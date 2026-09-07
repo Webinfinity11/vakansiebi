@@ -1,4 +1,5 @@
 import { load } from 'cheerio';
+import { safeLogoUrl, safeExternalUrl } from '../../lib/vacancy-media';
 
 type HrAnnouncement = {
   announcementId: number;
@@ -22,7 +23,8 @@ type JobPosting = {
   '@graph'?: JobPosting[];
   title?: string;
   description?: string;
-  hiringOrganization?: { name?: string };
+  hiringOrganization?: { name?: string; logo?: string | { url?: string } };
+  employmentType?: string | string[];
   jobLocation?: Location | Location[];
   datePosted?: string;
   validThrough?: string;
@@ -38,8 +40,20 @@ type JobPosting = {
   };
 };
 
-import type { SourceId, Vacancy } from '../../lib/types';
-export const configs = {
+import { sourceNames, type SourceId, type Vacancy } from '../../lib/types';
+const legacyConfigs = {
+  ss: {
+    origin: 'https://jobs.ss.ge',
+    list: 'https://jobs.ss.ge/ka/l/vacancies',
+    sitemap: null,
+    hosts: ['jobs.ss.ge'],
+  },
+  hrgov: {
+    origin: 'https://vacancy.hr.gov.ge',
+    list: 'https://vacancy.hr.gov.ge/',
+    sitemap: null,
+    hosts: ['vacancy.hr.gov.ge'],
+  },
   hr: {
     origin: 'https://www.hr.ge',
     list: 'https://www.hr.ge/',
@@ -59,10 +73,23 @@ export const configs = {
     hosts: ['jobs.ge', 'www.jobs.ge'],
   },
 };
+// Legacy parsing remains for existing audit records; no retired source can be fetched.
+export const configs = {
+  hr: legacyConfigs.hr,
+  jobs: legacyConfigs.jobs,
+  ss: legacyConfigs.ss,
+  hrgov: legacyConfigs.hrgov,
+};
+export function getSourceConfig(source: SourceId) {
+  if (source === 'samushao' || !(source in configs))
+    throw Error('Source is retired or unsupported');
+  return configs[source];
+}
 export function cleanText(html: string) {
   const $ = load(html);
   $('script,style,noscript,iframe').remove();
   $('br').replaceWith('\n');
+  $('li').prepend('• ');
   $('p,div,li,h1,h2,h3,tr').each((_, el) => {
     $(el).append('\n');
   });
@@ -86,13 +113,21 @@ export function fingerprint(j: Pick<Vacancy, 'title' | 'company' | 'city'>) {
 export function externalId(source: SourceId, url: string) {
   const u = new URL(url);
   if (
-    !configs[source].hosts.includes(u.hostname) ||
+    !legacyConfigs[source].hosts.includes(u.hostname) ||
     u.protocol !== 'https:' ||
     u.username ||
     u.password ||
     u.port
   )
     return null;
+  if (source === 'ss')
+    return u.pathname.match(/^\/ka\/details\/[^/]+-(\d+)\/?$/)?.[1] ?? null;
+  if (source === 'hrgov')
+    return (
+      u.pathname.match(
+        /^\/JobProvider\/UserOrgVaks\/Details\/(\d+)\/?$/,
+      )?.[1] ?? null
+    );
   if (source === 'hr')
     return u.pathname.match(/^\/announcement\/(\d+)(?:\/|$)/)?.[1] ?? null;
   if (source === 'samushao')
@@ -105,7 +140,7 @@ export function externalId(source: SourceId, url: string) {
 export function listLinks(
   source: SourceId,
   html: string,
-  base = configs[source].list,
+  base = legacyConfigs[source].list,
 ) {
   const $ = load(html);
   const result = new Map<string, string>();
@@ -120,12 +155,19 @@ export function listLinks(
   return [...result].map(([externalId, url]) => ({ externalId, url }));
 }
 function dateOnly(value: unknown) {
-  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)
+  return typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}/.test(value) &&
+    Number.isFinite(Date.parse(value.slice(0, 10))) &&
+    new Date(value.slice(0, 10)).toISOString().slice(0, 10) ===
+      value.slice(0, 10)
     ? value.slice(0, 10)
     : '';
 }
 function number(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+  return typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= 100000000
     ? value
     : null;
 }
@@ -166,7 +208,13 @@ export function parseDetail(
 ): Vacancy {
   const $ = load(html);
   if (!externalId(source, url)) throw Error('Invalid vacancy URL');
-  const j: Vacancy = {
+  const j: Vacancy &
+    Required<Pick<Vacancy, 'facts' | 'applicationLinks' | 'warnings'>> = {
+    logoUrl: '',
+    employmentType: '',
+    facts: [],
+    applicationLinks: [],
+    warnings: [],
     title: '',
     company: '',
     city: '',
@@ -178,11 +226,28 @@ export function parseDetail(
     mode: '',
     description: '',
     url,
-    source: source === 'hr' ? 'hr.ge' : `${source}.ge`,
+    source: source === 'samushao' ? 'samushao.ge' : sourceNames[source],
     deadline: '',
     datePosted: '',
   };
   if (source === 'hr') {
+    j.logoUrl = safeLogoUrl(
+      $('.logo-container .logo img').first().attr('src'),
+      url,
+    );
+    $('.list-item-label').each((_, el) => {
+      const label = $(el).text().replace(/:\s*$/, '').trim();
+      const value = $(el).siblings().text().replace(/\s+/g, ' ').trim();
+      if (
+        label &&
+        value &&
+        value.length < 1500 &&
+        !j.facts!.some((f) => f.label === label)
+      )
+        j.facts!.push({ label, value });
+    });
+    j.employmentType =
+      j.facts.find((f) => f.label === 'განაკვეთი')?.value || '';
     let a: HrAnnouncement | undefined;
     try {
       const state = JSON.parse($('#ng-state').text()) as Record<
@@ -234,6 +299,42 @@ export function parseDetail(
     if (!post) throw Error('Samushao.ge: JobPosting data not found');
     j.title = String(post.title || '');
     j.company = String(post.hiringOrganization?.name || '');
+    const orgLogo = post.hiringOrganization?.logo;
+    j.logoUrl =
+      safeLogoUrl(typeof orgLogo === 'string' ? orgLogo : orgLogo?.url, url) ||
+      safeLogoUrl(
+        $('h2')
+          .filter((_, el) => $(el).text().trim() === j.title)
+          .first()
+          .parent()
+          .find('img')
+          .first()
+          .attr('src'),
+        url,
+      );
+    const employment = Array.isArray(post.employmentType)
+      ? post.employmentType[0]
+      : post.employmentType;
+    j.employmentType =
+      (
+        {
+          FULL_TIME: 'სრული განაკვეთი',
+          PART_TIME: 'ნახევარი განაკვეთი',
+          CONTRACTOR: 'კონტრაქტი',
+          TEMPORARY: 'დროებითი',
+          INTERN: 'სტაჟირება',
+          VOLUNTEER: 'მოხალისეობა',
+        } as Record<string, string>
+      )[employment || ''] || '';
+    const visibleFacts = new Map<string, string>();
+    $('dt').each((_, el) => {
+      const label = $(el).text().trim();
+      if (!visibleFacts.has(label))
+        visibleFacts.set(
+          label,
+          $(el).next('dd').text().replace(/\s+/g, ' ').trim(),
+        );
+    });
     const loc = Array.isArray(post.jobLocation)
       ? post.jobLocation[0]
       : post.jobLocation;
@@ -242,6 +343,15 @@ export function parseDetail(
     j.datePosted = dateOnly(post.datePosted);
     j.deadline = dateOnly(post.validThrough);
     j.mode = post.jobLocationType === 'TELECOMMUTE' ? 'დისტანციური' : '';
+    const locationText = visibleFacts.get('ლოკაცია') || '';
+    if (!j.mode)
+      j.mode = /დისტანციური/.test(locationText)
+        ? 'დისტანციური'
+        : /ჰიბრიდ/.test(locationText)
+          ? 'ჰიბრიდული'
+          : /ადგილზე/.test(locationText)
+            ? 'ადგილზე'
+            : '';
     const pay = post.baseSalary;
     const val = pay?.value;
     j.salaryMin = number(val?.minValue ?? val?.value);
@@ -263,6 +373,189 @@ export function parseDetail(
       j.salaryPeriod,
       /ბონუს/.test(j.description),
     );
+    const rawAmount = val?.minValue ?? val?.value;
+    const visiblePay = visibleFacts.get('ხელფასი') || '';
+    const conflict =
+      (j.currency === 'GEL' && /\$|USD|დოლარ/.test(visiblePay)) ||
+      (j.currency === 'USD' && /ლარ/.test(visiblePay));
+    if (
+      (rawAmount !== undefined && number(rawAmount) === null) ||
+      (val?.maxValue !== undefined && number(val.maxValue) === null) ||
+      (number(rawAmount) !== null &&
+        number(val?.maxValue) !== null &&
+        Number(rawAmount) > Number(val?.maxValue)) ||
+      conflict
+    ) {
+      j.salary = '';
+      j.salaryMin = null;
+      j.currency = '';
+      j.salaryPeriod = '';
+      j.warnings.push(
+        'წყაროს ხელფასი არაზუსტია ან ვალუტა არ ემთხვევა. გადაამოწმე აღწერა და შეავსე ხელით.',
+      );
+    }
+    const content = load(String(post.description || ''));
+    content('a[href]').each((_, el) => {
+      const href = safeExternalUrl(content(el).attr('href') || '', url);
+      if (href)
+        j.applicationLinks!.push({
+          label:
+            content(el).text().trim().slice(0, 150) || new URL(href).hostname,
+          url: href,
+        });
+    });
+  } else if (source === 'ss') {
+    type Translated = { ka?: string; text?: string };
+    type SsDetail = {
+      id?: number;
+      jobsDealType?: number;
+      title?: Translated;
+      description?: Translated;
+      duties?: Translated;
+      requirements?: Translated;
+      publisherName?: string;
+      logo?: string;
+      startDate?: string;
+      endDate?: string;
+      address?: { cityTitle?: Translated };
+      salaryFrom?: number;
+      salaryTo?: number;
+      currencyId?: number;
+      monthOrDayType?: number;
+      workingFormat?: number;
+      workingSchedule?: number;
+      resumeLink?: string;
+    };
+    let data: SsDetail | undefined;
+    try {
+      data = (
+        JSON.parse($('#__NEXT_DATA__').text()) as {
+          props?: { pageProps?: { detailsInitData?: SsDetail } };
+        }
+      ).props?.pageProps?.detailsInitData;
+    } catch {}
+    if (
+      !data ||
+      String(data.id) !== externalId(source, url) ||
+      data.jobsDealType !== 1
+    )
+      throw Error('SS.ge vacancy data missing or mismatched');
+    const translated = (v?: Translated) => v?.ka || v?.text || '';
+    j.title = translated(data.title);
+    j.company = data.publisherName || '';
+    j.city = translated(data.address?.cityTitle);
+    j.description = [
+      translated(data.description),
+      translated(data.duties),
+      translated(data.requirements),
+    ]
+      .filter(Boolean)
+      .map(cleanText)
+      .join('\n\n');
+    j.logoUrl = safeLogoUrl(data.logo, url);
+    j.datePosted = dateOnly(data.startDate);
+    j.deadline = dateOnly(data.endDate);
+    j.mode =
+      (
+        {
+          0: 'ადგილზე',
+          1: 'დისტანციური',
+          2: 'ჰიბრიდული',
+          3: 'გარეთ სამუშაო',
+        } as Record<number, string>
+      )[data.workingFormat ?? -1] || '';
+    j.employmentType =
+      (
+        {
+          0: 'სრული განაკვეთი',
+          1: 'ნახევარი განაკვეთი',
+          2: 'თავისუფალი',
+          3: 'სამუშაო ცვლაში',
+          4: 'ერთჯერადი პროექტი',
+          5: 'ერთდღიანი სამუშაო',
+        } as Record<number, string>
+      )[data.workingSchedule ?? -1] || '';
+    // Only map the currency observed in the visible page; unknown enum values remain unpriced.
+    j.currency = data.currencyId === 1 ? 'GEL' : '';
+    j.salaryPeriod =
+      ({ 0: 'თვე', 1: 'დღე' } as Record<number, string>)[
+        data.monthOrDayType ?? -1
+      ] || '';
+    if (j.currency) {
+      j.salaryMin = number(data.salaryFrom);
+      j.salary = salaryText(
+        j.salaryMin,
+        number(data.salaryTo),
+        j.currency,
+        j.salaryPeriod,
+      );
+    }
+    const invalidPay =
+      [data.salaryFrom, data.salaryTo].some(
+        (v) => v !== undefined && v !== null && v !== 0 && number(v) === null,
+      ) ||
+      (number(data.salaryFrom) !== null &&
+        number(data.salaryTo) !== null &&
+        Number(data.salaryFrom) > Number(data.salaryTo));
+    if (invalidPay) {
+      j.salary = '';
+      j.salaryMin = null;
+      j.currency = '';
+      j.salaryPeriod = '';
+      j.warnings.push(
+        'წყაროს ხელფასის დიაპაზონი არაზუსტია. გადაამოწმე პირველწყარო და შეავსე ხელით.',
+      );
+    }
+    if (data.resumeLink && safeExternalUrl(data.resumeLink))
+      j.applicationLinks.push({
+        label: 'განაცხადის გაგზავნა',
+        url: safeExternalUrl(data.resumeLink),
+      });
+  } else if (source === 'hrgov') {
+    if ($('#ID').attr('value') !== externalId(source, url))
+      throw Error('Public service vacancy ID does not match');
+    const fields = new Map<string, string>();
+    $('#regForm dt').each((_, el) => {
+      const label = $(el).text().replace(/\s+/g, ' ').trim().replace(/:$/, '');
+      const value = cleanText($(el).next('dd').html() || '');
+      if (label && value) fields.set(label, value);
+    });
+    j.title = fields.get('პოზიციის დასახელება') || '';
+    j.company = fields.get('ორგანიზაცია') || '';
+    j.city = fields.get('სამსახურის ადგილმდებარეობა') || '';
+    j.employmentType = fields.get('სამუშაოს ტიპი') || '';
+    const deadline = fields
+      .get('განცხადების ბოლო ვადა')
+      ?.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (deadline)
+      j.deadline = dateOnly(`${deadline[3]}-${deadline[2]}-${deadline[1]}`);
+    const pay = fields.get('თანამდებობრივი სარგო') || '';
+    const amount = pay.match(/^(\d+(?:\.\d+)?)\s*ლარი$/);
+    if (amount) {
+      j.salaryMin = number(Number(amount[1]));
+      j.currency = 'GEL';
+      j.salary = salaryText(j.salaryMin, null, 'GEL', '');
+    }
+    const detailLabels = [
+      'ორგანიზაციის შესახებ',
+      'ფუნქციები',
+      'მინიმალური განათლება',
+      'საკონკურსო თემატიკა',
+      'დამატებითი მოთხოვნები',
+      'დამატებითი ინფორმაცია',
+      'გადაწყვეტილების მიღების ფორმა და ვადა',
+    ];
+    j.description = detailLabels
+      .filter((k) => fields.has(k))
+      .map((k) => k + '\n' + fields.get(k))
+      .join('\n\n');
+    for (const label of [
+      'კონკურსის ტიპი',
+      'ადგილების რაოდენობა',
+      'გამოსაცდელი ვადა',
+      'მინიმალური განათლება',
+    ])
+      if (fields.has(label)) j.facts.push({ label, value: fields.get(label)! });
   } else {
     const cells = $('.dtitle');
     j.title = cells.eq(0).find('b').first().text().trim();
@@ -270,19 +563,30 @@ export function parseDetail(
     j.description = cleanText(
       cells.last().closest('tr').next().find('td').html() || '',
     );
+    const body = cells.last().closest('tr').next().find('td').first();
+    // Jobs.ge mixes unrelated client banners into the description table. Leave logo empty unless the editor selects one.
+    j.logoUrl = '';
+    body.find('a[href]').each((_, el) => {
+      const href = safeExternalUrl($(el).attr('href') || '', url);
+      if (href)
+        j.applicationLinks!.push({
+          label: $(el).text().trim().slice(0, 150) || new URL(href).hostname,
+          url: href,
+        });
+    });
     const dates = cells
       .eq(2)
       .find('b')
       .map((_, el) => $(el).text().trim())
       .get();
-    const today = new Date();
-    const pub = georgianDate(dates[0] || '', today.getFullYear());
-    if (pub && pub > today.toISOString().slice(0, 10))
-      j.datePosted = georgianDate(dates[0], today.getFullYear() - 1);
+    const today = tbilisiDate();
+    const year = Number(today.slice(0, 4));
+    const pub = georgianDate(dates[0] || '', year);
+    if (pub && pub > today) j.datePosted = georgianDate(dates[0], year - 1);
     else j.datePosted = pub;
     j.deadline = georgianDate(
       dates[1] || '',
-      Number(j.datePosted.slice(0, 4)) || today.getFullYear(),
+      Number(j.datePosted.slice(0, 4)) || year,
     );
     if (j.deadline && j.datePosted && j.deadline < j.datePosted)
       j.deadline = georgianDate(dates[1], Number(j.datePosted.slice(0, 4)) + 1);
@@ -300,6 +604,21 @@ export function parseDetail(
       .filter((city) => j.description.includes(city))
       .join(', ');
   }
+  if (source === 'hr')
+    $('.description')
+      .first()
+      .find('a[href]')
+      .each((_, el) => {
+        const href = safeExternalUrl($(el).attr('href') || '', url);
+        if (href)
+          j.applicationLinks!.push({
+            label: $(el).text().trim().slice(0, 150) || new URL(href).hostname,
+            url: href,
+          });
+      });
+  j.applicationLinks = [
+    ...new Map(j.applicationLinks.map((l) => [l.url, l])).values(),
+  ].slice(0, 12);
   j.category = category(j.title);
   j.title = j.title.trim();
   j.company = j.company.trim();
@@ -334,4 +653,53 @@ export function georgianDate(value: string, year: number) {
     new Date(result).toISOString().slice(0, 10) === result
     ? result
     : '';
+}
+
+// Rotate a bounded extra listing page; always fetch page one as well for fresh vacancies.
+export function additionalListing(
+  source: SourceId,
+  html: string,
+  cursor: number,
+): string | null {
+  const key = source === 'ss' ? 'page' : source === 'hrgov' ? 'pageNo' : null;
+  if (!key) return null;
+  const $ = load(html);
+  let last = 1;
+  $('a[href]').each((_, el) => {
+    try {
+      const u = new URL($(el).attr('href')!, legacyConfigs[source].list);
+      const p = Number(u.searchParams.get(key));
+      if (
+        u.origin === legacyConfigs[source].origin &&
+        u.pathname === new URL(legacyConfigs[source].list).pathname &&
+        Number.isInteger(p) &&
+        p > 1 &&
+        p <= 1000
+      )
+        last = Math.max(last, p);
+    } catch {}
+  });
+  if (last < 2) return null;
+  const u = new URL(legacyConfigs[source].list);
+  u.searchParams.set(key, String(2 + (Math.max(0, cursor) % (last - 1))));
+  return u.href;
+}
+export const sourceLockIds: Record<SourceId, number> = {
+  hr: 917410,
+  samushao: 917411,
+  jobs: 917412,
+  ss: 917413,
+  hrgov: 917414,
+};
+
+// Georgian listings omit the year; compare against their local calendar date, including around midnight/New Year.
+export function tbilisiDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone: 'Asia/Tbilisi',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const part = (type: string) => parts.find((p) => p.type === type)!.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }

@@ -20,7 +20,8 @@ try {
       ? [{ id: arg }]
       : (
           await db().query(
-            'SELECT id FROM sources WHERE enabled AND (requested_at IS NOT NULL OR (auto_enabled AND next_run_at<=now())) ORDER BY requested_at NULLS LAST,next_run_at',
+            'SELECT id FROM sources WHERE id=ANY($1::text[]) AND enabled AND NOT retired AND (requested_at IS NOT NULL OR (auto_enabled AND next_run_at<=now())) ORDER BY requested_at NULLS LAST,next_run_at',
+            [Object.keys(configs)],
           )
         ).rows;
     for (const source of sources) {

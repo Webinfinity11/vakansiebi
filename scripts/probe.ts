@@ -1,11 +1,22 @@
 import 'dotenv/config';
 import fs from 'node:fs/promises';
-import { configs, listLinks, parseDetail } from '../worker/adapters';
+import {
+  configs,
+  getSourceConfig,
+  listLinks,
+  parseDetail,
+} from '../worker/adapters';
 import { sourceFetch } from '../worker/http';
 import type { SourceId } from '../lib/types';
-for (const source of Object.keys(configs) as SourceId[]) {
+const requested = process.argv
+  .find((a) => a.startsWith('--source='))
+  ?.split('=')[1];
+if (requested && !(requested in configs)) throw Error('Unknown source');
+for (const source of (requested
+  ? [requested]
+  : Object.keys(configs)) as SourceId[]) {
   try {
-    const html = await sourceFetch(source, configs[source].list);
+    const html = await sourceFetch(source, getSourceConfig(source).list);
     const links = listLinks(source, html);
     if (!links[0]) throw Error('No vacancy links');
     const detail = await sourceFetch(source, links[0].url);
@@ -25,6 +36,10 @@ for (const source of Object.keys(configs) as SourceId[]) {
         descriptionLength: job.description.length,
         datePosted: job.datePosted,
         deadline: job.deadline,
+        salary: job.salary,
+        logo: Boolean(job.logoUrl),
+        applicationLinks: job.applicationLinks?.length || 0,
+        warnings: job.warnings,
       }),
     );
   } catch (e) {

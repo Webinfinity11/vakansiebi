@@ -2,15 +2,24 @@ import { randomUUID } from 'node:crypto';
 import { load } from 'cheerio';
 import { db } from '../lib/server/db';
 import type { SourceId } from '../lib/types';
-import { configs, externalId, listLinks, parseDetail } from './adapters';
+import {
+  getSourceConfig,
+  externalId,
+  listLinks,
+  parseDetail,
+  additionalListing,
+  sourceLockIds,
+} from './adapters';
 import { sourceFetch, validateUrl } from './http';
 import { discoverItems, stageVacancy } from './importer';
 export async function runSource(
   source: SourceId,
   limit = Number(process.env.CRAWL_BATCH_SIZE) || 20,
 ) {
+  const activeConfig = getSourceConfig(source);
   const lock = await db().connect();
-  const lockId = 917410 + Object.keys(configs).indexOf(source);
+  const lockId = sourceLockIds[source];
+  limit = Math.max(1, Math.min(100, Math.floor(limit) || 20));
   let locked = false;
   const runId = randomUUID();
   let started = false;
@@ -26,7 +35,7 @@ export async function runSource(
     const config = (
       await db().query('SELECT * FROM sources WHERE id=$1', [source])
     ).rows[0];
-    if (!config?.enabled) return { skipped: true };
+    if (!config?.enabled || config.retired) return { skipped: true };
     await db().query(
       "UPDATE source_runs SET status='interrupted',finished_at=now(),error='Worker interrupted; next run retries pending items' WHERE source_id=$1 AND status='running'",
       [source],
@@ -40,14 +49,28 @@ export async function runSource(
       'UPDATE sources SET last_started_at=now(),requested_at=NULL WHERE id=$1',
       [source],
     );
-    const html = await sourceFetch(source, configs[source].list);
+    const html = await sourceFetch(source, activeConfig.list);
     const links = listLinks(source, html);
     if (!links.length)
       throw Error(
         'Listing returned no vacancy links; source structure may have changed',
       );
-    const sitemap = configs[source].sitemap;
+    const sitemap = activeConfig.sitemap;
     let discoveryWarning = '';
+    const extra = additionalListing(source, html, config.sitemap_cursor);
+    if (extra) {
+      try {
+        links.push(
+          ...listLinks(source, await sourceFetch(source, extra), extra),
+        );
+        await db().query(
+          'UPDATE sources SET sitemap_cursor=sitemap_cursor+1 WHERE id=$1',
+          [source],
+        );
+      } catch (e) {
+        discoveryWarning = 'Listing page: ' + (e as Error).message;
+      }
+    }
     if (sitemap) {
       try {
         const xml = await sourceFetch(source, sitemap);
@@ -91,16 +114,20 @@ export async function runSource(
     const pending = (
       await db().query(
         'SELECT * FROM source_items WHERE source_id=$1 AND raw IS NULL AND next_check_at<=now() ORDER BY discovered_at,id LIMIT $2',
-        [source, quota],
+        [source, limit],
       )
     ).rows;
     const existing = (
       await db().query(
         'SELECT * FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND next_check_at<=now() ORDER BY next_check_at LIMIT $2',
-        [source, Math.max(1, limit - pending.length)],
+        [source, Math.max(1, limit - Math.min(pending.length, quota))],
       )
     ).rows;
-    for (const item of [...pending, ...existing].slice(0, limit)) {
+    const newCount = Math.min(pending.length, limit - existing.length);
+    for (const item of [...pending.slice(0, newCount), ...existing].slice(
+      0,
+      limit,
+    )) {
       try {
         const data = parseDetail(
           source,

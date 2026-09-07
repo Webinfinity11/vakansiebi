@@ -13,12 +13,12 @@ export async function GET() {
     await requireAdmin();
     const sources = (
       await db().query(
-        `SELECT s.*,(SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NOT NULL) imported,(SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NULL) queued FROM sources s ORDER BY s.id`,
+        `SELECT s.*,(SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NOT NULL) imported,(SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NULL) queued FROM sources s WHERE NOT s.retired ORDER BY s.id`,
       )
     ).rows;
     const runs = (
       await db().query(
-        'SELECT * FROM source_runs ORDER BY started_at DESC LIMIT 20',
+        'SELECT r.* FROM source_runs r JOIN sources s ON s.id=r.source_id WHERE NOT s.retired ORDER BY r.started_at DESC LIMIT 20',
       )
     ).rows;
     return Response.json({ sources, runs, notificationsEnabled: false });
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     checkOrigin(req);
     const data = z
       .object({
-        id: z.enum(['hr', 'samushao', 'jobs']),
+        id: z.enum(['hr', 'jobs', 'ss', 'hrgov']),
         action: z.enum(['run', 'configure']),
         enabled: z.boolean().optional(),
         autoEnabled: z.boolean().optional(),

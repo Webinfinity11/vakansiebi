@@ -1,7 +1,7 @@
 import robotsParser from 'robots-parser';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { SourceId } from '../lib/types';
-import { configs } from './adapters';
+import { getSourceConfig } from './adapters';
 const agent = 'ErtadVacancyBot/0.1';
 const robotsCache = new Map<
   string,
@@ -15,7 +15,7 @@ export function validateUrl(source: SourceId, value: string) {
     u.port ||
     u.username ||
     u.password ||
-    !configs[source].hosts.includes(u.hostname)
+    !getSourceConfig(source).hosts.includes(u.hostname)
   )
     throw Error('URL is outside allowed source hosts');
   return u;
@@ -99,8 +99,11 @@ export async function sourceFetch(source: SourceId, value: string) {
   if (cached.rules.isAllowed(url.href, agent) === false)
     throw Error('robots.txt does not allow this URL');
   const crawlDelay = cached.rules.getCrawlDelay(agent);
-  if (crawlDelay && crawlDelay > 0)
-    await delay(Math.min(crawlDelay, 60) * 1000);
+  if (crawlDelay && crawlDelay > 0) {
+    if (crawlDelay > 60)
+      throw Error('Source crawl-delay exceeds this worker run budget');
+    await delay(crawlDelay * 1000);
+  }
   const result = await rawFetch(source, url.href);
   if (result.status < 200 || result.status >= 300)
     throw Error(`Source returned HTTP ${result.status}`);

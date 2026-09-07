@@ -1,5 +1,17 @@
-export type SourceId = 'hr' | 'samushao' | 'jobs';
+export type SourceId = 'hr' | 'samushao' | 'jobs' | 'ss' | 'hrgov';
+export type ActiveSourceId = Exclude<SourceId, 'samushao'>;
+export const sourceNames: Record<ActiveSourceId, string> = {
+  hr: 'hr.ge',
+  jobs: 'jobs.ge',
+  ss: 'jobs.ss.ge',
+  hrgov: 'vacancy.hr.gov.ge',
+};
 export type Vacancy = {
+  logoUrl?: string;
+  employmentType?: string;
+  facts?: { label: string; value: string }[];
+  applicationLinks?: { label: string; url: string }[];
+  warnings?: string[];
   title: string;
   company: string;
   city: string;
@@ -16,6 +28,7 @@ export type Vacancy = {
   datePosted: string;
 };
 export type PublicJob = Vacancy & {
+  companyProfile?: { website: string; description: string };
   id: string;
   createdAt: string;
   sources: { source: string; url: string }[];

@@ -30,8 +30,10 @@ import {
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Brand, Choice } from '../job-board';
+import { CompanyLogo } from '../company-logo';
+import { CompanyEditor } from './company-editor';
 import type { AdminJob, Source, Vacancy, SourceRun } from '@/lib/types';
-import { categories } from '@/lib/types';
+import { categories, sourceNames } from '@/lib/types';
 const names: Record<string, string> = {
   pending: 'შემოტანილი',
   published: 'გამოქვეყნებული',
@@ -165,7 +167,7 @@ export default function AdminPanel() {
       setBusy(false);
     }
   };
-  const change = (key: keyof Vacancy, value: string | number | null) =>
+  const change = <K extends keyof Vacancy>(key: K, value: Vacancy[K]) =>
     setDraft((d) => (d ? { ...d, [key]: value } : d));
   return (
     <>
@@ -328,9 +330,10 @@ export default function AdminPanel() {
                       setError('');
                     }}
                   >
-                    <div className="company-mark">
-                      {j.draft.company.slice(0, 2).toUpperCase()}
-                    </div>
+                    <CompanyLogo
+                      company={j.draft.company}
+                      url={j.draft.logoUrl}
+                    />
                     <div className="admin-job-text">
                       <span>
                         {j.draft.company} · {j.draft.source}
@@ -481,7 +484,8 @@ export default function AdminPanel() {
               {runs.map((r) => (
                 <div className="run-row" key={r.id}>
                   <strong>
-                    {r.source_id === 'hr' ? 'hr.ge' : r.source_id + '.ge'}
+                    {sourceNames[r.source_id as keyof typeof sourceNames] ||
+                      r.source_id}
                   </strong>
                   <span className={`status status-${r.status}`}>
                     {names[r.status] || r.status}
@@ -519,6 +523,26 @@ export default function AdminPanel() {
           </SheetHeader>
           {selected && draft && (
             <div className="edit-body">
+              <div className="editor-logo-row">
+                <CompanyLogo company={draft.company} url={draft.logoUrl} />
+                <div>
+                  <strong>{draft.company}</strong>
+                  <p>ლოგო პირველწყაროდან · გამოქვეყნებამდე გადაამოწმე</p>
+                </div>
+              </div>
+              {!!draft.warnings?.length && (
+                <div className="notice">
+                  {draft.warnings.map((w) => (
+                    <p key={w}>{w}</p>
+                  ))}
+                  <button
+                    className="secondary-button"
+                    onClick={() => change('warnings', [])}
+                  >
+                    გადავამოწმე
+                  </button>
+                </div>
+              )}
               {error && (
                 <p role="alert" className="notice">
                   {error}
@@ -533,11 +557,28 @@ export default function AdminPanel() {
                     rel="noopener noreferrer"
                   >
                     <ExternalLink size={14} />
-                    {i.source_id === 'hr' ? 'hr.ge' : i.source_id + '.ge'}
+                    {sourceNames[i.source_id as keyof typeof sourceNames] ||
+                      i.source_id}
                   </a>
                 ))}
               </div>
               <div className="edit-form">
+                <label className="full-width">
+                  კომპანიის ლოგოს მისამართი
+                  <input
+                    value={draft.logoUrl || ''}
+                    onChange={(e) => change('logoUrl', e.target.value)}
+                    placeholder="https://…"
+                  />
+                </label>
+                <label className="full-width">
+                  განაკვეთი
+                  <input
+                    value={draft.employmentType || ''}
+                    onChange={(e) => change('employmentType', e.target.value)}
+                    placeholder="სრული განაკვეთი, ნახევარი განაკვეთი…"
+                  />
+                </label>
                 <label>
                   პოზიცია
                   <input
@@ -641,6 +682,97 @@ export default function AdminPanel() {
                   />
                 </label>
               </div>
+              <CompanyEditor
+                key={draft.company}
+                name={draft.company}
+                sourceLogo={
+                  draft.logoUrl ||
+                  selected.items.find((i) => i.raw?.logoUrl)?.raw.logoUrl
+                }
+              />
+              {!!draft.facts?.length && (
+                <details className="raw-details">
+                  <summary>
+                    დამატებითი პირობების რედაქტირება ({draft.facts.length})
+                  </summary>
+                  <div className="metadata-editor">
+                    {draft.facts.map((f, index) => (
+                      <div key={index}>
+                        <label>
+                          {f.label}
+                          <textarea
+                            rows={2}
+                            value={f.value}
+                            onChange={(e) =>
+                              change(
+                                'facts',
+                                draft.facts!.map((v, k) =>
+                                  k === index
+                                    ? { ...v, value: e.target.value }
+                                    : v,
+                                ),
+                              )
+                            }
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            change(
+                              'facts',
+                              draft.facts!.filter((_, k) => k !== index),
+                            )
+                          }
+                        >
+                          წაშლა
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+              {!!draft.applicationLinks?.length && (
+                <details className="raw-details">
+                  <summary>
+                    განცხადების ბმულები ({draft.applicationLinks.length})
+                  </summary>
+                  <div className="metadata-editor">
+                    {draft.applicationLinks.map((link, index) => (
+                      <div key={index}>
+                        <label>
+                          {link.label}
+                          <input
+                            value={link.url}
+                            onChange={(e) =>
+                              change(
+                                'applicationLinks',
+                                draft.applicationLinks!.map((v, k) =>
+                                  k === index
+                                    ? { ...v, url: e.target.value }
+                                    : v,
+                                ),
+                              )
+                            }
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            change(
+                              'applicationLinks',
+                              draft.applicationLinks!.filter(
+                                (_, k) => k !== index,
+                              ),
+                            )
+                          }
+                        >
+                          წაშლა
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
               <details className="raw-details">
                 <summary>წყაროს ბოლო ვერსიის შედარება</summary>
                 {selected.items.map((i) => (
@@ -649,11 +781,53 @@ export default function AdminPanel() {
                       {i.source_id} · {time(i.last_checked_at)}
                     </p>
                     {i.error && <p className="notice">{i.error}</p>}
+                    {!!i.raw?.warnings?.length && (
+                      <div className="notice">
+                        {i.raw.warnings.map((w) => (
+                          <p key={w}>{w}</p>
+                        ))}
+                      </div>
+                    )}
+                    <CompanyLogo
+                      company={i.raw?.company || ''}
+                      url={i.raw?.logoUrl}
+                    />
                     <h3>{i.raw?.title}</h3>
                     <p>
                       {i.raw?.salary} · {i.raw?.city} · {i.raw?.deadline}
                     </p>
                     <p className="raw-text">{i.raw?.description}</p>
+                    {!!i.raw?.facts?.length && (
+                      <div className="editor-extra-facts">
+                        {i.raw.facts.map((f) => (
+                          <div key={f.label}>
+                            <strong>{f.label}</strong>
+                            <span>{f.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      className="secondary-button"
+                      disabled={
+                        busy || !i.raw || i.raw.company !== draft.company
+                      }
+                      onClick={() =>
+                        setDraft(
+                          (d) =>
+                            d && {
+                              ...d,
+                              logoUrl: i.raw.logoUrl || '',
+                              employmentType: i.raw.employmentType || '',
+                              facts: i.raw.facts || [],
+                              applicationLinks: i.raw.applicationLinks || [],
+                              warnings: i.raw.warnings || [],
+                            },
+                        )
+                      }
+                    >
+                      მხოლოდ ლოგოსა და დამატებითი დეტალების ჩასმა
+                    </button>
                     <button
                       className="secondary-button"
                       disabled={busy}

@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../lib/server/db';
 import { discoverItems, stageVacancy } from '../worker/importer';
 import { mutateJob, publicJobs } from '../lib/server/jobs';
+import { getCompany, saveCompany } from '../lib/server/companies';
 import type { Vacancy } from '../lib/types';
 const enabled = process.env.RUN_DB_TESTS === '1';
 void test(
@@ -47,6 +48,11 @@ void test(
     ).rows[0];
     const params = new URLSearchParams({ q: external });
     assert.equal((await publicJobs(params)).total, 0);
+    assert.equal(
+      (await publicJobs(new URLSearchParams({ ids: job.id }))).total,
+      0,
+      'shared and saved links cannot expose an unpublished vacancy',
+    );
     assert.equal((await publicJobs(params, true)).total, 1);
     const edited = { ...v, title: v.title + ' edited' };
     await mutateJob({
@@ -56,6 +62,38 @@ void test(
       draft: edited,
     });
     assert.equal((await publicJobs(params)).jobs[0].title, edited.title);
+    const profile = await getCompany(edited.company);
+    await saveCompany({
+      ...profile,
+      website: 'https://example.com/',
+      logoUrl: 'https://www.hr.ge/test-logo.png',
+      description: 'Verified company profile',
+    });
+    assert.equal(
+      (await publicJobs(params)).jobs[0].companyProfile.website,
+      'https://example.com/',
+    );
+    await assert.rejects(
+      () => saveCompany({ ...profile, website: 'https://example.com/' }),
+      /შეიცვალა/,
+    );
+    await assert.rejects(() =>
+      saveCompany({ ...profile, logoUrl: 'javascript:alert(1)' }),
+    );
+    assert.equal(
+      (await publicJobs(new URLSearchParams({ ids: job.id }))).jobs[0].id,
+      job.id,
+    );
+    assert.equal(
+      (await publicJobs(new URLSearchParams({ ids: '' }))).total,
+      0,
+      'empty saved collection must stay empty',
+    );
+    assert.equal(
+      (await publicJobs(new URLSearchParams({ ids: "invalid,' OR true --" })))
+        .total,
+      0,
+    );
     await stageVacancy(item.id, { ...v, title: v.title + ' source changed' });
     job = (await db().query('SELECT * FROM jobs WHERE id=$1', [job.id]))
       .rows[0];
@@ -76,10 +114,10 @@ void test(
     });
     assert.equal((await publicJobs(params)).jobs[0].company, 'Test Company');
     const external2 = randomUUID();
-    await discoverItems('samushao', [
+    await discoverItems('jobs', [
       {
         externalId: external2,
-        url: 'https://samushao.ge/vakansia/test-999999999',
+        url: 'https://jobs.ge/ge/?view=jobs&id=999999999',
       },
     ]);
     const item2 = (
@@ -89,7 +127,7 @@ void test(
     ).rows[0];
     await stageVacancy(item2.id, {
       ...v,
-      source: 'samushao.ge',
+      source: 'jobs.ge',
       url: item2.url,
     });
     const other = (

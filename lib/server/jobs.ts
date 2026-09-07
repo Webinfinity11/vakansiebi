@@ -4,7 +4,41 @@ import { ApiError } from './auth';
 import { audit } from '../../worker/importer';
 import { fingerprint } from '../../worker/adapters';
 import type { Vacancy } from '../types';
+import { safeLogoUrl } from '../vacancy-media';
+import { companyKey } from '../company-key';
 export const vacancySchema = z.object({
+  logoUrl: z
+    .string()
+    .max(2000)
+    .optional()
+    .default('')
+    .refine((v) => !v || safeLogoUrl(v) === v, 'ლოგოს მისამართი დაუშვებელია'),
+  employmentType: z.string().max(150).optional().default(''),
+  facts: z
+    .array(
+      z.object({ label: z.string().max(200), value: z.string().max(1500) }),
+    )
+    .max(30)
+    .optional()
+    .default([]),
+  applicationLinks: z
+    .array(
+      z.object({
+        label: z.string().max(150),
+        url: z
+          .url()
+          .refine(
+            (v) =>
+              new URL(v).protocol === 'https:' &&
+              !new URL(v).username &&
+              !new URL(v).password,
+          ),
+      }),
+    )
+    .max(12)
+    .optional()
+    .default([]),
+  warnings: z.array(z.string().max(500)).max(10).optional().default([]),
   title: z.string().trim().min(2).max(300),
   company: z.string().trim().max(300),
   city: z.string().max(300),
@@ -37,7 +71,7 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
   const source = params.get('source') || '';
   const paid = params.get('paid') === 'true';
   const remote = params.get('remote') === 'true';
-  let where = `j.status='published' AND j.published IS NOT NULL AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AND ($1='' OR strpos(lower(concat_ws(' ',j.published->>'title',j.published->>'company',j.published->>'description')),lower($1))>0) AND ($2='' OR strpos(j.published->>'city',$2)>0) AND ($3='' OR j.published->>'category'=$3) AND ($4='' OR EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND s.name=$4)) AND (NOT $5 OR COALESCE(j.published->>'salary','')<>'') AND (NOT $6 OR j.published->>'mode'='დისტანციური')`;
+  let where = `j.status='published' AND j.published IS NOT NULL AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AND ($1='' OR strpos(lower(concat_ws(' ',j.published->>'title',j.published->>'company',j.published->>'description')),lower($1))>0) AND ($2='' OR strpos(j.published->>'city',$2)>0) AND ($3='' OR j.published->>'category'=$3) AND ($4='' OR EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired AND s.name=$4)) AND (NOT $5 OR COALESCE(j.published->>'salary','')<>'') AND (NOT $6 OR j.published->>'mode'='დისტანციური')`;
   if (preview)
     where = where
       .replace(
@@ -45,7 +79,18 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
         "j.status IN ('pending','published')",
       )
       .replaceAll('j.published', 'j.draft');
+  where +=
+    ' AND EXISTS(SELECT 1 FROM source_items active_item JOIN sources active_source ON active_source.id=active_item.source_id WHERE active_item.job_id=j.id AND NOT active_source.retired)';
   const args = [q, city, category, source, paid, remote];
+  const requestedIds = params.get('ids');
+  if (requestedIds !== null) {
+    const ids = requestedIds
+      .split(',')
+      .filter((id) => z.uuid().safeParse(id).success)
+      .slice(0, 100);
+    where += ` AND j.id::text = ANY(string_to_array($7,','))`;
+    args.push(ids.join(','));
+  }
   const count = (
     await db().query(
       `SELECT count(*)::int AS count FROM jobs j WHERE ${where}`,
@@ -57,18 +102,51 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
       ? `CASE WHEN j.published->>'currency'='GEL' AND j.published->>'salaryPeriod'='თვე' THEN (j.published->>'salaryMin')::numeric END DESC NULLS LAST,j.published_at DESC`
       : 'j.published_at DESC';
   if (preview) ordering = ordering.replaceAll('j.published->', 'j.draft->');
+  if (preview) ordering = ordering.replaceAll('j.published_at', 'j.created_at');
   const rows = (
     await db().query(
-      `SELECT j.id,${preview ? 'j.draft' : 'j.published'} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url)) FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id),'[]'::jsonb) AS sources FROM jobs j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $7 OFFSET $8`,
+      `SELECT j.id,${preview ? 'j.draft' : 'j.published'} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url)) FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired),'[]'::jsonb) AS sources FROM jobs j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
       [...args, limit, (page - 1) * limit],
     )
   ).rows;
+  const companyKeys = [
+    ...new Set(rows.map((r) => companyKey(r.published.company || ''))),
+  ];
+  const profiles = companyKeys.length
+    ? (
+        await db().query(
+          'SELECT * FROM company_profiles WHERE company_key=ANY($1::text[])',
+          [companyKeys],
+        )
+      ).rows
+    : [];
+  const companyProfiles = new Map(profiles.map((p) => [p.company_key, p]));
   return {
     jobs: rows.map((r) => ({
       ...r.published,
+      ...(typeof r.published.salaryMin === 'number' &&
+      (!Number.isFinite(r.published.salaryMin) ||
+        r.published.salaryMin > 100000000 ||
+        r.published.salaryMin < 0)
+        ? { salary: '', salaryMin: null, currency: '', salaryPeriod: '' }
+        : {}),
       id: r.id,
       createdAt: r.created_at.toISOString(),
       sources: r.sources,
+      ...(companyProfiles.get(companyKey(r.published.company || ''))?.logo_url
+        ? {
+            logoUrl: companyProfiles.get(companyKey(r.published.company || ''))!
+              .logo_url,
+          }
+        : {}),
+      companyProfile: {
+        website:
+          companyProfiles.get(companyKey(r.published.company || ''))?.website ||
+          '',
+        description:
+          companyProfiles.get(companyKey(r.published.company || ''))
+            ?.description || '',
+      },
     })),
     preview,
     total: count,
