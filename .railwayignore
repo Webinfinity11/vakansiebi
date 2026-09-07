@@ -1,0 +1,9 @@
+.git
+.env*
+.local
+node_modules
+.next
+.next-production
+.wrangler
+.vinext
+docs/prototype-config
