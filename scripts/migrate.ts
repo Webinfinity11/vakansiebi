@@ -32,7 +32,7 @@ try {
     }
   }
   await client.query(
-    "INSERT INTO sources(id,name) VALUES('hr','hr.ge'),('samushao','samushao.ge'),('jobs','jobs.ge') ON CONFLICT DO NOTHING",
+    "INSERT INTO sources(id,name) VALUES('hr','hr.ge'),('jobs','jobs.ge') ON CONFLICT DO NOTHING",
   );
 } finally {
   await client.query('SELECT pg_advisory_unlock(917400)');
