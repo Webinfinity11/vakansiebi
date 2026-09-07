@@ -1,0 +1,10 @@
+.env*
+.local
+.git
+.next
+.next-production
+node_modules
+docs/prototype-config
+outputs
+work
+*.tsbuildinfo
