@@ -155,6 +155,40 @@ export default function AdminPanel() {
       setBusy(false);
     }
   };
+  const publishAll = async () => {
+    setBusy(true);
+    setError('');
+    let published = 0;
+    let skipped = 0;
+    try {
+      const { items } = await request('/api/admin/jobs/bulk');
+      for (let start = 0; start < items.length; start += 20) {
+        const { results } = await request(
+          '/api/admin/jobs/bulk',
+          items.slice(start, start + 20),
+        );
+        published += results.filter(
+          (r: { published: boolean }) => r.published,
+        ).length;
+        skipped += results.filter(
+          (r: { published: boolean }) => !r.published,
+        ).length;
+        setMessage(`გამოქვეყნდა ${published} / ${items.length}. მიმდინარეობს…`);
+      }
+      setMessage(
+        `გამოქვეყნდა ${published} ვაკანსია. გამოტოვებულია ${skipped} — საჭიროებს შემოწმებას. შეტყობინებები არ გაგზავნილა.`,
+      );
+    } catch (e) {
+      setMessage(`გამოქვეყნდა ${published} ვაკანსია.`);
+      setError(
+        `${(e as Error).message}. შეგიძლია ხელახლა გაუშვა — უკვე გამოქვეყნებული ჩანაწერები აღარ დამუშავდება.`,
+      );
+    } finally {
+      setBusy(false);
+      setConfirm(null);
+      await load();
+    }
+  };
   const sourceAction = async (s: Source, body: Record<string, unknown>) => {
     setBusy(true);
     try {
@@ -255,6 +289,15 @@ export default function AdminPanel() {
           </TabsList>
           <TabsContent value="vacancies">
             <div className="admin-toolbar">
+              <button
+                className="primary"
+                disabled={busy || loading || counts.pending === 0}
+                onClick={() => setConfirm({ action: 'bulk-publish' })}
+              >
+                {busy
+                  ? 'მიმდინარეობს…'
+                  : `ყველას დადასტურება (${counts.pending})`}
+              </button>
               <div className="admin-search">
                 <Search size={18} />
                 <input
@@ -922,20 +965,24 @@ export default function AdminPanel() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {confirm?.action === 'publish'
-                ? 'გამოვაქვეყნოთ ეს ვერსია?'
-                : confirm?.action === 'merge'
-                  ? 'გავაერთიანოთ ვაკანსიები?'
-                  : 'დაადასტურე ცვლილება'}
+              {confirm?.action === 'bulk-publish'
+                ? 'ყველა შემოტანილი ვაკანსია გამოვაქვეყნოთ?'
+                : confirm?.action === 'publish'
+                  ? 'გამოვაქვეყნოთ ეს ვერსია?'
+                  : confirm?.action === 'merge'
+                    ? 'გავაერთიანოთ ვაკანსიები?'
+                    : 'დაადასტურე ცვლილება'}
             </DialogTitle>
             <DialogDescription>
-              {confirm?.action === 'publish'
-                ? 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
-                : confirm?.action === 'apply-source'
-                  ? 'წყაროს ტექსტი შენახულ რედაქციას ჩაანაცვლებს. საჯარო ვერსია უცვლელი დარჩება.'
-                  : confirm?.action === 'merge'
-                    ? 'არჩეული ვაკანსიის რედაქცია დარჩება, ამ ჩანაწერის წყაროები კი მას მიემატება.'
-                    : 'ჩანაწერი საჯარო სიაში აღარ გამოჩნდება. აღდგენა ადმინიდან შეგიძლია.'}
+              {confirm?.action === 'bulk-publish'
+                ? 'გამოქვეყნდება ყველა მოლოდინში მყოფი ვაკანსიის შენახული რედაქცია, ყველა გვერდიდან და ფილტრის მიუხედავად. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
+                : confirm?.action === 'publish'
+                  ? 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
+                  : confirm?.action === 'apply-source'
+                    ? 'წყაროს ტექსტი შენახულ რედაქციას ჩაანაცვლებს. საჯარო ვერსია უცვლელი დარჩება.'
+                    : confirm?.action === 'merge'
+                      ? 'არჩეული ვაკანსიის რედაქცია დარჩება, ამ ჩანაწერის წყაროები კი მას მიემატება.'
+                      : 'ჩანაწერი საჯარო სიაში აღარ გამოჩნდება. აღდგენა ადმინიდან შეგიძლია.'}
             </DialogDescription>
           </DialogHeader>
           <div className="confirm-actions">
@@ -951,10 +998,12 @@ export default function AdminPanel() {
               disabled={busy}
               onClick={() =>
                 confirm &&
-                void act(confirm.action, {
-                  itemId: confirm.itemId,
-                  targetId: confirm.targetId,
-                })
+                (confirm.action === 'bulk-publish'
+                  ? void publishAll()
+                  : void act(confirm.action, {
+                      itemId: confirm.itemId,
+                      targetId: confirm.targetId,
+                    }))
               }
             >
               დადასტურება

@@ -14,10 +14,15 @@ export function CompanyLogo({
 }) {
   const [failed, setFailed] = useState('');
   const src = safeExternalUrl(url || '');
+  const words = company
+    .trim()
+    .split(/\s+/)
+    .filter((word) => /[\p{L}\p{N}]/u.test(word));
+  const meaningful = words.filter(
+    (word) => !['სსიპ', 'შპს', 'სს', 'llc', 'ltd'].includes(word.toLowerCase()),
+  );
   const initials =
-    company
-      .trim()
-      .split(/\s+/)
+    (meaningful.length ? meaningful : words)
       .slice(0, 2)
       .map((p) => Array.from(p)[0])
       .join('')

@@ -4,7 +4,12 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db } from '../lib/server/db';
 import { discoverItems, stageVacancy } from '../worker/importer';
-import { mutateJob, publicJobs } from '../lib/server/jobs';
+import {
+  mutateJob,
+  publicJobs,
+  bulkPublishCandidates,
+  bulkPublishJobs,
+} from '../lib/server/jobs';
 import { getCompany, saveCompany } from '../lib/server/companies';
 import type { Vacancy } from '../lib/types';
 const enabled = process.env.RUN_DB_TESTS === '1';
@@ -54,6 +59,33 @@ void test(
       'shared and saved links cannot expose an unpublished vacancy',
     );
     assert.equal((await publicJobs(params, true)).total, 1);
+    const candidates = await bulkPublishCandidates();
+    assert.ok(candidates.some((item) => item.id === job.id));
+    const conflict = await bulkPublishJobs([
+      { id: job.id, version: job.version - 1 },
+    ]);
+    assert.equal(conflict.results[0].published, false);
+    const batch = await bulkPublishJobs([{ id: job.id, version: job.version }]);
+    assert.equal(batch.results[0].published, true);
+    job = (await db().query('SELECT * FROM jobs WHERE id=$1', [job.id]))
+      .rows[0];
+    const retry = await bulkPublishJobs([{ id: job.id, version: job.version }]);
+    assert.equal(
+      retry.results[0].published,
+      false,
+      'bulk approval cannot republish existing jobs',
+    );
+    assert.ok(
+      !(await bulkPublishCandidates()).some((item) => item.id === job.id),
+    );
+    await assert.rejects(() =>
+      bulkPublishJobs(
+        Array.from({ length: 21 }, () => ({
+          id: job.id,
+          version: job.version,
+        })),
+      ),
+    );
     const edited = { ...v, title: v.title + ' edited' };
     await mutateJob({
       id: job.id,

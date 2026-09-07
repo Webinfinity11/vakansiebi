@@ -175,11 +175,48 @@ export async function adminJobs(status: string, q: string, page = 1) {
   ).rows[0];
   return { jobs: rows, total, counts };
 }
+export async function bulkPublishCandidates() {
+  return (
+    await db().query(`SELECT j.id,j.version FROM jobs j
+    WHERE j.status='pending' AND EXISTS (SELECT 1 FROM source_items i
+    JOIN sources s ON s.id=i.source_id WHERE i.job_id=j.id AND NOT s.retired)
+    ORDER BY j.created_at,j.id`)
+  ).rows as { id: string; version: number }[];
+}
+
+export async function bulkPublishJobs(input: unknown) {
+  const items = z
+    .array(z.object({ id: z.uuid(), version: z.number().int() }))
+    .min(1)
+    .max(20)
+    .parse(input);
+  const results: { id: string; published: boolean; reason?: string }[] = [];
+  for (const item of items) {
+    try {
+      await mutateJob({ ...item, action: 'publish', pendingOnly: true });
+      results.push({ id: item.id, published: true });
+    } catch (error) {
+      if (!(error instanceof ApiError) && !(error instanceof z.ZodError))
+        throw error;
+      results.push({
+        id: item.id,
+        published: false,
+        reason:
+          error instanceof z.ZodError
+            ? 'მონაცემები შესასწორებელია'
+            : error.message,
+      });
+    }
+  }
+  return { results };
+}
+
 export async function mutateJob(input: unknown) {
   const data = z
     .object({
       id: z.uuid(),
       version: z.number().int(),
+      pendingOnly: z.boolean().optional(),
       action: z.enum([
         'save',
         'publish',
@@ -211,6 +248,16 @@ export async function mutateJob(input: unknown) {
         'ჩანაწერი შეიცვალა. განაახლე სია და სცადე ხელახლა.',
         409,
       );
+    if (data.pendingOnly) {
+      const active = (
+        await c.query(
+          `SELECT 1 FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.job_id=$1 AND NOT s.retired LIMIT 1`,
+          [job.id],
+        )
+      ).rowCount;
+      if (job.status !== 'pending' || !active)
+        throw new ApiError('ჩანაწერი აღარ არის დასადასტურებელი', 409);
+    }
     if (job.status === 'merged')
       throw new ApiError('ვაკანსია უკვე გაერთიანებულია', 409);
     let draft: Vacancy = data.draft || job.draft;
