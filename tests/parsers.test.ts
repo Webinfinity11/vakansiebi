@@ -304,6 +304,27 @@ void test('retired competitor cannot be discovered by active configs or fetched'
   );
 });
 
+void test('SS retains duties and requirements supplied as plain strings', () => {
+  const detail = {
+    id: 123,
+    jobsDealType: 1,
+    title: { ka: 'მზარეული' },
+    publisherName: 'რესტორანი',
+    description: { ka: 'მზარეულის ვაკანსია.' },
+    duties:
+      'კერძების მომზადება განსაზღვრული რეცეპტისა და კალკულაციის მიხედვით.',
+    requirements: 'მინიმუმ 1 წლიანი გამოცდილება მზარეულის პოზიციაზე.',
+  };
+  const html = `<script id="__NEXT_DATA__">${JSON.stringify({ props: { pageProps: { detailsInitData: detail } } })}</script>`;
+  const result = parseDetail(
+    'ss',
+    html,
+    'https://jobs.ss.ge/ka/details/mzareuli-123',
+  );
+  assert.ok(result.description.includes(detail.duties));
+  assert.ok(result.description.includes(detail.requirements));
+});
+
 void test('SS pagination reaches distant pages using the public result count', () => {
   const html = `<a href="/ka/l/vacancies?page=2">2</a><a href="/ka/l/vacancies?page=3">3</a>
     <script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ props: { pageProps: { searchInitData: { result: { items: Array(25).fill({}), totalCount: 2452 } } } } })}</script>`;

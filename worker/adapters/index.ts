@@ -427,7 +427,7 @@ export function parseDetail(
         });
     });
   } else if (source === 'ss') {
-    type Translated = { ka?: string; text?: string };
+    type Translated = string | { ka?: string; text?: string };
     type SsDetail = {
       id?: number;
       jobsDealType?: number;
@@ -462,7 +462,8 @@ export function parseDetail(
       data.jobsDealType !== 1
     )
       throw Error('SS.ge vacancy data missing or mismatched');
-    const translated = (v?: Translated) => v?.ka || v?.text || '';
+    const translated = (v?: Translated) =>
+      typeof v === 'string' ? v : v?.ka || v?.text || '';
     j.title = translated(data.title);
     j.company = data.publisherName || '';
     j.city = translated(data.address?.cityTitle);
