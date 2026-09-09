@@ -20,7 +20,7 @@ try {
       throw Error('A scraper is running; reset aborted without changes');
   }
   await c.query(
-    'LOCK TABLE sources,source_items,jobs,audit_log,source_runs,company_profiles IN EXCLUSIVE MODE',
+    'LOCK TABLE sources,source_items,jobs,audit_log,source_runs,company_profiles,source_discovery_pages IN EXCLUSIVE MODE',
   );
   const backup: Record<string, unknown> = {
     version: 1,
@@ -33,6 +33,7 @@ try {
     'audit_log',
     'source_runs',
     'company_profiles',
+    'source_discovery_pages',
   ]) {
     backup[table] = (await c.query(`SELECT * FROM ${table}`)).rows;
   }
@@ -49,7 +50,8 @@ try {
   await c.query('DELETE FROM audit_log WHERE job_id IS NOT NULL');
   await c.query('DELETE FROM source_items');
   await c.query('DELETE FROM jobs');
-  await c.query(`UPDATE sources SET sitemap_cursor=0,last_started_at=NULL,last_success_at=NULL,
+  await c.query('DELETE FROM source_discovery_pages');
+  await c.query(`UPDATE sources SET discovery_cursor=0,reported_total=NULL,reported_pages=NULL,discovery_observed_at=NULL,sitemap_cursor=0,last_started_at=NULL,last_success_at=NULL,
     last_error=NULL,consecutive_failures=0,next_run_at=now(),requested_at=CASE WHEN enabled AND NOT retired THEN now() ELSE NULL END`);
   await c.query('COMMIT');
   console.log(
