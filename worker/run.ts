@@ -1,4 +1,12 @@
 import { randomUUID } from 'node:crypto';
+import {
+  readDiscoveryInfo,
+  discoveryListingUrl,
+  planDiscoveryPages,
+  DiscoveryPageGuard,
+  listingFingerprint,
+  type DiscoverySource,
+} from './discovery';
 import { load } from 'cheerio';
 import { db, transaction } from '../lib/server/db';
 import { reconcileJob } from './automation';
@@ -24,6 +32,7 @@ export async function runSource(
   limit = Number(process.env.CRAWL_BATCH_SIZE) || 20,
 ) {
   const activeConfig = getSourceConfig(source);
+  const startedAt = Date.now();
   const lock = await db().connect();
   const lockId = sourceLockIds[source];
   limit = Math.max(1, Math.min(100, Math.floor(limit) || 20));
@@ -36,7 +45,8 @@ export async function runSource(
     discovered = 0,
     removed = 0,
     linked = 0,
-    expired = 0;
+    expired = 0,
+    budgetExhausted = false;
   try {
     locked = (
       await lock.query('SELECT pg_try_advisory_lock($1) AS locked', [lockId])
@@ -59,28 +69,83 @@ export async function runSource(
       'UPDATE sources SET last_started_at=now(),requested_at=NULL WHERE id=$1',
       [source],
     );
-    const html = await sourceFetch(source, activeConfig.list);
-    const links = listLinks(source, html);
+    const paginated = source === 'hr' || source === 'jobs' || source === 'ss';
+    const listUrl = paginated
+      ? discoveryListingUrl(source as DiscoverySource)
+      : activeConfig.list;
+    const html = await sourceFetch(source, listUrl);
+    const links = listLinks(source, html, listUrl);
     if (!links.length)
       throw Error(
         'Listing returned no vacancy links; source structure may have changed',
       );
-    const sitemap = activeConfig.sitemap;
+    const info = paginated
+      ? readDiscoveryInfo(source as DiscoverySource, html)
+      : null;
+    const guard = new DiscoveryPageGuard();
+    guard.accept(links);
+    const rememberPage = async (
+      url: string,
+      pageLinks: { externalId: string; url: string }[],
+    ) => {
+      await discoverItems(source, pageLinks);
+      await db().query(
+        `INSERT INTO source_discovery_pages(source_id,url,signature,item_count) VALUES($1,$2,$3,$4)
+        ON CONFLICT(source_id,url) DO UPDATE SET signature=excluded.signature,item_count=excluded.item_count,observed_at=now()`,
+        [source, url, listingFingerprint(pageLinks), pageLinks.length],
+      );
+    };
+    await rememberPage(listUrl, links);
+    if (info)
+      await db().query(
+        'UPDATE sources SET reported_total=$2,reported_pages=$3,discovery_observed_at=now() WHERE id=$1',
+        [source, info.reportedTotal, info.totalPages],
+      );
+    // The full HR search is authoritative for discovery; its sitemap is only a fallback.
+    const sitemap = info?.totalPages ? null : activeConfig.sitemap;
     let discoveryWarning = '';
-    const extraPages = [
-      ...new Set(
-        Array.from({ length: 3 }, (_, offset) =>
-          additionalListing(source, html, config.sitemap_cursor + offset),
-        ).filter((url): url is string => !!url),
-      ),
-    ];
+    const pageBudget = Math.max(
+      1,
+      Math.min(50, Number(process.env.DISCOVERY_PAGE_BUDGET) || 20),
+    );
+    const extraPages = paginated
+      ? planDiscoveryPages(
+          source as DiscoverySource,
+          info!,
+          config.discovery_cursor,
+          pageBudget,
+        ).urls
+      : [
+          ...new Set(
+            Array.from({ length: 3 }, (_, offset) =>
+              additionalListing(source, html, config.sitemap_cursor + offset),
+            ).filter((url): url is string => !!url),
+          ),
+        ];
+    if (paginated && !info?.totalPages)
+      discoveryWarning =
+        'Listing page count is unavailable; first page retained and discovery will retry';
     for (const extra of extraPages) {
       try {
-        links.push(
-          ...listLinks(source, await sourceFetch(source, extra), extra),
+        const pageLinks = listLinks(
+          source,
+          await sourceFetch(source, extra),
+          extra,
         );
+        const accepted = guard.accept(pageLinks);
+        if (accepted !== 'accepted') {
+          discoveryWarning =
+            'Pagination returned ' +
+            accepted +
+            ' page; cursor retained for retry';
+          break;
+        }
+        await rememberPage(extra, pageLinks);
+        links.push(...pageLinks);
         await db().query(
-          'UPDATE sources SET sitemap_cursor=sitemap_cursor+1 WHERE id=$1',
+          paginated
+            ? 'UPDATE sources SET discovery_cursor=discovery_cursor+1 WHERE id=$1'
+            : 'UPDATE sources SET sitemap_cursor=sitemap_cursor+1 WHERE id=$1',
           [source],
         );
       } catch (e) {
@@ -124,7 +189,7 @@ export async function runSource(
       }
     }
     const unique = [...new Map(links.map((a) => [a.externalId, a])).values()];
-    await discoverItems(source, unique);
+    if (sitemap) await discoverItems(source, unique);
     discovered = unique.length;
     // Split the budget between backlog and rechecks so neither can starve the other.
     const quota = Math.max(1, Math.floor(limit * 0.75));
@@ -147,6 +212,10 @@ export async function runSource(
       0,
       limit,
     )) {
+      if (Date.now() - startedAt > 16 * 60 * 1000) {
+        budgetExhausted = true;
+        break;
+      }
       try {
         const data = parseDetail(
           source,
@@ -231,6 +300,7 @@ export async function runSource(
       removed,
       linked,
       expired,
+      budgetExhausted,
       warning,
     };
   } catch (e) {

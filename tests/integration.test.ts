@@ -457,6 +457,54 @@ void test(
     } finally {
       globalThis.fetch = originalFetch;
     }
+    try {
+      const firstId = String(Date.now()),
+        secondId = String(Date.now() + 1);
+      globalThis.fetch = async (input) => {
+        const url = new URL(String(input));
+        if (url.pathname === '/robots.txt')
+          return new Response('User-agent: *\nAllow: /');
+        if (url.pathname.includes('/ads/'))
+          return new Response(
+            `<a href="/ge/?view=jobs&id=${url.searchParams.get('page') === '2' ? secondId : firstId}">Vacancy</a><script>if(loaded_page<2){loaded_page++; request('for_scroll=yes');}</script>`,
+          );
+        return new Response(
+          `<table><tr><td class="dtitle"><b>Discovery test vacancy ${url.searchParams.get('id')}</b></td><td class="dtitle"><b>Test employer</b></td><td class="dtitle"><b>01 სექტემბერი 2099</b><b>30 სექტემბერი 2099</b></td></tr><tr><td>Join our experienced team and create excellent services for our customers.</td></tr></table>`,
+        );
+      };
+      await db().query("UPDATE sources SET discovery_cursor=0 WHERE id='jobs'");
+      const discovery = await runSource('jobs', 1);
+      assert.ok('discovered' in discovery && discovery.discovered === 2);
+      const foundIds = (
+        await db().query(
+          "SELECT external_id FROM source_items WHERE source_id='jobs' AND external_id=ANY($1::text[])",
+          [[firstId, secondId]],
+        )
+      ).rows;
+      assert.equal(
+        foundIds.length,
+        2,
+        'jobs beyond page one must be retained even with a one-detail batch',
+      );
+      assert.equal(
+        (
+          await db().query(
+            "SELECT discovery_cursor,reported_pages FROM sources WHERE id='jobs'",
+          )
+        ).rows[0].reported_pages,
+        2,
+      );
+      assert.equal(
+        (
+          await db().query(
+            "SELECT count(*)::int count FROM source_discovery_pages WHERE source_id='jobs'",
+          )
+        ).rows[0].count,
+        2,
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
     await db().end();
   },
 );

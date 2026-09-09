@@ -29,5 +29,6 @@ jobs:
         run: npm run worker -- --source=${{ matrix.source }} --due --once
         env:
           DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
-          CRAWL_BATCH_SIZE: '50'
+          CRAWL_BATCH_SIZE: '100'
+          DISCOVERY_PAGE_BUDGET: '30'
           CRAWL_DELAY_MS: '2000'
