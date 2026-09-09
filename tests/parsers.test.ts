@@ -303,3 +303,20 @@ void test('retired competitor cannot be discovered by active configs or fetched'
     /retired/,
   );
 });
+
+void test('SS pagination reaches distant pages using the public result count', () => {
+  const html = `<a href="/ka/l/vacancies?page=2">2</a><a href="/ka/l/vacancies?page=3">3</a>
+    <script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ props: { pageProps: { searchInitData: { result: { items: Array(25).fill({}), totalCount: 2452 } } } } })}</script>`;
+  assert.equal(
+    additionalListing('ss', html, 70),
+    'https://jobs.ss.ge/ka/l/vacancies?page=72',
+  );
+  assert.equal(
+    additionalListing('ss', html, 98),
+    'https://jobs.ss.ge/ka/l/vacancies?page=2',
+  );
+  assert.equal(
+    additionalListing('ss', '<script id="__NEXT_DATA__">broken</script>', 70),
+    null,
+  );
+});

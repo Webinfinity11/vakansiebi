@@ -679,6 +679,20 @@ export function additionalListing(
         last = Math.max(last, p);
     } catch {}
   });
+  if (source === 'ss') {
+    // The visible pager only exposes nearby pages, but public SSR state gives the full count.
+    try {
+      const result = JSON.parse($('#__NEXT_DATA__').text()).props.pageProps
+        .searchInitData.result;
+      const size = Array.isArray(result.items) ? result.items.length : 0;
+      const total = result.totalCount;
+      if (size > 0 && Number.isInteger(total) && total >= size) {
+        last = Math.max(last, Math.min(1000, Math.ceil(total / size)));
+      }
+    } catch {
+      /* Fall back to observed links when public state changes. */
+    }
+  }
   if (last < 2) return null;
   const u = new URL(legacyConfigs[source].list);
   u.searchParams.set(key, String(2 + (Math.max(0, cursor) % (last - 1))));

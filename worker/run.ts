@@ -58,8 +58,14 @@ export async function runSource(
       );
     const sitemap = activeConfig.sitemap;
     let discoveryWarning = '';
-    const extra = additionalListing(source, html, config.sitemap_cursor);
-    if (extra) {
+    const extraPages = [
+      ...new Set(
+        Array.from({ length: 3 }, (_, offset) =>
+          additionalListing(source, html, config.sitemap_cursor + offset),
+        ).filter((url): url is string => !!url),
+      ),
+    ];
+    for (const extra of extraPages) {
       try {
         links.push(
           ...listLinks(source, await sourceFetch(source, extra), extra),
@@ -70,6 +76,7 @@ export async function runSource(
         );
       } catch (e) {
         discoveryWarning = 'Listing page: ' + (e as Error).message;
+        break;
       }
     }
     if (sitemap) {
