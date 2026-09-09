@@ -101,7 +101,11 @@ PostgreSQL განთავსებულია Neon-ის პროექ�
 
 Vercel-ის Production გარემოში საჭიროა `DATABASE_URL` (Neon-ის pooled მისამართი), `APP_URL`, `ADMIN_PASSWORD_HASH` და `SESSION_SECRET`. მიგრაციებისა და მუდმივი პარსერისთვის გამოიყენე Neon-ის direct მისამართი. საიდუმლო მნიშვნელობები Git-ში არ ინახება; `.vercelignore` ადგილობრივ ბაზას, პაროლებსა და სარეზერვო ასლებს ატვირთვიდან გამორიცხავს.
 
-პარსერი ჯერ ამ კომპიუტერზე მუშაობს და მონაცემებს პირდაპირ Neon-ში წერს. კომპიუტერის გამორთვისას შეგროვება შეჩერდება, თუმცა ონლაინ საიტი და შენახული ვაკანსიები ხელმისაწვდომი დარჩება. შეტყობინებები გამორთულია, გამოქვეყნება კვლავ ხელით ხდება.
+The scraper runs in GitHub Actions (`.github/workflows/scrape.yml`) at minutes 17 and 47 of each hour. Each source respects its admin interval, enabled status and manual request. Admin requests are picked up by the next workflow run; Actions > Vacancy scraper > Run workflow also checks due sources. The local computer is no longer required.
+
+`SCRAPER_DATABASE_URL` is a GitHub Actions secret containing the Neon direct connection URL; session advisory locks require the direct endpoint. Four independent jobs process up to 20 details per source. Overlapping workflows queue, and database locks also protect against a local worker. Three consecutive detail failures stop that source's batch, retaining the remaining queue. Partial and failed results appear as failed Actions jobs and remain visible in the admin history. New vacancies still require manual approval; the scraper never sends messages or publishes jobs.
+
+GitHub schedules may be delayed. In public repositories, schedules disable after 60 days without repository activity and must be re-enabled. Standard GitHub-hosted runners are free for this public repository; Neon usage is separate.
 
 ამ Vercel პროექტში GitHub-ის ავტომატური განთავსების კავშირი ჯერ არ არის გამართული. განახლება CLI-ით ხდება: `vercel deploy --prod --scope kapana22s-projects`.
 
