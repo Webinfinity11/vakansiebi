@@ -37,6 +37,12 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { CompanyLogo } from './company-logo';
+import {
+  PersonalSpace,
+  ApplicationControl,
+  usePersonalSpace,
+} from './personal-space';
+import type { SearchFilters } from '@/lib/personal-space';
 import type { PublicJob as Job } from '@/lib/types';
 import { categories, sourceNames } from '@/lib/types';
 
@@ -175,6 +181,8 @@ export default function JobBoard() {
   const params = useSearchParams();
   const demo = params.get('preview') === '1';
   const deepId = params.get('job');
+  const personal = usePersonalSpace();
+  const [personalOpen, setPersonalOpen] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState('');
@@ -311,6 +319,18 @@ export default function JobBoard() {
     storageReady,
     retry,
   ]);
+  const applySearch = (filters: SearchFilters) => {
+    setPageState({ key: '', page: 1 });
+    setQuery(filters.query);
+    setCity(filters.city);
+    setCategory(filters.category);
+    setSource(filters.source);
+    setPaid(filters.paid);
+    setRemote(filters.remote);
+    setSort(filters.sort);
+    setSavedOnly(false);
+    document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
+  };
   const reset = () => {
     setQuery('');
     setCity('ყველა');
@@ -424,6 +444,7 @@ export default function JobBoard() {
             >
               ვაკანსიები
             </button>
+            <button onClick={() => setPersonalOpen(true)}>ჩემი სივრცე</button>
             <a href="#how-it-works">როგორ მუშაობს</a>
           </nav>
           <button
@@ -593,6 +614,15 @@ export default function JobBoard() {
                   ]}
                 />
               </div>
+              <PersonalSpace
+                space={personal}
+                filters={{ query, city, category, source, paid, remote, sort }}
+                active={activeCount > 0}
+                disabled={demo}
+                onApply={applySearch}
+                open={personalOpen}
+                setOpen={setPersonalOpen}
+              />
               <button
                 className="mobile-filter-toggle secondary-button"
                 onClick={() => setFiltersOpen(true)}
@@ -920,6 +950,11 @@ export default function JobBoard() {
                     </span>
                   )}
                 </div>
+                <ApplicationControl
+                  job={selected}
+                  space={personal}
+                  disabled={demo}
+                />
                 <dl className="detail-facts">
                   {[
                     ['ანაზღაურება', selected.salary || 'არ არის მითითებული'],
