@@ -28,7 +28,8 @@ export async function runSource(
     failed = 0,
     discovered = 0,
     removed = 0,
-    linked = 0;
+    linked = 0,
+    expired = 0;
   try {
     locked = (
       await lock.query('SELECT pg_try_advisory_lock($1) AS locked', [lockId])
@@ -154,6 +155,7 @@ export async function runSource(
         if (outcome === 'imported') imported++;
         if (outcome === 'changed') changed++;
         if (outcome === 'linked') linked++;
+        if (outcome === 'expired') expired++;
       } catch (e) {
         if (e instanceof SourceHttpError && [404, 410].includes(e.status)) {
           removed++;
@@ -216,6 +218,7 @@ export async function runSource(
       failed,
       removed,
       linked,
+      expired,
       warning,
     };
   } catch (e) {

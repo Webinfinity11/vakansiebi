@@ -1,3 +1,6 @@
+import { mailtoAddress } from '../../lib/application-contact';
+import { companyKey } from '../../lib/company-key';
+import { visibleFields } from '../visible-fields';
 import { load } from 'cheerio';
 import { safeLogoUrl, safeExternalUrl } from '../../lib/vacancy-media';
 
@@ -88,6 +91,10 @@ export function getSourceConfig(source: SourceId) {
 export function cleanText(html: string) {
   const $ = load(html);
   $('script,style,noscript,iframe').remove();
+  $('a[href]').each((_, el) => {
+    const email = mailtoAddress($(el).attr('href') || '');
+    if (email && !$(el).text().includes(email)) $(el).append(' ' + email);
+  });
   $('br').replaceWith('\n');
   $('li').prepend('• ');
   $('p,div,li,h1,h2,h3,tr').each((_, el) => {
@@ -280,6 +287,21 @@ export function parseDetail(
           '',
           a.isWithBonus,
         );
+        if (
+          (number(a.salaryFrom) !== null &&
+            number(a.salaryTo) !== null &&
+            a.salaryFrom! > a.salaryTo!) ||
+          [a.salaryFrom, a.salaryTo].some(
+            (v) => v != null && v !== 0 && number(v) === null,
+          )
+        ) {
+          j.salary = '';
+          j.salaryMin = null;
+          j.currency = '';
+          j.warnings.push(
+            'წყაროს ხელფასის დიაპაზონი არაზუსტია. გადაამოწმე პირველწყარო.',
+          );
+        }
       }
     } else {
       j.title = $('.ann-title-container__text').first().text().trim();
@@ -564,8 +586,14 @@ export function parseDetail(
       cells.last().closest('tr').next().find('td').html() || '',
     );
     const body = cells.last().closest('tr').next().find('td').first();
-    // Jobs.ge mixes unrelated client banners into the description table. Leave logo empty unless the editor selects one.
+    // Only a client image explicitly labelled with this employer can be used.
+    // Unlabelled images and other clients' rotating advertisements are ignored.
     j.logoUrl = '';
+    $('img[src*="/data/clients/"]').each((_, el) => {
+      const label = $(el).attr('title') || $(el).attr('alt') || '';
+      if (label && companyKey(label) === companyKey(j.company))
+        j.logoUrl ||= safeLogoUrl($(el).attr('src'), url);
+    });
     body.find('a[href]').each((_, el) => {
       const href = safeExternalUrl($(el).attr('href') || '', url);
       if (href)
@@ -590,19 +618,14 @@ export function parseDetail(
     );
     if (j.deadline && j.datePosted && j.deadline < j.datePosted)
       j.deadline = georgianDate(dates[1], Number(j.datePosted.slice(0, 4)) + 1);
-    j.city = [
-      'თბილისი',
-      'ბათუმი',
-      'ქუთაისი',
-      'რუსთავი',
-      'თელავი',
-      'გორი',
-      'ფოთი',
-      'ზუგდიდი',
-      'კასპი',
-    ]
-      .filter((city) => j.description.includes(city))
-      .join(', ');
+    const fields = visibleFields(j.description);
+    j.city = fields.location;
+    j.salary = fields.salary;
+    j.salaryMin = fields.salaryMin;
+    j.currency = fields.currency;
+    j.salaryPeriod = fields.salaryPeriod;
+    j.mode = fields.mode;
+    if (fields.warning) j.warnings.push(fields.warning);
   }
   if (source === 'hr')
     $('.description')
@@ -620,8 +643,12 @@ export function parseDetail(
     ...new Map(j.applicationLinks.map((l) => [l.url, l])).values(),
   ].slice(0, 12);
   j.category = category(j.title);
-  j.title = j.title.trim();
-  j.company = j.company.trim();
+  j.title = j.title.replace(/\s+/g, ' ').trim();
+  j.company = j.company.replace(/\s+/g, ' ').trim();
+  j.city = j.city.replace(/\s+/g, ' ').trim();
+  if (!j.company) j.warnings.push('კომპანიის სახელი წყაროზე ვერ მოიძებნა.');
+  if (!j.city && j.mode !== 'დისტანციური')
+    j.warnings.push('სამუშაოს მდებარეობა დასაზუსტებელია.');
   if (j.title.length < 2 || j.description.length < 40)
     throw Error('Vacancy structure changed or description is missing');
   if (j.description.length > 100000) throw Error('Description exceeds limit');

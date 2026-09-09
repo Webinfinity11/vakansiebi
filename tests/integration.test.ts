@@ -309,6 +309,16 @@ void test(
         .total,
       0,
     );
+    const expiredExternal = randomUUID();
+    await discoverItems('hr', [{ externalId: expiredExternal, url: v.url }]);
+    const expiredItem = (await db().query('SELECT id FROM source_items WHERE external_id=$1', [expiredExternal])).rows[0];
+    assert.equal(await stageVacancy(expiredItem.id, { ...v, deadline: '2000-01-01' }), 'expired');
+    const expiredRecord = (await db().query('SELECT job_id,raw,next_check_at FROM source_items WHERE id=$1', [expiredItem.id])).rows[0];
+    assert.equal(expiredRecord.job_id, null);
+    assert.equal(expiredRecord.raw.deadline, '2000-01-01');
+    assert.ok(expiredRecord.next_check_at > new Date());
+    // A renewed deadline can be imported on the next check.
+    assert.equal(await stageVacancy(expiredItem.id, v), 'imported');
     await db().end();
   },
 );

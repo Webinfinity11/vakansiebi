@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { db, transaction } from '../lib/server/db';
-import { fingerprint } from './adapters';
+import { fingerprint, tbilisiDate } from './adapters';
 import { samePosting } from '../lib/job-intelligence';
 import type { SourceId, Vacancy } from '../lib/types';
 export function hashVacancy(v: Vacancy) {
@@ -16,6 +16,13 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
     ).rows[0];
     if (!item) throw Error('Item missing');
     const hash = hashVacancy(v);
+    if (!item.job_id && v.deadline && v.deadline < tbilisiDate()) {
+      await c.query(
+        "UPDATE source_items SET raw=$2,content_hash=$3,last_checked_at=now(),next_check_at=now()+interval '7 days',error=NULL,failures=0 WHERE id=$1",
+        [itemId, v, hash],
+      );
+      return 'expired';
+    }
     let outcome = 'unchanged';
     let jobId = item.job_id;
     if (!jobId) {

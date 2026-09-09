@@ -210,7 +210,7 @@ void test('Samushao rejects concatenated salary, visible currency mismatch and i
   const j = parseDetail('samushao', make(data), url);
   assert.equal(j.salary, '');
   assert.equal(j.deadline, '');
-  assert.equal(j.warnings?.length, 1);
+  assert.ok(j.warnings?.some((w) => w.includes('ხელფას')));
   const conflict = parseDetail(
     'samushao',
     make(
@@ -288,7 +288,7 @@ void test('SS withholds reversed salary ranges and never copies private profile/
   );
   assert.equal(j.salary, '');
   assert.equal(j.salaryMin, null);
-  assert.equal(j.warnings?.length, 1);
+  assert.ok(j.warnings?.some((w) => w.includes('ხელფას')));
   assert.equal(j.company, 'Studio');
   assert.ok(!JSON.stringify(j).includes('private'));
   assert.ok(!JSON.stringify(j).includes('hidden@example.com'));
