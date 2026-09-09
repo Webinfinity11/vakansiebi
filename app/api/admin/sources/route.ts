@@ -13,7 +13,13 @@ export async function GET() {
     await requireAdmin();
     const sources = (
       await db().query(
-        `SELECT s.*,(SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NOT NULL) imported,(SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NULL) queued FROM sources s WHERE NOT s.retired ORDER BY s.id`,
+        `SELECT s.*,
+        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id) discovered,
+        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NOT NULL) imported,
+        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NULL AND (i.error IS NULL OR i.failures>0)) queued,
+        (SELECT count(DISTINCT j.id)::int FROM source_items i JOIN jobs j ON j.id=i.job_id WHERE i.source_id=s.id AND j.status='published' AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))) published_count,
+        (SELECT count(*)::int FROM source_discovery_pages p WHERE p.source_id=s.id AND p.observed_at>now()-interval '24 hours') observed_pages
+        FROM sources s WHERE NOT s.retired ORDER BY s.id`,
       )
     ).rows;
     const runs = (

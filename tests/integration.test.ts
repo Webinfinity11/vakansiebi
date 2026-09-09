@@ -461,7 +461,7 @@ void test(
       const firstId = String(Date.now()),
         secondId = String(Date.now() + 1);
       globalThis.fetch = async (input) => {
-        const url = new URL(String(input));
+        const url = new URL(input instanceof Request ? input.url : input);
         if (url.pathname === '/robots.txt')
           return new Response('User-agent: *\nAllow: /');
         if (url.pathname.includes('/ads/'))

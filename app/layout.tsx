@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './board.css';
 export const metadata: Metadata = {
   title: 'ერთად — ვაკანსიები ერთ სივრცეში',
   description:

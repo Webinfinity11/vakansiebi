@@ -74,6 +74,12 @@ export type Source = {
   requested_at: string | null;
   imported: number;
   queued: number;
+  discovered?: number;
+  published_count?: number;
+  observed_pages?: number;
+  reported_total?: number | null;
+  reported_pages?: number | null;
+  discovery_observed_at?: string | null;
 };
 export const categories = [
   'ტექნოლოგიები',

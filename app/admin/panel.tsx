@@ -444,11 +444,32 @@ export default function AdminPanel() {
                   </p>
                   <div className="source-numbers">
                     <span>
-                      <strong>{s.imported}</strong> შემოტანილი
+                      <strong>{s.discovered ?? s.imported}</strong> აღმოჩენილი
                     </span>
                     <span>
                       <strong>{s.queued}</strong> რიგში
                     </span>
+                  </div>
+                  <div className="source-coverage">
+                    <p>
+                      დამუშავებული: <b>{s.imported}</b> · ლაივზე:{' '}
+                      <b>{s.published_count ?? '—'}</b>
+                    </p>
+                    <p>
+                      წყაროს მითითებული რაოდენობა:{' '}
+                      <b>{s.reported_total ?? 'არ არის მითითებული'}</b>
+                    </p>
+                    <p>
+                      ბოლო 24 საათში გავლილი გვერდები:{' '}
+                      <b>
+                        {s.observed_pages ?? 0}
+                        {s.reported_pages ? ` / ${s.reported_pages}` : ''}
+                      </b>
+                    </p>
+                    <small>
+                      წყაროს საერთო რაოდენობა შეიძლება შეიცავდეს დუბლიკატებსა და
+                      ვადაგასულ განცხადებებს.
+                    </small>
                   </div>
                   <label
                     className="check-row"
@@ -503,7 +524,8 @@ export default function AdminPanel() {
                     />
                   </div>
                   <p className="source-last">
-                    არსებული ვაკანსიები: ყოველ {s.detail_interval_hours} საათში
+                    არსებული ვაკანსიების ხელახალი შემოწმების სამიზნე ინტერვალი:{' '}
+                    {s.detail_interval_hours} საათი · რიგის მიხედვით
                   </p>
                   {s.last_error && (
                     <div className="notice">
