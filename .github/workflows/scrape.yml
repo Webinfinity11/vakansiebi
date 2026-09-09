@@ -1,0 +1,33 @@
+name: Vacancy scraper
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vacancy-scraper-production
+  cancel-in-progress: false
+jobs:
+  scrape:
+    if: github.repository == 'Webinfinity11/vakansiebi' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [hr, jobs, ss, hrgov]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Import due vacancies into moderation
+        run: npm run worker -- --source=${{ matrix.source }} --due --once
+        env:
+          DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
+          CRAWL_BATCH_SIZE: '20'
+          CRAWL_DELAY_MS: '2000'

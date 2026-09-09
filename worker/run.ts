@@ -124,6 +124,8 @@ export async function runSource(
       )
     ).rows;
     const newCount = Math.min(pending.length, limit - existing.length);
+    let consecutiveDetailFailures = 0;
+    let stoppedEarly = false;
     for (const item of [...pending.slice(0, newCount), ...existing].slice(
       0,
       limit,
@@ -139,18 +141,31 @@ export async function runSource(
           data,
           config.detail_interval_hours,
         );
+        consecutiveDetailFailures = 0;
         if (outcome === 'imported') imported++;
         if (outcome === 'changed') changed++;
       } catch (e) {
         failed++;
+        consecutiveDetailFailures++;
         await db().query(
           "UPDATE source_items SET last_checked_at=now(),failures=failures+1,error=$2,next_check_at=now()+(LEAST(1440,30*power(2,LEAST(failures,5)))*interval '1 minute') WHERE id=$1",
           [item.id, (e as Error).message.slice(0, 500)],
         );
+        // Stop a broken source without exhausting its backlog.
+        if (consecutiveDetailFailures >= 3) {
+          stoppedEarly = true;
+          break;
+        }
       }
     }
     const warning =
-      [discoveryWarning, failed ? `${failed} detail pages failed` : null]
+      [
+        discoveryWarning,
+        stoppedEarly
+          ? 'Stopped after 3 consecutive detail failures; remaining items retained for retry'
+          : null,
+        failed ? `${failed} detail pages failed` : null,
+      ]
         .filter(Boolean)
         .join('; ') || null;
     await db().query(
