@@ -120,9 +120,14 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
   }
   if (preview) ordering = ordering.replaceAll('j.published->', 'j.draft->');
   if (preview) ordering = ordering.replaceAll('j.published_at', 'j.created_at');
+  const summary = params.get('summary') === '1';
+  const snapshot = preview ? 'j.draft' : 'j.published';
+  const projection = summary
+    ? `(${snapshot} - ARRAY['description','facts','applicationLinks','warnings'])`
+    : snapshot;
   const rows = (
     await db().query(
-      `SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${preview ? 'j.draft' : 'j.published'} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',si.last_checked_at,'error',si.error)) FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired),'[]'::jsonb) AS sources FROM jobs j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
+      `SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',si.last_checked_at,'error',si.error)) FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired),'[]'::jsonb) AS sources FROM jobs j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
       [...args, limit, (page - 1) * limit],
     )
   ).rows;
@@ -140,7 +145,9 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
   const companyProfiles = new Map(profiles.map((p) => [p.company_key, p]));
   return {
     jobs: rows.map((r) => ({
+      description: '',
       ...r.published,
+      summary,
       ...(typeof r.published.salaryMin === 'number' &&
       (!Number.isFinite(r.published.salaryMin) ||
         r.published.salaryMin > 100000000 ||

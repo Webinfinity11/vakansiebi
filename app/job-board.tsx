@@ -37,6 +37,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { CompanyLogo } from './company-logo';
+import { QuickApply } from './quick-apply';
 import {
   PersonalSpace,
   ApplicationControl,
@@ -200,6 +201,30 @@ export default function JobBoard() {
     [storageReady, setStorageReady] = useState(false),
     [feedback, setFeedback] = useState(''),
     [retry, setRetry] = useState(0);
+  const [detailError, setDetailError] = useState('');
+  const [detailRetry, setDetailRetry] = useState(0);
+  const detailId = selected?.id;
+  const needsDetail = selected?.summary === true;
+  useEffect(() => {
+    if (!detailId || !needsDetail) return;
+    const controller = new AbortController();
+    void fetch(`/api/jobs?ids=${detailId}&preview=${demo ? '1' : '0'}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw Error('დეტალები ვერ ჩაიტვირთა. სცადე ხელახლა.');
+        const data = await response.json();
+        if (!data.jobs?.[0]) throw Error('ვაკანსია აღარ არის ხელმისაწვდომი.');
+        if (!controller.signal.aborted)
+          setSelected((current) =>
+            current?.id === detailId ? data.jobs[0] : current,
+          );
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setDetailError(error.message);
+      });
+    return () => controller.abort();
+  }, [detailId, needsDetail, demo, detailRetry]);
   const [pageState, setPageState] = useState({ key: '', page: 1 }),
     [total, setTotal] = useState(0),
     [pages, setPages] = useState(0);
@@ -277,6 +302,7 @@ export default function JobBoard() {
                 ? 'new'
                 : 'relevance',
         page: String(page),
+        summary: '1',
         preview: demo ? '1' : '0',
       });
       if (savedOnly) p.set('ids', savedFilter);
@@ -712,7 +738,10 @@ export default function JobBoard() {
                             </div>
                             <button
                               className="job-title"
-                              onClick={() => setSelected(j)}
+                              onClick={() => {
+                                setDetailError('');
+                                setSelected(j);
+                              }}
                             >
                               {j.title}
                             </button>
@@ -767,7 +796,10 @@ export default function JobBoard() {
                             <button
                               className="card-open"
                               aria-label={`${j.title} — დეტალები`}
-                              onClick={() => setSelected(j)}
+                              onClick={() => {
+                                setDetailError('');
+                                setSelected(j);
+                              }}
                             >
                               <ArrowUpRight size={19} />
                             </button>
@@ -950,6 +982,9 @@ export default function JobBoard() {
                     </span>
                   )}
                 </div>
+                {!selected.summary && (
+                  <QuickApply key={selected.id} job={selected} />
+                )}
                 <ApplicationControl
                   job={selected}
                   space={personal}
@@ -1014,7 +1049,24 @@ export default function JobBoard() {
                     გაგზავნამდე გადაამოწმე განახლებული პირობები.
                   </p>
                 )}
-                <Description text={selected.description} />
+                {selected.summary ? (
+                  <div aria-live="polite">
+                    <output>{detailError || 'დეტალები იტვირთება…'}</output>
+                    {detailError && (
+                      <button
+                        className="secondary-button"
+                        onClick={() => (
+                          setDetailError(''),
+                          setDetailRetry((value) => value + 1)
+                        )}
+                      >
+                        ხელახლა ცდა
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <Description text={selected.description} />
+                )}
                 {!!selected.applicationLinks?.length && (
                   <div className="application-links">
                     <h3>ბმულები განცხადებიდან</h3>

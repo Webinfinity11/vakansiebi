@@ -245,6 +245,15 @@ void test(
       'search matches all terms regardless of order',
     );
     assert.equal(found.jobs[0].sources.length, 2);
+    const compact = await publicJobs(
+      new URLSearchParams({ q: marker, summary: '1' }),
+    );
+    assert.equal(compact.total, found.total);
+    assert.equal(compact.jobs[0].summary, true);
+    assert.equal(compact.jobs[0].description, '');
+    assert.equal(compact.jobs[0].facts, undefined);
+    assert.equal(compact.jobs[0].applicationLinks, undefined);
+    assert.ok(JSON.stringify(compact).length < JSON.stringify(found).length);
     assert.equal(found.jobs[0].sources[0].health, 'recent');
     const secondaryId = randomUUID();
     await discoverItems('hr', [{ externalId: secondaryId, url: v.url }]);
@@ -311,9 +320,21 @@ void test(
     );
     const expiredExternal = randomUUID();
     await discoverItems('hr', [{ externalId: expiredExternal, url: v.url }]);
-    const expiredItem = (await db().query('SELECT id FROM source_items WHERE external_id=$1', [expiredExternal])).rows[0];
-    assert.equal(await stageVacancy(expiredItem.id, { ...v, deadline: '2000-01-01' }), 'expired');
-    const expiredRecord = (await db().query('SELECT job_id,raw,next_check_at FROM source_items WHERE id=$1', [expiredItem.id])).rows[0];
+    const expiredItem = (
+      await db().query('SELECT id FROM source_items WHERE external_id=$1', [
+        expiredExternal,
+      ])
+    ).rows[0];
+    assert.equal(
+      await stageVacancy(expiredItem.id, { ...v, deadline: '2000-01-01' }),
+      'expired',
+    );
+    const expiredRecord = (
+      await db().query(
+        'SELECT job_id,raw,next_check_at FROM source_items WHERE id=$1',
+        [expiredItem.id],
+      )
+    ).rows[0];
     assert.equal(expiredRecord.job_id, null);
     assert.equal(expiredRecord.raw.deadline, '2000-01-01');
     assert.ok(expiredRecord.next_check_at > new Date());
