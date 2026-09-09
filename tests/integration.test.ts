@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db, transaction } from '../lib/server/db';
 import { reconcileJob } from '../worker/automation';
+import { runSource } from '../worker/run';
 import { discoverItems, stageVacancy } from '../worker/importer';
 import {
   mutateJob,
@@ -433,6 +434,28 @@ void test(
       );
     } finally {
       await db().query("UPDATE sources SET auto_publish=false WHERE id='hr'");
+    }
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async () => {
+        throw new Error('connect timeout', {
+          cause: { code: 'UND_ERR_CONNECT_TIMEOUT' },
+        });
+      };
+      const deferred = await runSource('hrgov', 1);
+      assert.ok('deferred' in deferred && deferred.deferred);
+      const retryState = (
+        await db().query("SELECT next_run_at FROM sources WHERE id='hrgov'")
+      ).rows[0];
+      assert.ok(retryState.next_run_at.getTime() - Date.now() > 23 * 3600000);
+      const run = (
+        await db().query(
+          "SELECT status FROM source_runs WHERE source_id='hrgov' ORDER BY started_at DESC LIMIT 1",
+        )
+      ).rows[0];
+      assert.equal(run.status, 'deferred');
+    } finally {
+      globalThis.fetch = originalFetch;
     }
     await db().end();
   },
