@@ -6,6 +6,7 @@ import { fingerprint } from '../../worker/adapters';
 import type { Vacancy } from '../types';
 import { safeLogoUrl } from '../vacancy-media';
 import { companyKey } from '../company-key';
+import { searchTerms, sourceHealth } from '../job-intelligence';
 export const vacancySchema = z.object({
   logoUrl: z
     .string()
@@ -71,7 +72,7 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
   const source = params.get('source') || '';
   const paid = params.get('paid') === 'true';
   const remote = params.get('remote') === 'true';
-  let where = `j.status='published' AND j.published IS NOT NULL AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AND ($1='' OR strpos(lower(concat_ws(' ',j.published->>'title',j.published->>'company',j.published->>'description')),lower($1))>0) AND ($2='' OR strpos(j.published->>'city',$2)>0) AND ($3='' OR j.published->>'category'=$3) AND ($4='' OR EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired AND s.name=$4)) AND (NOT $5 OR COALESCE(j.published->>'salary','')<>'') AND (NOT $6 OR j.published->>'mode'='დისტანციური')`;
+  let where = `j.status='published' AND j.published IS NOT NULL AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text($1::jsonb) term WHERE strpos(lower(concat_ws(' ',j.published->>'title',j.published->>'company',j.published->>'city',j.published->>'description')),term)=0) AND ($2='' OR strpos(j.published->>'city',$2)>0) AND ($3='' OR j.published->>'category'=$3) AND ($4='' OR EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired AND s.name=$4)) AND (NOT $5 OR COALESCE(j.published->>'salary','')<>'') AND (NOT $6 OR j.published->>'mode'='დისტანციური')`;
   if (preview)
     where = where
       .replace(
@@ -81,7 +82,14 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
       .replaceAll('j.published', 'j.draft');
   where +=
     ' AND EXISTS(SELECT 1 FROM source_items active_item JOIN sources active_source ON active_source.id=active_item.source_id WHERE active_item.job_id=j.id AND NOT active_source.retired)';
-  const args = [q, city, category, source, paid, remote];
+  const args = [
+    JSON.stringify(searchTerms(q)),
+    city,
+    category,
+    source,
+    paid,
+    remote,
+  ];
   const requestedIds = params.get('ids');
   if (requestedIds !== null) {
     const ids = requestedIds
@@ -101,11 +109,20 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
     params.get('sort') === 'salary'
       ? `CASE WHEN j.published->>'currency'='GEL' AND j.published->>'salaryPeriod'='თვე' THEN (j.published->>'salaryMin')::numeric END DESC NULLS LAST,j.published_at DESC`
       : 'j.published_at DESC';
+  if (params.get('sort') === 'deadline')
+    ordering =
+      "NULLIF(j.published->>'deadline','') ASC NULLS LAST,j.published_at DESC";
+  if (
+    q.trim() &&
+    !['salary', 'new', 'deadline'].includes(params.get('sort') || '')
+  ) {
+    ordering = `(SELECT COALESCE(sum(CASE WHEN strpos(lower(j.published->>'title'),term)>0 THEN 5 ELSE 0 END + CASE WHEN strpos(lower(j.published->>'company'),term)>0 THEN 2 ELSE 0 END),0) FROM jsonb_array_elements_text($1::jsonb) term) DESC,j.published_at DESC`;
+  }
   if (preview) ordering = ordering.replaceAll('j.published->', 'j.draft->');
   if (preview) ordering = ordering.replaceAll('j.published_at', 'j.created_at');
   const rows = (
     await db().query(
-      `SELECT j.id,${preview ? 'j.draft' : 'j.published'} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url)) FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired),'[]'::jsonb) AS sources FROM jobs j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
+      `SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${preview ? 'j.draft' : 'j.published'} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',si.last_checked_at,'error',si.error)) FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired),'[]'::jsonb) AS sources FROM jobs j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
       [...args, limit, (page - 1) * limit],
     )
   ).rows;
@@ -131,8 +148,21 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
         ? { salary: '', salaryMin: null, currency: '', salaryPeriod: '' }
         : {}),
       id: r.id,
+      sourceChanged: !preview && r.source_changed,
       createdAt: r.created_at.toISOString(),
-      sources: r.sources,
+      sources: r.sources.map(
+        (s: {
+          source: string;
+          url: string;
+          checkedAt: string | null;
+          error: string | null;
+        }) => ({
+          source: s.source,
+          url: s.url,
+          checkedAt: s.checkedAt,
+          health: sourceHealth(s.checkedAt, s.error),
+        }),
+      ),
       ...(companyProfiles.get(companyKey(r.published.company || ''))?.logo_url
         ? {
             logoUrl: companyProfiles.get(companyKey(r.published.company || ''))!

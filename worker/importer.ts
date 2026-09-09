@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { db, transaction } from '../lib/server/db';
 import { fingerprint } from './adapters';
+import { samePosting } from '../lib/job-intelligence';
 import type { SourceId, Vacancy } from '../lib/types';
 export function hashVacancy(v: Vacancy) {
   return createHash('sha256').update(JSON.stringify(v)).digest('hex');
@@ -18,6 +19,33 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
     let outcome = 'unchanged';
     let jobId = item.job_id;
     if (!jobId) {
+      // Serializes identical imports arriving from independent source workers.
+      await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [
+        'posting:' + fingerprint(v),
+      ]);
+      const candidates = (
+        await c.query(
+          `SELECT j.id,j.draft FROM jobs j WHERE j.fingerprint=$1
+        AND j.status='pending' AND EXISTS (SELECT 1 FROM source_items other
+          JOIN sources s ON s.id=other.source_id WHERE other.job_id=j.id AND NOT s.retired AND other.source_id<>$2)
+        AND NOT EXISTS (SELECT 1 FROM source_items same WHERE same.job_id=j.id AND same.source_id=$2)
+        ORDER BY j.created_at,j.id FOR UPDATE`,
+          [fingerprint(v), item.source_id],
+        )
+      ).rows;
+      const matches = candidates.filter((candidate) =>
+        samePosting(candidate.draft, v),
+      );
+      if (matches.length === 1) {
+        jobId = matches[0].id;
+        outcome = 'linked';
+        await c.query(
+          'UPDATE jobs SET version=version+1,needs_review=true,updated_at=now() WHERE id=$1',
+          [jobId],
+        );
+      }
+    }
+    if (!jobId) {
       jobId = randomUUID();
       await c.query('INSERT INTO jobs(id,draft,fingerprint) VALUES($1,$2,$3)', [
         jobId,
@@ -25,7 +53,7 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
         fingerprint(v),
       ]);
       outcome = 'imported';
-    } else if (item.content_hash !== hash) {
+    } else if (item.job_id && item.content_hash !== hash) {
       await c.query(
         'UPDATE jobs SET needs_review=true,version=version+1,updated_at=now() WHERE id=$1',
         [jobId],

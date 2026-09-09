@@ -27,7 +27,8 @@ export async function runSource(
     changed = 0,
     failed = 0,
     discovered = 0,
-    removed = 0;
+    removed = 0,
+    linked = 0;
   try {
     locked = (
       await lock.query('SELECT pg_try_advisory_lock($1) AS locked', [lockId])
@@ -152,6 +153,7 @@ export async function runSource(
         consecutiveDetailFailures = 0;
         if (outcome === 'imported') imported++;
         if (outcome === 'changed') changed++;
+        if (outcome === 'linked') linked++;
       } catch (e) {
         if (e instanceof SourceHttpError && [404, 410].includes(e.status)) {
           removed++;
@@ -206,7 +208,16 @@ export async function runSource(
       "UPDATE sources SET last_success_at=CASE WHEN $2::text IS NULL THEN now() ELSE last_success_at END,last_error=$2,consecutive_failures=0,next_run_at=now()+(interval_minutes*interval '1 minute') WHERE id=$1",
       [source, warning],
     );
-    return { source, discovered, imported, changed, failed, removed, warning };
+    return {
+      source,
+      discovered,
+      imported,
+      changed,
+      failed,
+      removed,
+      linked,
+      warning,
+    };
   } catch (e) {
     const error = (e as Error).message.slice(0, 500);
     if (started) {

@@ -28,10 +28,16 @@ export type Vacancy = {
   datePosted: string;
 };
 export type PublicJob = Vacancy & {
+  sourceChanged?: boolean;
   companyProfile?: { website: string; description: string };
   id: string;
   createdAt: string;
-  sources: { source: string; url: string }[];
+  sources: {
+    source: string;
+    url: string;
+    checkedAt?: string | null;
+    health?: 'recent' | 'stale' | 'unavailable' | 'unknown';
+  }[];
 };
 export type AdminJob = {
   id: string;

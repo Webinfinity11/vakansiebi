@@ -3265,3 +3265,8 @@ button:disabled {
 .company-profile-editor > .editor-logo-row {
   margin-top: 16px;
 }
+
+.job-evidence { display:flex; flex-wrap:wrap; gap:6px 14px; margin:12px 0; color:var(--muted); font-size:11px; line-height:1.7; }
+.job-evidence span:first-child { color:#52725e; }
+.source-check-note { display:block; font-size:10px; font-weight:400; margin-top:4px; }
+.source-update-note { border-left:3px solid #b3873c; background:#faf6eb; padding:12px 16px; font-size:13px; line-height:1.8; color:#705b36; margin:14px 0; }

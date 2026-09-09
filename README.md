@@ -131,3 +131,11 @@ Railway-ის secrets-ში მიუთითე `DATABASE_URL`, `APP_URL`, `
 - GitHub-ში არ იტვირთება `.env`, ადმინისტრატორის პაროლი, `.local`, ბაზები, ჩამოტვირთული HTML ან build/cache ფაილები.
 
 GitHub verification (2026-09-09): HR, Jobs and SS imported 43 new pending vacancies in total. The government source timed out connecting from GitHub (`UND_ERR_CONNECT_TIMEOUT`) on two attempts, while responding locally. Its existing data is retained; scheduled retries follow the source backoff. This is an unresolved network reachability limitation, not a successful government-source cloud import. Removed HTTP 404/410 detail pages are rechecked after seven days and linked pending/published jobs are flagged for manual review.
+
+## Vacancy discovery and trust logic
+
+Search matches all normalized query terms across title, employer, city and description, regardless of word order. Relevance ordering gives title matches more weight than employer matches; recency breaks ties. Users can also explicitly sort by latest, comparable monthly GEL salary, or earliest deadline (unknown deadlines last).
+
+Public provenance shows each source's last check and distinguishes recent successful checks (48 hours), older checks and failed checks. A successful fetch is not a guarantee that an employer is still accepting applications. Changes detected after publication are flagged while the approved public text is retained.
+
+New imports from different sources can share a pending draft only when exactly one candidate has matching content, employer, city, dates, compensation, mode, employment type, facts and application links. Identical concurrent imports are serialized by a transaction lock. Already-published, ambiguous, different-cycle and same-source postings are not automatically merged. Existing manual moderation and merge controls remain available.

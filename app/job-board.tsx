@@ -151,6 +151,26 @@ function Description({ text }: { text: string }) {
   );
 }
 
+function SourceStatus({ job }: { job: Job }) {
+  const checked = job.sources
+    .filter((s) => s.health === 'recent' && s.checkedAt)
+    .sort((a, b) => b.checkedAt!.localeCompare(a.checkedAt!))[0];
+  const unavailable =
+    job.sources.length > 0 &&
+    job.sources.every((s) => s.health === 'unavailable');
+  return (
+    <div className="job-evidence">
+      {job.sources.length > 1 && <span>{job.sources.length} პირველწყარო</span>}
+      <span>
+        {checked
+          ? `წყარო შემოწმდა ${formatDate(checked.checkedAt!)}`
+          : unavailable
+            ? 'წყაროს შემოწმება ვერ მოხერხდა'
+            : 'აქტუალურობა გადაამოწმე პირველწყაროზე'}
+      </span>
+    </div>
+  );
+}
 export default function JobBoard() {
   const params = useSearchParams();
   const demo = params.get('preview') === '1';
@@ -164,7 +184,7 @@ export default function JobBoard() {
     [source, setSource] = useState('ყველა'),
     [paid, setPaid] = useState(false),
     [remote, setRemote] = useState(false),
-    [sort, setSort] = useState('უახლესი');
+    [sort, setSort] = useState('შესაბამისობა');
   const [selected, setSelected] = useState<Job | null>(null),
     [filtersOpen, setFiltersOpen] = useState(false),
     [savedOnly, setSavedOnly] = useState(false),
@@ -240,7 +260,14 @@ export default function JobBoard() {
         source: source === 'ყველა' ? '' : source,
         paid: String(paid),
         remote: String(remote),
-        sort: sort === 'მაღალი ხელფასი' ? 'salary' : 'new',
+        sort:
+          sort === 'მაღალი ხელფასი'
+            ? 'salary'
+            : sort === 'ვადა იწურება'
+              ? 'deadline'
+              : sort === 'უახლესი'
+                ? 'new'
+                : 'relevance',
         page: String(page),
         preview: demo ? '1' : '0',
       });
@@ -558,7 +585,12 @@ export default function JobBoard() {
                   label="დალაგება"
                   value={sort}
                   onChange={(v) => setSort(v === 'ყველა' ? 'უახლესი' : v)}
-                  options={['უახლესი', 'მაღალი ხელფასი']}
+                  options={[
+                    'შესაბამისობა',
+                    'უახლესი',
+                    'მაღალი ხელფასი',
+                    'ვადა იწურება',
+                  ]}
                 />
               </div>
               <button
@@ -674,6 +706,7 @@ export default function JobBoard() {
                                 </span>
                               )}
                             </div>
+                            <SourceStatus job={j} />
                             <div className="card-bottom">
                               <span className="category-tag">{j.category}</span>
                               {j.salary ? (
@@ -939,6 +972,13 @@ export default function JobBoard() {
                     )}
                   </section>
                 )}
+                <SourceStatus job={selected} />
+                {selected.sourceChanged && (
+                  <p className="source-update-note">
+                    პირველწყაროზე ცვლილებაა დაფიქსირებული. განაცხადის
+                    გაგზავნამდე გადაამოწმე განახლებული პირობები.
+                  </p>
+                )}
                 <Description text={selected.description} />
                 {!!selected.applicationLinks?.length && (
                   <div className="application-links">
@@ -971,7 +1011,16 @@ export default function JobBoard() {
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          {s.source}
+                          <span>
+                            {s.source}
+                            <small className="source-check-note">
+                              {s.health === 'unavailable'
+                                ? 'ბოლო შემოწმება ვერ შესრულდა'
+                                : s.checkedAt
+                                  ? `შემოწმდა ${formatDate(s.checkedAt)}${s.health === 'stale' ? ' · ხელახლა გადასამოწმებელია' : ''}`
+                                  : 'ჯერ არ შემოწმებულა'}
+                            </small>
+                          </span>
                           <ArrowUpRight size={13} />
                         </a>
                       ))}

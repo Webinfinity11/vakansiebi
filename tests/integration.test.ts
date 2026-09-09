@@ -130,6 +130,7 @@ void test(
     job = (await db().query('SELECT * FROM jobs WHERE id=$1', [job.id]))
       .rows[0];
     assert.equal(job.draft.title, edited.title);
+    assert.equal((await publicJobs(params)).jobs[0].sourceChanged, true);
     assert.equal(job.published.title, edited.title);
     assert.equal(job.needs_review, true);
     await assert.rejects(
@@ -185,6 +186,129 @@ void test(
       [job.id],
     );
     assert.equal((await publicJobs(params)).total, 0);
+    // Concurrent, identical imports on different sources share one pending draft.
+    const marker = randomUUID().replaceAll('-', '');
+    const exact = {
+      ...v,
+      title: 'Backend ' + marker + ' Engineer',
+      description:
+        'Build reliable services and support existing applications. Work with the engineering team on production delivery.',
+    };
+    const pair = await Promise.all(
+      ['hr', 'jobs'].map(async (source) => {
+        const id = randomUUID();
+        await discoverItems(source as 'hr' | 'jobs', [
+          { externalId: id, url: v.url },
+        ]);
+        return (
+          await db().query('SELECT id FROM source_items WHERE external_id=$1', [
+            id,
+          ])
+        ).rows[0].id;
+      }),
+    );
+    const outcomes = await Promise.all(
+      pair.map((id, index) =>
+        stageVacancy(id, { ...exact, source: index ? 'jobs.ge' : 'hr.ge' }),
+      ),
+    );
+    assert.deepEqual(outcomes.sort(), ['imported', 'linked']);
+    const shared = (
+      await db().query(
+        'SELECT DISTINCT job_id FROM source_items WHERE id=ANY($1::uuid[])',
+        [pair],
+      )
+    ).rows;
+    assert.equal(shared.length, 1);
+    assert.equal(
+      (await publicJobs(new URLSearchParams({ q: marker }))).total,
+      0,
+    );
+    const sharedJob = (
+      await db().query('SELECT * FROM jobs WHERE id=$1', [shared[0].job_id])
+    ).rows[0];
+    assert.equal(sharedJob.version, 2);
+    await mutateJob({
+      id: sharedJob.id,
+      version: sharedJob.version,
+      action: 'publish',
+    });
+    const found = await publicJobs(
+      new URLSearchParams({
+        q: 'Engineer ' + marker + ' Backend',
+        sort: 'relevance',
+      }),
+    );
+    assert.equal(
+      found.total,
+      1,
+      'search matches all terms regardless of order',
+    );
+    assert.equal(found.jobs[0].sources.length, 2);
+    assert.equal(found.jobs[0].sources[0].health, 'recent');
+    const secondaryId = randomUUID();
+    await discoverItems('hr', [{ externalId: secondaryId, url: v.url }]);
+    const secondaryItem = (
+      await db().query('SELECT id FROM source_items WHERE external_id=$1', [
+        secondaryId,
+      ])
+    ).rows[0];
+    await stageVacancy(secondaryItem.id, {
+      ...exact,
+      title: 'Coordinator ' + marker,
+      deadline: '2098-01-01',
+      description: exact.description + ' Backend Engineer support.',
+    });
+    const secondaryJob = (
+      await db().query(
+        'SELECT j.* FROM jobs j JOIN source_items i ON i.job_id=j.id WHERE i.id=$1',
+        [secondaryItem.id],
+      )
+    ).rows[0];
+    await mutateJob({
+      id: secondaryJob.id,
+      version: secondaryJob.version,
+      action: 'publish',
+    });
+    const ranked = await publicJobs(
+      new URLSearchParams({
+        q: 'Engineer ' + marker + ' Backend',
+        sort: 'relevance',
+      }),
+    );
+    assert.equal(ranked.total, 2);
+    assert.equal(
+      ranked.jobs[0].id,
+      sharedJob.id,
+      'title match outranks a newer description-only match',
+    );
+    const byDeadline = await publicJobs(
+      new URLSearchParams({ q: marker, sort: 'deadline' }),
+    );
+    assert.equal(
+      byDeadline.jobs[0].id,
+      secondaryJob.id,
+      'earlier known deadlines come first',
+    );
+
+    await db().query('UPDATE source_items SET error=$2 WHERE id=$1', [
+      pair[0],
+      'private internal error',
+    ]);
+    const withFailure = await publicJobs(new URLSearchParams({ q: marker }));
+    assert.ok(
+      withFailure.jobs
+        .find((job: { id: string }) => job.id === sharedJob.id)!
+        .sources.some(
+          (source: { health: string }) => source.health === 'unavailable',
+        ),
+    );
+    assert.ok(!JSON.stringify(withFailure).includes('private internal error'));
+    assert.equal(
+      (await publicJobs(new URLSearchParams({ q: marker + ' missingword' })))
+        .total,
+      0,
+    );
     await db().end();
   },
 );
