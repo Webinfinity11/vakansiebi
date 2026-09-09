@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Import due vacancies into moderation
+      - name: Import, validate and publish due vacancies
         run: npm run worker -- --source=${{ matrix.source }} --due --once
         env:
           DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}

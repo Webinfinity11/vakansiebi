@@ -1,6 +1,6 @@
 # ერთად — ვაკანსიების აგრეგატორი
 
-ქართული ვაკანსიების ერთიანი ძებნა, წყაროების პერიოდული პარსინგი და ადმინის მიერ ხელით გამოქვეყნება.
+ქართული ვაკანსიების ერთიანი ძებნა, წყაროების პერიოდული პარსინგი და ავტომატური შემოწმება და გამოქვეყნება.
 
 **ამ ეტაპზე სატესტო პროდუქტია. შეტყობინებების გაგზავნა საერთოდ არ არის დაკავშირებული. შემოტანა არაფერს აქვეყნებს ავტომატურად.**
 
@@ -103,7 +103,7 @@ Vercel-ის Production გარემოში საჭიროა `DATABAS
 
 The scraper runs in GitHub Actions (`.github/workflows/scrape.yml`) at minutes 17 and 47 of each hour. Each source respects its admin interval, enabled status and manual request. Admin requests are picked up by the next workflow run; Actions > Vacancy scraper > Run workflow also checks due sources. The local computer is no longer required.
 
-`SCRAPER_DATABASE_URL` is a GitHub Actions secret containing the Neon direct connection URL; session advisory locks require the direct endpoint. Four independent jobs process up to 50 details per source. Overlapping workflows queue, and database locks also protect against a local worker. Three consecutive detail failures stop that source's batch, retaining the remaining queue. Partial and failed results appear as failed Actions jobs and remain visible in the admin history. New vacancies still require manual approval; the scraper never sends messages or publishes jobs.
+`SCRAPER_DATABASE_URL` is a GitHub Actions secret containing the Neon direct connection URL; session advisory locks require the direct endpoint. Four independent jobs process up to 50 details per source. Overlapping workflows queue, and database locks also protect against a local worker. Three consecutive detail failures stop that source's batch, retaining the remaining queue. Partial and failed results appear as failed Actions jobs and remain visible in the admin history. Sources with auto_publish enabled validate, publish, update and archive automatically. Invalid records wait for source recovery without a manual-review flag. The scraper never sends messages.
 
 GitHub schedules may be delayed. In public repositories, schedules disable after 60 days without repository activity and must be re-enabled. Standard GitHub-hosted runners are free for this public repository; Neon usage is separate.
 
@@ -126,7 +126,7 @@ Railway-ის secrets-ში მიუთითე `DATABASE_URL`, `APP_URL`, `
 - ავტომატური კატეგორიზაცია სათაურის წესებზეა დაფუძნებული და ადმინის შემოწმებას საჭიროებს.
 - დუბლიკატების დამთხვევა კანდიდატებს აჩვენებს; სხვადასხვა ენით დაწერილი კომპანიების/პოზიციების სემანტიკური შედარება ჯერ არ კეთდება.
 - ხელფასით დალაგება პირველ რიგში მხოლოდ მკაფიოდ მითითებულ თვიურ GEL თანხებს ადარებს. საათობრივ/წლიურ თანხებსა და უცხოურ ვალუტებს არ ურევს.
-- გამოქვეყნება, არქივი და წყაროს განახლებაზე რეაგირება ხელით კონტროლდება. წყაროს ცვლილება ადმინის შენახულ რედაქციას არ გადაწერს.
+- ავტომატურად მართვადი ჩანაწერები ქვეყნდება, ახლდება და არქივდება. ხელით შესწორება კონკრეტული ჩანაწერის ავტომატიზაციას აჩერებს.
 - robots.txt-ის გათვალისწინება არ უდრის კონტენტის ხელახალი გავრცელების უფლებას. ფართო საჯარო გაშვებამდე თითოეული წყაროს პირობები ცალკე უნდა შეთანხმდეს.
 - GitHub-ში არ იტვირთება `.env`, ადმინისტრატორის პაროლი, `.local`, ბაზები, ჩამოტვირთული HTML ან build/cache ფაილები.
 
@@ -138,7 +138,7 @@ Search matches all normalized query terms across title, employer, city and descr
 
 Public provenance shows each source's last check and distinguishes recent successful checks (48 hours), older checks and failed checks. A successful fetch is not a guarantee that an employer is still accepting applications. Changes detected after publication are flagged while the approved public text is retained.
 
-New imports from different sources can share a pending draft only when exactly one candidate has matching content, employer, city, dates, compensation, mode, employment type, facts and application links. Identical concurrent imports are serialized by a transaction lock. Already-published, ambiguous, different-cycle and same-source postings are not automatically merged. Existing manual moderation and merge controls remain available.
+New imports from different sources can share a pending draft only when exactly one candidate has matching content, employer, city, dates, compensation, mode, employment type, facts and application links. Identical concurrent imports are serialized by a transaction lock. An automatically published candidate can also be linked; manually controlled, ambiguous, different-cycle and same-source postings are not automatically merged. Existing manual moderation and merge controls remain available.
 
 ## Personal workspace (no registration)
 
@@ -151,3 +151,7 @@ Records live only in this browser and origin, with limits of 20 searches and 200
 Vacancy details extract and display email addresses from the approved description, with a draft-email link and copy action. Recruitment context is distinguished from generic contact addresses. Mailto links inside source descriptions retain their recipient when converted to plain text; hidden cc/bcc/subject parameters from the source are not imported. The generated draft uses the position title and an editable Georgian body. It opens the visitor's email client, which is where the visitor attaches the CV and sends it. No mail provider is configured and there is no direct site upload/send flow.
 
 English-dominant descriptions offer an explicitly labelled external Google Translate website link. Original text remains available; this is not an in-site or human-verified Georgian translation. No private CV data is sent to translation services.
+
+## Automatic lifecycle
+
+See [automation rules](docs/automation.md). Migration 007 adds opt-in source publication and per-job automation state. Existing editorial overrides are preserved.

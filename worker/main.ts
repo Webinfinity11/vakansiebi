@@ -5,6 +5,7 @@ import { db } from '../lib/server/db';
 import { runSource } from './run';
 import { configs } from './adapters';
 import type { SourceId } from '../lib/types';
+import { reconcileSource } from './automation';
 let stopped = false;
 process.on('SIGTERM', () => {
   stopped = true;
@@ -18,6 +19,11 @@ const dueOnly = process.argv.includes('--due');
 if (arg && !(arg in configs)) throw Error('Unknown source');
 try {
   do {
+    for (const source of arg ? [arg] : Object.keys(configs)) {
+      const result = await reconcileSource(source);
+      if (Object.keys(result).length)
+        console.log(JSON.stringify({ automation: source, ...result }));
+    }
     const sources =
       arg && !dueOnly
         ? [{ id: arg }]
@@ -38,6 +44,9 @@ try {
     for (const source of sources) {
       if (stopped) break;
       const result = await runSource(source.id as SourceId);
+      const automation = await reconcileSource(source.id);
+      if (Object.keys(automation).length)
+        console.log(JSON.stringify({ automation: source.id, ...automation }));
       console.log(JSON.stringify(result));
       if (process.env.GITHUB_STEP_SUMMARY) {
         const status =
@@ -50,7 +59,7 @@ try {
                 : 'success';
         appendFileSync(
           process.env.GITHUB_STEP_SUMMARY,
-          `Source: ${source.id}: ${status}\n\nImported: ${'imported' in result ? result.imported : 0}; changed: ${'changed' in result ? result.changed : 0}; failed: ${'failed' in result ? result.failed : 0}. New vacancies require admin approval.\n\n`,
+          `Source: ${source.id}: ${status}\n\nImported: ${'imported' in result ? result.imported : 0}; changed: ${'changed' in result ? result.changed : 0}; failed: ${'failed' in result ? result.failed : 0}. Automatic publication follows each source's database setting.\n\n`,
         );
       }
       if (

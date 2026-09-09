@@ -9,6 +9,7 @@ import {
   parseDetail,
   additionalListing,
   sourceLockIds,
+  UnavailableVacancy,
 } from './adapters';
 import { sourceFetch, validateUrl, SourceHttpError } from './http';
 import { discoverItems, stageVacancy } from './importer';
@@ -157,7 +158,10 @@ export async function runSource(
         if (outcome === 'linked') linked++;
         if (outcome === 'expired') expired++;
       } catch (e) {
-        if (e instanceof SourceHttpError && [404, 410].includes(e.status)) {
+        if (
+          (e instanceof SourceHttpError && [404, 410].includes(e.status)) ||
+          e instanceof UnavailableVacancy
+        ) {
           removed++;
           consecutiveDetailFailures = 0;
           await db().query(

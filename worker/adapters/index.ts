@@ -20,6 +20,11 @@ type HrAnnouncement = {
   isWithBonus?: boolean;
 };
 type HrState = { b?: { data?: { announcement?: HrAnnouncement } } };
+export class UnavailableVacancy extends Error {
+  constructor() {
+    super('Source vacancy unavailable');
+  }
+}
 type Location = { address?: { addressLocality?: string } };
 type JobPosting = {
   '@type'?: string;
@@ -644,6 +649,14 @@ export function parseDetail(
     ...new Map(j.applicationLinks.map((l) => [l.url, l])).values(),
   ].slice(0, 12);
   j.category = category(j.title);
+  if (
+    source === 'jobs' &&
+    !j.title &&
+    !j.company &&
+    !j.description &&
+    $('.dtitle').length >= 3
+  )
+    throw new UnavailableVacancy();
   j.title = j.title.replace(/\s+/g, ' ').trim();
   j.company = j.company.replace(/\s+/g, ' ').trim();
   j.city = j.city.replace(/\s+/g, ' ').trim();

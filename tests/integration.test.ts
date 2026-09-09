@@ -2,7 +2,8 @@ import 'dotenv/config';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { db } from '../lib/server/db';
+import { db, transaction } from '../lib/server/db';
+import { reconcileJob } from '../worker/automation';
 import { discoverItems, stageVacancy } from '../worker/importer';
 import {
   mutateJob,
@@ -340,6 +341,99 @@ void test(
     assert.ok(expiredRecord.next_check_at > new Date());
     // A renewed deadline can be imported on the next check.
     assert.equal(await stageVacancy(expiredItem.id, v), 'imported');
+    await db().query("UPDATE sources SET auto_publish=true WHERE id='hr'");
+    try {
+      const autoExternal = randomUUID();
+      const automatic = {
+        ...v,
+        title: 'AUTOMATIC-' + autoExternal,
+        company: 'Automation Test',
+      };
+      await discoverItems('hr', [{ externalId: autoExternal, url: v.url }]);
+      const autoItem = (
+        await db().query('SELECT id FROM source_items WHERE external_id=$1', [
+          autoExternal,
+        ])
+      ).rows[0];
+      await stageVacancy(autoItem.id, automatic);
+      const readAuto = async () =>
+        (
+          await db().query(
+            'SELECT j.* FROM jobs j JOIN source_items i ON i.job_id=j.id WHERE i.id=$1',
+            [autoItem.id],
+          )
+        ).rows[0];
+      let autoJob = await readAuto();
+      assert.equal(autoJob.status, 'published');
+      assert.equal(autoJob.needs_review, false);
+      const firstPublished = autoJob.published_at.toISOString();
+      const changed = {
+        ...automatic,
+        description: automatic.description + ' Updated requirements.',
+      };
+      await stageVacancy(autoItem.id, changed);
+      autoJob = await readAuto();
+      assert.equal(autoJob.published.description, changed.description);
+      assert.equal(
+        autoJob.published_at.toISOString(),
+        firstPublished,
+        'refresh must not bump a job above newly published vacancies',
+      );
+      await db().query(
+        "UPDATE source_items SET error='Source request failed: timeout' WHERE id=$1",
+        [autoItem.id],
+      );
+      await transaction((c) => reconcileJob(c, autoJob.id));
+      assert.equal(
+        (await readAuto()).status,
+        'published',
+        'temporary network failure preserves verified listing',
+      );
+      await db().query(
+        "UPDATE source_items SET error='Source returned HTTP 410' WHERE id=$1",
+        [autoItem.id],
+      );
+      await transaction((c) => reconcileJob(c, autoJob.id));
+      assert.equal((await readAuto()).status, 'archived');
+      await stageVacancy(autoItem.id, changed);
+      assert.equal(
+        (await readAuto()).status,
+        'published',
+        'reappearing source is restored automatically',
+      );
+      await stageVacancy(autoItem.id, { ...changed, deadline: '2000-01-01' });
+      assert.equal((await readAuto()).status, 'archived');
+      await stageVacancy(autoItem.id, { ...changed, company: '' });
+      assert.equal(
+        (await readAuto()).status,
+        'pending',
+        'invalid employer cannot be automatically published',
+      );
+      assert.equal(
+        (await readAuto()).needs_review,
+        false,
+        'quarantine does not create a manual review task',
+      );
+      await stageVacancy(autoItem.id, changed);
+      autoJob = await readAuto();
+      await mutateJob({
+        id: autoJob.id,
+        version: autoJob.version,
+        action: 'save',
+        draft: { ...changed, title: 'Manual override' },
+      });
+      await stageVacancy(autoItem.id, {
+        ...changed,
+        description: changed.description + ' Another change.',
+      });
+      assert.equal(
+        (await readAuto()).draft.title,
+        'Manual override',
+        'an explicit editorial override pauses automation',
+      );
+    } finally {
+      await db().query("UPDATE sources SET auto_publish=false WHERE id='hr'");
+    }
     await db().end();
   },
 );

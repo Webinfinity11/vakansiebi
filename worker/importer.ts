@@ -4,6 +4,7 @@ import { db, transaction } from '../lib/server/db';
 import { fingerprint, tbilisiDate } from './adapters';
 import { samePosting } from '../lib/job-intelligence';
 import type { SourceId, Vacancy } from '../lib/types';
+import { reconcileJob } from './automation';
 export function hashVacancy(v: Vacancy) {
   return createHash('sha256').update(JSON.stringify(v)).digest('hex');
 }
@@ -33,7 +34,7 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
       const candidates = (
         await c.query(
           `SELECT j.id,j.draft FROM jobs j WHERE j.fingerprint=$1
-        AND j.status='pending' AND EXISTS (SELECT 1 FROM source_items other
+        AND (j.status='pending' OR (j.status='published' AND j.automation_managed AND NOT j.automation_paused)) AND EXISTS (SELECT 1 FROM source_items other
           JOIN sources s ON s.id=other.source_id WHERE other.job_id=j.id AND NOT s.retired AND other.source_id<>$2)
         AND NOT EXISTS (SELECT 1 FROM source_items same WHERE same.job_id=j.id AND same.source_id=$2)
         ORDER BY j.created_at,j.id FOR UPDATE`,
@@ -69,7 +70,7 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
     }
     // Existing editorial draft and published snapshot are never overwritten by crawling.
     await c.query(
-      "UPDATE source_items SET job_id=$2,raw=$3,content_hash=$4,last_checked_at=now(),next_check_at=now()+($5*interval '1 hour'),error=NULL,failures=0 WHERE id=$1",
+      "UPDATE source_items SET job_id=$2,raw=$3,content_hash=$4,last_checked_at=now(),last_verified_at=now(),next_check_at=now()+($5*interval '1 hour'),error=NULL,failures=0 WHERE id=$1",
       [itemId, jobId, v, hash, hours],
     );
     if (outcome !== 'unchanged')
@@ -81,6 +82,7 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
         item.raw,
         v,
       );
+    await reconcileJob(c, jobId);
     return outcome;
   });
 }

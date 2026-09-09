@@ -13,9 +13,9 @@ Active read-only public HTML adapters, verified with live probes on 2026-09-07:
 
 The worker respects robots.txt, host allowlists, request delay and bounded response size. There are no authenticated endpoints, browser automation, anti-bot bypasses or notifications. Each run imports a bounded batch, sharing capacity with due rechecks and filling unused quota from the backlog. Listing pagination rotates gradually; discovery is not instantaneous or exhaustive.
 
-New records enter moderation. Crawling changes only source snapshots and review flags, never editorial draft or published text. Missing or changed source pages back off and appear as errors; transient failures never delete a vacancy. Published expiry remains enforced by the public query.
+Sources with auto_publish enabled publish validated records and refresh automatically managed drafts/public snapshots. Explicit editorial edits pause automation for that job. Missing/invalid data is retried without requiring manual review; transient failures preserve the last verified snapshot for up to seven days. Published expiry remains enforced by the public query.
 
-Only explicit currency/pay periods are normalized. Public-service salary has no period assumed. SS currency enum 1 was verified as GEL; other currencies are conservatively unpriced. Jobs.ge client banners can belong to unrelated advertisers; those images are never used as employer logos. HR and SS logos come from vacancy-specific containers/data.
+Only explicit currency/pay periods are normalized. Public-service salary has no period assumed. SS currency enum 1 was verified as GEL; other currencies are conservatively unpriced. Jobs.ge client banners can belong to unrelated advertisers; only images explicitly labelled with the matching employer are used. HR and SS logos come from vacancy-specific containers/data.
 
 Read-only smoke check:
 
@@ -25,13 +25,13 @@ npm run source:probe -- --source=ss --save
 
 The optional `--save` stores probes only under ignored `.local/probes/`.
 
-Bounded existing snapshot refresh, with source advisory locks (changes source snapshots/review flags only):
+Bounded existing snapshot refresh, with source advisory locks (also reconciles publication when source automation is enabled):
 
 ```sh
 npx tsx scripts/refresh-source-details.ts --limit=3 --source=hr
 ```
 
-Omit `--source` to refresh a maximum of three existing records per supported source. Editors can inspect the fresh metadata and explicitly save it. This command does not publish anything.
+Omit `--source` to refresh a maximum of three existing records per supported source. Automatic source publication also applies to this refresh command.
 
 Samushao.ge is retired at the owner’s request. Active configs, CLI, HTTP fetch and source selectors exclude it. Migration004 disables collection and archives vacancies exclusively associated with it. Historical parsing fixtures/audit data remain for compatibility; there is no active network path to that source.
 
