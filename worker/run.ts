@@ -12,7 +12,12 @@ import {
   sourceLockIds,
   UnavailableVacancy,
 } from './adapters';
-import { sourceFetch, validateUrl, SourceHttpError } from './http';
+import {
+  sourceFetch,
+  validateUrl,
+  SourceHttpError,
+  deferredSourceFailure,
+} from './http';
 import { discoverItems, stageVacancy } from './importer';
 export async function runSource(
   source: SourceId,
@@ -230,17 +235,26 @@ export async function runSource(
     };
   } catch (e) {
     const error = (e as Error).message.slice(0, 500);
+    const deferred = deferredSourceFailure(source, error);
     if (started) {
       await db().query(
-        "UPDATE source_runs SET status='failed',finished_at=now(),error=$2,discovered=$3,imported=$4,changed=$5,failed=$6 WHERE id=$1",
-        [runId, error, discovered, imported, changed, failed],
+        'UPDATE source_runs SET status=$7,finished_at=now(),error=$2,discovered=$3,imported=$4,changed=$5,failed=$6 WHERE id=$1',
+        [
+          runId,
+          error,
+          discovered,
+          imported,
+          changed,
+          failed,
+          deferred ? 'deferred' : 'failed',
+        ],
       );
       await db().query(
-        "UPDATE sources SET last_error=$2,consecutive_failures=consecutive_failures+1,next_run_at=now()+(LEAST(1440,interval_minutes*power(2,LEAST(consecutive_failures,5)))*interval '1 minute') WHERE id=$1",
-        [source, error],
+        "UPDATE sources SET last_error=$2,consecutive_failures=consecutive_failures+1,next_run_at=now()+CASE WHEN $3 THEN interval '1 day' ELSE (LEAST(1440,interval_minutes*power(2,LEAST(consecutive_failures,5)))*interval '1 minute') END WHERE id=$1",
+        [source, error, deferred],
       );
     }
-    return { source, error };
+    return { source, error, deferred };
   } finally {
     if (locked) await lock.query('SELECT pg_advisory_unlock($1)', [lockId]);
     lock.release();

@@ -44,6 +44,7 @@ const names: Record<string, string> = {
   success: 'წარმატებული',
   partial: 'ნაწილობრივი',
   failed: 'შეცდომა',
+  deferred: 'ავტომატური გამეორების მოლოდინში',
   interrupted: 'შეწყდა',
 };
 const time = (v: string | null) =>
@@ -504,7 +505,18 @@ export default function AdminPanel() {
                   <p className="source-last">
                     არსებული ვაკანსიები: ყოველ {s.detail_interval_hours} საათში
                   </p>
-                  {s.last_error && <p className="notice">{s.last_error}</p>}
+                  {s.last_error && (
+                    <div className="notice">
+                      <p>
+                        ბოლო შემოწმება სრულად ვერ დასრულდა. სისტემა ავტომატურად
+                        გადაამოწმებს.
+                      </p>
+                      <details>
+                        <summary>შემოწმების დეტალები</summary>
+                        <p>{s.last_error}</p>
+                      </details>
+                    </div>
+                  )}
                   <button
                     className="secondary-button"
                     disabled={busy || !s.enabled || !!s.requested_at}

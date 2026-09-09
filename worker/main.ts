@@ -50,13 +50,15 @@ try {
       console.log(JSON.stringify(result));
       if (process.env.GITHUB_STEP_SUMMARY) {
         const status =
-          'error' in result
-            ? 'failed'
-            : 'warning' in result && result.warning
-              ? 'partial'
-              : 'skipped' in result
-                ? 'skipped'
-                : 'success';
+          'deferred' in result && result.deferred
+            ? 'deferred: network unavailable; automatic retry scheduled'
+            : 'error' in result
+              ? 'failed'
+              : 'warning' in result && result.warning
+                ? 'partial'
+                : 'skipped' in result
+                  ? 'skipped'
+                  : 'success';
         appendFileSync(
           process.env.GITHUB_STEP_SUMMARY,
           `Source: ${source.id}: ${status}\n\nImported: ${'imported' in result ? result.imported : 0}; changed: ${'changed' in result ? result.changed : 0}; failed: ${'failed' in result ? result.failed : 0}. Automatic publication follows each source's database setting.\n\n`,
@@ -64,7 +66,7 @@ try {
       }
       if (
         (once || arg) &&
-        (('error' in result && result.error) ||
+        (('error' in result && result.error && !result.deferred) ||
           ('warning' in result && result.warning))
       )
         process.exitCode = 1;

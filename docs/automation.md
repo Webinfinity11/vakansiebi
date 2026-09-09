@@ -15,3 +15,5 @@ Explicit admin changes set `automation_paused` for that record. Historical admin
 `last_verified_at` changes only after successful parsing. Failed retries cannot make stale data look freshly verified. Source backoff, robots rules, bounded batches and advisory locks remain in force. Notifications remain disabled.
 
 Government-source network reachability is assessed separately; a green workflow that skips a source is not evidence it can connect. The authenticated Vercel government probe performs one bounded connectivity check without importing or exposing upstream HTML.
+
+Both GitHub and Vercel connectivity checks failed for the government source. Known government connection timeouts are recorded as `deferred`, with a one-day retry and an explicit workflow summary; this is not a successful import. After connectivity returns, normal hourly collection resumes. Parsing failures and unexpected errors remain failures. This fallback uses the existing GitHub/Neon/Vercel setup and adds no server or paid service.

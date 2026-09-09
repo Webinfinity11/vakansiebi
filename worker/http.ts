@@ -2,6 +2,14 @@ import robotsParser from 'robots-parser';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { SourceId } from '../lib/types';
 import { getSourceConfig } from './adapters';
+export function deferredSourceFailure(source: SourceId, error: string) {
+  return (
+    source === 'hrgov' &&
+    /^Source request failed: (UND_ERR_CONNECT_TIMEOUT|AbortError|TimeoutError)$/.test(
+      error,
+    )
+  );
+}
 export class SourceHttpError extends Error {
   constructor(public status: number) {
     super(`Source returned HTTP ${status}`);

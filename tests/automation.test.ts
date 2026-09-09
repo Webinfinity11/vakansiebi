@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { publishable } from '../worker/automation';
 import { parseDetail, UnavailableVacancy } from '../worker/adapters';
+import { deferredSourceFailure } from '../worker/http';
 const vacancy = {
   title: 'Developer',
   company: 'Studio',
@@ -19,6 +20,26 @@ const vacancy = {
   datePosted: '2026-09-01',
   deadline: '2026-10-01',
 };
+void test('known government network failure is deferred without disguising parser or other source failures', () => {
+  assert.equal(
+    deferredSourceFailure(
+      'hrgov',
+      'Source request failed: UND_ERR_CONNECT_TIMEOUT',
+    ),
+    true,
+  );
+  assert.equal(
+    deferredSourceFailure('hrgov', 'Vacancy structure changed'),
+    false,
+  );
+  assert.equal(
+    deferredSourceFailure(
+      'hr',
+      'Source request failed: UND_ERR_CONNECT_TIMEOUT',
+    ),
+    false,
+  );
+});
 void test('automatic quality gate permits honest omissions but rejects malformed, expired and offsite records', () => {
   const check = (v: unknown, source = 'hr', url = vacancy.url) =>
     publishable(v, source, url, '2026-09-09');
