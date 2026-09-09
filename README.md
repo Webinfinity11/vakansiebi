@@ -129,3 +129,5 @@ Railway-ის secrets-ში მიუთითე `DATABASE_URL`, `APP_URL`, `
 - გამოქვეყნება, არქივი და წყაროს განახლებაზე რეაგირება ხელით კონტროლდება. წყაროს ცვლილება ადმინის შენახულ რედაქციას არ გადაწერს.
 - robots.txt-ის გათვალისწინება არ უდრის კონტენტის ხელახალი გავრცელების უფლებას. ფართო საჯარო გაშვებამდე თითოეული წყაროს პირობები ცალკე უნდა შეთანხმდეს.
 - GitHub-ში არ იტვირთება `.env`, ადმინისტრატორის პაროლი, `.local`, ბაზები, ჩამოტვირთული HTML ან build/cache ფაილები.
+
+GitHub verification (2026-09-09): HR, Jobs and SS imported 43 new pending vacancies in total. The government source timed out connecting from GitHub (`UND_ERR_CONNECT_TIMEOUT`) on two attempts, while responding locally. Its existing data is retained; scheduled retries follow the source backoff. This is an unresolved network reachability limitation, not a successful government-source cloud import. Removed HTTP 404/410 detail pages are rechecked after seven days and linked pending/published jobs are flagged for manual review.
