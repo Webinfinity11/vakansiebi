@@ -2,6 +2,11 @@ import robotsParser from 'robots-parser';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { SourceId } from '../lib/types';
 import { getSourceConfig } from './adapters';
+export class SourceHttpError extends Error {
+  constructor(public status: number) {
+    super(`Source returned HTTP ${status}`);
+  }
+}
 const agent = 'ErtadVacancyBot/0.1';
 const robotsCache = new Map<
   string,
@@ -38,14 +43,20 @@ async function rawFetch(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 25000);
   try {
-    const r = await fetch(url, {
-      headers: {
-        'User-Agent': agent,
-        Accept: 'text/html,application/xml,text/xml,text/plain',
-      },
-      redirect: 'manual',
-      signal: controller.signal,
-    });
+    let r: Response;
+    try {
+      r = await fetch(url, {
+        headers: {
+          'User-Agent': agent,
+          Accept: 'text/html,application/xml,text/xml,text/plain',
+        },
+        redirect: 'manual',
+        signal: controller.signal,
+      });
+    } catch (error) {
+      const cause = (error as { cause?: { code?: string } }).cause?.code;
+      throw Error(`Source request failed: ${cause || (error as Error).name}`);
+    }
     if (r.status >= 300 && r.status < 400 && r.headers.get('location')) {
       await r.body?.cancel();
       return rawFetch(
@@ -106,6 +117,6 @@ export async function sourceFetch(source: SourceId, value: string) {
   }
   const result = await rawFetch(source, url.href);
   if (result.status < 200 || result.status >= 300)
-    throw Error(`Source returned HTTP ${result.status}`);
+    throw new SourceHttpError(result.status);
   return result.text;
 }

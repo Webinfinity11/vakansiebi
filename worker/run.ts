@@ -10,7 +10,7 @@ import {
   additionalListing,
   sourceLockIds,
 } from './adapters';
-import { sourceFetch, validateUrl } from './http';
+import { sourceFetch, validateUrl, SourceHttpError } from './http';
 import { discoverItems, stageVacancy } from './importer';
 export async function runSource(
   source: SourceId,
@@ -26,7 +26,8 @@ export async function runSource(
   let imported = 0,
     changed = 0,
     failed = 0,
-    discovered = 0;
+    discovered = 0,
+    removed = 0;
   try {
     locked = (
       await lock.query('SELECT pg_try_advisory_lock($1) AS locked', [lockId])
@@ -145,6 +146,20 @@ export async function runSource(
         if (outcome === 'imported') imported++;
         if (outcome === 'changed') changed++;
       } catch (e) {
+        if (e instanceof SourceHttpError && [404, 410].includes(e.status)) {
+          removed++;
+          consecutiveDetailFailures = 0;
+          await db().query(
+            "UPDATE source_items SET last_checked_at=now(),error=$2,next_check_at=now()+interval '7 days' WHERE id=$1",
+            [item.id, e.message],
+          );
+          if (item.job_id)
+            await db().query(
+              "UPDATE jobs SET needs_review=true,version=version+1 WHERE id=$1 AND NOT needs_review AND status IN ('pending','published')",
+              [item.job_id],
+            );
+          continue;
+        }
         failed++;
         consecutiveDetailFailures++;
         await db().query(
@@ -184,7 +199,7 @@ export async function runSource(
       "UPDATE sources SET last_success_at=CASE WHEN $2::text IS NULL THEN now() ELSE last_success_at END,last_error=$2,consecutive_failures=0,next_run_at=now()+(interval_minutes*interval '1 minute') WHERE id=$1",
       [source, warning],
     );
-    return { source, discovered, imported, changed, failed, warning };
+    return { source, discovered, imported, changed, failed, removed, warning };
   } catch (e) {
     const error = (e as Error).message.slice(0, 500);
     if (started) {
