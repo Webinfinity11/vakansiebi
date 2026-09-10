@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -209,9 +209,31 @@ export default function VacancyPage({
     job.companyProfile?.website ||
     job.companyProfile?.description,
   );
+  function recordContactOpen(event: MouseEvent<HTMLDivElement>) {
+    if (preview || !(event.target instanceof Element)) return;
+    const href = event.target.closest('a')?.getAttribute('href');
+    if (
+      href &&
+      (/^(?:mailto:|tel:)/i.test(href) ||
+        href === applicationDestination(job)?.url)
+    )
+      personal.begin(job);
+  }
+  const progress = (
+    <ApplicationControl
+      job={job}
+      space={personal}
+      disabled={preview}
+      seen={activity.seen.includes(job.id)}
+    />
+  );
   return (
     <div
-      className={`board-shell vacancy-page ${hasAction ? 'has-contact' : ''}`}
+      onClickCapture={recordContactOpen}
+      onAuxClickCapture={(event) => {
+        if (event.button === 1) recordContactOpen(event);
+      }}
+      className={`board-shell vacancy-page has-personal-progress ${hasAction ? 'has-contact' : ''}`}
     >
       <header className="topbar">
         <div className="header-inner">
@@ -344,12 +366,17 @@ export default function VacancyPage({
               </div>
             )}
           </section>
+          {!hasAction && (
+            <aside className="vacancy-contact vacancy-progress-only">
+              {progress}
+            </aside>
+          )}
           {hasAction && (
             <aside
               className="vacancy-contact"
               aria-label="დამსაქმებელთან დაკავშირება"
             >
-              <QuickApply job={job} />
+              <QuickApply job={job}>{progress}</QuickApply>
             </aside>
           )}
           {hasDescriptionContent && (
@@ -461,16 +488,6 @@ export default function VacancyPage({
                       : 'არ მაინტერესებს'}
                   </button>
                 )}
-              </details>
-              <details className="application-tracker">
-                <summary>
-                  განაცხადის ეტაპის აღნიშვნა <span>სურვილისამებრ</span>
-                </summary>
-                <ApplicationControl
-                  job={job}
-                  space={personal}
-                  disabled={preview}
-                />
               </details>
             </section>
           )}

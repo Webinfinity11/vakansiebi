@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Mail, Phone, Copy, ArrowUpRight, Languages } from 'lucide-react';
 import { emailDraft, hasEnglishDescription } from '@/lib/application-contact';
 import {
@@ -12,9 +12,11 @@ import type { PublicJob } from '@/lib/types';
 export function QuickApply({
   job,
   showApplication = true,
+  children,
 }: {
   job: PublicJob;
   showApplication?: boolean;
+  children?: ReactNode;
 }) {
   const { emails, phones } = vacancyContacts(job);
   const application = applicationDestination(job);
@@ -109,6 +111,7 @@ export function QuickApply({
         </p>
       )}
       <output aria-live="polite">{message}</output>
+      {children}
       <TranslationHelp job={job} />
     </section>
   );

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import {
   readPersonal,
+  beginApplication,
   putPersonal,
   saveSearch,
   recordKey,
@@ -123,4 +124,57 @@ void test('limits do not silently discard previous searches and writes report st
     },
   };
   assert.throws(() => putPersonal(broken, application()), /QuotaExceededError/);
+});
+
+void test('opening a contact begins a draft but never claims submission or downgrades later stages', () => {
+  const store = memory();
+  const app = application();
+  assert.equal(beginApplication(store, app).status, 'started');
+  for (const status of [
+    'applied',
+    'interview',
+    'offer',
+    'hired',
+    'rejected',
+    'closed',
+  ] as const) {
+    const advanced = { ...app, status };
+    putPersonal(store, advanced);
+    assert.deepEqual(
+      beginApplication(store, {
+        ...app,
+        updatedAt: '2026-09-11T00:00:00.000Z',
+      }),
+      advanced,
+    );
+    assert.equal(readPersonal(store).records.length, 1);
+  }
+  store.removeItem(recordKey(app));
+  putPersonal(store, { ...app, status: 'planned' });
+  assert.equal(beginApplication(store, app).status, 'started');
+});
+void test('new stages round trip while existing records and unrelated browsing activity survive', () => {
+  const store = memory();
+  store.setItem(
+    'ertad-vacancy-activity',
+    JSON.stringify({ seen: ['existing'], hidden: [] }),
+  );
+  for (const status of [
+    'planned',
+    'started',
+    'applied',
+    'interview',
+    'offer',
+    'hired',
+    'rejected',
+    'closed',
+  ] as const)
+    putPersonal(store, { ...application(), status });
+  const result = readPersonal(store);
+  assert.equal(result.invalid, 0);
+  assert.equal(result.records.length, 8);
+  assert.equal(
+    JSON.parse(store.getItem('ertad-vacancy-activity')!).seen[0],
+    'existing',
+  );
 });

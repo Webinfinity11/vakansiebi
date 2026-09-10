@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useId } from 'react';
 import { FolderHeart, Search, Trash2, ArrowUpRight } from 'lucide-react';
 import {
   Sheet,
@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   applicationStatuses,
+  beginApplication,
   PERSONAL_PREFIX,
   readPersonal,
   putPersonal,
@@ -29,6 +30,7 @@ import {
 } from '@/lib/personal-space';
 import type { PublicJob } from '@/lib/types';
 
+const personalChanged = 'ertad-personal-changed';
 export function usePersonalSpace() {
   const [records, setRecords] = useState<PersonalRecord[]>([]);
   const [ready, setReady] = useState(false);
@@ -58,14 +60,18 @@ export function usePersonalSpace() {
       if (!event.key || event.key.startsWith(PERSONAL_PREFIX)) refresh();
     };
     window.addEventListener('storage', onStorage);
+    window.addEventListener(personalChanged, refresh);
     return () => {
       clearTimeout(timer);
       window.removeEventListener('storage', onStorage);
+      window.removeEventListener(personalChanged, refresh);
     };
   }, [refresh]);
   function act(operation: () => void, success: string) {
     try {
       operation();
+      setError('');
+      window.dispatchEvent(new Event(personalChanged));
       refresh();
       setMessage(success);
       return true;
@@ -92,7 +98,25 @@ export function usePersonalSpace() {
         status,
         updatedAt: new Date().toISOString(),
       });
-    }, 'ეტაპი შენახულია. განაცხადი არ გაგზავნილა.');
+      if (undo?.id === job.id) setUndo(null);
+    }, 'პირადი სტატუსი განახლდა.');
+  }
+  function begin(job: PublicJob) {
+    return act(() => {
+      beginApplication(localStorage, {
+        version: 1,
+        kind: 'application',
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        city: job.city,
+        url: job.url,
+        deadline: job.deadline,
+        status: 'started',
+        updatedAt: new Date().toISOString(),
+      });
+      if (undo?.id === job.id) setUndo(null);
+    }, '');
   }
   function updateStatus(record: Application, status: Application['status']) {
     return act(() => {
@@ -134,6 +158,7 @@ export function usePersonalSpace() {
     restore,
     remove,
     track,
+    begin,
     updateStatus,
     save: (name: string, filters: SearchFilters) =>
       act(() => {
@@ -161,39 +186,56 @@ export function ApplicationControl({
   job,
   space,
   disabled,
+  seen = false,
 }: {
   job: PublicJob;
   space: PersonalController;
   disabled: boolean;
+  seen?: boolean;
 }) {
+  const stageId = useId();
   const entry = space.records.find(
     (r): r is Application => r.kind === 'application' && r.id === job.id,
   );
   return (
     <section className="application-control">
-      <label htmlFor="application-stage">ჩემი განაცხადი</label>
+      <div className="application-control-heading">
+        <label htmlFor={stageId}>ჩემი სტატუსი</label>
+        {seen && <span className="seen-badge">ნანახია</span>}
+      </div>
       <select
-        id="application-stage"
+        id={stageId}
         disabled={disabled || !space.ready}
         value={entry?.status || ''}
         onChange={(e) => {
           if (e.target.value)
             space.track(job, e.target.value as Application['status']);
+          else if (entry) space.remove(entry);
         }}
       >
-        <option value="" disabled>
-          აირჩიე ეტაპი
-        </option>
+        <option value="">ეტაპის გარეშე</option>
         {Object.entries(applicationStatuses).map(([key, label]) => (
           <option key={key} value={key}>
             {label}
           </option>
         ))}
       </select>
+      {entry?.status === 'started' && (
+        <div className="application-confirm">
+          <p>ბმულის გახსნა გაგზავნას არ ადასტურებს. უკვე გაგზავნე განაცხადი?</p>
+          <button
+            className="secondary-button"
+            disabled={disabled || !space.ready}
+            onClick={() => space.track(job, 'applied')}
+          >
+            კი, გავაგზავნე
+          </button>
+        </div>
+      )}
       <p>
         {disabled
           ? 'წინასწარი ნახვის რეჟიმში პირადი აღრიცხვა გამორთულია.'
-          : 'პირადი ჩანაწერი — დამსაქმებელს არ ეგზავნება.'}
+          : 'პირადი აღნიშვნა · ინახება ამ ბრაუზერში.'}
       </p>
       <Feedback space={space} />
     </section>
@@ -219,7 +261,7 @@ export function PersonalSpace({
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
   const [section, setSection] = useState<'searches' | 'applications'>(
-    'searches',
+    'applications',
   );
   const [stage, setStage] = useState('all');
   const searches = space.records.filter(
@@ -344,7 +386,7 @@ export function PersonalSpace({
             ) : (
               <>
                 <p>
-                  ეტაპებს შენ ცვლი. „გავაგზავნე“ დამსაქმებლის პასუხს ან მიღების
+                  ეტაპებს შენ ცვლი. „გაგზავნილია“ დამსაქმებლის პასუხს ან მიღების
                   დადასტურებას არ ნიშნავს.
                 </p>
                 <label className="personal-stage-filter">
@@ -368,7 +410,7 @@ export function PersonalSpace({
                   <div className="personal-empty">
                     <h3>ამ ეტაპზე ჩანაწერი არ გაქვს</h3>
                     <p>
-                      გახსენი ვაკანსია და „ჩემი განაცხადის“ ველში აირჩიე ეტაპი.
+                      გახსენი ვაკანსია და „ჩემი სტატუსის“ ველში აირჩიე ეტაპი.
                     </p>
                   </div>
                 )}
@@ -377,7 +419,9 @@ export function PersonalSpace({
                   .map((record) => (
                     <article className="personal-card" key={record.id}>
                       <p>
-                        {record.company} · {record.city}
+                        {[record.company, record.city]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </p>
                       <h3>{record.title}</h3>
                       <label>

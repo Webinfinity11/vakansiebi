@@ -1,4 +1,6 @@
 'use client';
+import { VacancyStatus } from './vacancy-status';
+import type { Application } from '@/lib/personal-space';
 import { compactSalary } from '@/lib/vacancy-presentation';
 import Link from 'next/link';
 import AdvancedFilterControls, {
@@ -108,6 +110,11 @@ export default function JobBoard() {
   const activity = useVacancyActivity();
   const excluded = demo ? '' : activity.hidden.map((item) => item.id).join(',');
   const personal = usePersonalSpace();
+  const applicationsById = new Map(
+    personal.records
+      .filter((r): r is Application => r.kind === 'application')
+      .map((r) => [r.id, r.status]),
+  );
   const [personalOpen, setPersonalOpen] = useState(false);
   const [loadedResult, setLoadedResult] = useState({ key: '', page: 0 });
   const [jobs, setJobs] = useState<Job[]>([]),
@@ -970,8 +977,11 @@ export default function JobBoard() {
                           <div className="job-info">
                             <div className="job-company">
                               <span>{j.company || 'კომპანია'}</span>
-                              {!demo && activity.seen.includes(j.id) && (
-                                <span className="seen-badge">ნანახია</span>
+                              {!demo && (
+                                <VacancyStatus
+                                  seen={activity.seen.includes(j.id)}
+                                  status={applicationsById.get(j.id)}
+                                />
                               )}
                             </div>
                             <Link

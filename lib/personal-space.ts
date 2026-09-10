@@ -2,8 +2,12 @@ import { z } from 'zod';
 export const PERSONAL_PREFIX = 'ertad-personal:v1:';
 export const applicationStatuses = {
   planned: 'გასაგზავნი',
-  applied: 'გავაგზავნე',
+  started: 'დაკავშირება დაწყებულია',
+  applied: 'გაგზავნილია',
   interview: 'გასაუბრება',
+  offer: 'შეთავაზება მივიღე',
+  hired: 'დავსაქმდი',
+  rejected: 'უარი მივიღე',
   closed: 'დასრულებული',
 } as const;
 export const filtersSchema = z.object({
@@ -50,7 +54,16 @@ const https = z.url().refine((v) => {
 export const applicationSchema = z.object({
   ...base,
   kind: z.literal('application'),
-  status: z.enum(['planned', 'applied', 'interview', 'closed']),
+  status: z.enum([
+    'planned',
+    'started',
+    'applied',
+    'interview',
+    'offer',
+    'hired',
+    'rejected',
+    'closed',
+  ]),
   title: z.string().min(2).max(300),
   company: z.string().max(300),
   city: z.string().max(300),
@@ -131,4 +144,15 @@ export function saveSearch(
     filters,
     updatedAt: new Date().toISOString(),
   });
+}
+
+/** Opening an application/contact link is intent, never evidence of delivery. */
+export function beginApplication(storage: PersonalStorage, input: Application) {
+  const existing = readPersonal(storage).records.find(
+    (r): r is Application => r.kind === 'application' && r.id === input.id,
+  );
+  if (existing && existing.status !== 'planned') return existing;
+  const record = applicationSchema.parse({ ...input, status: 'started' });
+  putPersonal(storage, record);
+  return record;
 }

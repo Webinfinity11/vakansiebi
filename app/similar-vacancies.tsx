@@ -1,4 +1,7 @@
 'use client';
+import { VacancyStatus } from './vacancy-status';
+import { usePersonalSpace } from './personal-space';
+import type { Application } from '@/lib/personal-space';
 import { compactSalary } from '@/lib/vacancy-presentation';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
@@ -23,6 +26,12 @@ export function SimilarVacancies({
   } | null>(null);
   const [retry, setRetry] = useState(0);
   const activity = useVacancyActivity();
+  const personal = usePersonalSpace();
+  const applicationsById = new Map(
+    personal.records
+      .filter((r): r is Application => r.kind === 'application')
+      .map((r) => [r.id, r.status]),
+  );
   const excluded = activity.hidden.map((item) => item.id).join(',');
   const key = id + ':' + excluded;
   useEffect(() => {
@@ -99,6 +108,10 @@ export function SimilarVacancies({
                 <span>{job.company}</span>
               </div>
               <h3>{job.title}</h3>
+              <VacancyStatus
+                seen={activity.seen.includes(job.id)}
+                status={applicationsById.get(job.id)}
+              />
               {job.salary && (
                 <span className="similar-salary">
                   {compactSalary(job.salary)}
@@ -106,10 +119,7 @@ export function SimilarVacancies({
               )}
               <p>{reasons.join(' · ')}</p>
               <span className="similar-open">
-                {activity.seen.includes(job.id)
-                  ? 'ნანახია · ნახვა'
-                  : 'ვაკანსიის ნახვა'}{' '}
-                <ArrowUpRight size={15} />
+                ვაკანსიის ნახვა <ArrowUpRight size={15} />
               </span>
             </Link>
           ))}
