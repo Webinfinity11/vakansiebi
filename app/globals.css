@@ -674,10 +674,8 @@ footer > span:last-child {
   font-size: 14px;
 }
 .detail-sheet {
-  width: 100% !important;
-  max-width: 640px !important;
-  overflow: auto;
-  padding: 25px;
+  overflow: hidden;
+  padding: 0;
 }
 .detail-title {
   font-size: 25px;
@@ -2331,13 +2329,12 @@ button:disabled {
   top: 15px;
 }
 .detail-sheet {
-  max-width: 740px !important;
   padding: 0 !important;
   gap: 0 !important;
   background: #fff !important;
   display: flex !important;
   flex-direction: column !important;
-  overflow: auto !important;
+  overflow: hidden;
 }
 .detail-sheet > [data-slot='sheet-header'] {
   padding: 24px 32px 12px;

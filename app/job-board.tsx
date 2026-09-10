@@ -7,7 +7,7 @@ import AdvancedFilterControls, {
 } from './advanced-filters';
 import type { SearchMeta, FilterKey } from '@/lib/server/search-plan';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { readSearch, searchParams } from '@/lib/search-state';
 import {
   ArrowUpRight,
@@ -244,6 +244,8 @@ export default function JobBoard() {
       .catch(() => {});
     return () => controller.abort();
   }, []);
+  const detailOpener = useRef<HTMLButtonElement | null>(null);
+  const detailHeading = useRef<HTMLHeadingElement | null>(null);
   const [selected, setSelected] = useState<Job | null>(null),
     [filtersOpen, setFiltersOpen] = useState(false),
     [savedOnly, setSavedOnly] = useState(false),
@@ -1025,7 +1027,9 @@ export default function JobBoard() {
                             <button
                               className="job-title"
                               disabled={resultsPending}
-                              onClick={() => {
+                              aria-haspopup="dialog"
+                              onClick={(event) => {
+                                detailOpener.current = event.currentTarget;
                                 setDetailError('');
                                 setSelected(j);
                               }}
@@ -1089,18 +1093,10 @@ export default function JobBoard() {
                                   ? `გამოქვეყნდა ${formatDate(j.datePosted)}`
                                   : ''}
                             </span>
-                            <button
-                              className="card-open"
-                              disabled={resultsPending}
-                              aria-label={`${j.title} — დეტალები`}
-                              onClick={() => {
-                                setDetailError('');
-                                setSelected(j);
-                              }}
-                            >
+                            <span className="card-open" aria-hidden="true">
                               <span>ნახვა</span>
                               <ArrowUpRight size={16} />
-                            </button>
+                            </span>
                           </div>
                         </article>
                       ))}
@@ -1272,7 +1268,13 @@ export default function JobBoard() {
           if (!open) setSelected(null);
         }}
       >
-        <SheetContent className="detail-sheet">
+        <SheetContent
+          className="detail-sheet"
+          initialFocus={detailHeading}
+          finalFocus={() =>
+            detailOpener.current?.isConnected ? detailOpener.current : true
+          }
+        >
           <SheetHeader>
             <SheetDescription>
               ვაკანსიის დეტალები · {selected?.source}
@@ -1304,7 +1306,9 @@ export default function JobBoard() {
                   </button>
                 </div>
                 <span className="category-tag">{selected.category}</span>
-                <h2 className="detail-title">{selected.title}</h2>
+                <h2 className="detail-title" ref={detailHeading} tabIndex={-1}>
+                  {selected.title}
+                </h2>
                 <div className="detail-dates">
                   {selected.datePosted && (
                     <span>გამოქვეყნდა {formatDate(selected.datePosted)}</span>

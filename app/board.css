@@ -500,8 +500,14 @@
   color: #616368;
 }
 .detail-sheet[data-slot='sheet-content'] {
-  width: min(780px, 92vw);
-  max-width: 780px;
+  width: min(920px, calc(100vw - 64px));
+  max-width: 920px;
+  height: min(960px, calc(100dvh - 64px));
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  translate: none;
+  border: 1px solid #dce2ed;
+  border-radius: 20px;
   background: #fff;
 }
 .detail-sheet .detail-title {
@@ -1158,5 +1164,96 @@
   }
   .board-shell .saved-nav > span {
     display: none;
+  }
+}
+
+/* The native title button covers the card; bookmark remains a separate action. */
+.board-shell .job-card {
+  position: relative;
+  isolation: isolate;
+}
+.board-shell .job-title::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.board-shell .job-title:disabled::after {
+  cursor: wait;
+}
+.board-shell .job-title:focus-visible {
+  outline: none;
+}
+.board-shell .job-title:focus-visible::after {
+  outline: 3px solid #2457e6;
+  outline-offset: 3px;
+}
+.board-shell .job-side .save-button {
+  position: relative;
+  z-index: 2;
+}
+.board-shell .job-card:hover .card-open {
+  background: #2457e6;
+  color: #fff;
+}
+.detail-sheet > [data-slot='sheet-header'] {
+  flex-shrink: 0;
+  padding-right: 72px;
+  border-bottom: 1px solid #edf0f5;
+  padding-bottom: 18px;
+}
+.detail-sheet .detail-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+  padding-top: 22px;
+}
+.detail-sheet .detail-actions {
+  flex-shrink: 0;
+  position: static;
+  padding-bottom: max(17px, env(safe-area-inset-bottom));
+}
+.detail-sheet > [data-slot='sheet-close'] {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f1f4f9;
+  top: 10px;
+  right: 14px;
+}
+.detail-sheet .detail-title:focus {
+  outline: none;
+}
+.detail-sheet:is([data-starting-style], [data-ending-style]) {
+  scale: 0.98;
+}
+@media (min-width: 761px) {
+  .detail-sheet .detail-facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .detail-sheet[data-slot='sheet-content'] {
+    inset: auto 0 0;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    height: calc(100dvh - 20px);
+    border-radius: 18px 18px 0 0;
+  }
+  .detail-sheet:is([data-starting-style], [data-ending-style]) {
+    scale: 1;
+    translate: 0 24px;
+  }
+  .detail-sheet > [data-slot='sheet-header'] {
+    padding: 22px 70px 18px 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .detail-sheet[data-slot='sheet-content'] {
+    transition: none;
   }
 }
