@@ -2381,29 +2381,51 @@
 .vacancy-status {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 7px;
-  border-radius: 5px;
-  font-size: 11px;
-  font-weight: 500;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 650;
   line-height: 1.5;
-  color: #58677f;
-  background: #eff2f6;
+  color: var(--status-text, #1e40af);
+  background: var(--status-bg, #dbeafe);
+  border: 1px solid var(--status-border, #93b4f2);
 }
-.vacancy-status.status-started,
-.vacancy-status.status-planned {
-  color: #78551a;
-  background: #fff5df;
+.status-started,
+.status-planned,
+.application-control[data-application-status='started'],
+.application-control[data-application-status='planned'] {
+  --status-text: #854d0e;
+  --status-bg: #fef3c7;
+  --status-border: #e7bf60;
 }
-.vacancy-status.status-applied,
-.vacancy-status.status-hired {
-  color: #196044;
-  background: #edf7f1;
+.status-applied,
+.status-hired,
+.application-control[data-application-status='applied'],
+.application-control[data-application-status='hired'] {
+  --status-text: #166534;
+  --status-bg: #dcfce7;
+  --status-border: #86ceac;
 }
-.vacancy-status.status-interview,
-.vacancy-status.status-offer {
-  color: #52418b;
-  background: #f2effa;
+.status-interview,
+.status-offer,
+.application-control[data-application-status='interview'],
+.application-control[data-application-status='offer'] {
+  --status-text: #5b21b6;
+  --status-bg: #ede9fe;
+  --status-border: #bba1ed;
+}
+.status-rejected,
+.application-control[data-application-status='rejected'] {
+  --status-text: #9f1239;
+  --status-bg: #ffe4e6;
+  --status-border: #eca2b5;
+}
+.status-closed,
+.application-control[data-application-status='closed'] {
+  --status-text: #475569;
+  --status-bg: #e2e8f0;
+  --status-border: #a8b5c6;
 }
 .similar-card .vacancy-status {
   width: fit-content;
@@ -2461,4 +2483,20 @@
   .vacancy-progress-only > .application-control {
     position: static;
   }
+}
+
+/* Reinforce personal state with readable text, icon and a colored outline. */
+.seen-badge {
+  color: #1e40af;
+  background: #dbeafe;
+  border: 1px solid #93b4f2;
+  font-size: 11px;
+  font-weight: 650;
+  padding: 3px 7px;
+}
+.vacancy-page .application-control:not([data-application-status='']) select {
+  color: var(--status-text);
+  background: var(--status-bg);
+  border-color: var(--status-border);
+  font-weight: 600;
 }

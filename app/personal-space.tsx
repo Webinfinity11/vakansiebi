@@ -198,7 +198,10 @@ export function ApplicationControl({
     (r): r is Application => r.kind === 'application' && r.id === job.id,
   );
   return (
-    <section className="application-control">
+    <section
+      className="application-control"
+      data-application-status={entry?.status || ''}
+    >
       <div className="application-control-heading">
         <label htmlFor={stageId}>ჩემი სტატუსი</label>
         {seen && <span className="seen-badge">ნანახია</span>}
