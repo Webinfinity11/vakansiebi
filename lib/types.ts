@@ -28,6 +28,7 @@ export type Vacancy = {
   datePosted: string;
 };
 export type PublicJob = Vacancy & {
+  logoOrigin?: string;
   summary?: boolean;
   sourceChanged?: boolean;
   companyProfile?: { website: string; description: string };

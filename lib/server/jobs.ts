@@ -15,6 +15,8 @@ import {
   type SearchMeta,
 } from './search-plan';
 import { suggestSearch } from '../search-language';
+import { logoCompanyKey } from '../company-logo-identity';
+import { resolveCompanyLogos } from './company-logos';
 export async function publicJobs(params: URLSearchParams, preview = false) {
   const page = Math.max(
     1,
@@ -82,10 +84,29 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
       ).rows
     : [];
   const companyProfiles = new Map(profiles.map((p) => [p.company_key, p]));
+  const sharedLogos = await resolveCompanyLogos(
+    rows
+      .filter(
+        (r) =>
+          !r.published.logoUrl &&
+          !companyProfiles.get(companyKey(r.published.company || ''))?.logo_url,
+      )
+      .map((r) => r.published.company || ''),
+  );
   return {
     jobs: rows.map((r) => ({
       description: '',
       ...r.published,
+      ...(!r.published.logoUrl &&
+      sharedLogos.has(logoCompanyKey(r.published.company || ''))
+        ? {
+            logoUrl: sharedLogos.get(logoCompanyKey(r.published.company || ''))!
+              .logoUrl,
+            logoOrigin: sharedLogos.get(
+              logoCompanyKey(r.published.company || ''),
+            )!.origin,
+          }
+        : {}),
       summary,
       ...(typeof r.published.salaryMin === 'number' &&
       (!Number.isFinite(r.published.salaryMin) ||
