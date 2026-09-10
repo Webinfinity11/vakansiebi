@@ -203,6 +203,7 @@ export default function VacancyPage({
   const hasAction = hasContact || Boolean(applicationDestination(job));
   const hasDescriptionContent = Boolean(
     description.trim() ||
+    sourceExcerpt ||
     links.some((link) => !link.application) ||
     extraFacts.length ||
     job.companyProfile?.website ||
@@ -234,8 +235,12 @@ export default function VacancyPage({
           <Link href={returnTo} prefetch={false}>
             ვაკანსიები
           </Link>
-          <span aria-hidden="true">/</span>
-          {job.category !== 'სხვა' && <span>{job.category}</span>}
+          {job.category !== 'სხვა' && (
+            <>
+              <span aria-hidden="true">/</span>
+              <span>{job.category}</span>
+            </>
+          )}
         </nav>
         <article className="vacancy-layout">
           <section className="vacancy-overview" aria-labelledby="vacancy-title">
