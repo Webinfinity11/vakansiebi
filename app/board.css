@@ -2500,3 +2500,427 @@
   border-color: var(--status-border);
   font-weight: 600;
 }
+
+/* An editorial blue masthead and compact, useful discovery navigation. */
+.board-shell .discovery-hero {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 78% 8%, #3466a5 0%, transparent 54%),
+    linear-gradient(112deg, #142e53, #1e4573 64%, #244976);
+  border: 0;
+}
+.board-shell .discovery-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.22;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 110px,
+      #b3d2f322 110px 111px,
+      transparent 111px 220px
+    ),
+    repeating-linear-gradient(0deg, transparent 0 76px, #b3d2f31a 76px 77px);
+  transform: skewX(-12deg) scale(1.12);
+}
+.board-shell .discovery-hero::after {
+  content: '';
+  position: absolute;
+  width: 450px;
+  height: 450px;
+  right: -160px;
+  top: -230px;
+  border: 70px solid #ffffff04;
+  border-radius: 50%;
+  z-index: -1;
+  pointer-events: none;
+}
+.board-shell .discovery-hero .hero-inner {
+  display: block;
+  max-width: 1080px;
+  padding: 36px 24px 24px;
+  margin: 0 auto;
+  text-align: center;
+}
+.board-shell .discovery-hero .eyebrow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  color: #bfd1e8;
+  margin-bottom: 14px;
+}
+.board-shell .discovery-hero .eyebrow > span {
+  background: #80b5ff;
+  box-shadow: 0 0 0 4px #8bbaff16;
+}
+.board-shell .discovery-hero h1 {
+  color: #fff;
+  font-size: clamp(32px, 3.4vw, 47px);
+  line-height: 1.4;
+  letter-spacing: -1.2px;
+  margin: 0 0 12px;
+}
+.board-shell .discovery-hero h1 em {
+  color: #a9d2ff;
+  font-style: normal;
+}
+.board-shell .discovery-hero .hero-copy > p {
+  color: #cfdbed;
+  font-size: 14px;
+  margin: 0;
+}
+.board-shell .discovery-hero .hero-search-wrap {
+  position: relative;
+  max-width: 1060px;
+  padding: 0 24px 25px;
+  margin: 0 auto;
+}
+.search-panel {
+  border: 1px solid #e0e8f3;
+  border-radius: 16px;
+  padding: 0 20px 12px;
+  background: #fff;
+  box-shadow: 0 12px 32px #071c3926;
+}
+.search-modes {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid #e4eaf2;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.search-modes button {
+  position: relative;
+  padding: 16px 0 14px;
+  min-height: 48px;
+  flex: 0 0 auto;
+  color: #566c88;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+.search-modes button[aria-pressed='true'] {
+  color: #2457e6;
+  border-bottom-color: #2457e6;
+}
+.search-modes button:hover {
+  color: #2457e6;
+}
+.board-shell .discovery-hero .searchbar {
+  padding: 12px 0 0;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  background: #fff;
+  gap: 14px;
+}
+.board-shell .discovery-hero .searchbar:focus-within {
+  box-shadow: none;
+}
+.search-panel:focus-within {
+  outline: 2px solid #8ab4ff;
+  outline-offset: 4px;
+}
+.board-shell .discovery-hero .searchbar > svg {
+  color: #8399b6;
+}
+.board-shell .discovery-hero .searchbar input {
+  color: #243955;
+  height: 48px;
+}
+.board-shell .discovery-hero .searchbar input::placeholder {
+  color: #5c6f89;
+}
+.board-shell .discovery-hero .searchbar .primary {
+  min-height: 50px;
+  background: #2457e6;
+  padding: 0 24px;
+  font-size: 13px;
+  border-radius: 10px;
+  gap: 12px;
+}
+.hero-assurance {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 17px;
+  color: #c6d8ed;
+  font-size: 11px;
+}
+.hero-assurance > span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.hero-assurance svg {
+  color: #91b9e8;
+}
+.discovery-shortcuts {
+  max-width: 1224px;
+  margin: 24px auto 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.discovery-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px;
+  text-align: left;
+  background: #edf2f9;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  min-width: 0;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.shortcut-icon {
+  display: grid;
+  place-items: center;
+  color: #2457e6;
+  flex: 0 0 36px;
+}
+.discovery-shortcut > span:nth-child(2) {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.discovery-shortcut strong {
+  font-size: 13px;
+  line-height: 1.6;
+  font-weight: 700;
+  color: #253f5e;
+}
+.discovery-shortcut small {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #536a87;
+}
+.shortcut-arrow {
+  margin-left: auto;
+  color: #7d94b3;
+  flex-shrink: 0;
+}
+.discovery-shortcut:hover,
+.discovery-shortcut[aria-pressed='true'] {
+  border-color: #96b5ec;
+  background: #e5edfc;
+}
+.discovery-shortcut[aria-pressed='true'] .shortcut-arrow {
+  color: #2457e6;
+}
+.discovery-categories {
+  max-width: 1224px;
+  margin: 24px auto 0;
+}
+.discovery-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.discovery-section-heading h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #57708e;
+  margin: 0;
+}
+.discovery-section-heading > button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 36px;
+  font-size: 11px;
+  color: #42618a;
+}
+.category-gallery {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  padding: 6px;
+  border: 1px solid #e0e7f0;
+  background: #fff;
+  border-radius: 12px;
+}
+.category-gallery button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 82px;
+  padding: 12px 6px;
+  border-radius: 8px;
+  color: #6c8cac;
+}
+.category-gallery button > span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #446182;
+}
+.category-gallery button:hover,
+.category-gallery button[aria-pressed='true'] {
+  background: #edf3ff;
+  color: #2457e6;
+}
+.category-gallery button[aria-pressed='true'] > span {
+  color: #2457e6;
+}
+.discovery-shortcut:focus-visible,
+.category-gallery button:focus-visible,
+.search-modes button:focus-visible,
+.discovery-section-heading > button:focus-visible {
+  outline: 2px solid #2457e6;
+  outline-offset: 3px;
+}
+.board-shell .board-page {
+  padding-top: 24px;
+}
+@media (max-width: 1280px) {
+  .discovery-shortcuts,
+  .discovery-categories {
+    margin-left: 28px;
+    margin-right: 28px;
+  }
+}
+@media (min-width: 761px) and (max-width: 1050px) {
+  .discovery-shortcut {
+    padding: 14px 10px;
+    gap: 6px;
+  }
+  .shortcut-arrow {
+    display: none;
+  }
+  .discovery-shortcut strong {
+    font-size: 12px;
+  }
+  .discovery-shortcut small {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .board-shell .discovery-hero .hero-inner {
+    padding: 26px 18px 18px;
+  }
+  .board-shell .discovery-hero .eyebrow {
+    font-size: 10px;
+    margin-bottom: 10px;
+  }
+  .board-shell .discovery-hero h1 {
+    font-size: 29px;
+    line-height: 1.4;
+    letter-spacing: -0.7px;
+  }
+  .board-shell .discovery-hero .hero-copy > p {
+    font-size: 12px;
+    max-width: 330px;
+    margin: 0 auto;
+  }
+  .board-shell .discovery-hero .hero-search-wrap {
+    padding: 0 16px 20px;
+  }
+  .search-panel {
+    padding: 0 12px 12px;
+    border-radius: 12px;
+  }
+  .search-modes {
+    gap: 20px;
+  }
+  .search-modes button {
+    font-size: 11px;
+    padding: 12px 0 10px;
+    min-height: 44px;
+  }
+  .board-shell .discovery-hero .searchbar {
+    grid-template-columns: 18px minmax(0, 1fr) 96px;
+    gap: 8px;
+    padding-top: 8px;
+  }
+  .board-shell .discovery-hero .searchbar > input {
+    grid-column: 2 / -1;
+    height: 40px;
+    font-size: 12px;
+  }
+  .board-shell .discovery-hero .searchbar .primary {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  .board-shell .discovery-hero .searchbar .search-city {
+    min-width: 0;
+  }
+  .hero-assurance {
+    gap: 12px;
+    font-size: 9px;
+    margin-top: 13px;
+  }
+  .hero-assurance > span:last-child {
+    display: none;
+  }
+  .discovery-shortcuts {
+    margin: 16px 16px 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .discovery-shortcut {
+    gap: 6px;
+    padding: 12px 8px;
+    min-height: 64px;
+  }
+  .shortcut-icon {
+    flex-basis: 26px;
+  }
+  .shortcut-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+  .discovery-shortcut strong {
+    font-size: 11px;
+  }
+  .discovery-shortcut small,
+  .shortcut-arrow {
+    display: none;
+  }
+  .discovery-categories {
+    margin: 16px 16px 0;
+  }
+  .discovery-section-heading {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .discovery-section-heading h2 {
+    font-size: 11px;
+  }
+  .discovery-section-heading > button {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .category-gallery {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    gap: 4px;
+  }
+  .category-gallery button {
+    flex: 0 0 95px;
+    min-height: 72px;
+  }
+  .category-gallery button > span {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .discovery-shortcut {
+    transition: none;
+  }
+}

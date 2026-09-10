@@ -37,6 +37,14 @@ import {
   Globe2,
   Laptop,
   ShieldCheck,
+  Wallet,
+  GraduationCap,
+  Code2,
+  Megaphone,
+  Truck,
+  Calculator,
+  Headphones,
+  Stethoscope,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -620,140 +628,216 @@ export default function JobBoard() {
         </div>
       )}
       <main>
-        <section className="hero">
+        <section
+          className="hero discovery-hero"
+          aria-labelledby="search-heading"
+        >
           <div className="hero-inner">
             <div className="hero-copy">
               <div className="eyebrow">
-                <span /> ვაკანსიები · რეგისტრაციის გარეშე
+                <span /> სხვადასხვა წყარო · ერთი სივრცე
               </div>
-              <h1>
-                შენი შემდეგი სამსახური <em>აქ არის.</em>
+              <h1 id="search-heading">
+                იპოვე შენი შემდეგი <em>სამსახური.</em>
               </h1>
               <p>
-                მოძებნე ერთ სივრცეში. შეადარე პირობები. დაუკავშირდი
-                დამსაქმებელს.
+                შენთვის მნიშვნელოვანი პირობები. მეტი შესაძლებლობა ერთ ძებნაში.
               </p>
             </div>
-            <aside
-              className="catalogue-summary"
-              aria-label="საჯარო ვაკანსიების რაოდენობა"
-            >
-              <span className="catalogue-kicker">
-                <span /> ერთ ძებნაში
-              </span>
-              <div className="catalogue-total">
-                <strong>
-                  {catalogue
-                    ? catalogue.sources.length.toLocaleString('en-US')
-                    : '—'}
-                </strong>
-                <span>
-                  წყარო
-                  <br />
-                  ერთ ძებნაში
-                </span>
-              </div>
-              <details className="catalogue-breakdown">
-                <summary>წყაროების მიხედვით</summary>
-                <div className="catalogue-sources">
-                  {(catalogue?.sources || []).map((item) => (
-                    <span key={item.name}>
-                      {item.name}
-                      <b>{item.count.toLocaleString('en-US')}</b>
-                    </span>
-                  ))}
-                </div>
-              </details>
-            </aside>
           </div>
           <div className="hero-search-wrap">
-            <form
-              className="searchbar"
-              onSubmit={(e) => {
-                e.preventDefault();
+            <div className="search-panel">
+              <div className="search-modes" aria-label="სამუშაოს ტიპი">
+                {[
+                  ['all', 'ყველა განაკვეთი'],
+                  ['daily', 'ერთდღიანი / ერთჯერადი'],
+                  ['part-time', 'ნახევარი განაკვეთი'],
+                  ['internship', 'სტაჟირება'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={advanced.employment === value}
+                    onClick={() => {
+                      if (advanced.employment !== value)
+                        setAdvanced({
+                          ...advanced,
+                          employment: value as AdvancedFilters['employment'],
+                        });
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <form
+                role="search"
+                aria-label="ვაკანსიის ძებნა"
+                className="searchbar"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  document.getElementById('results')?.scrollIntoView({
+                    behavior: window.matchMedia(
+                      '(prefers-reduced-motion: reduce)',
+                    ).matches
+                      ? 'auto'
+                      : 'smooth',
+                  });
+                }}
+              >
+                <Search size={22} />
+                <input
+                  aria-label="მოძებნე ვაკანსია ან კომპანია"
+                  maxLength={200}
+                  placeholder="პოზიცია, კომპანია ან საკვანძო სიტყვა"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+                <div className="search-city">
+                  <MapPin size={18} />
+                  <Choice
+                    label="ყველა ქალაქი"
+                    value={city}
+                    onChange={setCity}
+                    options={cities}
+                  />
+                </div>
+                <button
+                  className="primary"
+                  type="submit"
+                  aria-label="მოძებნე ვაკანსია"
+                >
+                  <span className="search-label-full">მოძებნე ვაკანსია</span>
+                  <span className="search-label-short" aria-hidden="true">
+                    ძებნა
+                  </span>
+                  <ArrowRight size={18} />
+                </button>
+              </form>
+            </div>
+            <div className="hero-assurance">
+              <span>
+                <Check size={14} /> რეგისტრაციის გარეშე
+              </span>
+              <span>
+                <Check size={14} /> პირდაპირ დამსაქმებელთან
+              </span>
+              <span>
+                <Globe2 size={14} />
+                {catalogue
+                  ? `${catalogue.sources.length} წყარო ერთ სივრცეში`
+                  : 'სხვადასხვა წყაროდან'}
+              </span>
+            </div>
+          </div>
+        </section>
+        <section className="discovery-shortcuts" aria-label="სწრაფი არჩევანი">
+          <button
+            className="discovery-shortcut"
+            aria-pressed={advanced.salaryPeriod === 'day'}
+            onClick={() =>
+              setAdvanced({
+                ...advanced,
+                salaryPeriod: advanced.salaryPeriod === 'day' ? 'month' : 'day',
+                salaryFrom: null,
+                salaryTo: null,
+              })
+            }
+          >
+            <span className="shortcut-icon">
+              <Wallet size={24} />
+            </span>
+            <span>
+              <strong>ანაზღაურება დღეში</strong>
+              <small>იპოვე დღიური ანაზღაურებით</small>
+            </span>
+            <ArrowUpRight className="shortcut-arrow" size={16} />
+          </button>
+          <button
+            className="discovery-shortcut"
+            aria-pressed={remote}
+            onClick={() => setRemote(!remote)}
+          >
+            <span className="shortcut-icon">
+              <Laptop size={24} />
+            </span>
+            <span>
+              <strong>დისტანციური</strong>
+              <small>იმუშავე შენთვის კომფორტულად</small>
+            </span>
+            <ArrowUpRight className="shortcut-arrow" size={16} />
+          </button>
+          <button
+            className="discovery-shortcut"
+            aria-pressed={advanced.entryLevel}
+            onClick={() =>
+              setAdvanced({ ...advanced, entryLevel: !advanced.entryLevel })
+            }
+          >
+            <span className="shortcut-icon">
+              <GraduationCap size={24} />
+            </span>
+            <span>
+              <strong>გამოცდილების გარეშე</strong>
+              <small>გადადგი პირველი ნაბიჯი</small>
+            </span>
+            <ArrowUpRight className="shortcut-arrow" size={16} />
+          </button>
+          <button
+            className="discovery-shortcut"
+            aria-pressed={paid}
+            onClick={() => setPaid(!paid)}
+          >
+            <span className="shortcut-icon">
+              <BriefcaseBusiness size={24} />
+            </span>
+            <span>
+              <strong>ხელფასი მითითებულია</strong>
+              <small>გაიგე პირობები წინასწარ</small>
+            </span>
+            <ArrowUpRight className="shortcut-arrow" size={16} />
+          </button>
+        </section>
+        <section
+          className="discovery-categories"
+          aria-labelledby="category-heading"
+        >
+          <div className="discovery-section-heading">
+            <h2 id="category-heading">რომელი მიმართულება გაინტერესებს?</h2>
+            <button
+              onClick={() => {
                 document
-                  .getElementById('results')
-                  ?.scrollIntoView({ behavior: 'smooth' });
+                  .querySelector('.desktop-filters')
+                  ?.scrollIntoView({ block: 'start' });
+                if (window.innerWidth <= 760) {
+                  setMobileDraft(currentSearch);
+                  setFiltersOpen(true);
+                }
               }}
             >
-              <Search size={22} />
-              <input
-                aria-label="მოძებნე ვაკანსია ან კომპანია"
-                maxLength={200}
-                placeholder="პოზიცია, კომპანია ან საკვანძო სიტყვა"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <div className="search-city">
-                <MapPin size={18} />
-                <Choice
-                  label="ყველა ქალაქი"
-                  value={city}
-                  onChange={setCity}
-                  options={cities}
-                />
-              </div>
+              ყველა მიმართულება <ArrowRight size={16} />
+            </button>
+          </div>
+          <div className="category-gallery">
+            {[
+              { name: 'ტექნოლოგიები', Icon: Code2 },
+              { name: 'გაყიდვები', Icon: BriefcaseBusiness },
+              { name: 'მარკეტინგი', Icon: Megaphone },
+              { name: 'ლოჯისტიკა', Icon: Truck },
+              { name: 'ფინანსები', Icon: Calculator },
+              { name: 'მომსახურება', Icon: Headphones },
+              { name: 'განათლება', Icon: GraduationCap },
+              { name: 'სამედიცინო', Icon: Stethoscope },
+            ].map(({ name, Icon }) => (
               <button
-                className="primary"
-                type="submit"
-                aria-label="მოძებნე ვაკანსია"
+                key={name}
+                aria-pressed={category === name}
+                onClick={() => setCategory(category === name ? 'ყველა' : name)}
               >
-                <span className="search-label-full">მოძებნე ვაკანსია</span>
-                <span className="search-label-short" aria-hidden="true">
-                  ძებნა
-                </span>{' '}
-                <ArrowRight size={18} />
+                <Icon size={23} />
+                <span>{name}</span>
               </button>
-            </form>
-            <div className="quick">
-              <span>სცადე:</span>
-              <button
-                aria-pressed={advanced.employment === 'daily'}
-                className={advanced.employment === 'daily' ? 'active' : ''}
-                onClick={() =>
-                  setAdvanced({
-                    ...advanced,
-                    employment:
-                      advanced.employment === 'daily' ? 'all' : 'daily',
-                  })
-                }
-              >
-                ერთდღიანი / ერთჯერადი <ArrowUpRight size={12} />
-              </button>
-              <button
-                aria-pressed={advanced.salaryPeriod === 'day'}
-                className={advanced.salaryPeriod === 'day' ? 'active' : ''}
-                onClick={() =>
-                  setAdvanced({
-                    ...advanced,
-                    salaryPeriod:
-                      advanced.salaryPeriod === 'day' ? 'month' : 'day',
-                    salaryFrom: null,
-                    salaryTo: null,
-                  })
-                }
-              >
-                ანაზღაურება დღეში <ArrowUpRight size={12} />
-              </button>
-              {['ტექნოლოგიები', 'გაყიდვები', 'მარკეტინგი'].map((c) => (
-                <button
-                  key={c}
-                  aria-pressed={category === c}
-                  className={category === c ? 'active' : ''}
-                  onClick={() => setCategory(category === c ? 'ყველა' : c)}
-                >
-                  {c}
-                  <ArrowUpRight size={12} />
-                </button>
-              ))}
-              <button
-                aria-pressed={remote}
-                className={remote ? 'active' : ''}
-                onClick={() => setRemote(!remote)}
-              >
-                <Laptop size={13} /> დისტანციური
-              </button>
-            </div>
+            ))}
           </div>
         </section>
         <div className="page board-page">
