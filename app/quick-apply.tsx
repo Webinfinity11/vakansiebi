@@ -74,6 +74,7 @@ export function QuickApply({
               <button
                 className="secondary-button"
                 aria-label={`${contact.email} — კოპირება`}
+                title="ელფოსტის კოპირება"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(contact.email);
@@ -86,7 +87,7 @@ export function QuickApply({
                 }}
               >
                 <Copy size={15} />
-                კოპირება
+                <span className="email-copy-label">კოპირება</span>
               </button>
             </div>
             {!contact.application && (
@@ -100,7 +101,7 @@ export function QuickApply({
       {!!emails.length && (
         <p className="quick-apply-note">
           {emails.some((contact) => contact.application)
-            ? 'გაიხსნება შენი ფოსტა გამზადებული წერილით. მიამაგრე CV, ჩაწერე შენი სახელი და გააგზავნე. წერილის თემა გადაამოწმე განცხადების ინსტრუქციასთან.'
+            ? 'გაიხსნება შენი ფოსტა. მიამაგრე CV და გაგზავნამდე გადაამოწმე წერილის ტექსტი და თემა.'
             : 'გაიხსნება შენი ფოსტა. წერილის ტექსტი და თემა შეცვალე დაკავშირების მიზნის მიხედვით.'}
         </p>
       )}

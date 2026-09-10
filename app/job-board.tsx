@@ -1036,25 +1036,6 @@ export default function JobBoard() {
                             >
                               <Bookmark size={19} />
                             </button>
-                            {!demo && (
-                              <button
-                                className="hide-vacancy"
-                                disabled={resultsPending || !activity.ready}
-                                aria-label={`${j.title} — არ მაინტერესებს`}
-                                onClick={() => {
-                                  if (activity.hide(j.id, j.title)) {
-                                    setFeedback(
-                                      'ვაკანსია დამალულია — აღდგენა შეგიძლია „დამალული ვაკანსიებიდან“.',
-                                    );
-                                  } else
-                                    setFeedback(
-                                      'ბრაუზერმა დამალვა ვერ შეინახა.',
-                                    );
-                                }}
-                              >
-                                არ მაინტერესებს
-                              </button>
-                            )}
                             <span className="job-date">
                               {j.deadline
                                 ? `ვადა: ${formatDate(j.deadline)}`
