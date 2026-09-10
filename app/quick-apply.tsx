@@ -1,105 +1,121 @@
 'use client';
 import { useState } from 'react';
-import { Mail, Copy, ArrowUpRight, Languages } from 'lucide-react';
+import { Mail, Phone, Copy, ArrowUpRight, Languages } from 'lucide-react';
+import { emailDraft, hasEnglishDescription } from '@/lib/application-contact';
 import {
-  applicationContacts,
-  emailDraft,
-  hasEnglishDescription,
-} from '@/lib/application-contact';
+  applicationDestination,
+  defaultApplicationBody,
+  vacancyContacts,
+} from '@/lib/vacancy-details';
 import type { PublicJob } from '@/lib/types';
+
 export function QuickApply({ job }: { job: PublicJob }) {
-  const contacts = applicationContacts(job.description);
+  const { emails, phones } = vacancyContacts(job);
+  const application = applicationDestination(job);
   const [message, setMessage] = useState('');
-  const [body, setBody] = useState(
-    'გამარჯობა,\n\nმსურს განაცხადის გაკეთება თქვენს ვაკანსიაზე. გიგზავნით ჩემს CV-ს განსახილველად.\n\nპატივისცემით,\n[შენი სახელი]',
-  );
   const english = hasEnglishDescription(job.description);
-  if (!contacts.length && !english) return null;
   return (
-    <section className="quick-apply">
-      {contacts.length > 0 && (
-        <>
-          <h3>
-            <Mail size={18} />
-            როგორ გავაგზავნო განაცხადი?
-          </h3>
-          <p>
-            ელფოსტა განცხადებიდან პირდაპირ აქ არის. გახსენი წერილი, მიამაგრე CV
-            და გააგზავნე შენი ფოსტიდან.
-          </p>
-          {contacts.map((contact) => (
-            <div className="application-email" key={contact.email}>
-              <span>
-                {contact.application
-                  ? 'განაცხადის ელფოსტა'
-                  : 'საკონტაქტო ელფოსტა განცხადებიდან'}
-              </span>
-              <strong>{contact.email}</strong>
-              <div className="email-actions">
-                <a
-                  className="primary"
-                  href={emailDraft(contact.email, job.title, body)}
-                >
-                  <Mail size={15} />
-                  წერილის გახსნა
-                </a>
-                <button
-                  className="secondary-button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(contact.email);
-                      setMessage('ელფოსტა დაკოპირებულია');
-                    } catch {
-                      setMessage(
-                        'კოპირება ვერ მოხერხდა. მისამართი ზემოთ არის მითითებული.',
-                      );
-                    }
-                  }}
-                >
-                  <Copy size={15} />
-                  კოპირება
-                </button>
-              </div>
-              {!contact.application && (
-                <small>
-                  გადაამოწმე, იღებს თუ არა ეს მისამართი განაცხადებს.
-                </small>
-              )}
-            </div>
-          ))}
-          <details>
-            <summary>წერილის ტექსტის შეცვლა</summary>
-            <label htmlFor="application-email-body">
-              ტექსტი — გაგზავნამდე ჩაწერე შენი სახელი
-              <textarea
-                id="application-email-body"
-                rows={7}
-                maxLength={4000}
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-              />
-            </label>
-            <p>
-              წერილის თემად ჩაიწერება პოზიციის დასახელება. თუ განცხადება სხვა
-              თემას ითხოვს, შეცვალე ფოსტაში.
-            </p>
-          </details>
-          <p className="quick-apply-note">
-            ღილაკი საფოსტო პროგრამას ხსნის. CV-ს მასში ამაგრებ; ჩვენი საიტი
-            წერილს ავტომატურად არ აგზავნის.
-          </p>
-          <output aria-live="polite">{message}</output>
-        </>
+    <section className="quick-apply" id="vacancy-contacts" tabIndex={-1}>
+      <h3>დაუკავშირდი დამსაქმებელს</h3>
+      {application && (
+        <a
+          className="primary external-application"
+          href={application.url}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          განაცხადის შევსება <ArrowUpRight size={16} />
+        </a>
       )}
+      <div className="contact-options">
+        {phones.map((phone) => (
+          <a
+            className="contact-phone"
+            key={phone.number}
+            href={`tel:${phone.number}`}
+          >
+            <Phone size={18} />
+            <span>
+              <small>ტელეფონი განცხადებიდან</small>
+              <strong>{phone.display}</strong>
+            </span>
+            <span className="contact-call">დარეკვა</span>
+          </a>
+        ))}
+        {emails.map((contact) => (
+          <div className="application-email" key={contact.email}>
+            <span>
+              {contact.application
+                ? 'განაცხადის ელფოსტა'
+                : 'საკონტაქტო ელფოსტა'}
+            </span>
+            <strong>{contact.email}</strong>
+            <div className="email-actions">
+              <a
+                className="primary"
+                href={emailDraft(
+                  contact.email,
+                  job.title,
+                  contact.application
+                    ? defaultApplicationBody
+                    : 'გამარჯობა,\n\nთქვენს განცხადებასთან დაკავშირებით მაქვს კითხვა.\n\n[შენი სახელი]',
+                )}
+              >
+                <Mail size={16} />
+                {contact.application
+                  ? 'CV-ის გაგზავნა მეილით'
+                  : 'წერილის გახსნა'}
+              </a>
+              <button
+                className="secondary-button"
+                aria-label={`${contact.email} — კოპირება`}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(contact.email);
+                    setMessage('ელფოსტა დაკოპირებულია');
+                  } catch {
+                    setMessage(
+                      'კოპირება ვერ მოხერხდა. მონიშნე მისამართი ხელით.',
+                    );
+                  }
+                }}
+              >
+                <Copy size={15} />
+                კოპირება
+              </button>
+            </div>
+            {!contact.application && (
+              <small>
+                განცხადებაში გადაამოწმე, იღებს თუ არა ეს მისამართი CV-ს.
+              </small>
+            )}
+          </div>
+        ))}
+      </div>
+      {!!emails.length && (
+        <p className="quick-apply-note">
+          {emails.some((contact) => contact.application)
+            ? 'გაიხსნება შენი ფოსტა გამზადებული წერილით. მიამაგრე CV, ჩაწერე შენი სახელი და გააგზავნე. წერილის თემა გადაამოწმე განცხადების ინსტრუქციასთან.'
+            : 'გაიხსნება შენი ფოსტა. წერილის ტექსტი და თემა შეცვალე დაკავშირების მიზნის მიხედვით.'}
+        </p>
+      )}
+      {!phones.length && !emails.length && !application && (
+        <p className="contact-missing">
+          აღწერაში ტელეფონი ან ელფოსტა არ არის მითითებული.{' '}
+          <a href={job.url} target="_blank" rel="noopener noreferrer">
+            კონტაქტი ნახე პირველწყაროზე <ArrowUpRight size={13} />
+          </a>
+        </p>
+      )}
+      <output aria-live="polite">{message}</output>
       {english && (
-        <div className="translation-help">
-          <h3>
-            <Languages size={18} />
-            ინგლისური აღწერა
-          </h3>
+        <details className="translation-help">
+          <summary>
+            <Languages size={16} /> ინგლისური აღწერის ქართულად ნახვა
+          </summary>
           <p>
-            ორიგინალი ტექსტი შენარჩუნებულია. წყაროს ქართული ავტომატური თარგმანი
-            შეგიძლია Google Translate-ში გახსნა.
+            წყაროს ავტომატური თარგმანი შეგიძლია Google Translate-ში გახსნა;
+            მოთხოვნები ორიგინალთან გადაამოწმე.
           </p>
           <a
             className="secondary-button"
@@ -110,13 +126,9 @@ export function QuickApply({ job }: { job: PublicJob }) {
               encodeURIComponent(job.url)
             }
           >
-            ქართულად ნახვა · Google Translate <ArrowUpRight size={15} />
+            ქართულად ნახვა <ArrowUpRight size={15} />
           </a>
-          <small>
-            ავტომატური თარგმანი შეიძლება არაზუსტი იყოს; მოთხოვნები ორიგინალთან
-            გადაამოწმე.
-          </small>
-        </div>
+        </details>
       )}
     </section>
   );

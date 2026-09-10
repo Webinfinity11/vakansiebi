@@ -45,6 +45,13 @@ import {
 import { CompanyLogo } from './company-logo';
 import { QuickApply } from './quick-apply';
 import {
+  applicationDestination,
+  vacancyContacts,
+  workSchedule,
+  defaultApplicationBody,
+} from '@/lib/vacancy-details';
+import { emailDraft } from '@/lib/application-contact';
+import {
   PersonalSpace,
   ApplicationControl,
   usePersonalSpace,
@@ -278,6 +285,16 @@ export default function JobBoard() {
   }, [filtersOpen, mobileKey, demo, savedOnly, saved]);
   const [detailError, setDetailError] = useState('');
   const [detailRetry, setDetailRetry] = useState(0);
+  const selectedContacts =
+    selected && !selected.summary ? vacancyContacts(selected) : null;
+  const applicationEmails =
+    selectedContacts?.emails.filter((contact) => contact.application) || [];
+  const externalApplication =
+    selected && !selected.summary ? applicationDestination(selected) : null;
+  const directEmail =
+    applicationEmails.length === 1 ? applicationEmails[0].email : null;
+  const selectedSchedule =
+    selected && !selected.summary ? workSchedule(selected) : [];
   const detailId = selected?.id;
   const needsDetail = selected?.summary === true;
   useEffect(() => {
@@ -1326,10 +1343,25 @@ export default function JobBoard() {
                     ['ქალაქი', selected.city || 'არ არის მითითებული'],
                     ['განაკვეთი', selected.employmentType],
                     ['სამუშაო რეჟიმი', selected.mode],
+                    [
+                      'სამუშაო გრაფიკი',
+                      selectedSchedule.length
+                        ? selectedSchedule.join(' · ')
+                        : selected.summary
+                          ? ''
+                          : 'არ არის მითითებული',
+                    ],
                   ]
                     .filter(([, v]) => v)
                     .map(([label, value]) => (
-                      <div key={label}>
+                      <div
+                        key={label}
+                        className={
+                          label === 'სამუშაო გრაფიკი'
+                            ? 'schedule-fact'
+                            : undefined
+                        }
+                      >
                         <dt>{label}</dt>
                         <dd>{value}</dd>
                       </div>
@@ -1338,11 +1370,6 @@ export default function JobBoard() {
                 {!selected.summary && (
                   <QuickApply key={selected.id} job={selected} />
                 )}
-                <ApplicationControl
-                  job={selected}
-                  space={personal}
-                  disabled={demo}
-                />
                 {!!selected.facts?.length && (
                   <details className="extra-facts">
                     <summary>
@@ -1426,6 +1453,16 @@ export default function JobBoard() {
                     ))}
                   </div>
                 )}
+                <details className="application-tracker">
+                  <summary>
+                    განაცხადის ეტაპის აღნიშვნა <span>სურვილისამებრ</span>
+                  </summary>
+                  <ApplicationControl
+                    job={selected}
+                    space={personal}
+                    disabled={demo}
+                  />
+                </details>
                 <div className="detail-source">
                   <ShieldCheck size={20} />
                   <div>
@@ -1459,14 +1496,69 @@ export default function JobBoard() {
                 </div>
               </div>
               <div className="detail-actions">
-                <a
-                  className="primary"
-                  href={selected.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  ნახე პირველწყაროზე <ArrowUpRight size={18} />
-                </a>
+                {directEmail ? (
+                  <a
+                    className="primary"
+                    href={emailDraft(
+                      directEmail,
+                      selected.title,
+                      defaultApplicationBody,
+                    )}
+                  >
+                    CV-ის გაგზავნა მეილით <ArrowUpRight size={18} />
+                  </a>
+                ) : externalApplication ? (
+                  <a
+                    className="primary"
+                    href={externalApplication.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    განაცხადის შევსება <ArrowUpRight size={18} />
+                  </a>
+                ) : selectedContacts?.emails.length ||
+                  (selectedContacts?.phones.length || 0) > 1 ? (
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      const contacts =
+                        document.getElementById('vacancy-contacts');
+                      contacts?.scrollIntoView({ block: 'nearest' });
+                      contacts?.focus({ preventScroll: true });
+                    }}
+                  >
+                    კონტაქტების ნახვა <ArrowRight size={18} />
+                  </button>
+                ) : selectedContacts?.phones.length ? (
+                  <a
+                    className="primary"
+                    href={`tel:${selectedContacts.phones[0].number}`}
+                  >
+                    დარეკვა <ArrowUpRight size={18} />
+                  </a>
+                ) : (
+                  <a
+                    className="primary"
+                    href={selected.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ნახე პირველწყაროზე <ArrowUpRight size={18} />
+                  </a>
+                )}
+                {!!(
+                  selectedContacts?.emails.length ||
+                  selectedContacts?.phones.length
+                ) && (
+                  <a
+                    className="secondary-button source-action"
+                    href={selected.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    პირველწყარო <ArrowUpRight size={15} />
+                  </a>
+                )}
                 {!demo && (
                   <button
                     className="secondary-button"

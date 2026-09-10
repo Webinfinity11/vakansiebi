@@ -1,3 +1,4 @@
+import { telephoneHref } from '../../lib/vacancy-details';
 import { mailtoAddress } from '../../lib/application-contact';
 import { companyKey } from '../../lib/company-key';
 import { visibleFields } from '../visible-fields';
@@ -99,6 +100,9 @@ export function cleanText(html: string) {
   $('a[href]').each((_, el) => {
     const email = mailtoAddress($(el).attr('href') || '');
     if (email && !$(el).text().includes(email)) $(el).append(' ' + email);
+    const phone = telephoneHref($(el).attr('href') || '');
+    if (phone && !$(el).text().replace(/\D/g, '').includes(phone.slice(4)))
+      $(el).append(' ტელეფონი: ' + phone);
   });
   $('br').replaceWith('\n');
   $('li').prepend('• ');
@@ -442,6 +446,7 @@ export function parseDetail(
       description?: Translated;
       duties?: Translated;
       requirements?: Translated;
+      conditions?: Translated;
       publisherName?: string;
       logo?: string;
       startDate?: string;
@@ -482,6 +487,7 @@ export function parseDetail(
       translated(data.description),
       translated(data.duties),
       translated(data.requirements),
+      translated(data.conditions),
     ]
       .filter(Boolean)
       .map(cleanText)
