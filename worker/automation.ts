@@ -3,6 +3,7 @@ import { vacancySchema } from '../lib/vacancy-schema';
 import { sourceNames, type ActiveSourceId, type Vacancy } from '../lib/types';
 import { externalId, fingerprint, tbilisiDate } from './adapters';
 import { db, transaction } from '../lib/server/db';
+import { safeLogoUrl } from '../lib/vacancy-media';
 
 export function publishable(
   raw: unknown,
@@ -10,7 +11,13 @@ export function publishable(
   url: string,
   today = tbilisiDate(),
 ): Vacancy | null {
-  const parsed = vacancySchema.safeParse(raw);
+  // Optional image metadata must not hide an otherwise valid vacancy.
+  // Keep the URL restrictions: unsupported images are omitted, not rendered.
+  const candidate =
+    raw && typeof raw === 'object' && 'logoUrl' in raw
+      ? { ...raw, logoUrl: safeLogoUrl(raw.logoUrl) }
+      : raw;
+  const parsed = vacancySchema.safeParse(candidate);
   if (!parsed.success || !(source in sourceNames)) return null;
   const v = parsed.data;
   if (

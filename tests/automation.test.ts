@@ -69,3 +69,26 @@ void test('empty Jobs.ge template is recognized as an unavailable vacancy, not v
     UnavailableVacancy,
   );
 });
+
+void test('unsupported optional logo does not unpublish valid text or weaken core validation', () => {
+  const image = { ...vacancy, logoUrl: 'https://unsupported.example/logo.png' };
+  const result = publishable(image, 'hr', vacancy.url, '2026-09-09');
+  assert.ok(result);
+  assert.equal(result.logoUrl, '');
+  assert.equal(result.description, vacancy.description);
+  assert.equal(
+    publishable({ ...image, description: '' }, 'hr', vacancy.url, '2026-09-09'),
+    null,
+  );
+  const supported =
+    'https://helio-ai-assets-prod.s3.amazonaws.com/company/logo.png';
+  assert.equal(
+    publishable(
+      { ...vacancy, logoUrl: supported },
+      'hr',
+      vacancy.url,
+      '2026-09-09',
+    )?.logoUrl,
+    supported,
+  );
+});

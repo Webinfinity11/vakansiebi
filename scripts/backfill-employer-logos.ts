@@ -8,6 +8,7 @@ import {
   sameLinkedTitle,
 } from '../worker/linked-description';
 import { hashVacancy, audit } from '../worker/importer';
+import { vacancySchema } from '../lib/vacancy-schema';
 const apply = process.argv.includes('--apply');
 try {
   const rows = (
@@ -86,6 +87,7 @@ try {
           )
             return false;
           const raw = { ...item.raw, logoUrl: linked.logoUrl };
+          vacancySchema.parse(raw);
           await c.query(
             'UPDATE source_items SET raw=$2,content_hash=$3 WHERE id=$1',
             [row.item_id, raw, hashVacancy(raw)],
