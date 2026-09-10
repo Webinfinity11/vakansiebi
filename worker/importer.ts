@@ -5,6 +5,7 @@ import { fingerprint, tbilisiDate } from './adapters';
 import { samePosting } from '../lib/job-intelligence';
 import type { SourceId, Vacancy } from '../lib/types';
 import { reconcileJob } from './automation';
+import { assessVacancy } from './quality';
 export function hashVacancy(v: Vacancy) {
   return createHash('sha256').update(JSON.stringify(v)).digest('hex');
 }
@@ -16,6 +17,48 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
       ])
     ).rows[0];
     if (!item) throw Error('Item missing');
+    const quality = assessVacancy(item.raw, v, {
+      signature: item.quality_signature,
+      firstSeen: item.quality_first_seen,
+      lastSeen: item.quality_last_seen,
+      observations: item.quality_observations || 0,
+    });
+    if (quality.hold) {
+      await c.query(
+        `UPDATE source_items SET quality_candidate=$2,quality_signature=$3,quality_warning=$4,
+        quality_first_seen=$5,quality_last_seen=$6,quality_observations=$7,last_checked_at=now(),error=NULL,failures=0,
+        next_check_at=now()+interval '30 minutes' WHERE id=$1`,
+        [
+          itemId,
+          v,
+          quality.signature,
+          quality.warning,
+          quality.firstSeen,
+          quality.lastSeen,
+          quality.observations,
+        ],
+      );
+      if (item.job_id && item.quality_signature !== quality.signature) {
+        await c.query(
+          'UPDATE jobs SET needs_review=(NOT automation_managed OR automation_paused),version=version+1 WHERE id=$1',
+          [item.job_id],
+        );
+        await audit(
+          c,
+          item.job_id,
+          'source.quality_held',
+          'crawler:' + item.source_id,
+          { warning: item.quality_warning },
+          { warning: quality.warning },
+        );
+      }
+      return 'quality_held';
+    }
+    await c.query(
+      `UPDATE source_items SET quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,
+      quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0 WHERE id=$1`,
+      [itemId],
+    );
     const hash = hashVacancy(v);
     if (!item.job_id && v.deadline && v.deadline < tbilisiDate()) {
       await c.query(

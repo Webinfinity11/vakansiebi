@@ -55,10 +55,27 @@ export async function reconcileJob(c: PoolClient, id: string) {
   ]);
   if (!job.automation_managed && job.status !== 'pending') return 'skipped';
   const now = Date.now();
+  const lastGood = Math.max(
+    0,
+    ...items.map((i) =>
+      i.last_verified_at ? new Date(i.last_verified_at).getTime() : 0,
+    ),
+  );
+  const qualityGrace = now - lastGood <= 7 * 86400000;
+  const primaryHeld = items.some(
+    (i) => i.url === job.draft.url && i.quality_warning && !i.error,
+  );
+  if (
+    primaryHeld &&
+    qualityGrace &&
+    !(job.draft.deadline && job.draft.deadline < tbilisiDate())
+  )
+    return 'quality_held';
   const fresh = items.filter(
     (i) =>
       i.auto_publish &&
       !i.error &&
+      !i.quality_warning &&
       i.last_verified_at &&
       now - new Date(i.last_verified_at).getTime() <= 48 * 3600000,
   );
@@ -74,6 +91,13 @@ export async function reconcileJob(c: PoolClient, id: string) {
     draft = candidate;
     published = candidate;
   } else {
+    // A valid previous snapshot stays intact during independent quality rechecks; normal expiry still applies.
+    if (
+      qualityGrace &&
+      items.some((i) => i.quality_warning && !i.error) &&
+      !items.every((i) => i.raw?.deadline && i.raw.deadline < tbilisiDate())
+    )
+      return 'quality_held';
     const today = tbilisiDate();
     const allExpired =
       items.length > 0 &&
@@ -85,12 +109,6 @@ export async function reconcileJob(c: PoolClient, id: string) {
           i.error || '',
         ),
       );
-    const lastGood = Math.max(
-      0,
-      ...items.map((i) =>
-        i.last_verified_at ? new Date(i.last_verified_at).getTime() : 0,
-      ),
-    );
     if (
       allExpired ||
       allRemoved ||

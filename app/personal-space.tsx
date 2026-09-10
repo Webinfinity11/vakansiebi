@@ -236,6 +236,20 @@ export function PersonalSpace({
       f.source === 'ყველა' ? '' : f.source,
       f.paid ? 'ხელფასი მითითებულია' : '',
       f.remote ? 'დისტანციური' : '',
+      f.employment === 'daily'
+        ? 'დღიური სამუშაო'
+        : f.employment === 'part-time'
+          ? 'ნახევარი განაკვეთი'
+          : f.employment === 'internship'
+            ? 'სტაჟირება'
+            : '',
+      f.entryLevel ? 'გამოცდილების გარეშე' : '',
+      f.postedWithin ? `ბოლო ${f.postedWithin} დღეში` : '',
+      f.salaryFrom !== null || f.salaryTo !== null
+        ? `${f.salaryFrom ?? 0}–${f.salaryTo ?? '∞'} ₾ / ${f.salaryPeriod === 'day' ? 'დღე' : 'თვე'}`
+        : f.salaryPeriod === 'day'
+          ? 'დღიური ანაზღაურება'
+          : '',
     ]
       .filter(Boolean)
       .join(' · ');

@@ -450,6 +450,20 @@ export default function AdminPanel() {
                       <strong>{s.queued}</strong> რიგში
                     </span>
                   </div>
+                  {(s.quality_warning || !!s.quality_held) && (
+                    <div className="source-quality-note">
+                      <strong>ავტომატური ხელახალი შემოწმება</strong>
+                      <p>
+                        {s.quality_held
+                          ? `${s.quality_held} განცხადების ცვლილება დამატებით მოწმდება. მანამდე შენარჩუნებულია ბოლო სანდო მონაცემები.`
+                          : 'წყაროს რაოდენობა უჩვეულოდ შეიცვალა. დაფარვა ხელახლა მოწმდება.'}
+                      </p>
+                      <small>
+                        ხელით დადასტურება საჭირო არ არის; ვადაგასული და
+                        ხანგრძლივად გადაუმოწმებელი განცხადებები იხსნება.
+                      </small>
+                    </div>
+                  )}
                   <div className="source-coverage">
                     <p>
                       დამუშავებული: <b>{s.imported}</b> · ლაივზე:{' '}

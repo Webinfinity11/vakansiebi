@@ -80,6 +80,8 @@ export type Source = {
   reported_total?: number | null;
   reported_pages?: number | null;
   discovery_observed_at?: string | null;
+  quality_warning?: string | null;
+  quality_held?: number;
 };
 export const categories = [
   'ტექნოლოგიები',

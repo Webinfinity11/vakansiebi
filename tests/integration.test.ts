@@ -405,10 +405,19 @@ void test(
       await stageVacancy(autoItem.id, { ...changed, deadline: '2000-01-01' });
       assert.equal((await readAuto()).status, 'archived');
       await stageVacancy(autoItem.id, { ...changed, company: '' });
+      const heldSource = (
+        await db().query(
+          'SELECT raw,quality_candidate FROM source_items WHERE id=$1',
+          [autoItem.id],
+        )
+      ).rows[0];
+      assert.equal(heldSource.raw.company, changed.company);
+      assert.equal(heldSource.raw.deadline, '2000-01-01');
+      assert.equal(heldSource.quality_candidate.company, '');
       assert.equal(
         (await readAuto()).status,
-        'pending',
-        'invalid employer cannot be automatically published',
+        'archived',
+        'invalid employer is held without replacing the previous archived snapshot',
       );
       assert.equal(
         (await readAuto()).needs_review,

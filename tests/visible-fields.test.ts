@@ -48,3 +48,35 @@ void test('Jobs logo requires matching employer label and HR reversed ranges are
     '',
   );
 });
+void test('daily wages retain an explicit daily period without converting to monthly salary', () => {
+  for (const text of [
+    'დღიური ანაზღაურება: 100 ლარი',
+    'დღიური ხელფასი 80–120 ლარი',
+    'ანაზღაურება დღეში: 100 GEL',
+    'ხელფასი: დღეში 100 ლარი',
+    'ანაზღაურება: 100 ლარი დღიურად',
+    'Daily wage: 50 USD',
+  ]) {
+    const r = visibleFields(text);
+    assert.equal(r.salaryPeriod, 'დღე');
+    assert.ok(r.salaryMin && r.salaryMin <= 100);
+    assert.ok(!r.salary.includes('თვე'));
+  }
+  assert.equal(
+    visibleFields('გადახდა ყოველდღიურად\nხელფასი: 1500 ლარი').salaryPeriod,
+    '',
+  );
+  assert.equal(
+    visibleFields('ხელფასი: 1500 ლარი თვეში, თანხა გაიცემა ყოველდღიურად')
+      .salaryPeriod,
+    'თვე',
+  );
+});
+
+void test('a contradictory daily label and monthly amount is held for review', () => {
+  const r = visibleFields('დღიური ანაზღაურება: 1500 ლარი თვეში');
+  assert.equal(r.salary, '');
+  assert.equal(r.salaryMin, null);
+  assert.equal(r.salaryPeriod, '');
+  assert.ok(r.warning);
+});

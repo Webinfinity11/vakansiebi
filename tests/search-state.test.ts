@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readSearch, searchParams } from '../lib/search-state';
 void test('a shared search restores all supported filters without private or preview data', () => {
   const filters = {
+    ...readSearch(new URLSearchParams()),
     query: '  ოფისის მენეჯერი  ',
     city: 'თბილისი',
     category: 'ადმინისტრაცია',
@@ -10,6 +11,11 @@ void test('a shared search restores all supported filters without private or pre
     paid: true,
     remote: true,
     sort: 'მაღალი ხელფასი',
+    salaryFrom: 1000,
+    salaryTo: 3000,
+    employment: 'part-time' as const,
+    entryLevel: true,
+    postedWithin: 7 as const,
   };
   const params = searchParams(filters);
   assert.deepEqual(readSearch(params), {

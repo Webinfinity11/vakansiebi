@@ -12,7 +12,7 @@
     "lint": "oxlint app lib worker scripts tests",
     "format": "oxfmt",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "worker": "tsx worker/main.ts",
     "source:probe": "tsx scripts/probe.ts",

@@ -1,3 +1,4 @@
+import { assessReportedTotal } from './quality';
 import { randomUUID } from 'node:crypto';
 import {
   readDiscoveryInfo,
@@ -46,6 +47,7 @@ export async function runSource(
     removed = 0,
     linked = 0,
     expired = 0,
+    qualityHeld = 0,
     budgetExhausted = false;
   try {
     locked = (
@@ -96,32 +98,54 @@ export async function runSource(
       );
     };
     await rememberPage(listUrl, links);
-    if (info)
+    const countQuality = info
+      ? assessReportedTotal(config.reported_total, info.reportedTotal, {
+          value: config.reported_total_candidate,
+          firstSeen: config.reported_total_first_seen,
+          lastSeen: config.reported_total_last_seen,
+          observations: config.reported_total_observations || 0,
+        })
+      : null;
+    if (countQuality)
+      await db().query(
+        `UPDATE sources SET quality_warning=$2,reported_total_candidate=$3,reported_total_first_seen=$4,reported_total_last_seen=$5,reported_total_observations=$6 WHERE id=$1`,
+        [
+          source,
+          countQuality.warning,
+          countQuality.candidate,
+          countQuality.firstSeen,
+          countQuality.lastSeen,
+          countQuality.observations,
+        ],
+      );
+    if (info && !countQuality?.hold)
       await db().query(
         'UPDATE sources SET reported_total=$2,reported_pages=$3,discovery_observed_at=now() WHERE id=$1',
         [source, info.reportedTotal, info.totalPages],
       );
     // The full HR search is authoritative for discovery; its sitemap is only a fallback.
     const sitemap = info?.totalPages ? null : activeConfig.sitemap;
-    let discoveryWarning = '';
+    let discoveryWarning = countQuality?.warning || '';
     const pageBudget = Math.max(
       1,
       Math.min(50, Number(process.env.DISCOVERY_PAGE_BUDGET) || 20),
     );
-    const extraPages = paginated
-      ? planDiscoveryPages(
-          source as DiscoverySource,
-          info!,
-          config.discovery_cursor,
-          pageBudget,
-        ).urls
-      : [
-          ...new Set(
-            Array.from({ length: 3 }, (_, offset) =>
-              additionalListing(source, html, config.sitemap_cursor + offset),
-            ).filter((url): url is string => !!url),
-          ),
-        ];
+    const extraPages = countQuality?.hold
+      ? []
+      : paginated
+        ? planDiscoveryPages(
+            source as DiscoverySource,
+            info!,
+            config.discovery_cursor,
+            pageBudget,
+          ).urls
+        : [
+            ...new Set(
+              Array.from({ length: 3 }, (_, offset) =>
+                additionalListing(source, html, config.sitemap_cursor + offset),
+              ).filter((url): url is string => !!url),
+            ),
+          ];
     if (paginated && !info?.totalPages)
       discoveryWarning =
         'Listing page count is unavailable; first page retained and discovery will retry';
@@ -232,6 +256,7 @@ export async function runSource(
         if (outcome === 'changed') changed++;
         if (outcome === 'linked') linked++;
         if (outcome === 'expired') expired++;
+        if (outcome === 'quality_held') qualityHeld++;
       } catch (e) {
         if (
           (e instanceof SourceHttpError && [404, 410].includes(e.status)) ||
@@ -240,7 +265,7 @@ export async function runSource(
           removed++;
           consecutiveDetailFailures = 0;
           await db().query(
-            "UPDATE source_items SET last_checked_at=now(),error=$2,next_check_at=now()+interval '7 days' WHERE id=$1",
+            "UPDATE source_items SET last_checked_at=now(),error=$2,quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0,next_check_at=now()+interval '7 days' WHERE id=$1",
             [item.id, e.message],
           );
           if (item.job_id)
@@ -268,6 +293,9 @@ export async function runSource(
     const warning =
       [
         discoveryWarning,
+        qualityHeld
+          ? `${qualityHeld} detail snapshots held for quality review`
+          : null,
         stoppedEarly
           ? 'Stopped after 3 consecutive detail failures; remaining items retained for retry'
           : null,
@@ -287,9 +315,37 @@ export async function runSource(
         warning,
       ],
     );
+    const operationalWarning =
+      [
+        discoveryWarning === countQuality?.warning ? null : discoveryWarning,
+        failed ? `${failed} detail pages failed` : null,
+      ]
+        .filter(Boolean)
+        .join('; ') || null;
+    const unresolvedQuality = Number(
+      (
+        await db().query(
+          'SELECT count(*)::int AS count FROM source_items WHERE source_id=$1 AND quality_warning IS NOT NULL',
+          [source],
+        )
+      ).rows[0].count,
+    );
+    const qualityWarning =
+      [
+        countQuality?.warning,
+        unresolvedQuality
+          ? `${unresolvedQuality} detail snapshots held for quality review`
+          : null,
+      ]
+        .filter(Boolean)
+        .join('; ') || null;
+    await db().query('UPDATE sources SET quality_warning=$2 WHERE id=$1', [
+      source,
+      qualityWarning,
+    ]);
     await db().query(
       "UPDATE sources SET last_success_at=CASE WHEN $2::text IS NULL THEN now() ELSE last_success_at END,last_error=$2,consecutive_failures=0,next_run_at=now()+(interval_minutes*interval '1 minute') WHERE id=$1",
-      [source, warning],
+      [source, operationalWarning],
     );
     return {
       source,
@@ -301,6 +357,7 @@ export async function runSource(
       linked,
       expired,
       budgetExhausted,
+      qualityHeld,
       warning,
     };
   } catch (e) {

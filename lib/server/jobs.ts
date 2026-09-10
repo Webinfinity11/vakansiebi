@@ -7,64 +7,58 @@ import type { Vacancy } from '../types';
 import { vacancySchema } from '../vacancy-schema';
 export { vacancySchema } from '../vacancy-schema';
 import { companyKey } from '../company-key';
-import { searchTerms, sourceHealth } from '../job-intelligence';
+import { sourceHealth } from '../job-intelligence';
+import {
+  searchPlan,
+  filterLabels,
+  type FilterKey,
+  type SearchMeta,
+} from './search-plan';
+import { suggestSearch } from '../search-language';
 export async function publicJobs(params: URLSearchParams, preview = false) {
-  const page = Math.max(1, Math.min(10000, Number(params.get('page')) || 1));
+  const page = Math.max(
+    1,
+    Math.min(10000, Math.floor(Number(params.get('page'))) || 1),
+  );
   const limit = 20;
-  const q = (params.get('q') || '').slice(0, 200);
-  const city = params.get('city') || '';
-  const category = params.get('category') || '';
-  const source = params.get('source') || '';
-  const paid = params.get('paid') === 'true';
-  const remote = params.get('remote') === 'true';
-  let where = `j.status='published' AND j.published IS NOT NULL AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text($1::jsonb) term WHERE strpos(lower(concat_ws(' ',j.published->>'title',j.published->>'company',j.published->>'city',j.published->>'description')),term)=0) AND ($2='' OR strpos(j.published->>'city',$2)>0) AND ($3='' OR j.published->>'category'=$3) AND ($4='' OR EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired AND s.name=$4)) AND (NOT $5 OR COALESCE(j.published->>'salary','')<>'') AND (NOT $6 OR j.published->>'mode'='დისტანციური')`;
-  if (preview)
-    where = where
-      .replace(
-        "j.status='published' AND j.published IS NOT NULL",
-        "j.status IN ('pending','published')",
+  const { where, args, ordering, metrics, filters, cte } = searchPlan(
+    params,
+    preview,
+  );
+  const measured = (await db().query(metrics, args)).rows[0];
+  const count = measured.total;
+  const search: SearchMeta = {
+    categories: measured.categories,
+    categoryTotal: measured.category_total,
+    relaxations: (Object.entries(measured.relaxed) as [FilterKey, number][])
+      .filter(([, n]) => n > count)
+      .map(([key, n]) => ({ key, label: filterLabels[key], count: n }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3),
+    suggestion: null,
+  };
+  const correction = count === 0 ? suggestSearch(filters.query) : null;
+  if (correction) {
+    const corrected = new URLSearchParams(params);
+    corrected.set('q', correction);
+    const plan = searchPlan(corrected, preview);
+    const n = (
+      await db().query(
+        `${plan.cte} SELECT count(*)::int count FROM searchable j WHERE ${plan.where}`,
+        plan.args,
       )
-      .replaceAll('j.published', 'j.draft');
-  where +=
-    ' AND EXISTS(SELECT 1 FROM source_items active_item JOIN sources active_source ON active_source.id=active_item.source_id WHERE active_item.job_id=j.id AND NOT active_source.retired)';
-  const args = [
-    JSON.stringify(searchTerms(q)),
-    city,
-    category,
-    source,
-    paid,
-    remote,
-  ];
-  const requestedIds = params.get('ids');
-  if (requestedIds !== null) {
-    const ids = requestedIds
-      .split(',')
-      .filter((id) => z.uuid().safeParse(id).success)
-      .slice(0, 100);
-    where += ` AND j.id::text = ANY(string_to_array($7,','))`;
-    args.push(ids.join(','));
+    ).rows[0].count;
+    if (n > 0) search.suggestion = { query: correction, count: n };
   }
-  const count = (
-    await db().query(
-      `SELECT count(*)::int AS count FROM jobs j WHERE ${where}`,
-      args,
-    )
-  ).rows[0].count;
-  let ordering =
-    params.get('sort') === 'salary'
-      ? `CASE WHEN j.published->>'currency'='GEL' AND j.published->>'salaryPeriod'='თვე' THEN (j.published->>'salaryMin')::numeric END DESC NULLS LAST,j.published_at DESC`
-      : 'j.published_at DESC';
-  if (params.get('sort') === 'deadline')
-    ordering =
-      "NULLIF(j.published->>'deadline','') ASC NULLS LAST,j.published_at DESC";
-  if (
-    q.trim() &&
-    !['salary', 'new', 'deadline'].includes(params.get('sort') || '')
-  ) {
-    ordering = `(SELECT COALESCE(sum(CASE WHEN strpos(lower(j.published->>'title'),term)>0 THEN 5 ELSE 0 END + CASE WHEN strpos(lower(j.published->>'company'),term)>0 THEN 2 ELSE 0 END),0) FROM jsonb_array_elements_text($1::jsonb) term) DESC,j.published_at DESC`;
-  }
-  if (preview) ordering = ordering.replaceAll('j.published->', 'j.draft->');
-  if (preview) ordering = ordering.replaceAll('j.published_at', 'j.created_at');
+  if (params.get('countsOnly') === '1')
+    return {
+      jobs: [],
+      preview,
+      search,
+      total: count,
+      page: 1,
+      pages: Math.ceil(count / limit),
+    };
   const summary = params.get('summary') === '1';
   const snapshot = preview ? 'j.draft' : 'j.published';
   const projection = summary
@@ -72,7 +66,7 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
     : snapshot;
   const rows = (
     await db().query(
-      `SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',si.last_checked_at,'error',si.error)) FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired),'[]'::jsonb) AS sources FROM jobs j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
+      `${cte} SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error)) FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired),'[]'::jsonb) AS sources FROM searchable j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
       [...args, limit, (page - 1) * limit],
     )
   ).rows;
@@ -131,6 +125,7 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
       },
     })),
     preview,
+    search,
     total: count,
     page,
     pages: Math.ceil(count / limit),

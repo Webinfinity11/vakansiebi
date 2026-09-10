@@ -1,5 +1,11 @@
 'use client';
 import Link from 'next/link';
+import AdvancedFilterControls, {
+  advancedDefaults,
+  employmentLabels,
+  type AdvancedFilters,
+} from './advanced-filters';
+import type { SearchMeta, FilterKey } from '@/lib/server/search-plan';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { readSearch, searchParams } from '@/lib/search-state';
@@ -198,6 +204,31 @@ export default function JobBoard() {
     [paid, setPaid] = useState(initialSearch.paid),
     [remote, setRemote] = useState(initialSearch.remote),
     [sort, setSort] = useState(initialSearch.sort);
+  const [advanced, setAdvanced] = useState<AdvancedFilters>(
+    () =>
+      Object.fromEntries(
+        Object.keys(advancedDefaults).map((key) => [
+          key,
+          initialSearch[key as keyof AdvancedFilters],
+        ]),
+      ) as AdvancedFilters,
+  );
+  const currentSearch: SearchFilters = {
+    query,
+    city,
+    category,
+    source,
+    paid,
+    remote,
+    sort,
+    ...advanced,
+  };
+  const [searchMeta, setSearchMeta] = useState<SearchMeta | null>(null);
+  const [mobileMeta, setMobileMeta] = useState<{
+    key: string;
+    data: SearchMeta;
+  } | null>(null);
+
   const [catalogue, setCatalogue] = useState<{
     total: number;
     categories: { name: string; count: number }[];
@@ -221,6 +252,28 @@ export default function JobBoard() {
     [feedback, setFeedback] = useState(''),
     [retry, setRetry] = useState(0);
   const [mobileDraft, setMobileDraft] = useState<SearchFilters | null>(null);
+  const mobileKey = mobileDraft ? searchParams(mobileDraft).toString() : '';
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      const p = new URLSearchParams(mobileKey);
+      p.set('countsOnly', '1');
+      if (demo) p.set('preview', '1');
+      if (savedOnly) p.set('ids', saved.join(','));
+      void fetch('/api/jobs?' + p, { signal: controller.signal })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d && !controller.signal.aborted)
+            setMobileMeta({ key: mobileKey, data: d.search });
+        })
+        .catch(() => {});
+    }, 350);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [filtersOpen, mobileKey, demo, savedOnly, saved]);
   const [detailError, setDetailError] = useState('');
   const [detailRetry, setDetailRetry] = useState(0);
   const detailId = selected?.id;
@@ -254,6 +307,7 @@ export default function JobBoard() {
         initialSearch.paid,
         initialSearch.remote,
         initialSearch.sort,
+        advanced,
         false,
         [],
       ]),
@@ -272,6 +326,7 @@ export default function JobBoard() {
     paid,
     remote,
     sort,
+    advanced,
     savedOnly,
     savedOnly ? saved : [],
   ]);
@@ -287,6 +342,12 @@ export default function JobBoard() {
     source === 'ყველა' ? '' : source,
     paid,
     remote,
+    advanced.salaryPeriod === 'day' ||
+      advanced.salaryFrom !== null ||
+      advanced.salaryTo !== null,
+    advanced.employment !== 'all',
+    advanced.entryLevel,
+    advanced.postedWithin,
   ].filter(Boolean).length;
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -325,25 +386,19 @@ export default function JobBoard() {
     const timer = setTimeout(() => {
       setLoading(true);
       setError('');
-      const p = new URLSearchParams({
-        q: query,
-        city: city === 'ყველა' ? '' : city,
-        category: category === 'ყველა' ? '' : category,
-        source: source === 'ყველა' ? '' : source,
-        paid: String(paid),
-        remote: String(remote),
-        sort:
-          sort === 'მაღალი ხელფასი'
-            ? 'salary'
-            : sort === 'ვადა იწურება'
-              ? 'deadline'
-              : sort === 'უახლესი'
-                ? 'new'
-                : 'relevance',
-        page: String(page),
-        summary: '1',
-        preview: demo ? '1' : '0',
+      const p = searchParams({
+        query,
+        city,
+        category,
+        source,
+        paid,
+        remote,
+        sort,
+        ...advanced,
       });
+      p.set('page', String(page));
+      p.set('summary', '1');
+      p.set('preview', demo ? '1' : '0');
       if (savedOnly) p.set('ids', savedFilter);
       const address = searchParams({
         query,
@@ -353,6 +408,7 @@ export default function JobBoard() {
         paid,
         remote,
         sort,
+        ...advanced,
       });
       if (demo) address.set('preview', '1');
       if (deepId) address.set('job', deepId);
@@ -371,6 +427,7 @@ export default function JobBoard() {
         .then((d) => {
           if (!controller.signal.aborted) {
             setJobs(d.jobs);
+            setSearchMeta(d.search);
             setLoadedResult({ key: filterKey, page });
             setTotal(d.total);
             setPages(d.pages);
@@ -395,6 +452,7 @@ export default function JobBoard() {
     paid,
     remote,
     sort,
+    advanced,
     page,
     demo,
     savedOnly,
@@ -414,6 +472,14 @@ export default function JobBoard() {
     setPaid(filters.paid);
     setRemote(filters.remote);
     setSort(filters.sort);
+    setAdvanced({
+      salaryPeriod: filters.salaryPeriod,
+      salaryFrom: filters.salaryFrom,
+      salaryTo: filters.salaryTo,
+      employment: filters.employment,
+      entryLevel: filters.entryLevel,
+      postedWithin: filters.postedWithin,
+    });
     setSavedOnly(false);
     document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -424,6 +490,25 @@ export default function JobBoard() {
     setSource('ყველა');
     setPaid(false);
     setRemote(false);
+    setAdvanced(advancedDefaults);
+  };
+  const relaxFilter = (key: FilterKey) => {
+    if (key === 'query') setQuery('');
+    if (key === 'city') setCity('ყველა');
+    if (key === 'category') setCategory('ყველა');
+    if (key === 'source') setSource('ყველა');
+    if (key === 'paid') setPaid(false);
+    if (key === 'remote') setRemote(false);
+    if (key === 'salary')
+      setAdvanced({
+        ...advanced,
+        salaryPeriod: 'month',
+        salaryFrom: null,
+        salaryTo: null,
+      });
+    if (key === 'employment') setAdvanced({ ...advanced, employment: 'all' });
+    if (key === 'entryLevel') setAdvanced({ ...advanced, entryLevel: false });
+    if (key === 'postedWithin') setAdvanced({ ...advanced, postedWithin: 0 });
   };
   function toggleSave(id: string) {
     const next = saved.includes(id)
@@ -454,9 +539,15 @@ export default function JobBoard() {
   }
   const renderFilters = (prefix: string) => {
     const draft =
-      prefix === 'mobile' && mobileDraft
-        ? mobileDraft
-        : { query, city, category, source, paid, remote, sort };
+      prefix === 'mobile' && mobileDraft ? mobileDraft : currentSearch;
+    const facets =
+      prefix === 'mobile'
+        ? mobileMeta?.key === mobileKey
+          ? mobileMeta.data
+          : null
+        : !resultsPending
+          ? searchMeta
+          : null;
     const changeCategory = (value: string) =>
       prefix === 'mobile'
         ? setMobileDraft({ ...draft, category: value })
@@ -483,12 +574,19 @@ export default function JobBoard() {
           <h2>
             <SlidersHorizontal size={17} /> ფილტრები
           </h2>
-          <button onClick={reset} disabled={!activeCount}>
+          <button
+            onClick={() =>
+              prefix === 'mobile'
+                ? setMobileDraft(readSearch(new URLSearchParams()))
+                : reset()
+            }
+            disabled={prefix === 'mobile' ? !mobileKey : !activeCount}
+          >
             გასუფთავება
           </button>
         </div>
         <h3>
-          მიმართულება <small>· მთელ კატალოგში</small>
+          მიმართულება <small>· არჩეული პირობებით</small>
         </h3>
         <div className="category-options">
           {['ყველა', ...categories].map((c) => (
@@ -501,11 +599,11 @@ export default function JobBoard() {
                 onChange={() => changeCategory(c)}
               />
               <span>{c === 'ყველა' ? 'ყველა მიმართულება' : c}</span>
-              {catalogue && (
+              {facets && (
                 <small className="facet-count">
                   {c === 'ყველა'
-                    ? catalogue.total
-                    : catalogue.categories.find((item) => item.name === c)
+                    ? facets.categoryTotal
+                    : facets.categories.find((item) => item.name === c)
                         ?.count || 0}
                 </small>
               )}
@@ -530,6 +628,15 @@ export default function JobBoard() {
           />
           ხელფასი მითითებულია
         </label>
+        <AdvancedFilterControls
+          prefix={prefix}
+          value={draft}
+          onChange={(next) =>
+            prefix === 'mobile'
+              ? setMobileDraft({ ...draft, ...next })
+              : setAdvanced(next)
+          }
+        />
         <div className="filter-divider" />
         <h3>ქალაქი</h3>
         <Choice
@@ -674,6 +781,34 @@ export default function JobBoard() {
             </form>
             <div className="quick">
               <span>სცადე:</span>
+              <button
+                aria-pressed={advanced.employment === 'daily'}
+                className={advanced.employment === 'daily' ? 'active' : ''}
+                onClick={() =>
+                  setAdvanced({
+                    ...advanced,
+                    employment:
+                      advanced.employment === 'daily' ? 'all' : 'daily',
+                  })
+                }
+              >
+                დღიური სამუშაო <ArrowUpRight size={12} />
+              </button>
+              <button
+                aria-pressed={advanced.salaryPeriod === 'day'}
+                className={advanced.salaryPeriod === 'day' ? 'active' : ''}
+                onClick={() =>
+                  setAdvanced({
+                    ...advanced,
+                    salaryPeriod:
+                      advanced.salaryPeriod === 'day' ? 'month' : 'day',
+                    salaryFrom: null,
+                    salaryTo: null,
+                  })
+                }
+              >
+                დღიური ანაზღაურება <ArrowUpRight size={12} />
+              </button>
               {['ტექნოლოგიები', 'გაყიდვები', 'მარკეტინგი'].map((c) => (
                 <button
                   key={c}
@@ -738,7 +873,7 @@ export default function JobBoard() {
               </div>
               <PersonalSpace
                 space={personal}
-                filters={{ query, city, category, source, paid, remote, sort }}
+                filters={currentSearch}
                 active={activeCount > 0}
                 disabled={demo}
                 onApply={applySearch}
@@ -748,15 +883,7 @@ export default function JobBoard() {
               <button
                 className="mobile-filter-toggle secondary-button"
                 onClick={() => {
-                  setMobileDraft({
-                    query,
-                    city,
-                    category,
-                    source,
-                    paid,
-                    remote,
-                    sort,
-                  });
+                  setMobileDraft(currentSearch);
                   setFiltersOpen(true);
                 }}
               >
@@ -771,15 +898,7 @@ export default function JobBoard() {
                       await navigator.clipboard.writeText(
                         window.location.origin +
                           '/?' +
-                          searchParams({
-                            query,
-                            city,
-                            category,
-                            source,
-                            paid,
-                            remote,
-                            sort,
-                          }),
+                          searchParams(currentSearch),
                       );
                       setFeedback('ძიების ბმული დაკოპირებულია');
                     } catch {
@@ -825,6 +944,35 @@ export default function JobBoard() {
                   {remote && (
                     <button onClick={() => setRemote(false)}>
                       დისტანციური
+                      <X size={12} />
+                    </button>
+                  )}
+                  {(advanced.salaryPeriod === 'day' ||
+                    advanced.salaryFrom !== null ||
+                    advanced.salaryTo !== null) && (
+                    <button onClick={() => relaxFilter('salary')}>
+                      {advanced.salaryFrom ?? 0}–{advanced.salaryTo ?? '∞'} ₾ /{' '}
+                      {advanced.salaryPeriod === 'day' ? 'დღე' : 'თვე'}
+                      <X size={12} />
+                    </button>
+                  )}
+                  {advanced.employment !== 'all' && (
+                    <button onClick={() => relaxFilter('employment')}>
+                      {employmentLabels[advanced.employment]}
+                      <X size={12} />
+                    </button>
+                  )}
+                  {advanced.entryLevel && (
+                    <button onClick={() => relaxFilter('entryLevel')}>
+                      გამოცდილების გარეშე
+                      <X size={12} />
+                    </button>
+                  )}
+                  {!!advanced.postedWithin && (
+                    <button onClick={() => relaxFilter('postedWithin')}>
+                      {advanced.postedWithin === 1
+                        ? 'დღეს'
+                        : `ბოლო ${advanced.postedWithin} დღეში`}
                       <X size={12} />
                     </button>
                   )}
@@ -969,6 +1117,29 @@ export default function JobBoard() {
                       ? 'დააჭირე ბარათზე შენახვის ნიშანს და მოგვიანებით აქ დაბრუნდი.'
                       : 'შეცვალე საძიებო სიტყვა ან შეამცირე ფილტრების რაოდენობა.'}
                   </p>
+                  {searchMeta?.suggestion && (
+                    <button
+                      className="secondary-button"
+                      onClick={() => setQuery(searchMeta.suggestion!.query)}
+                    >
+                      ხომ არ გულისხმობდი „{searchMeta.suggestion.query}“? (
+                      {searchMeta.suggestion.count})
+                    </button>
+                  )}
+                  {!!searchMeta?.relaxations.length && (
+                    <div className="search-recovery">
+                      <p>სხვა პირობების შენარჩუნებით:</p>
+                      {searchMeta.relaxations.map((item) => (
+                        <button
+                          className="secondary-button"
+                          key={item.key}
+                          onClick={() => relaxFilter(item.key)}
+                        >
+                          მოხსენი „{item.label}“ — {item.count} შედეგი
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <button
                     className="primary"
                     onClick={() => {

@@ -35,6 +35,12 @@ const filters: SearchFilters = {
   paid: true,
   remote: false,
   sort: 'შესაბამისობა',
+  salaryPeriod: 'month',
+  salaryFrom: null,
+  salaryTo: null,
+  employment: 'all',
+  entryLevel: false,
+  postedWithin: 0,
 };
 const application = (): Application => ({
   version: 1,
