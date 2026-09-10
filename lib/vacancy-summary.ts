@@ -1,4 +1,5 @@
 import type { Vacancy } from './types';
+import { experienceConflict } from './experience';
 
 /** Extract short, attributable excerpts. Never infer missing terms or translate them. */
 export function vacancySummary(job: Pick<Vacancy, 'description' | 'facts'>) {
@@ -14,11 +15,11 @@ export function vacancySummary(job: Pick<Vacancy, 'description' | 'facts'>) {
     ],
     [
       'მისამართი',
-      /^(?:სამუშაო\s+)?(?:მისამართი|ადგილმდებარეობა|სამუშაო ადგილი|address|location)\s*[:–—-]\s*(.+)$/i,
+      /^(?:სამუშაო\s+)?(?:მისამართი|ადგილმდებარეობა|მდებარეობა|სამუშაო ადგილი|address|location)\s*[:–—-]\s*(.+)$/i,
     ],
     [
       'ბენეფიტები',
-      /^(?:ბენეფიტები|ჩვენ გთავაზობთ|კომპანია გთავაზობთ|შეთავაზება|benefits|we offer)(?:\s*[:–—-]\s*(.*)|\s*)$/i,
+      /^(?:ბენეფიტები|ჩვენ გთავაზობთ|კომპანია გთავაზობთ|ჩვენთან თანამშრომლობის შემთხვევაში გთავაზობთ|შეთავაზება|benefits|we offer)(?:\s*[:–—-]\s*(.*)|\s*)$/i,
     ],
     ['მთავარი მოთხოვნა', /^(?:აუცილებელია|სავალდებულოა)\s*[:–—-]?\s+(.+)$/i],
   ] as const) {
@@ -28,7 +29,7 @@ export function vacancySummary(job: Pick<Vacancy, 'description' | 'facts'>) {
         : label === 'მისამართი'
           ? /^(?:სამუშაო )?მისამართი$|^ადგილმდებარეობა$|^address$|^location$/i
           : label === 'ბენეფიტები'
-            ? /^ბენეფიტები$|^benefits$/i
+            ? /^ბენეფიტები$|^დამატებითი სარგებელი \(ბენეფიტები\)$|^benefits$/i
             : /^მთავარი მოთხოვნა$/i
       ).test(f.label.trim()),
     );
@@ -65,5 +66,15 @@ export function vacancySummary(job: Pick<Vacancy, 'description' | 'facts'>) {
       }
     }
   }
+  const conflict = experienceConflict(job);
+  if (conflict)
+    return result.map((item) =>
+      item.label === 'გამოცდილება'
+        ? {
+            label: 'გამოცდილება — დასაზუსტებელია',
+            value: `ველში: ${conflict.field}. აღწერაში: ${conflict.requirement}`,
+          }
+        : item,
+    );
   return result;
 }

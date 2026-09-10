@@ -123,6 +123,13 @@ export function workSchedule(job: DetailSource): string[] {
       )
     )
       value = line;
+    if (
+      /^(?:დასაქმებულის\s+)?სამუშაო დრო\s+(?:შეადგენს|განისაზღვრება)/.test(
+        line,
+      ) &&
+      /საათ|კვირ|დღე/.test(line)
+    )
+      value = line;
     if (value && value.length <= 300) values.push(value);
   }
   return [...new Set(values.filter(Boolean))].slice(0, 4);

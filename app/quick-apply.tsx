@@ -9,14 +9,20 @@ import {
 } from '@/lib/vacancy-details';
 import type { PublicJob } from '@/lib/types';
 
-export function QuickApply({ job }: { job: PublicJob }) {
+export function QuickApply({
+  job,
+  showApplication = true,
+}: {
+  job: PublicJob;
+  showApplication?: boolean;
+}) {
   const { emails, phones } = vacancyContacts(job);
   const application = applicationDestination(job);
   const [message, setMessage] = useState('');
   return (
     <section className="quick-apply" id="vacancy-contacts" tabIndex={-1}>
       <h3>დაუკავშირდი დამსაქმებელს</h3>
-      {application && (
+      {showApplication && application && (
         <a
           className="primary external-application"
           href={application.url}

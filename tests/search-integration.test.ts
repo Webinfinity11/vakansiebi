@@ -117,6 +117,19 @@ void test(
         2,
         'required experience must not qualify',
       );
+      await db().query(
+        "UPDATE jobs SET published=jsonb_set(published,'{description}',to_jsonb($2::text)) WHERE id=$1",
+        [ids[1], 'გამოცდილების გარეშე. უნდა ქონდეს გამოცდილება.'],
+      );
+      assert.equal(
+        (await search({ entryLevel: 'true' })).total,
+        1,
+        'contradictory entry-level labels are not promoted as no-experience jobs',
+      );
+      await db().query(
+        "UPDATE jobs SET published=jsonb_set(published,'{description}',to_jsonb($2::text)) WHERE id=$1",
+        [ids[1], fixtures[1].description],
+      );
       assert.equal(
         (await search({ salaryFrom: '1000', salaryTo: '2500' })).total,
         4,

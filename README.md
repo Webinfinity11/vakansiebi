@@ -155,3 +155,9 @@ English-dominant descriptions offer an explicitly labelled external Google Trans
 ## Automatic lifecycle
 
 See [automation rules](docs/automation.md). Migration 007 adds opt-in source publication and per-job automation state. Existing editorial overrides are preserved.
+
+### Stored salary enrichment
+
+`npx tsx scripts/enrich-existing.ts` previews additive pay extraction across currently searchable jobs in batches of 100. Use `--apply` to write validated changes and audit entries. By default only automatically managed, unpaused jobs are eligible. An explicit `--include-editorial` also fills missing pay and adds source-text pay excerpts to editorial/paused records; it preserves existing salary text, publication state and automation flags. This option is for an intentional catalogue repair, not a scheduled override of editorial choices. Source advisory locks prevent overlap with crawlers. No source verification timestamp is advanced because this operation only reinterprets stored text.
+
+Source comparison and recovery scope: [2026-09-10 audit](docs/source-audit-2026-09-10.md).

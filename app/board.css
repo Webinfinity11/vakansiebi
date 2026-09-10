@@ -1607,8 +1607,44 @@
   font-size: 12px;
   color: #58657a;
 }
-.vacancy-related-links summary {
-  cursor: pointer;
+.vacancy-related-links .application-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.vacancy-related-links .application-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 12px 16px;
+  text-decoration: none;
+  line-height: 1.6;
+}
+.vacancy-related-links .application-links .vacancy-apply-link {
+  background: #2457e6;
+  color: #fff;
+  border: 1px solid #2457e6;
+  border-radius: 8px;
+}
+.vacancy-related-links .application-links .vacancy-employer-link {
+  color: #315590;
+  background: #edf3ff;
+  border: 1px solid #ccdafa;
+  border-radius: 8px;
+}
+.vacancy-related-links .application-links a small {
+  font-size: 10px;
+  font-weight: 400;
+}
+@media (max-width: 760px) {
+  .vacancy-related-links .application-links a {
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
 }
 .vacancy-page .application-tracker {
   margin-top: 20px;
@@ -1860,6 +1896,25 @@
   color: #263a58;
   margin-bottom: 12px;
 }
+.vacancy-pay-details {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #c8e4d6;
+  border-radius: 9px;
+  background: #f0f8f3;
+}
+.vacancy-pay-details h2 {
+  color: #245b41;
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+.vacancy-pay-details p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #315b47;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
 .vacancy-summary dl {
   display: grid;
   gap: 12px;
@@ -1887,6 +1942,14 @@
   color: #66768d;
   margin-top: 10px;
   line-height: 1.8;
+}
+.vacancy-summary dl > .summary-conflict {
+  background: #fff7e6;
+  border-left-color: #c58a24;
+}
+.vacancy-summary .summary-conflict dt {
+  color: #80520f;
+  font-weight: 650;
 }
 .vacancy-hide-action {
   margin-top: 18px;

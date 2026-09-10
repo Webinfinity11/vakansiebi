@@ -8,6 +8,12 @@ import { vacancyContacts } from '../lib/vacancy-details';
 import type { PublicJob } from '../lib/types';
 
 void test('summary preserves qualifications and negations, stops at unrelated sections, and never guesses missing terms', () => {
+  const conflict = vacancySummary({
+    description: 'უნდა ქონდეს გამოცდილება.',
+    facts: [{ label: 'გამოცდილება', value: 'გამოცდილების გარეშე' }],
+  });
+  assert.equal(conflict[0].label, 'გამოცდილება — დასაზუსტებელია');
+  assert.match(conflict[0].value, /უნდა ქონდეს გამოცდილება/);
   assert.deepEqual(
     vacancySummary({
       description:

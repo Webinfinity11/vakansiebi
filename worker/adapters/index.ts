@@ -1,7 +1,12 @@
-import { telephoneHref, telephoneNumber } from '../../lib/vacancy-details';
+import {
+  telephoneHref,
+  telephoneNumber,
+  vacancyContacts,
+} from '../../lib/vacancy-details';
 import { mailtoAddress } from '../../lib/application-contact';
 import { companyKey } from '../../lib/company-key';
 import { visibleFields } from '../visible-fields';
+import { enrichVacancy } from '../enrich';
 import { load } from 'cheerio';
 import { safeLogoUrl, safeExternalUrl } from '../../lib/vacancy-media';
 
@@ -319,6 +324,20 @@ export function parseDetail(
       j.city = $('.main-info .location-items').first().text().trim();
       j.description = cleanText($('.description').first().html() || '');
     }
+    const visible = visibleFields(j.description);
+    if (!j.salary && visible.salary && !visible.warning) {
+      j.salary = visible.salary;
+      j.salaryMin = visible.salaryMin;
+      j.currency = visible.currency;
+      j.salaryPeriod = visible.salaryPeriod;
+    }
+    const publicContacts = vacancyContacts({
+      description: $('.application__phone,.application__email').text(),
+    });
+    for (const phone of publicContacts.phones)
+      j.facts.push({ label: 'საკონტაქტო ტელეფონი', value: phone.number });
+    for (const email of publicContacts.emails)
+      j.facts.push({ label: 'საკონტაქტო ელფოსტა', value: email.email });
   } else if (source === 'samushao') {
     let post: JobPosting | undefined;
     $('script[type="application/ld+json"]').each((_, el) => {
@@ -642,6 +661,12 @@ export function parseDetail(
       'ორგანიზაციის შესახებ',
       'ფუნქციები',
       'მინიმალური განათლება',
+      'სამუშაო გამოცდილება',
+      'პროფესია',
+      'საკონტაქტო ტელეფონები',
+      'ელექტრონული ფოსტა',
+      'საკონტაქტო ელფოსტა',
+      'საკონტაქტო პირი',
       'საკონკურსო თემატიკა',
       'დამატებითი მოთხოვნები',
       'დამატებითი ინფორმაცია',
@@ -656,6 +681,12 @@ export function parseDetail(
       'ადგილების რაოდენობა',
       'გამოსაცდელი ვადა',
       'მინიმალური განათლება',
+      'სამუშაო გამოცდილება',
+      'პროფესია',
+      'საკონტაქტო ტელეფონები',
+      'ელექტრონული ფოსტა',
+      'საკონტაქტო ელფოსტა',
+      'საკონტაქტო პირი',
     ])
       if (fields.has(label)) j.facts.push({ label, value: fields.get(label)! });
   } else {
@@ -732,6 +763,8 @@ export function parseDetail(
   )
     throw new UnavailableVacancy();
   j.title = j.title.replace(/\s+/g, ' ').trim();
+  if (/^(?:ტენდერი(?:\s|$)|tender\s+for\s)/i.test(j.title))
+    throw new UnavailableVacancy();
   j.company = j.company.replace(/\s+/g, ' ').trim();
   j.city = j.city.replace(/\s+/g, ' ').trim();
   if (!j.company) j.warnings.push('კომპანიის სახელი წყაროზე ვერ მოიძებნა.');
@@ -744,7 +777,7 @@ export function parseDetail(
       'პირველწყაროზე აღწერა მითითებული არ არის. დეტალებისთვის გახსენი განცხადება.',
     );
   if (j.description.length > 100000) throw Error('Description exceeds limit');
-  return j;
+  return enrichVacancy(j);
 }
 
 export function georgianDate(value: string, year: number) {

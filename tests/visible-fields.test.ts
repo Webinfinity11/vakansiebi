@@ -12,6 +12,47 @@ void test('location comes from the job label, never employer history or privacy 
     visibleFields('კომპანია დაარსდა თბილისში 1998 წელს.').location,
     '',
   );
+  assert.equal(
+    visibleFields(
+      '"კრედო ბანკი" აცხადებს ვაკანსიას პოზიციაზე - რჩეულის ოპერატორი თბილისში.',
+    ).location,
+    'თბილისი',
+  );
+  assert.equal(
+    visibleFields(
+      'კომპანია აცხადებს ვაკანსიას მენეჯერის პოზიციაზე.\n\nკომპანიის მთავარი ოფისი თბილისში.',
+    ).location,
+    '',
+  );
+});
+void test('HR keeps an explicitly written salary even when the structured salary field is absent, without inventing a period', () => {
+  const state = {
+    a: {
+      b: {
+        data: {
+          announcement: {
+            announcementId: 123,
+            title: 'დრაივის თანამშრომელი',
+            customerName: 'Company',
+            showSalary: false,
+          },
+        },
+      },
+    },
+  };
+  const html = `<script id="ng-state">${JSON.stringify(state)}</script><div class="application__phone">ტელეფონი: +995 577 22 61 88</div><div class="description"><p>კომპანია აცხადებს ვაკანსიას დრაივის თანამშრომლის პოზიციაზე.</p><p>ხელფასი: 110 ლარი</p></div>`;
+  const job = parseDetail(
+    'hr',
+    html,
+    'https://www.hr.ge/announcement/123/test',
+  );
+  assert.equal(job.salary, '110 ლარი');
+  assert.equal(job.salaryPeriod, '');
+  assert.ok(
+    job.facts?.some(
+      (f) => f.label === 'საკონტაქტო ტელეფონი' && f.value === '+995577226188',
+    ),
+  );
 });
 void test('salary preserves currency, explicit period, bonus and tax qualification', () => {
   const r = visibleFields(
@@ -22,6 +63,8 @@ void test('salary preserves currency, explicit period, bonus and tax qualificati
   assert.equal(r.salaryPeriod, 'თვე');
   assert.ok(r.salary.includes('ხელზე'));
   assert.equal(visibleFields('ხელფასი: 2000 USD').salaryPeriod, '');
+  assert.equal(visibleFields('ანაზღაურება: ფიქსირებული 4000 ლარი + ბონუსი').salaryMin, 4000);
+  assert.equal(visibleFields('ანაზღაურება: ფიქსირებული 4000 ლარი + ბონუსი').salaryPeriod, '');
   assert.equal(visibleFields('ხელფასი: 2000 ლარამდე').salaryMin, null);
   assert.equal(visibleFields('ხელფასი: 2000–1000 ლარი').salary, '');
   assert.equal(visibleFields('გამოცდილება: 2000 საათი').salaryMin, null);

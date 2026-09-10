@@ -26,6 +26,11 @@ import { emailDraft } from '@/lib/application-contact';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import type { PublicJob } from '@/lib/types';
 import { vacancySummary } from '@/lib/vacancy-summary';
+import { payExcerpts, payDisplay } from '@/lib/pay-excerpts';
+import {
+  vacancyLinks,
+  descriptionWithoutRepeatedLinks,
+} from '@/lib/vacancy-links';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { SimilarVacancies } from './similar-vacancies';
 
@@ -168,12 +173,16 @@ export default function VacancyPage({
   }
   const schedule = workSchedule(job);
   const summary = vacancySummary(job);
+  const extractedPay = payExcerpts(job.description);
+  const payConditions =
+    extractedPay.length === 1 && payDisplay(extractedPay) === job.salary
+      ? []
+      : extractedPay;
+  const links = vacancyLinks(job);
+  const description = descriptionWithoutRepeatedLinks(job.description, links);
   const contacts = vacancyContacts(job);
-  const hasContact = Boolean(
-    contacts.emails.length ||
-    contacts.phones.length ||
-    applicationDestination(job),
-  );
+  const hasContact = Boolean(contacts.emails.length || contacts.phones.length);
+  const hasAction = hasContact || Boolean(applicationDestination(job));
   return (
     <div
       className={`board-shell vacancy-page ${hasContact ? 'has-contact' : ''}`}
@@ -277,6 +286,17 @@ export default function VacancyPage({
                   </div>
                 ))}
             </dl>
+            {payConditions.length > 0 && (
+              <section
+                className="vacancy-pay-details"
+                aria-labelledby="pay-details-title"
+              >
+                <h2 id="pay-details-title">ანაზღაურების პირობები</h2>
+                {payConditions.map((text) => (
+                  <p key={text}>{text}</p>
+                ))}
+              </section>
+            )}
             {summary.length > 0 && (
               <section
                 className="vacancy-summary"
@@ -285,7 +305,14 @@ export default function VacancyPage({
                 <h2 id="summary-title">პირობები მოკლედ</h2>
                 <dl>
                   {summary.map((item) => (
-                    <div key={item.label}>
+                    <div
+                      key={item.label}
+                      className={
+                        item.label.includes('დასაზუსტებელია')
+                          ? 'summary-conflict'
+                          : undefined
+                      }
+                    >
                       <dt>{item.label}</dt>
                       <dd>{item.value}</dd>
                     </div>
@@ -319,7 +346,7 @@ export default function VacancyPage({
                   : 'არ მაინტერესებს'}
               </button>
             )}
-            {!hasContact && (
+            {!hasAction && (
               <div className="vacancy-contact-guidance">
                 <strong>დაკავშირების გზა</strong>
                 <p>შემოტანილ განცხადებაში ტელეფონი და ელფოსტა არ ჩანს.</p>
@@ -334,17 +361,43 @@ export default function VacancyPage({
               className="vacancy-contact"
               aria-label="დამსაქმებელთან დაკავშირება"
             >
-              <QuickApply job={job} />
+              <QuickApply job={job} showApplication={false} />
             </aside>
           )}
           <section className="vacancy-description-panel">
             <h2 className="description-heading">პოზიციის შესახებ</h2>
             {job.description.trim() ? (
-              <Description text={job.description} />
+              <Description text={description} />
             ) : (
               <p className="filter-help">
                 დამატებითი აღწერა არ არის მითითებული.
               </p>
+            )}
+            {links.length > 0 && (
+              <section
+                className="vacancy-related-links"
+                aria-label="განცხადების ბმულები"
+              >
+                <div className="application-links">
+                  {links.map((l) => (
+                    <a
+                      className={
+                        l.application
+                          ? 'primary vacancy-apply-link'
+                          : 'vacancy-employer-link'
+                      }
+                      key={l.url}
+                      href={l.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {l.label}
+                      <ArrowUpRight size={15} />
+                      <small>{l.host}</small>
+                    </a>
+                  ))}
+                </div>
+              </section>
             )}
             {!hasContact && <TranslationHelp job={job} />}
             {!!job.facts?.length && (
@@ -382,24 +435,6 @@ export default function VacancyPage({
                 )}
               </section>
             )}
-            {!!job.applicationLinks?.length && (
-              <details className="vacancy-related-links">
-                <summary>ბმულები განცხადებიდან</summary>
-                <div className="application-links">
-                  {job.applicationLinks.map((l) => (
-                    <a
-                      key={l.url}
-                      href={l.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {l.label}
-                      <ArrowUpRight size={15} />
-                    </a>
-                  ))}
-                </div>
-              </details>
-            )}
             <details className="application-tracker">
               <summary>
                 განაცხადის ეტაპის აღნიშვნა <span>სურვილისამებრ</span>
@@ -420,7 +455,7 @@ export default function VacancyPage({
                 გადაამოწმე განახლებული პირობები.
               </p>
             )}
-            {!hasContact && (
+            {!hasAction && (
               <p>
                 საკონტაქტო ინფორმაცია აღწერაში არ არის მითითებული. დაკავშირების
                 გზა შეგიძლია განცხადების ორიგინალში ნახო.
@@ -446,7 +481,7 @@ export default function VacancyPage({
           </footer>
         </article>
       </main>
-      {hasContact && (
+      {hasAction && (
         <div className="vacancy-mobile-action">
           <ApplyAction job={job} />
         </div>

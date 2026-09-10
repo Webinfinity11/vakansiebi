@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { readSearch } from '../search-state';
 import { searchGroups } from '../search-language';
+import { requiredExperiencePattern } from '../experience';
 
 export const filterLabels = {
   query: 'საძიებო სიტყვა',
@@ -84,6 +85,9 @@ export function searchPlan(params: URLSearchParams, preview = false) {
       : 'true',
   };
   let base = `${preview ? "j.status IN ('pending','published')" : "j.status='published'"} AND ${snapshot} IS NOT NULL AND (COALESCE(${field('deadline')},'')='' OR ${field('deadline')}>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AND EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired)`;
+  base += ` AND NOT (lower(${field('title')}) ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]])')`;
+  if (filters.entryLevel)
+    conditions.entryLevel += ` AND NOT (${experienceText} ~ ${bind(requiredExperiencePattern)})`;
   if (params.has('ids'))
     base += ` AND j.id::text=ANY(${bind(
       (params.get('ids') || '')

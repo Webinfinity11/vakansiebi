@@ -170,7 +170,7 @@ void test('SS parses matching vacancy, preserving currency, period and company-s
     '',
   );
 });
-void test('public service parser uses labelled fields and visible deadline, excludes contact metadata', () => {
+void test('public service parser uses visible labelled fields, including public vacancy contacts', () => {
   const html =
     '<p id="vacancyActiveDateLast" style="visibility:hidden">2026/10/01</p><form id="regForm"><input id="ID" value="42"><dl><dt>პოზიციის დასახელება</dt><dd>მთავარი სპეციალისტი</dd><dt>ორგანიზაცია</dt><dd>სააგენტო</dd><dt>სამსახურის ადგილმდებარეობა</dt><dd>გორი</dd><dt>განცხადების ბოლო ვადა</dt><dd>30.09.2026</dd><dt>თანამდებობრივი სარგო:</dt><dd>2080 ლარი</dd><dt>ფუნქციები</dt><dd>კანდიდატი შეასრულებს ადმინისტრაციულ სამუშაოს და მოამზადებს ანგარიშებს.</dd><dt>საკონტაქტო ტელეფონები</dt><dd>555000000</dd></dl></form>';
   const j = parseDetail(
@@ -183,7 +183,11 @@ void test('public service parser uses labelled fields and visible deadline, excl
   assert.equal(j.salaryMin, 2080);
   assert.equal(j.salaryPeriod, '');
   assert.equal(j.logoUrl, '');
-  assert.ok(!j.description.includes('555000000'));
+  assert.ok(
+    j.facts?.some(
+      (f) => f.label === 'საკონტაქტო ტელეფონები' && f.value === '555000000',
+    ),
+  );
   assert.throws(() =>
     parseDetail(
       'hrgov',
