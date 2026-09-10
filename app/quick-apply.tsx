@@ -68,7 +68,7 @@ export function QuickApply({
               >
                 <Mail size={16} />
                 {contact.application
-                  ? 'CV-ის გაგზავნა მეილით'
+                  ? 'CV-ის გაგზავნა'
                   : 'წერილის გახსნა'}
               </a>
               <button
