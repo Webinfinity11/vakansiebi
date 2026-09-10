@@ -220,6 +220,7 @@ export function parseDetail(
 ): Vacancy {
   const $ = load(html);
   if (!externalId(source, url)) throw Error('Invalid vacancy URL');
+  let verifiedMinimalSs = false;
   const j: Vacancy &
     Required<Pick<Vacancy, 'facts' | 'applicationLinks' | 'warnings'>> = {
     logoUrl: '',
@@ -434,6 +435,7 @@ export function parseDetail(
   } else if (source === 'ss') {
     type Translated = string | { ka?: string; text?: string };
     type SsDetail = {
+      status?: number;
       id?: number;
       jobsDealType?: number;
       title?: Translated;
@@ -471,6 +473,10 @@ export function parseDetail(
       typeof v === 'string' ? v : v?.ka || v?.text || '';
     j.title = translated(data.title);
     j.company = data.publisherName || '';
+    verifiedMinimalSs =
+      data.status === 0 &&
+      j.title.trim().length >= 2 &&
+      j.company.trim().length > 0;
     j.city = translated(data.address?.cityTitle);
     j.description = [
       translated(data.description),
@@ -663,8 +669,12 @@ export function parseDetail(
   if (!j.company) j.warnings.push('კომპანიის სახელი წყაროზე ვერ მოიძებნა.');
   if (!j.city && j.mode !== 'დისტანციური')
     j.warnings.push('სამუშაოს მდებარეობა დასაზუსტებელია.');
-  if (j.title.length < 2 || j.description.length < 40)
+  if (j.title.length < 2 || (!verifiedMinimalSs && j.description.length < 40))
     throw Error('Vacancy structure changed or description is missing');
+  if (verifiedMinimalSs && !j.description)
+    j.warnings.push(
+      'პირველწყაროზე აღწერა მითითებული არ არის. დეტალებისთვის გახსენი განცხადება.',
+    );
   if (j.description.length > 100000) throw Error('Description exceeds limit');
   return j;
 }

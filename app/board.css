@@ -917,7 +917,32 @@
   font-size: 12px;
   line-height: 1.7;
 }
-.mobile-filters-sheet .filter-head{display:flex;justify-content:flex-end;margin:0 0 12px;}
-.mobile-filters-sheet .filter-head h2{display:none;}
-.mobile-filters-sheet .filter-head>button{min-height:42px;padding:8px 12px;border:1px solid #d8e2d9;border-radius:8px;color:#245b43;font-size:12px;}
-.mobile-filters-sheet .filter-head>button:disabled{opacity:.5;}
+.mobile-filters-sheet .filter-head {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 12px;
+}
+.mobile-filters-sheet .filter-head h2 {
+  display: none;
+}
+.mobile-filters-sheet .filter-head > button {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid #d8e2d9;
+  border-radius: 8px;
+  color: #245b43;
+  font-size: 12px;
+}
+.mobile-filters-sheet .filter-head > button:disabled {
+  opacity: 0.5;
+}
+.company-avatar.company-placeholder {
+  background: #f5f7f6;
+  color: #7b8d82;
+  border: 1px solid #e2e8e3;
+  box-shadow: none;
+}
+.company-avatar.company-placeholder svg {
+  display: block;
+  flex: none;
+}

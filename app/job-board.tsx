@@ -1394,6 +1394,11 @@ export default function JobBoard() {
                       </button>
                     )}
                   </div>
+                ) : !selected.description.trim() ? (
+                  <p className="filter-help">
+                    დამატებითი აღწერა არ არის მითითებული. პირობები გადაამოწმე
+                    პირველწყაროზე.
+                  </p>
                 ) : (
                   <Description text={selected.description} />
                 )}

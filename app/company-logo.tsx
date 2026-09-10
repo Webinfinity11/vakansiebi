@@ -1,6 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
+import { Building2 } from 'lucide-react';
 import { safeExternalUrl } from '@/lib/vacancy-media';
 
 export function CompanyLogo({
@@ -14,26 +15,12 @@ export function CompanyLogo({
 }) {
   const [failed, setFailed] = useState('');
   const src = safeExternalUrl(url || '');
-  const words = company
-    .trim()
-    .split(/\s+/)
-    .filter((word) => /[\p{L}\p{N}]/u.test(word));
-  const meaningful = words.filter(
-    (word) => !['სსიპ', 'შპს', 'სს', 'llc', 'ltd'].includes(word.toLowerCase()),
-  );
-  const initials =
-    (meaningful.length ? meaningful : words)
-      .slice(0, 2)
-      .map((p) => Array.from(p)[0])
-      .join('')
-      .toUpperCase() || '·';
-  const tone =
-    Array.from(company).reduce((n, c) => n + c.codePointAt(0)!, 0) % 4;
+  const showLogo = Boolean(src && failed !== src);
   return (
     <span
-      className={`company-avatar avatar-${tone} ${large ? 'avatar-large' : ''}`}
+      className={`company-avatar ${showLogo ? '' : 'company-placeholder'} ${large ? 'avatar-large' : ''}`}
     >
-      {src && failed !== src ? (
+      {showLogo ? (
         <Image
           src={src}
           alt={`${company} — ლოგო`}
@@ -44,7 +31,11 @@ export function CompanyLogo({
           onError={() => setFailed(src)}
         />
       ) : (
-        <span aria-hidden="true">{initials}</span>
+        <Building2
+          aria-hidden="true"
+          size={large ? 30 : 24}
+          strokeWidth={1.4}
+        />
       )}
     </span>
   );

@@ -84,6 +84,10 @@ export function assessVacancy(
   let severe = structural;
   if (structural) reasons.push('invalid identity or required fields');
   if (previous) {
+    if (previous.description.trim() && !next.description.trim()) {
+      reasons.push('previous description disappeared');
+      severe = true;
+    }
     if (
       normalized(previous.title) !== normalized(next.title) &&
       normalized(previous.company) !== normalized(next.company)
