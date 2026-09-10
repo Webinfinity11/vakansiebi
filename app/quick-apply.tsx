@@ -13,7 +13,6 @@ export function QuickApply({ job }: { job: PublicJob }) {
   const { emails, phones } = vacancyContacts(job);
   const application = applicationDestination(job);
   const [message, setMessage] = useState('');
-  const english = hasEnglishDescription(job.description);
   return (
     <section className="quick-apply" id="vacancy-contacts" tabIndex={-1}>
       <h3>დაუკავშირდი დამსაქმებელს</h3>
@@ -108,28 +107,33 @@ export function QuickApply({ job }: { job: PublicJob }) {
         </p>
       )}
       <output aria-live="polite">{message}</output>
-      {english && (
-        <details className="translation-help">
-          <summary>
-            <Languages size={16} /> ინგლისური აღწერის ქართულად ნახვა
-          </summary>
-          <p>
-            წყაროს ავტომატური თარგმანი შეგიძლია Google Translate-ში გახსნა;
-            მოთხოვნები ორიგინალთან გადაამოწმე.
-          </p>
-          <a
-            className="secondary-button"
-            target="_blank"
-            rel="noopener noreferrer"
-            href={
-              'https://translate.google.com/translate?sl=auto&tl=ka&u=' +
-              encodeURIComponent(job.url)
-            }
-          >
-            ქართულად ნახვა <ArrowUpRight size={15} />
-          </a>
-        </details>
-      )}
+      <TranslationHelp job={job} />
     </section>
+  );
+}
+
+export function TranslationHelp({ job }: { job: PublicJob }) {
+  if (!hasEnglishDescription(job.description)) return null;
+  return (
+    <details className="translation-help">
+      <summary>
+        <Languages size={16} /> ინგლისური აღწერის ქართულად ნახვა
+      </summary>
+      <p>
+        წყაროს ავტომატური თარგმანი შეგიძლია Google Translate-ში გახსნა;
+        მოთხოვნები ორიგინალთან გადაამოწმე.
+      </p>
+      <a
+        className="secondary-button"
+        target="_blank"
+        rel="noopener noreferrer"
+        href={
+          'https://translate.google.com/translate?sl=auto&tl=ka&u=' +
+          encodeURIComponent(job.url)
+        }
+      >
+        ქართულად ნახვა <ArrowUpRight size={15} />
+      </a>
+    </details>
   );
 }

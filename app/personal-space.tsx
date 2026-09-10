@@ -410,12 +410,8 @@ export function PersonalSpace({
                         წაშლის შემდეგაც.
                       </p>
                       <div className="personal-actions">
-                        <a
-                          href={record.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          პირველწყაროს ბმული <ArrowUpRight size={14} />
+                        <a href={`/vacancies/${record.id}`}>
+                          ვაკანსიის ნახვა <ArrowUpRight size={14} />
                         </a>
                         <button
                           className="icon-button"
