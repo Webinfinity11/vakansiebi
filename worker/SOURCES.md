@@ -33,6 +33,10 @@ npx tsx scripts/refresh-source-details.ts --limit=3 --source=hr
 
 Omit `--source` to refresh a maximum of three existing records per supported source. Automatic source publication also applies to this refresh command.
 
+Use `--job=<vacancy UUID>` with `--source=ss --limit=1` for a bounded recheck of a reported vacancy, through the same source lock and quality/publication rules.
+
+SS contact extraction verified on 2026-09-10: public phone controls expose the vacancy-bound `phones` entries on click without login. Import requires a matching application ID and a corresponding visible full/masked phone control. Emails must match a public mailto, displayed contact button, or Cloudflare email-protection element decoded by the page. Company/user profile contacts remain excluded. The labelled visible experience field is retained in facts. Example 88240596 verified with public phone, email, and experience; previously the description-only extraction missed this separate contact block.
+
 Samushao.ge is retired at the owner’s request. Active configs, CLI, HTTP fetch and source selectors exclude it. Migration004 disables collection and archives vacancies exclusively associated with it. Historical parsing fixtures/audit data remain for compatibility; there is no active network path to that source.
 
 SS pagination uses the public SSR totalCount and page size because visible links only show neighbouring pages. Each source run visits up to three additional listing pages, with the cursor retained in PostgreSQL. GitHub batches process up to 50 details per source; the backlog drains gradually and still shares capacity with existing-record rechecks.

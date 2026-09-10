@@ -91,6 +91,13 @@ export function searchPlan(params: URLSearchParams, preview = false) {
         .filter((id) => z.uuid().safeParse(id).success)
         .slice(0, 100),
     )}::text[])`;
+  if (params.has('exclude'))
+    base += ` AND NOT (j.id::text=ANY(${bind(
+      (params.get('exclude') || '')
+        .split(',')
+        .filter((id) => z.uuid().safeParse(id).success)
+        .slice(0, 100),
+    )}::text[]))`;
   const cte = `WITH searchable AS MATERIALIZED (SELECT j.*,${filters.query.trim() ? documentExpression : "''::text"} AS search_document FROM jobs j WHERE ${base})`;
   const keys = Object.keys(conditions) as FilterKey[];
   const where = [base, ...keys.map((key) => `(${conditions[key]})`)].join(

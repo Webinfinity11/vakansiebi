@@ -51,6 +51,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { CompanyLogo } from './company-logo';
+import { useVacancyActivity } from './use-vacancy-activity';
 import { PersonalSpace, usePersonalSpace } from './personal-space';
 import type { SearchFilters } from '@/lib/personal-space';
 import type { PublicJob as Job } from '@/lib/types';
@@ -103,6 +104,8 @@ const cities = [
 export default function JobBoard() {
   const params = useSearchParams();
   const demo = params.get('preview') === '1';
+  const activity = useVacancyActivity();
+  const excluded = demo ? '' : activity.hidden.map((item) => item.id).join(',');
   const personal = usePersonalSpace();
   const [personalOpen, setPersonalOpen] = useState(false);
   const [loadedResult, setLoadedResult] = useState({ key: '', page: 0 });
@@ -175,6 +178,7 @@ export default function JobBoard() {
       p.set('countsOnly', '1');
       if (demo) p.set('preview', '1');
       if (savedOnly) p.set('ids', saved.join(','));
+      if (excluded) p.set('exclude', excluded);
       void fetch('/api/jobs?' + p, { signal: controller.signal })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
@@ -187,7 +191,7 @@ export default function JobBoard() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filtersOpen, mobileKey, demo, savedOnly, saved]);
+  }, [filtersOpen, mobileKey, demo, savedOnly, saved, excluded]);
   const [pageState, setPageState] = useState(() => ({
       key: JSON.stringify([
         initialSearch.query,
@@ -200,6 +204,7 @@ export default function JobBoard() {
         advanced,
         false,
         [],
+        '',
       ]),
       page: Math.max(
         1,
@@ -219,6 +224,7 @@ export default function JobBoard() {
     advanced,
     savedOnly,
     savedOnly ? saved : [],
+    excluded,
   ]);
   const page = pageState.key === filterKey ? pageState.page : 1;
   const resultsPending =
@@ -255,7 +261,7 @@ export default function JobBoard() {
     return () => clearTimeout(timer);
   }, []);
   useEffect(() => {
-    if (filtersOpen || (savedOnly && !storageReady)) return;
+    if (filtersOpen || !activity.ready || (savedOnly && !storageReady)) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
       setLoading(true);
@@ -274,6 +280,7 @@ export default function JobBoard() {
       p.set('summary', '1');
       p.set('preview', demo ? '1' : '0');
       if (savedOnly) p.set('ids', savedFilter);
+      if (excluded) p.set('exclude', excluded);
       const address = searchParams({
         query,
         city,
@@ -335,6 +342,8 @@ export default function JobBoard() {
     filtersOpen,
     filterKey,
     retry,
+    excluded,
+    activity.ready,
   ]);
   const applySearch = (filters: SearchFilters) => {
     setPageState({ key: '', page: 1 });
@@ -402,7 +411,7 @@ export default function JobBoard() {
   }
   const initialPageRestored = useRef(false);
   useEffect(() => {
-    if (!storageReady || initialPageRestored.current) return;
+    if (!storageReady || !activity.ready || initialPageRestored.current) return;
     const timer = setTimeout(() => {
       initialPageRestored.current = true;
       const initialPage = Math.max(
@@ -412,7 +421,7 @@ export default function JobBoard() {
       if (initialPage > 1) setPageState({ key: filterKey, page: initialPage });
     }, 0);
     return () => clearTimeout(timer);
-  }, [storageReady, filterKey, params]);
+  }, [storageReady, activity.ready, filterKey, params]);
   const returnPath = searchReturnPath(currentSearch, page, savedOnly, demo);
   const searchRestored = useRef(false);
   useEffect(() => {
@@ -878,6 +887,43 @@ export default function JobBoard() {
                   )}
                 </div>
               )}
+              {!demo && activity.hidden.length > 0 && (
+                <details className="hidden-vacancies">
+                  <summary>
+                    დამალული ვაკანსიები ({activity.hidden.length})
+                  </summary>
+                  <p>
+                    შენახულია ამ ბრაუზერში. სურვილისამებრ დააბრუნე ძებნის
+                    შედეგებში.
+                  </p>
+                  <button
+                    className="secondary-button"
+                    onClick={() => {
+                      if (!activity.restore())
+                        setFeedback('ბრაუზერმა აღდგენა ვერ შეძლო.');
+                    }}
+                  >
+                    ყველას აღდგენა
+                  </button>
+                  <ul>
+                    {activity.hidden.map((item) => (
+                      <li key={item.id}>
+                        <span>{item.title}</span>
+                        <button
+                          className="secondary-button"
+                          aria-label={`${item.title} — აღდგენა`}
+                          onClick={() => {
+                            if (!activity.restore(item.id))
+                              setFeedback('ბრაუზერმა აღდგენა ვერ შეძლო.');
+                          }}
+                        >
+                          აღდგენა
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
               {error ? (
                 <div className="empty" role="alert">
                   <Globe2 size={30} />
@@ -913,6 +959,9 @@ export default function JobBoard() {
                           <div className="job-info">
                             <div className="job-company">
                               <span>{j.company || 'კომპანია'}</span>
+                              {!demo && activity.seen.includes(j.id) && (
+                                <span className="seen-badge">ნანახია</span>
+                              )}
                             </div>
                             <Link
                               className="job-title"
@@ -987,6 +1036,25 @@ export default function JobBoard() {
                             >
                               <Bookmark size={19} />
                             </button>
+                            {!demo && (
+                              <button
+                                className="hide-vacancy"
+                                disabled={resultsPending || !activity.ready}
+                                aria-label={`${j.title} — არ მაინტერესებს`}
+                                onClick={() => {
+                                  if (activity.hide(j.id, j.title)) {
+                                    setFeedback(
+                                      'ვაკანსია დამალულია — აღდგენა შეგიძლია „დამალული ვაკანსიებიდან“.',
+                                    );
+                                  } else
+                                    setFeedback(
+                                      'ბრაუზერმა დამალვა ვერ შეინახა.',
+                                    );
+                                }}
+                              >
+                                არ მაინტერესებს
+                              </button>
+                            )}
                             <span className="job-date">
                               {j.deadline
                                 ? `ვადა: ${formatDate(j.deadline)}`

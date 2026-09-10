@@ -25,11 +25,38 @@ import {
 import { emailDraft } from '@/lib/application-contact';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import type { PublicJob } from '@/lib/types';
+import { vacancySummary } from '@/lib/vacancy-summary';
+import { useVacancyActivity } from './use-vacancy-activity';
+import { SimilarVacancies } from './similar-vacancies';
 
 function ApplyAction({ job }: { job: PublicJob }) {
   const contacts = vacancyContacts(job);
   const emails = contacts.emails.filter((c) => c.application);
   const external = applicationDestination(job);
+  if (contacts.phones.length === 1 && contacts.emails.length === 1)
+    return (
+      <>
+        <a
+          className="secondary-button"
+          href={`tel:${contacts.phones[0].number}`}
+        >
+          დარეკვა
+        </a>
+        <a
+          className="primary"
+          href={emailDraft(
+            contacts.emails[0].email,
+            job.title,
+            contacts.emails[0].application
+              ? defaultApplicationBody
+              : 'გამარჯობა,\n\nთქვენს ვაკანსიასთან დაკავშირებით მაქვს კითხვა.',
+          )}
+        >
+          {contacts.emails[0].application ? 'CV-ის გაგზავნა' : 'წერილის გახსნა'}{' '}
+          <ArrowUpRight size={16} />
+        </a>
+      </>
+    );
   if (emails.length === 1)
     return (
       <a
@@ -84,6 +111,13 @@ export default function VacancyPage({
   returnTo: string;
 }) {
   const personal = usePersonalSpace();
+  const activity = useVacancyActivity();
+  const { markSeen } = activity;
+  useEffect(() => {
+    if (preview) return;
+    const timer = setTimeout(() => markSeen(job.id), 0);
+    return () => clearTimeout(timer);
+  }, [job.id, preview, markSeen]);
   const [saved, setSaved] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -133,6 +167,7 @@ export default function VacancyPage({
     }
   }
   const schedule = workSchedule(job);
+  const summary = vacancySummary(job);
   const contacts = vacancyContacts(job);
   const hasContact = Boolean(
     contacts.emails.length ||
@@ -230,7 +265,11 @@ export default function VacancyPage({
                   <div
                     key={label}
                     className={
-                      label === 'სამუშაო გრაფიკი' ? 'schedule-fact' : undefined
+                      label === 'სამუშაო გრაფიკი'
+                        ? `schedule-fact ${schedule.length ? '' : 'schedule-missing'}`
+                        : label === 'ანაზღაურება' && job.salary
+                          ? 'salary-fact'
+                          : undefined
                     }
                   >
                     <dt>{label}</dt>
@@ -238,6 +277,57 @@ export default function VacancyPage({
                   </div>
                 ))}
             </dl>
+            {summary.length > 0 && (
+              <section
+                className="vacancy-summary"
+                aria-labelledby="summary-title"
+              >
+                <h2 id="summary-title">პირობები მოკლედ</h2>
+                <dl>
+                  {summary.map((item) => (
+                    <div key={item.label}>
+                      <dt>{item.label}</dt>
+                      <dd>{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p>ამონარიდები განცხადებიდან — სრული პირობები აღწერაშია.</p>
+              </section>
+            )}
+            {!preview && (
+              <button
+                className="secondary-button vacancy-hide-action"
+                disabled={!activity.ready}
+                onClick={() => {
+                  const hidden = activity.hidden.some(
+                    (item) => item.id === job.id,
+                  );
+                  const ok = hidden
+                    ? activity.restore(job.id)
+                    : activity.hide(job.id, job.title);
+                  setFeedback(
+                    ok
+                      ? hidden
+                        ? 'ვაკანსია დაბრუნებულია ძებნის შედეგებში.'
+                        : 'ვაკანსია დამალულია ძებნის შედეგებიდან. აქვე შეგიძლია აღდგენა.'
+                      : 'ბრაუზერმა ცვლილება ვერ შეინახა.',
+                  );
+                }}
+              >
+                {activity.hidden.some((item) => item.id === job.id)
+                  ? 'ძებნის შედეგებში აღდგენა'
+                  : 'არ მაინტერესებს'}
+              </button>
+            )}
+            {!hasContact && (
+              <div className="vacancy-contact-guidance">
+                <strong>დაკავშირების გზა</strong>
+                <p>შემოტანილ განცხადებაში ტელეფონი და ელფოსტა არ ჩანს.</p>
+                <a href={job.url} target="_blank" rel="noopener noreferrer">
+                  კონტაქტი ნახე ორიგინალ განცხადებაში <ArrowUpRight size={15} />
+                </a>
+              </div>
+            )}
           </section>
           {hasContact && (
             <aside
@@ -321,8 +411,9 @@ export default function VacancyPage({
               />
             </details>
           </section>
+          {!preview && <SimilarVacancies id={job.id} returnTo={returnTo} />}
           <footer className="vacancy-source" id="vacancy-source">
-            <h2>განცხადების წყარო</h2>
+            <h2>ორიგინალი განცხადება</h2>
             {job.sourceChanged && (
               <p className="source-update-note">
                 წყაროზე ცვლილებაა დაფიქსირებული. განაცხადის გაგზავნამდე
@@ -346,7 +437,7 @@ export default function VacancyPage({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {source.source}
+                  ორიგინალის ნახვა · {source.source}
                   <ArrowUpRight size={14} />
                 </a>
               ))}

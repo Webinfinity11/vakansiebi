@@ -1,0 +1,9 @@
+# Vacancy comfort features
+
+- Detail pages extract short, labelled source excerpts for experience, location, benefits and explicit requirements. Missing terms are not inferred, source language and qualifications remain intact, and the full description remains available.
+- Seen IDs (last 500) and hidden vacancy IDs/titles (last 100) live only in the visitor's browser. Opening a real detail page marks it seen. Hidden entries can be restored individually or together above search results. Preview pages do not update these preferences.
+- Search excludes hidden IDs on the server before pagination, counts and facets. Hidden IDs are sent only in API requests, not shared vacancy/search links. Existing saved vacancies and application records are preserved.
+- Similar vacancies load as the visitor approaches the section. A bounded query selects up to 40 candidates under the existing publication, expiration and source rules; up to six compact cards reach the browser. Role overlap or a meaningful matching category and city is required. Generic daily/employment words are excluded. Matching an unspecified schedule does not count. Reasons describe the actual matches; no relevance percentage is invented.
+- Salary, known schedule and contacts have distinct visual emphasis. Both phone and email remain visible when present, with both actions in the mobile bar when there is exactly one of each. If neither is available, the overview offers a secondary link to find contact details in the original. Original source attribution stays last, in a visible but subdued panel.
+
+Validation: extraction/negative cases, malformed browser storage, SQL exclusion/counts, related-job publication guards, and browser checks for seen/hide/restore persistence, full result pages, navigation, public phone/email, responsive layout and source placement.

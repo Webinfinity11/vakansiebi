@@ -1,4 +1,4 @@
-import { telephoneHref } from '../../lib/vacancy-details';
+import { telephoneHref, telephoneNumber } from '../../lib/vacancy-details';
 import { mailtoAddress } from '../../lib/application-contact';
 import { companyKey } from '../../lib/company-key';
 import { visibleFields } from '../visible-fields';
@@ -459,6 +459,8 @@ export function parseDetail(
       workingFormat?: number;
       workingSchedule?: number;
       resumeLink?: string;
+      phones?: { applicationId?: number; phoneNumber?: string }[];
+      email?: string;
     };
     let data: SsDetail | undefined;
     try {
@@ -492,6 +494,66 @@ export function parseDetail(
       .filter(Boolean)
       .map(cleanText)
       .join('\n\n');
+    // Only vacancy-bound contacts confirmed by public contact controls.
+    // Never read companyInfo/userInfo or arbitrary profile contact fields.
+    const phoneControls = $('button')
+      .map((_, el) => $(el).text().replace(/\s+/g, ''))
+      .get();
+    for (const phone of Array.isArray(data.phones) ? data.phones : []) {
+      if (
+        !phone ||
+        phone.applicationId !== data.id ||
+        typeof phone.phoneNumber !== 'string'
+      )
+        continue;
+      const number = telephoneNumber(phone.phoneNumber);
+      if (!number) continue;
+      const local = number.slice(4);
+      if (
+        phoneControls.some(
+          (text) =>
+            text.includes(local) || text.includes(local.slice(0, 7) + '**'),
+        )
+      )
+        j.facts.push({ label: 'საკონტაქტო ტელეფონი', value: number });
+    }
+    const visibleEmails = $('button a[data-cfemail],a[href^="mailto:"]')
+      .map((_, el) => {
+        const encoded = $(el).attr('data-cfemail');
+        if (!encoded) return mailtoAddress($(el).attr('href') || '') || '';
+        if (
+          !/^[a-f\d]+$/i.test(encoded) ||
+          encoded.length % 2 ||
+          encoded.length < 4
+        )
+          return '';
+        const key = parseInt(encoded.slice(0, 2), 16);
+        return (encoded.slice(2).match(/../g) || [])
+          .map((byte) => String.fromCharCode(parseInt(byte, 16) ^ key))
+          .join('');
+      })
+      .get();
+    if (
+      data.email &&
+      (visibleEmails.some(
+        (email) => email.toLowerCase() === data.email!.toLowerCase(),
+      ) ||
+        phoneControls.some(
+          (text) => text.toLowerCase() === data.email!.toLowerCase(),
+        )) &&
+      mailtoAddress('mailto:' + data.email)
+    )
+      j.facts.push({ label: 'საკონტაქტო ელფოსტა', value: data.email });
+    $('.detail-grid-item h2').each((_, el) => {
+      const label = $(el).text().trim();
+      const value = $(el)
+        .parent()
+        .next('.detail-grid-item-value')
+        .text()
+        .trim();
+      if (label === 'გამოცდილება' && value && value.length <= 150)
+        j.facts.push({ label, value });
+    });
     j.logoUrl = safeLogoUrl(data.logo, url);
     j.datePosted = dateOnly(data.startDate);
     j.deadline = dateOnly(data.endDate);

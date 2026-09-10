@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from '../lib/server/db';
 import { publicJobs } from '../lib/server/jobs';
 import type { Vacancy } from '../lib/types';
+import { similarVacancies } from '../lib/server/similar-vacancies';
 void test(
   'search aliases, conditional counts, recovery and daily filters use actual public snapshots',
   { skip: process.env.RUN_DB_TESTS !== '1' },
@@ -158,6 +159,21 @@ void test(
       assert.deepEqual(compact.jobs, []);
       assert.equal((await search({ q: "' OR 1=1 --" })).total, 0);
       assert.equal((await search({ ids: 'not-a-uuid' })).total, 0);
+      const hidden = await search({ exclude: ids[0] + ',bad' });
+      assert.equal(hidden.total, 6);
+      assert.ok(!hidden.jobs.some((job) => job.id === ids[0]));
+      assert.equal(
+        (await search({ exclude: ids[0], countsOnly: '1' })).total,
+        6,
+      );
+      const original = (await search({ ids: ids[0] })).jobs[0];
+      const similar = await similarVacancies(original, ids[4]);
+      assert.ok(
+        similar.every(
+          ({ job }) => !new Set<string>([ids[0], ids[4], ids[7]]).has(job.id),
+        ),
+      );
+      assert.ok(similar.some(({ job }) => job.id === ids[6]));
     } finally {
       await db().query('DELETE FROM source_items WHERE id=ANY($1::uuid[])', [
         ids,

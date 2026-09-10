@@ -16,6 +16,9 @@ const limit = Math.max(
 const requested = process.argv
   .find((a) => a.startsWith('--source='))
   ?.split('=')[1];
+const jobId = process.argv.find((a) => a.startsWith('--job='))?.split('=')[1];
+if (jobId && !/^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i.test(jobId))
+  throw Error('Invalid vacancy ID');
 if (requested && !(requested in configs)) throw Error('Unknown source');
 try {
   for (const source of (requested
@@ -35,8 +38,8 @@ try {
       }
       const items = (
         await client.query(
-          'SELECT id,url FROM source_items WHERE source_id=$1 AND raw IS NOT NULL ORDER BY last_checked_at NULLS FIRST,id LIMIT $2',
-          [source, limit],
+          'SELECT id,url FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND ($3::uuid IS NULL OR job_id=$3::uuid) ORDER BY last_checked_at NULLS FIRST,id LIMIT $2',
+          [source, limit, jobId || null],
         )
       ).rows;
       for (const item of items) {
