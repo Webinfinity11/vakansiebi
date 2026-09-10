@@ -40,6 +40,13 @@ export function officialCompanyLogo(
   name: string,
 ): { logoUrl: string; origin: string } | null {
   const key = logoCompanyKey(name);
+  // Public logo labelled "Credo Logo" on https://credobank.ge/.
+  if (['კრედობანკი', 'credobank'].includes(key))
+    return {
+      logoUrl:
+        'https://imagedelivery.net/d_EE26O5eWcJDRYn-qMBOg/3732102c-3667-4edc-cc08-b44198044600/public',
+      origin: 'https://credobank.ge/',
+    };
   if (['საქართველოსბანკი', 'bankofgeorgia'].includes(key))
     return {
       logoUrl:

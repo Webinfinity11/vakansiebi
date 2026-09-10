@@ -115,6 +115,7 @@ export default function JobBoard() {
   const [initialSearch] = useState(() =>
     readSearch(new URLSearchParams(params.toString())),
   );
+  const lastRequestedQuery = useRef(initialSearch.query);
   const [query, setQuery] = useState(initialSearch.query),
     [city, setCity] = useState(initialSearch.city),
     [category, setCategory] = useState(initialSearch.category),
@@ -264,6 +265,7 @@ export default function JobBoard() {
     if (filtersOpen || !activity.ready || (savedOnly && !storageReady)) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
+      lastRequestedQuery.current = query;
       setLoading(true);
       setError('');
       const p = searchParams({
@@ -320,7 +322,7 @@ export default function JobBoard() {
         .finally(() => {
           if (!controller.signal.aborted) setLoading(false);
         });
-    }, 400);
+    }, lastRequestedQuery.current === query ? 0 : 400);
     return () => {
       clearTimeout(timer);
       controller.abort();

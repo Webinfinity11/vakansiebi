@@ -6,6 +6,8 @@ const logoHosts = new Set([
   'static.ss.ge',
   'jobs.ge',
   'www.jobs.ge',
+  'helio-ai-assets-prod.s3.amazonaws.com',
+  'c.smartrecruiters.com',
 ]);
 
 export function safeLogoUrl(value: unknown, base?: string): string {
@@ -17,7 +19,10 @@ export function safeLogoUrl(value: unknown, base?: string): string {
       url.username ||
       url.password ||
       url.port ||
-      !logoHosts.has(url.hostname)
+      !(
+        logoHosts.has(url.hostname) ||
+        /^[a-z0-9-]+\.selfrecruit\.ge$/.test(url.hostname)
+      )
     )
       return '';
     if (/background\.|placeholder|default[-_]?logo/i.test(url.pathname))

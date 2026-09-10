@@ -75,23 +75,21 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
   const companyKeys = [
     ...new Set(rows.map((r) => companyKey(r.published.company || ''))),
   ];
-  const profiles = companyKeys.length
-    ? (
-        await db().query(
+  const [profilesResult, sharedLogos] = await Promise.all([
+    companyKeys.length
+      ? db().query(
           'SELECT * FROM company_profiles WHERE company_key=ANY($1::text[])',
           [companyKeys],
         )
-      ).rows
-    : [];
-  const companyProfiles = new Map(profiles.map((p) => [p.company_key, p]));
-  const sharedLogos = await resolveCompanyLogos(
-    rows
-      .filter(
-        (r) =>
-          !r.published.logoUrl &&
-          !companyProfiles.get(companyKey(r.published.company || ''))?.logo_url,
-      )
-      .map((r) => r.published.company || ''),
+      : Promise.resolve({ rows: [] }),
+    resolveCompanyLogos(
+      rows
+        .filter((r) => !r.published.logoUrl)
+        .map((r) => r.published.company || ''),
+    ),
+  ]);
+  const companyProfiles = new Map(
+    profilesResult.rows.map((p) => [p.company_key, p]),
   );
   return {
     jobs: rows.map((r) => ({

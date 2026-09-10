@@ -9,13 +9,19 @@ import {
 import { publicPage, validateLinkedUrl } from './public-page';
 import { sourceFetch } from './http';
 import { enrichVacancy } from './enrich';
+import { safeLogoUrl } from '../lib/vacancy-media';
 
 export class ClosedEmployerVacancy extends Error {
   constructor(public title: string) {
     super('Employer vacancy is closed');
   }
 }
-export type LinkedText = { title: string; text: string; url: string };
+export type LinkedText = {
+  title: string;
+  text: string;
+  url: string;
+  logoUrl?: string;
+};
 const normalized = (s: string) =>
   s
     .normalize('NFKC')
@@ -35,6 +41,10 @@ export function sameLinkedTitle(original: string, linked: string) {
     მოზიდვის: 'acquisition',
     უმცროსი: 'junior',
     ინჟინერი: 'engineer',
+    იურისტი: 'lawyer',
+    ბუღალტერი: 'accountant',
+    ტრენინგ: 'ტრეინინგ',
+    გრანულატორის: 'გრანულატორი',
   };
   const terms = (value: string) =>
     value
@@ -44,6 +54,12 @@ export function sameLinkedTitle(original: string, linked: string) {
       .replace(/[\p{L}]+/gu, (word) => aliases[word] || word);
   const left = terms(original),
     right = terms(linked);
+  for (const qualifier of [
+    /(?:^|[^\p{L}])(assistant|ასისტენტი)(?:$|[^\p{L}])/u,
+    /(?:^|[^\p{L}])(senior|უფროსი)(?:$|[^\p{L}])/u,
+    /(?:^|[^\p{L}])junior(?:$|[^\p{L}])/u,
+  ])
+    if (qualifier.test(left) !== qualifier.test(right)) return false;
   const a = normalized(left),
     b = normalized(right);
   if (!a || !b) return false;
@@ -97,8 +113,13 @@ export function parseLinkedPage(
 ): LinkedText {
   const $ = load(html);
   let title = '',
-    body = '';
+    body = '',
+    logoUrl = '';
   if (provider === 'selfrecruit') {
+    logoUrl = safeLogoUrl(
+      $('.pub-vac-text .brand-logo img').first().attr('src'),
+      url,
+    );
     title = $('.vacancy_title_inner').first().text().trim();
     const content = $('.pub-vac-text').first().clone();
     content
@@ -108,6 +129,10 @@ export function parseLinkedPage(
       .remove();
     body = content.html() || '';
   } else if (provider === 'smart') {
+    logoUrl = safeLogoUrl(
+      $('.jobad-header .logo img').first().attr('src'),
+      url,
+    );
     title = $('h1.job-title').text().trim();
     if (
       title &&
@@ -174,14 +199,14 @@ export function parseLinkedPage(
   }
   const text = cleanText(body);
   if (!title || text.length < 100) throw Error('Employer description missing');
-  return { title, text, url };
+  return { title, text, url, ...(logoUrl ? { logoUrl } : {}) };
 }
 export function parseHelio(
   data: Record<string, unknown>,
   token: string,
   url: string,
 ): LinkedText {
-  if (data.public_url_token !== token || data.status !== 'active')
+  if (data.public_url_token !== token)
     throw Error('Employer vacancy token or status mismatch');
   const text = cleanText(
     typeof data.description === 'string' ? data.description : '',
@@ -191,8 +216,14 @@ export function parseHelio(
       ? data.job_title_en
       : data.job_title_local || data.job_title_en || '',
   );
+  // Observed public terminal states; an unknown status must remain retryable.
+  if (title && ['completed', 'canceled'].includes(String(data.status)))
+    throw new ClosedEmployerVacancy(title);
+  if (data.status !== 'active')
+    throw Error('Employer vacancy token or status mismatch');
   if (!title || text.length < 100) throw Error('Employer description missing');
-  return { title, text, url };
+  const logoUrl = safeLogoUrl(data.company_logo);
+  return { title, text, url, ...(logoUrl ? { logoUrl } : {}) };
 }
 export async function readLinkedText(
   url: string,
@@ -258,10 +289,16 @@ export async function completeDescription(job: Vacancy): Promise<Vacancy> {
     if (linked) break;
   }
   if (!linked) return job;
-  if (job.description.includes(linked.text)) return job;
+  const logoUrl = job.logoUrl || linked.logoUrl || '';
+  if (job.description.includes(linked.text)) return { ...job, logoUrl };
   const description =
     job.description + '\n\nსრული ინფორმაცია დამსაქმებლისგან:\n\n' + linked.text;
   if (description.length > 100000)
     throw Error('Complete description exceeds supported size');
-  return enrichVacancy({ ...job, description, fullTextUrl: linked.url });
+  return enrichVacancy({
+    ...job,
+    description,
+    logoUrl,
+    fullTextUrl: linked.url,
+  });
 }

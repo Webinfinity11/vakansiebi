@@ -140,3 +140,100 @@ void test('explicit employer expiry is distinguished from a missing selector', (
     ClosedEmployerVacancy,
   );
 });
+
+void test('linked employer logos come from the matched posting header, excluding platform images', () => {
+  const body = 'პოზიციის სრულყოფილი აღწერა და ძირითადი მოთხოვნები. '.repeat(5);
+  const self = parseLinkedPage(
+    `<div class="pub-vac-text"><div class="brand-logo"><img src="buffer/tmp/brand/logo.png"></div><h1 class="vacancy_title_inner">მოლარე</h1><p>${body}</p></div><footer><img src="/platform.png"></footer>`,
+    'https://dailygroup.selfrecruit.ge/abc',
+    'selfrecruit',
+  );
+  assert.equal(
+    self.logoUrl,
+    'https://dailygroup.selfrecruit.ge/buffer/tmp/brand/logo.png',
+  );
+  const smart = parseLinkedPage(
+    `<header class="jobad-header"><span class="logo"><img src="https://c.smartrecruiters.com/sr-company-logo/company/huge"></span></header><h1 class="job-title">მოლარე</h1><section class="job-section">${body}</section>`,
+    'https://jobs.smartrecruiters.com/company/123',
+    'smart',
+  );
+  assert.equal(
+    smart.logoUrl,
+    'https://c.smartrecruiters.com/sr-company-logo/company/huge',
+  );
+  const helio = parseHelio(
+    {
+      public_url_token: 'abc',
+      status: 'active',
+      job_title_local: 'მოლარე',
+      description: body,
+      company_logo:
+        'https://helio-ai-assets-prod.s3.amazonaws.com/company/logo/test.png',
+    },
+    'abc',
+    'https://app.helio-ai.com/apply/abc',
+  );
+  assert.equal(
+    helio.logoUrl,
+    'https://helio-ai-assets-prod.s3.amazonaws.com/company/logo/test.png',
+  );
+  assert.equal(
+    parseHelio(
+      {
+        public_url_token: 'abc',
+        status: 'active',
+        job_title_local: 'მოლარე',
+        description: body,
+        company_logo:
+          'https://helio-ai-assets-prod.s3.amazonaws.com.evil.test/logo.png',
+      },
+      'abc',
+      'https://app.helio-ai.com/apply/abc',
+    ).logoUrl,
+    undefined,
+  );
+});
+
+void test('verified bilingual titles and spelling variants match without conflating distinct roles', () => {
+  assert.equal(sameLinkedTitle('იურისტი', 'Lawyer'), true);
+  assert.equal(sameLinkedTitle('უმცროსი ბუღალტერი', 'Junior Accountant'), true);
+  assert.equal(sameLinkedTitle('ტრენინგ მენეჯერი', 'ტრეინინგ მენეჯერი'), true);
+  assert.equal(
+    sameLinkedTitle(
+      'გრანულატორის ოპერატორი',
+      'საწარმოო დანადგარის ოპერატორი (გრანულატორი)',
+    ),
+    true,
+  );
+  assert.equal(sameLinkedTitle('იურისტი', 'Lawyer Assistant'), false);
+  assert.equal(
+    sameLinkedTitle('უმცროსი ბუღალტერი', 'Senior Accountant'),
+    false,
+  );
+});
+
+void test('Helio terminal states close only the identified posting; unknown or mismatched status stays retryable', () => {
+  for (const status of ['completed', 'canceled'])
+    assert.throws(
+      () =>
+        parseHelio(
+          { public_url_token: 'abc', status, job_title_local: 'მოლარე' },
+          'abc',
+          'https://app.helio-ai.com/apply/abc',
+        ),
+      ClosedEmployerVacancy,
+    );
+  for (const data of [
+    { public_url_token: 'abc', status: 'draft', job_title_local: 'მოლარე' },
+    {
+      public_url_token: 'wrong',
+      status: 'completed',
+      job_title_local: 'მოლარე',
+    },
+  ])
+    assert.throws(
+      () => parseHelio(data, 'abc', 'https://app.helio-ai.com/apply/abc'),
+      (error) =>
+        error instanceof Error && !(error instanceof ClosedEmployerVacancy),
+    );
+});

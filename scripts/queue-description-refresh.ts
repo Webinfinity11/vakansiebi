@@ -28,10 +28,6 @@ try {
           'UPDATE source_items SET refresh_requested_at=now(),next_check_at=now() WHERE id=ANY($1::uuid[])',
           [rows.map((r) => r.id)],
         );
-        await c.query(
-          'UPDATE sources SET requested_at=now() WHERE id=ANY($1::text[])',
-          [['hr', 'jobs', 'ss', 'hrgov']],
-        );
       }
       return {
         apply,

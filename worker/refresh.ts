@@ -51,7 +51,8 @@ export async function refreshDescriptions(source: ActiveSourceId, limit = 100) {
     for (const item of removedItems) await reconcileRemovedRefresh(item.id);
     const items = (
       await c.query(
-        `SELECT i.id,i.url FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now() ORDER BY i.next_check_at,i.id LIMIT $2`,
+        `SELECT i.id,i.url FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now()
+        ORDER BY CASE WHEN length(COALESCE(i.raw->>'description',''))<700 AND jsonb_array_length(COALESCE(i.raw->'applicationLinks','[]'::jsonb))>0 THEN 0 ELSE 1 END,i.next_check_at,i.id LIMIT $2`,
         [source, Math.max(1, Math.min(1000, limit))],
       )
     ).rows;
