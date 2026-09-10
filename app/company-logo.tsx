@@ -14,13 +14,14 @@ export function CompanyLogo({
   large?: boolean;
 }) {
   const [failed, setFailed] = useState('');
+  const [loaded, setLoaded] = useState('');
   const src = safeExternalUrl(url || '');
   const showLogo = Boolean(src && failed !== src);
   return (
     <span
-      className={`company-avatar ${showLogo ? '' : 'company-placeholder'} ${large ? 'avatar-large' : ''}`}
+      className={`company-avatar ${showLogo && loaded === src ? '' : 'company-placeholder'} ${large ? 'avatar-large' : ''}`}
     >
-      {showLogo ? (
+      {showLogo && (
         <Image
           src={src}
           alt={`${company} — ლოგო`}
@@ -28,9 +29,12 @@ export function CompanyLogo({
           height={large ? 80 : 52}
           unoptimized
           referrerPolicy="no-referrer"
+          className={loaded === src ? 'logo-ready' : 'logo-loading'}
+          onLoad={() => setLoaded(src)}
           onError={() => setFailed(src)}
         />
-      ) : (
+      )}
+      {(!showLogo || loaded !== src) && (
         <Building2
           aria-hidden="true"
           size={large ? 30 : 24}
