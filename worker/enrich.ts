@@ -1,8 +1,10 @@
 import type { Vacancy } from '../lib/types';
+import { explicitWorkCity } from '../lib/work-location';
 import { visibleFields } from './visible-fields';
 export function enrichVacancy(input: Vacancy): Vacancy {
   const fields = visibleFields(input.description);
-  let result = input;
+  const city = input.city || explicitWorkCity(input);
+  let result = city !== input.city ? { ...input, city } : input;
   if (!input.salary && fields.salary && !fields.warning)
     result = {
       ...result,

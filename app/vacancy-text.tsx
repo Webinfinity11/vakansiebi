@@ -5,7 +5,13 @@ export function formatDate(value?: string) {
   if (!year || !month || !day) return '';
   return `${day} ${['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'][month - 1]}`;
 }
-function TextLinks({ text }: { text: string }) {
+function TextLinks({
+  text,
+  links = [],
+}: {
+  text: string;
+  links?: { url: string; label: string }[];
+}) {
   return text.split(/(https:\/\/[^\s<>"']+)/g).map((part, i) => {
     if (!part.startsWith('https://')) return part;
     const url = part.replace(/[.,;]+$/, '');
@@ -18,14 +24,21 @@ function TextLinks({ text }: { text: string }) {
     return (
       <span key={i}>
         <a href={url} target="_blank" rel="noopener noreferrer">
-          {url}
+          {links.find((link) => link.url === url)?.label ||
+            new URL(url).hostname + ' — ბმულის გახსნა'}
         </a>
         {part.slice(url.length)}
       </span>
     );
   });
 }
-export function Description({ text }: { text: string }) {
+export function Description({
+  text,
+  links = [],
+}: {
+  text: string;
+  links?: { url: string; label: string }[];
+}) {
   const lines = text
     .split(/\n+/)
     .map((line) => line.trim())
@@ -40,15 +53,13 @@ export function Description({ text }: { text: string }) {
     if (numbered || bullet) {
       const kind = numbered ? 'ol' : 'ul';
       if (blocks.at(-1)?.kind !== kind) blocks.push({ kind, lines: [] });
-      blocks
-        .at(-1)!
-        .lines.push({
-          text: numbered ? numbered[2] : bullet![1],
-          value: numbered ? Number(numbered[1]) : undefined,
-        });
+      blocks.at(-1)!.lines.push({
+        text: numbered ? numbered[2] : bullet![1],
+        value: numbered ? Number(numbered[1]) : undefined,
+      });
     } else
       blocks.push({
-        kind: line.length < 110 && /[:：]$/.test(line) ? 'heading' : 'p',
+        kind: line.length < 110 && /[:：?]$/.test(line) ? 'heading' : 'p',
         lines: [{ text: line }],
       });
   }
@@ -61,7 +72,7 @@ export function Description({ text }: { text: string }) {
             <Tag key={i}>
               {block.lines.map((line, k) => (
                 <li key={k} value={line.value}>
-                  <TextLinks text={line.text} />
+                  <TextLinks text={line.text} links={links} />
                 </li>
               ))}
             </Tag>
@@ -69,11 +80,11 @@ export function Description({ text }: { text: string }) {
         }
         return block.kind === 'heading' ? (
           <h3 key={i}>
-            <TextLinks text={block.lines[0].text} />
+            <TextLinks text={block.lines[0].text} links={links} />
           </h3>
         ) : (
           <p key={i}>
-            <TextLinks text={block.lines[0].text} />
+            <TextLinks text={block.lines[0].text} links={links} />
           </p>
         );
       })}

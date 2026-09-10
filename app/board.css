@@ -2133,3 +2133,234 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* A consistent reading order: position, conditions, application, full description. */
+.board-shell .job-card {
+  min-height: 136px;
+  padding: 18px 20px;
+  gap: 14px;
+  box-shadow: none;
+}
+.board-shell .job-meta:empty,
+.board-shell .card-bottom:empty {
+  display: none;
+}
+.board-shell .job-title {
+  line-height: 1.5;
+}
+.board-shell .card-bottom {
+  margin-top: 10px;
+}
+.board-shell .salary {
+  background: #edf7f1;
+  color: #196044;
+  font-weight: 650;
+}
+.board-shell .job-side .save-button {
+  width: 44px;
+  height: 44px;
+}
+.board-shell .job-side .card-open {
+  background: transparent;
+  padding: 3px 0;
+  min-height: 26px;
+}
+.board-shell .job-card:hover .card-open {
+  background: transparent;
+  color: #2457e6;
+}
+.board-shell .company-avatar img {
+  padding: 2px;
+}
+.board-shell .company-avatar.company-placeholder {
+  background: #f4f6f8;
+  border-color: transparent;
+  color: #7b8798;
+}
+.catalogue-breakdown {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #617087;
+}
+.catalogue-breakdown summary {
+  cursor: pointer;
+  min-height: 24px;
+}
+.catalogue-breakdown .catalogue-sources {
+  margin-top: 8px;
+}
+.vacancy-page .detail-company {
+  margin-bottom: 14px;
+  gap: 12px;
+}
+.vacancy-page .detail-company > div > span {
+  display: none;
+}
+.vacancy-page .detail-company strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.vacancy-page .detail-title {
+  margin: 12px 0 16px;
+  font-size: 30px;
+  line-height: 1.45;
+}
+.vacancy-page .detail-facts {
+  border: 0;
+  border-top: 1px solid #e8ecf1;
+  border-radius: 0;
+  background: transparent;
+  padding: 20px 0 0;
+  margin-top: 20px;
+  gap: 18px 28px;
+}
+.vacancy-page .detail-facts .salary-fact,
+.vacancy-page .detail-facts .schedule-fact {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.vacancy-page .detail-facts .salary-fact {
+  grid-column: 1 / -1;
+}
+.vacancy-page .detail-facts .salary-fact dd {
+  color: #196044;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.vacancy-page .detail-facts .schedule-fact {
+  grid-column: auto;
+}
+.vacancy-page .detail-facts .schedule-fact dd {
+  color: #223554;
+}
+.vacancy-page .detail-facts dd {
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.6;
+}
+.vacancy-page .detail-facts dt {
+  margin-bottom: 4px;
+}
+.vacancy-tools .secondary-button {
+  min-height: 44px;
+}
+.vacancy-page .quick-apply {
+  border: 1px solid #e1e6ef;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.vacancy-page .quick-apply h3 {
+  color: #253650;
+  font-weight: 650;
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+.vacancy-page .quick-apply-note {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.vacancy-page .quick-apply output:empty,
+.vacancy-page .contact-options:empty {
+  display: none;
+}
+.vacancy-page .vacancy-description {
+  font-size: 15px;
+  line-height: 1.85;
+  color: #39465c;
+}
+.vacancy-page .vacancy-description p {
+  margin: 0 0 16px;
+}
+.vacancy-page .vacancy-description h3 {
+  font-size: 16px;
+  margin: 26px 0 12px;
+  color: #263650;
+}
+.vacancy-page .vacancy-description ul,
+.vacancy-page .vacancy-description ol {
+  margin: 12px 0 22px;
+}
+.vacancy-page .description-heading {
+  margin-bottom: 20px;
+}
+.vacancy-source-excerpt {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #e8ecf1;
+}
+.vacancy-source-excerpt > h3 {
+  font-size: 12px;
+  color: #647187;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+.vacancy-source-excerpt .vacancy-description {
+  font-size: 13px;
+}
+.vacancy-more-actions {
+  margin-top: 24px;
+  border-top: 1px solid #e8ecf1;
+  padding-top: 12px;
+  color: #647187;
+  font-size: 12px;
+}
+.vacancy-more-actions summary,
+.vacancy-page .application-tracker summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+}
+.vacancy-more-actions .vacancy-hide-action {
+  margin-top: 6px;
+}
+.vacancy-page .application-tracker {
+  margin-top: 8px;
+  padding-top: 8px;
+}
+@media (min-width: 761px) {
+  .vacancy-page:not(.has-contact) .vacancy-layout {
+    grid-template-columns: minmax(0, 900px);
+    justify-content: center;
+  }
+}
+@media (max-width: 760px) {
+  .board-shell .job-card {
+    min-height: 0;
+    padding: 16px;
+    gap: 10px;
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+  }
+  .board-shell .job-side,
+  .board-shell .job-side .save-button {
+    width: 40px;
+    max-width: 40px;
+  }
+  .vacancy-page .detail-title {
+    font-size: 24px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .vacancy-page .detail-company {
+    margin-bottom: 10px;
+  }
+  .vacancy-page .detail-facts {
+    padding-top: 16px;
+    margin-top: 16px;
+    gap: 16px;
+  }
+  .vacancy-page .detail-facts .salary-fact dd {
+    font-size: 19px;
+  }
+  .vacancy-page .detail-facts .schedule-fact {
+    grid-column: 1 / -1;
+  }
+  .vacancy-page .detail-facts dd {
+    font-size: 13px;
+  }
+  .vacancy-page .vacancy-description {
+    font-size: 14px;
+  }
+}

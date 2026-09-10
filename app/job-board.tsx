@@ -1,4 +1,5 @@
 'use client';
+import { compactSalary } from '@/lib/vacancy-presentation';
 import Link from 'next/link';
 import AdvancedFilterControls, {
   advancedDefaults,
@@ -264,65 +265,68 @@ export default function JobBoard() {
   useEffect(() => {
     if (filtersOpen || !activity.ready || (savedOnly && !storageReady)) return;
     const controller = new AbortController();
-    const timer = setTimeout(() => {
-      lastRequestedQuery.current = query;
-      setLoading(true);
-      setError('');
-      const p = searchParams({
-        query,
-        city,
-        category,
-        source,
-        paid,
-        remote,
-        sort,
-        ...advanced,
-      });
-      p.set('page', String(page));
-      p.set('summary', '1');
-      p.set('preview', demo ? '1' : '0');
-      if (savedOnly) p.set('ids', savedFilter);
-      if (excluded) p.set('exclude', excluded);
-      const address = searchParams({
-        query,
-        city,
-        category,
-        source,
-        paid,
-        remote,
-        sort,
-        ...advanced,
-      });
-      if (demo) address.set('preview', '1');
-      if (savedOnly) address.set('saved', '1');
-      if (page > 1) address.set('page', String(page));
-      window.history.replaceState(
-        null,
-        '',
-        '/' + (address.size ? '?' + address.toString() : ''),
-      );
-      void fetch('/api/jobs?' + p, { signal: controller.signal })
-        .then(async (r) => {
-          const d = await r.json();
-          if (!r.ok) throw Error(d.error || 'ვაკანსიები ვერ ჩაიტვირთა');
-          return d;
-        })
-        .then((d) => {
-          if (!controller.signal.aborted) {
-            setJobs(d.jobs);
-            setSearchMeta(d.search);
-            setLoadedResult({ key: filterKey, page });
-            setTotal(d.total);
-            setPages(d.pages);
-          }
-        })
-        .catch((e) => {
-          if (e.name !== 'AbortError') setError(e.message);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setLoading(false);
+    const timer = setTimeout(
+      () => {
+        lastRequestedQuery.current = query;
+        setLoading(true);
+        setError('');
+        const p = searchParams({
+          query,
+          city,
+          category,
+          source,
+          paid,
+          remote,
+          sort,
+          ...advanced,
         });
-    }, lastRequestedQuery.current === query ? 0 : 400);
+        p.set('page', String(page));
+        p.set('summary', '1');
+        p.set('preview', demo ? '1' : '0');
+        if (savedOnly) p.set('ids', savedFilter);
+        if (excluded) p.set('exclude', excluded);
+        const address = searchParams({
+          query,
+          city,
+          category,
+          source,
+          paid,
+          remote,
+          sort,
+          ...advanced,
+        });
+        if (demo) address.set('preview', '1');
+        if (savedOnly) address.set('saved', '1');
+        if (page > 1) address.set('page', String(page));
+        window.history.replaceState(
+          null,
+          '',
+          '/' + (address.size ? '?' + address.toString() : ''),
+        );
+        void fetch('/api/jobs?' + p, { signal: controller.signal })
+          .then(async (r) => {
+            const d = await r.json();
+            if (!r.ok) throw Error(d.error || 'ვაკანსიები ვერ ჩაიტვირთა');
+            return d;
+          })
+          .then((d) => {
+            if (!controller.signal.aborted) {
+              setJobs(d.jobs);
+              setSearchMeta(d.search);
+              setLoadedResult({ key: filterKey, page });
+              setTotal(d.total);
+              setPages(d.pages);
+            }
+          })
+          .catch((e) => {
+            if (e.name !== 'AbortError') setError(e.message);
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) setLoading(false);
+          });
+      },
+      lastRequestedQuery.current === query ? 0 : 400,
+    );
     return () => {
       clearTimeout(timer);
       controller.abort();
@@ -632,22 +636,27 @@ export default function JobBoard() {
               </span>
               <div className="catalogue-total">
                 <strong>
-                  {catalogue ? catalogue.total.toLocaleString('en-US') : '—'}
+                  {catalogue
+                    ? catalogue.sources.length.toLocaleString('en-US')
+                    : '—'}
                 </strong>
                 <span>
-                  აქტიური
+                  წყარო
                   <br />
-                  ვაკანსია
+                  ერთ ძებნაში
                 </span>
               </div>
-              <div className="catalogue-sources">
-                {(catalogue?.sources || []).map((item) => (
-                  <span key={item.name}>
-                    {item.name}
-                    <b>{item.count.toLocaleString('en-US')}</b>
-                  </span>
-                ))}
-              </div>
+              <details className="catalogue-breakdown">
+                <summary>წყაროების მიხედვით</summary>
+                <div className="catalogue-sources">
+                  {(catalogue?.sources || []).map((item) => (
+                    <span key={item.name}>
+                      {item.name}
+                      <b>{item.count.toLocaleString('en-US')}</b>
+                    </span>
+                  ))}
+                </div>
+              </details>
             </aside>
           </div>
           <div className="hero-search-wrap">
@@ -702,7 +711,7 @@ export default function JobBoard() {
                   })
                 }
               >
-                დღიური სამუშაო <ArrowUpRight size={12} />
+                ერთდღიანი / ერთჯერადი <ArrowUpRight size={12} />
               </button>
               <button
                 aria-pressed={advanced.salaryPeriod === 'day'}
@@ -717,7 +726,7 @@ export default function JobBoard() {
                   })
                 }
               >
-                დღიური ანაზღაურება <ArrowUpRight size={12} />
+                ანაზღაურება დღეში <ArrowUpRight size={12} />
               </button>
               {['ტექნოლოგიები', 'გაყიდვები', 'მარკეტინგი'].map((c) => (
                 <button
@@ -1016,9 +1025,15 @@ export default function JobBoard() {
                             </div>
                             <div className="card-bottom">
                               {j.salary && (
-                                <span className="salary">{j.salary}</span>
+                                <span className="salary">
+                                  {compactSalary(j.salary)}
+                                </span>
                               )}
-                              <span className="category-tag">{j.category}</span>
+                              {j.category !== 'სხვა' && (
+                                <span className="category-tag">
+                                  {j.category}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="job-side">

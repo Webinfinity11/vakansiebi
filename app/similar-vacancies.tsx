@@ -1,4 +1,5 @@
 'use client';
+import { compactSalary } from '@/lib/vacancy-presentation';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
@@ -99,7 +100,9 @@ export function SimilarVacancies({
               </div>
               <h3>{job.title}</h3>
               {job.salary && (
-                <span className="similar-salary">{job.salary}</span>
+                <span className="similar-salary">
+                  {compactSalary(job.salary)}
+                </span>
               )}
               <p>{reasons.join(' · ')}</p>
               <span className="similar-open">

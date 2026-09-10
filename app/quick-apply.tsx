@@ -41,7 +41,7 @@ export function QuickApply({
           >
             <Phone size={18} />
             <span>
-              <small>ტელეფონი განცხადებიდან</small>
+              <small>ტელეფონი</small>
               <strong>{phone.display}</strong>
             </span>
             <span className="contact-call">დარეკვა</span>
@@ -50,9 +50,7 @@ export function QuickApply({
         {emails.map((contact) => (
           <div className="application-email" key={contact.email}>
             <span>
-              {contact.application
-                ? 'განაცხადის ელფოსტა'
-                : 'საკონტაქტო ელფოსტა'}
+              {contact.application ? 'ელფოსტა CV-სთვის' : 'საკონტაქტო ელფოსტა'}
             </span>
             <strong>{contact.email}</strong>
             <div className="email-actions">

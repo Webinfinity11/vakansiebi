@@ -26,11 +26,13 @@ import { emailDraft } from '@/lib/application-contact';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import type { PublicJob } from '@/lib/types';
 import { vacancySummary } from '@/lib/vacancy-summary';
-import { payExcerpts, payDisplay } from '@/lib/pay-excerpts';
 import {
-  vacancyLinks,
-  descriptionWithoutRepeatedLinks,
-} from '@/lib/vacancy-links';
+  compactSalary,
+  compactSchedule,
+  factAlreadyVisible,
+} from '@/lib/vacancy-presentation';
+import { explicitWorkCity } from '@/lib/work-location';
+import { vacancyLinks } from '@/lib/vacancy-links';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { SimilarVacancies } from './similar-vacancies';
 
@@ -173,27 +175,36 @@ export default function VacancyPage({
   }
   const schedule = workSchedule(job);
   const facts = [
-    ['ანაზღაურება', job.salary],
-    ['ქალაქი', job.city],
+    ['ანაზღაურება', compactSalary(job.salary)],
+    ['ქალაქი', job.city || explicitWorkCity(job)],
     ['განაკვეთი', job.employmentType],
     ['სამუშაო რეჟიმი', job.mode],
-    ['სამუშაო გრაფიკი', schedule.join(' · ')],
+    ['სამუშაო გრაფიკი', schedule.map(compactSchedule).join(' · ')],
   ].filter(([, value]) => value?.trim());
   const summary = vacancySummary(job);
-  const extractedPay = payExcerpts(job.description);
-  const payConditions =
-    extractedPay.length === 1 && payDisplay(extractedPay) === job.salary
-      ? []
-      : extractedPay;
   const links = vacancyLinks(job);
-  const description = descriptionWithoutRepeatedLinks(job.description, links);
+  const marker = 'სრული ინფორმაცია დამსაქმებლისგან:';
+  const split = job.fullTextUrl ? job.description.indexOf(marker) : -1;
+  const sourceExcerpt =
+    split >= 0 ? job.description.slice(0, split).trim() : '';
+  const description =
+    split >= 0
+      ? job.description.slice(split + marker.length).trim()
+      : job.description;
+  const extraFacts = (job.facts || []).filter(
+    (f) =>
+      !factAlreadyVisible(f.value, job.description, [
+        ...facts.map(([, v]) => v || ''),
+        ...summary.map((s) => s.value),
+      ]),
+  );
   const contacts = vacancyContacts(job);
   const hasContact = Boolean(contacts.emails.length || contacts.phones.length);
   const hasAction = hasContact || Boolean(applicationDestination(job));
   const hasDescriptionContent = Boolean(
     description.trim() ||
     links.some((link) => !link.application) ||
-    job.facts?.length ||
+    extraFacts.length ||
     job.companyProfile?.website ||
     job.companyProfile?.description,
   );
@@ -224,7 +235,7 @@ export default function VacancyPage({
             ვაკანსიები
           </Link>
           <span aria-hidden="true">/</span>
-          <span>{job.category}</span>
+          {job.category !== 'სხვა' && <span>{job.category}</span>}
         </nav>
         <article className="vacancy-layout">
           <section className="vacancy-overview" aria-labelledby="vacancy-title">
@@ -235,7 +246,9 @@ export default function VacancyPage({
                 <strong>{job.company}</strong>
               </div>
             </div>
-            <span className="category-tag">{job.category}</span>
+            {job.category !== 'სხვა' && (
+              <span className="category-tag">{job.category}</span>
+            )}
             <h1 id="vacancy-title" className="detail-title">
               {job.title}
             </h1>
@@ -293,17 +306,6 @@ export default function VacancyPage({
                 ))}
               </dl>
             )}
-            {payConditions.length > 0 && (
-              <section
-                className="vacancy-pay-details"
-                aria-labelledby="pay-details-title"
-              >
-                <h2 id="pay-details-title">ანაზღაურების პირობები</h2>
-                {payConditions.map((text) => (
-                  <p key={text}>{text}</p>
-                ))}
-              </section>
-            )}
             {summary.length > 0 && (
               <section
                 className="vacancy-summary"
@@ -328,31 +330,6 @@ export default function VacancyPage({
                 <p>ამონარიდები განცხადებიდან — სრული პირობები აღწერაშია.</p>
               </section>
             )}
-            {!preview && (
-              <button
-                className="secondary-button vacancy-hide-action"
-                disabled={!activity.ready}
-                onClick={() => {
-                  const hidden = activity.hidden.some(
-                    (item) => item.id === job.id,
-                  );
-                  const ok = hidden
-                    ? activity.restore(job.id)
-                    : activity.hide(job.id, job.title);
-                  setFeedback(
-                    ok
-                      ? hidden
-                        ? 'ვაკანსია დაბრუნებულია ძებნის შედეგებში.'
-                        : 'ვაკანსია დამალულია ძებნის შედეგებიდან. აქვე შეგიძლია აღდგენა.'
-                      : 'ბრაუზერმა ცვლილება ვერ შეინახა.',
-                  );
-                }}
-              >
-                {activity.hidden.some((item) => item.id === job.id)
-                  ? 'ძებნის შედეგებში აღდგენა'
-                  : 'არ მაინტერესებს'}
-              </button>
-            )}
             {!hasAction && (
               <div className="vacancy-contact-guidance">
                 <strong>დაკავშირების გზა</strong>
@@ -375,17 +352,30 @@ export default function VacancyPage({
               {description.trim() && (
                 <>
                   <h2 className="description-heading">სრული აღწერა</h2>
-                  <Description text={description} />
+                  <Description text={description} links={links} />
                 </>
               )}
-              {links.some((link) => !link.application) && (
+              {sourceExcerpt && (
+                <section className="vacancy-source-excerpt">
+                  <h3>განცხადების შესავალი პირველწყაროდან</h3>
+                  <Description text={sourceExcerpt} links={links} />
+                </section>
+              )}
+              {links.some(
+                (link) =>
+                  !link.application && !job.description.includes(link.url),
+              ) && (
                 <section
                   className="vacancy-related-links"
                   aria-label="განცხადების ბმულები"
                 >
                   <div className="application-links">
                     {links
-                      .filter((link) => !link.application)
+                      .filter(
+                        (link) =>
+                          !link.application &&
+                          !job.description.includes(link.url),
+                      )
                       .map((l) => (
                         <a
                           className={
@@ -407,11 +397,11 @@ export default function VacancyPage({
                 </section>
               )}
               {!hasAction && <TranslationHelp job={job} />}
-              {!!job.facts?.length && (
+              {!!extraFacts.length && (
                 <section className="extra-facts">
                   <h3>დამატებითი პირობები და მოთხოვნები</h3>
                   <dl>
-                    {job.facts.map((f) => (
+                    {extraFacts.map((f) => (
                       <div key={f.label}>
                         <dt>{f.label}</dt>
                         <dd>{f.value}</dd>
@@ -439,6 +429,34 @@ export default function VacancyPage({
                   )}
                 </section>
               )}
+              <details className="vacancy-more-actions">
+                <summary>მეტი მოქმედება</summary>{' '}
+                {!preview && (
+                  <button
+                    className="secondary-button vacancy-hide-action"
+                    disabled={!activity.ready}
+                    onClick={() => {
+                      const hidden = activity.hidden.some(
+                        (item) => item.id === job.id,
+                      );
+                      const ok = hidden
+                        ? activity.restore(job.id)
+                        : activity.hide(job.id, job.title);
+                      setFeedback(
+                        ok
+                          ? hidden
+                            ? 'ვაკანსია დაბრუნებულია ძებნის შედეგებში.'
+                            : 'ვაკანსია დამალულია ძებნის შედეგებიდან. აქვე შეგიძლია აღდგენა.'
+                          : 'ბრაუზერმა ცვლილება ვერ შეინახა.',
+                      );
+                    }}
+                  >
+                    {activity.hidden.some((item) => item.id === job.id)
+                      ? 'ძებნის შედეგებში აღდგენა'
+                      : 'არ მაინტერესებს'}
+                  </button>
+                )}
+              </details>
               <details className="application-tracker">
                 <summary>
                   განაცხადის ეტაპის აღნიშვნა <span>სურვილისამებრ</span>
