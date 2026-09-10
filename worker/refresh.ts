@@ -6,7 +6,7 @@ import {
   sourceLockIds,
   UnavailableVacancy,
 } from './adapters';
-import { stageVacancy } from './importer';
+import { stageVacancy, audit } from './importer';
 import { completeDescription } from './linked-description';
 import { sourceFetch, SourceHttpError } from './http';
 import { reconcileJob } from './automation';
@@ -39,6 +39,16 @@ export async function refreshDescriptions(source: ActiveSourceId, limit = 100) {
         removed,
         remaining: 0,
       };
+    const removedItems = (
+      await c.query(
+        `SELECT i.id FROM source_items i JOIN jobs j ON j.id=i.job_id
+      WHERE i.source_id=$1 AND i.refresh_requested_at IS NOT NULL AND j.status='published'
+      AND i.error IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410')
+      AND j.updated_at<=i.refresh_requested_at`,
+        [source],
+      )
+    ).rows;
+    for (const item of removedItems) await reconcileRemovedRefresh(item.id);
     const items = (
       await c.query(
         `SELECT i.id,i.url FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now() ORDER BY i.next_check_at,i.id LIMIT $2`,
@@ -83,8 +93,7 @@ export async function refreshDescriptions(source: ActiveSourceId, limit = 100) {
               item.id,
             ])
           ).rows[0];
-          if (row?.job_id)
-            await transaction((client) => reconcileJob(client, row.job_id));
+          if (row?.job_id) await reconcileRemovedRefresh(item.id);
         } else failed++;
         console.log(
           JSON.stringify({
@@ -127,4 +136,39 @@ export async function refreshDescriptions(source: ActiveSourceId, limit = 100) {
       await c.query('SELECT pg_advisory_unlock($1)', [sourceLockIds[source]]);
     c.release();
   }
+}
+
+export async function reconcileRemovedRefresh(itemId: string) {
+  return transaction(async (c) => {
+    const item = (
+      await c.query('SELECT * FROM source_items WHERE id=$1 FOR UPDATE', [
+        itemId,
+      ])
+    ).rows[0];
+    if (
+      !item?.job_id ||
+      !item.refresh_requested_at ||
+      ![
+        'Source vacancy unavailable',
+        'Source returned HTTP 404',
+        'Source returned HTTP 410',
+      ].includes(item.error)
+    )
+      return 'skipped';
+    const changed = await c.query(
+      `UPDATE jobs SET automation_managed=true,automation_paused=false WHERE id=$1 AND status='published'
+      AND published->>'url'=$2 AND updated_at<=$3 AND (automation_paused OR NOT automation_managed) RETURNING id`,
+      [item.job_id, item.url, item.refresh_requested_at],
+    );
+    if (changed.rowCount)
+      await audit(
+        c,
+        item.job_id,
+        'automation.resumed',
+        'requested:full-description-refresh',
+        { reason: 'source_removed' },
+        { automation_managed: true, automation_paused: false },
+      );
+    return reconcileJob(c, item.job_id);
+  });
 }

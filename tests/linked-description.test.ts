@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ClosedEmployerVacancy,
   parseHelio,
   parseLinkedPage,
   sameLinkedTitle,
@@ -83,5 +84,59 @@ void test('government keeps previously unknown labelled sections and final full 
     v.description.endsWith(
       'სერტიფიკატი და გამოცდილების დამადასტურებელი სრული დოკუმენტაცია',
     ),
+  );
+});
+
+void test('equivalent bilingual role titles match while different roles and branch labels remain distinct', () => {
+  assert.equal(
+    sameLinkedTitle(
+      'სტუდიური მხარდაჭერის ტექნიკოსი',
+      'Studio Support Technician',
+    ),
+    true,
+  );
+  assert.equal(
+    sameLinkedTitle(
+      'ტალანტების მოზიდვის უმცროსი სპეციალისტი',
+      'Junior Talent Acquisition Specialist',
+    ),
+    true,
+  );
+  assert.equal(
+    sameLinkedTitle('Manual QA ინჟინერი', 'Manual QA Engineer - QA ტესტერი'),
+    true,
+  );
+  assert.equal(
+    sameLinkedTitle(
+      'ელექტრიკოსი-ბათუმი',
+      'ტექნიკური დეპარტამენტის ელექტრიკოსი',
+    ),
+    true,
+  );
+  assert.equal(
+    sameLinkedTitle(
+      'RB ბანკირის ასისტენტი',
+      'სივრცის კონსულტანტი - ვაჟა-ფშაველას გამზირის ს/ც 6',
+    ),
+    false,
+  );
+  assert.equal(
+    sameLinkedTitle(
+      'მოლარე-კონსულტანტი (300 არაგველის ქუჩა)',
+      'მოლარე-კონსულტანტი (სოკარის სათავო ოფისი)',
+    ),
+    false,
+  );
+});
+
+void test('explicit employer expiry is distinguished from a missing selector', () => {
+  assert.throws(
+    () =>
+      parseLinkedPage(
+        '<h1 class="job-title">მოლარე</h1><div class="jobad--empty-state">ამ ვაკანსიას ვადა გაუვიდა</div>',
+        'https://jobs.smartrecruiters.com/company/123',
+        'smart',
+      ),
+    ClosedEmployerVacancy,
   );
 });

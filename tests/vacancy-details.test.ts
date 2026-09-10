@@ -139,3 +139,20 @@ void test('privacy and no-reply addresses are not presented as vacancy contacts'
     ['jobs@example.com'],
   );
 });
+
+void test('public employer application URLs remain usable when source labels say only link', () => {
+  assert.equal(
+    applicationDestination({
+      applicationLinks: [{ label: 'ბმული', url: 'https://smrtr.io/BHW3v' }],
+    })?.url,
+    'https://smrtr.io/BHW3v',
+  );
+  assert.equal(
+    applicationDestination({
+      applicationLinks: [
+        { label: 'კომპანიის საიტი', url: 'https://example.com/' },
+      ],
+    }),
+    null,
+  );
+});

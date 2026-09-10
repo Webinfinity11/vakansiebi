@@ -1,10 +1,20 @@
 import { load } from 'cheerio';
 import type { Vacancy } from '../lib/types';
-import { cleanText, externalId, parseDetail } from './adapters';
+import {
+  cleanText,
+  externalId,
+  parseDetail,
+  UnavailableVacancy,
+} from './adapters';
 import { publicPage, validateLinkedUrl } from './public-page';
 import { sourceFetch } from './http';
 import { enrichVacancy } from './enrich';
 
+export class ClosedEmployerVacancy extends Error {
+  constructor(public title: string) {
+    super('Employer vacancy is closed');
+  }
+}
 export type LinkedText = { title: string; text: string; url: string };
 const normalized = (s: string) =>
   s
@@ -12,17 +22,43 @@ const normalized = (s: string) =>
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]/gu, '');
 export function sameLinkedTitle(original: string, linked: string) {
-  const a = normalized(original),
-    b = normalized(linked);
+  // Equivalent words seen in bilingual public vacancy titles; no text is translated for display.
+  const aliases: Record<string, string> = {
+    მარკეტინგისა: 'marketing',
+    მარკეტინგის: 'marketing',
+    კომუნიკაციების: 'communications',
+    სპეციალისტი: 'specialist',
+    სტუდიური: 'studio',
+    მხარდაჭერის: 'support',
+    ტექნიკოსი: 'technician',
+    ტალანტების: 'talent',
+    მოზიდვის: 'acquisition',
+    უმცროსი: 'junior',
+    ინჟინერი: 'engineer',
+  };
+  const terms = (value: string) =>
+    value
+      .normalize('NFKC')
+      .toLowerCase()
+      .replace(/\s*[-–—]\s*(?:თბილისი|ბათუმი|ქუთაისი|რუსთავი)\s*$/, '')
+      .replace(/[\p{L}]+/gu, (word) => aliases[word] || word);
+  const left = terms(original),
+    right = terms(linked);
+  const a = normalized(left),
+    b = normalized(right);
   if (!a || !b) return false;
   if (a.includes(b) || b.includes(a)) return true;
-  const words = original.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) || [];
+  const words =
+    left
+      .match(/[\p{L}\p{N}]{2,}/gu)
+      ?.filter((w) => !['და', 'and'].includes(w)) || [];
   return (
     words.length >= 2 &&
     words.filter((w) => b.includes(normalized(w))).length >=
-      Math.ceil(words.length * 0.6)
+      Math.ceil(words.length * 0.75)
   );
 }
+
 export function linkedProvider(url: string) {
   try {
     const u = new URL(url);
@@ -73,6 +109,13 @@ export function parseLinkedPage(
     body = content.html() || '';
   } else if (provider === 'smart') {
     title = $('h1.job-title').text().trim();
+    if (
+      title &&
+      /ამ ვაკანსიას ვადა გაუვიდა|This job has expired|no longer available/i.test(
+        $('.jobad--empty-state').text(),
+      )
+    )
+      throw new ClosedEmployerVacancy(title);
     body = $('.job-details,.job-section')
       .map((_, e) => $.html(e))
       .get()
@@ -199,7 +242,16 @@ export async function completeDescription(job: Vacancy): Promise<Vacancy> {
         url: candidate.url,
       };
     } else {
-      linked = await readLinkedText(candidate.url, candidate.provider!);
+      try {
+        linked = await readLinkedText(candidate.url, candidate.provider!);
+      } catch (error) {
+        if (
+          error instanceof ClosedEmployerVacancy &&
+          sameLinkedTitle(job.title, error.title)
+        )
+          throw new UnavailableVacancy();
+        throw error;
+      }
       if (!sameLinkedTitle(job.title, linked.title))
         throw Error('Linked employer vacancy title differs from original');
     }

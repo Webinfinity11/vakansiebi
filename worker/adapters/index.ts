@@ -117,7 +117,13 @@ export function cleanText(html: string) {
       $(el).append(' ' + href);
   });
   $('br').replaceWith('\n');
-  $('li').prepend('• ');
+  $('li').each((_, el) => {
+    const parent = $(el).parent();
+    const start = Number(parent.attr('start')) || 1;
+    const ordinal =
+      Number($(el).attr('value')) || start + parent.children('li').index(el);
+    $(el).prepend(parent.is('ol') ? `${ordinal}. ` : '• ');
+  });
   $('td,th').append(' | ');
   $('p,div,li,h1,h2,h3,h4,h5,h6,tr,dt,dd,section').each((_, el) => {
     $(el).append('\n');

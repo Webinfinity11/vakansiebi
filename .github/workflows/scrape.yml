@@ -32,3 +32,8 @@ jobs:
           CRAWL_BATCH_SIZE: '100'
           DISCOVERY_PAGE_BUDGET: '30'
           CRAWL_DELAY_MS: '2000'
+      - name: Verify refreshed descriptions match published text
+        if: always()
+        run: npx tsx scripts/verify-description-refresh.ts --source=${{ matrix.source }}
+        env:
+          DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}

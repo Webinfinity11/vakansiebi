@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db } from '../lib/server/db';
 import { stageVacancy } from '../worker/importer';
+import { reconcileRemovedRefresh } from '../worker/refresh';
 import type { Vacancy } from '../lib/types';
 void test(
   'requested refresh publishes complete text for old paused jobs but preserves a newer editorial change',
@@ -72,6 +73,27 @@ void test(
       const edited = rows.find((r) => r.id === ids[1]);
       assert.equal(edited.published.description, v.description);
       assert.equal(edited.automation_paused, true);
+      await db().query(
+        "UPDATE jobs SET automation_managed=false,automation_paused=true,updated_at=now()-interval '1 hour' WHERE id=$1",
+        [ids[0]],
+      );
+      await db().query(
+        "UPDATE source_items SET error='Source returned HTTP 404' WHERE id=ANY($1::uuid[])",
+        [ids],
+      );
+      assert.equal(await reconcileRemovedRefresh(ids[0]), 'archived');
+      const archived = (
+        await db().query('SELECT status,published FROM jobs WHERE id=$1', [
+          ids[0],
+        ])
+      ).rows[0];
+      assert.equal(archived.published, null);
+      assert.equal(await reconcileRemovedRefresh(ids[1]), 'skipped');
+      assert.equal(
+        (await db().query('SELECT status FROM jobs WHERE id=$1', [ids[1]]))
+          .rows[0].status,
+        'published',
+      );
     } finally {
       await db().query('DELETE FROM audit_log WHERE job_id=ANY($1::uuid[])', [
         ids,

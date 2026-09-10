@@ -2137,3 +2137,13 @@
   font-size: 13px;
   color: #315590;
 }
+.vacancy-description ol {
+  list-style: decimal;
+  padding-left: 26px;
+  margin-bottom: 22px;
+}
+.vacancy-description a {
+  color: #315590;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

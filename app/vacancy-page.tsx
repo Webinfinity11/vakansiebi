@@ -185,7 +185,7 @@ export default function VacancyPage({
   const hasAction = hasContact || Boolean(applicationDestination(job));
   return (
     <div
-      className={`board-shell vacancy-page ${hasContact ? 'has-contact' : ''}`}
+      className={`board-shell vacancy-page ${hasAction ? 'has-contact' : ''}`}
     >
       <header className="topbar">
         <div className="header-inner">
@@ -356,12 +356,12 @@ export default function VacancyPage({
               </div>
             )}
           </section>
-          {hasContact && (
+          {hasAction && (
             <aside
               className="vacancy-contact"
               aria-label="დამსაქმებელთან დაკავშირება"
             >
-              <QuickApply job={job} showApplication={false} />
+              <QuickApply job={job} />
             </aside>
           )}
           <section className="vacancy-description-panel">
@@ -373,33 +373,35 @@ export default function VacancyPage({
                 დამატებითი აღწერა არ არის მითითებული.
               </p>
             )}
-            {links.length > 0 && (
+            {links.some((link) => !link.application) && (
               <section
                 className="vacancy-related-links"
                 aria-label="განცხადების ბმულები"
               >
                 <div className="application-links">
-                  {links.map((l) => (
-                    <a
-                      className={
-                        l.application
-                          ? 'primary vacancy-apply-link'
-                          : 'vacancy-employer-link'
-                      }
-                      key={l.url}
-                      href={l.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {l.label}
-                      <ArrowUpRight size={15} />
-                      <small>{l.host}</small>
-                    </a>
-                  ))}
+                  {links
+                    .filter((link) => !link.application)
+                    .map((l) => (
+                      <a
+                        className={
+                          l.application
+                            ? 'primary vacancy-apply-link'
+                            : 'vacancy-employer-link'
+                        }
+                        key={l.url}
+                        href={l.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {l.label}
+                        <ArrowUpRight size={15} />
+                        <small>{l.host}</small>
+                      </a>
+                    ))}
                 </div>
               </section>
             )}
-            {!hasContact && <TranslationHelp job={job} />}
+            {!hasAction && <TranslationHelp job={job} />}
             {!!job.facts?.length && (
               <section className="extra-facts">
                 <h3>დამატებითი პირობები და მოთხოვნები</h3>

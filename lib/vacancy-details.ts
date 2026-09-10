@@ -138,7 +138,10 @@ export function workSchedule(job: DetailSource): string[] {
 export function applicationDestination(job: Pick<Vacancy, 'applicationLinks'>) {
   const links = (job.applicationLinks || []).filter(
     (link) =>
-      /განაცხად|რეზიუმ|\bapply\b|\bapplication\b/i.test(link.label) &&
+      (/განაცხად|რეზიუმ|\bapply\b|\bapplication\b/i.test(link.label) ||
+        /^https:\/\/(?:smrtr\.io\/[A-Za-z0-9]+|wrk\.ge\/[A-Za-z0-9]+|(?:www\.)?app\.helio-ai\.com\/apply\/|hel-ai\.com\/apply\/|[a-z0-9-]+\.selfrecruit\.ge\/(?:s\/|[a-f0-9]{8}-)|jobs\.smartrecruiters\.com\/)/i.test(
+          link.url,
+        )) &&
       !/privacy|policy|კონფიდენციალურ/i.test(link.label + ' ' + link.url),
   );
   if (links.length !== 1) return null;
