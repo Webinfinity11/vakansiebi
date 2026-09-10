@@ -680,6 +680,7 @@ export default function JobBoard() {
           </nav>
           <button
             className={`saved-nav ${savedOnly ? 'is-active' : ''}`}
+            aria-label="შენახული ვაკანსიები"
             onClick={() => {
               setSavedOnly(!savedOnly);
               document
@@ -712,13 +713,11 @@ export default function JobBoard() {
                 <span /> ვაკანსიები · რეგისტრაციის გარეშე
               </div>
               <h1>
-                შენი შემდეგი სამსახური.
-                <br />
-                <em>იპოვე ერთად.</em>
+                შენი შემდეგი სამსახური <em>აქ არის.</em>
               </h1>
               <p>
-                რამდენიმე წყარო, ერთი ძებნა. შეადარე პირობები
-                <br className="desktop-break" /> და აირჩიე შენი შემდეგი ნაბიჯი.
+                მოძებნე ერთ სივრცეში. შეადარე პირობები. დაუკავშირდი
+                დამსაქმებელს.
               </p>
             </div>
             <aside
@@ -775,8 +774,16 @@ export default function JobBoard() {
                   options={cities}
                 />
               </div>
-              <button className="primary" type="submit">
-                მოძებნე ვაკანსია <ArrowRight size={18} />
+              <button
+                className="primary"
+                type="submit"
+                aria-label="მოძებნე ვაკანსია"
+              >
+                <span className="search-label-full">მოძებნე ვაკანსია</span>
+                <span className="search-label-short" aria-hidden="true">
+                  ძებნა
+                </span>{' '}
+                <ArrowRight size={18} />
               </button>
             </form>
             <div className="quick">
@@ -842,9 +849,6 @@ export default function JobBoard() {
             >
               <div className="results-head">
                 <div>
-                  <div className="section-kicker">
-                    აირჩიე ის, რაც შენთვის მნიშვნელოვანია
-                  </div>
                   <h2>
                     {savedOnly ? 'შენახული ვაკანსიები' : 'ვაკანსიები'}
                     <span className="result-count">
@@ -856,7 +860,9 @@ export default function JobBoard() {
                       ? 'ვაკანსიებს ვეძებთ…'
                       : savedOnly
                         ? 'შენახულია ამ ბრაუზერში · აქტიური ვაკანსიები'
-                        : `${total.toLocaleString('en-US')} შედეგი${activeCount ? ' არჩეული პირობებით' : ' სხვადასხვა პირველწყაროდან'}`}
+                        : activeCount
+                          ? 'შედეგები შენ მიერ არჩეული პირობებით'
+                          : 'იპოვე პოზიცია, რომელიც შენს გეგმებს ერგება'}
                   </p>
                 </div>
                 <Choice
@@ -871,44 +877,46 @@ export default function JobBoard() {
                   ]}
                 />
               </div>
-              <PersonalSpace
-                space={personal}
-                filters={currentSearch}
-                active={activeCount > 0}
-                disabled={demo}
-                onApply={applySearch}
-                open={personalOpen}
-                setOpen={setPersonalOpen}
-              />
-              <button
-                className="mobile-filter-toggle secondary-button"
-                onClick={() => {
-                  setMobileDraft(currentSearch);
-                  setFiltersOpen(true);
-                }}
-              >
-                <SlidersHorizontal size={16} />
-                ფილტრები {activeCount > 0 && <b>{activeCount}</b>}
-              </button>
-              {activeCount > 0 && (
+              <div className="results-tools">
+                <PersonalSpace
+                  space={personal}
+                  filters={currentSearch}
+                  active={activeCount > 0}
+                  disabled={demo}
+                  onApply={applySearch}
+                  open={personalOpen}
+                  setOpen={setPersonalOpen}
+                />
                 <button
-                  className="share-search"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(
-                        window.location.origin +
-                          '/?' +
-                          searchParams(currentSearch),
-                      );
-                      setFeedback('ძიების ბმული დაკოპირებულია');
-                    } catch {
-                      setFeedback('ბმულის კოპირება ვერ მოხერხდა');
-                    }
+                  className="mobile-filter-toggle secondary-button"
+                  onClick={() => {
+                    setMobileDraft(currentSearch);
+                    setFiltersOpen(true);
                   }}
                 >
-                  <Share2 size={14} /> ძიების გაზიარება
+                  <SlidersHorizontal size={16} />
+                  ფილტრები {activeCount > 0 && <b>{activeCount}</b>}
                 </button>
-              )}
+                {activeCount > 0 && (
+                  <button
+                    className="share-search"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(
+                          window.location.origin +
+                            '/?' +
+                            searchParams(currentSearch),
+                        );
+                        setFeedback('ძიების ბმული დაკოპირებულია');
+                      } catch {
+                        setFeedback('ბმულის კოპირება ვერ მოხერხდა');
+                      }
+                    }}
+                  >
+                    <Share2 size={14} /> ძიების გაზიარება
+                  </button>
+                )}
+              </div>
               {!!activeCount && (
                 <div className="active-filters">
                   {query && (
@@ -1013,10 +1021,6 @@ export default function JobBoard() {
                           <div className="job-info">
                             <div className="job-company">
                               <span>{j.company || 'კომპანია'}</span>
-                              <span className="source-pill">
-                                <span />
-                                {j.source}
-                              </span>
                             </div>
                             <button
                               className="job-title"
@@ -1053,9 +1057,7 @@ export default function JobBoard() {
                                 </span>
                               )}
                             </div>
-                            <SourceStatus job={j} />
                             <div className="card-bottom">
-                              <span className="category-tag">{j.category}</span>
                               {j.salary ? (
                                 <span className="salary">{j.salary}</span>
                               ) : (
@@ -1063,6 +1065,8 @@ export default function JobBoard() {
                                   ანაზღაურება არ არის მითითებული
                                 </span>
                               )}
+                              <span className="category-tag">{j.category}</span>
+                              <span className="source-pill">{j.source}</span>
                             </div>
                           </div>
                           <div className="job-side">
