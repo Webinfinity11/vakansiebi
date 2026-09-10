@@ -1511,6 +1511,9 @@
   font-size: 12px;
   margin-bottom: 6px;
 }
+.vacancy-page .detail-facts.single-fact-column {
+  grid-template-columns: minmax(0, 1fr);
+}
 .vacancy-page .detail-facts dd {
   color: #223554;
   font-size: 14px;
@@ -2061,15 +2064,6 @@
   width: 36px;
   height: 36px;
   min-width: 36px;
-}
-.vacancy-page .schedule-missing {
-  background: transparent;
-  border-color: #dce3ef;
-}
-.vacancy-page .schedule-missing dd,
-.similar-salary.salary-missing {
-  color: #66768d;
-  font-weight: 400;
 }
 .similar-company span {
   overflow-wrap: anywhere;

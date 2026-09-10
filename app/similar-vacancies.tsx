@@ -98,11 +98,9 @@ export function SimilarVacancies({
                 <span>{job.company}</span>
               </div>
               <h3>{job.title}</h3>
-              <span
-                className={`similar-salary ${job.salary ? '' : 'salary-missing'}`}
-              >
-                {job.salary || 'ანაზღაურება არ არის მითითებული'}
-              </span>
+              {job.salary && (
+                <span className="similar-salary">{job.salary}</span>
+              )}
               <p>{reasons.join(' · ')}</p>
               <span className="similar-open">
                 {activity.seen.includes(job.id)

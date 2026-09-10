@@ -172,6 +172,13 @@ export default function VacancyPage({
     }
   }
   const schedule = workSchedule(job);
+  const facts = [
+    ['ანაზღაურება', job.salary],
+    ['ქალაქი', job.city],
+    ['განაკვეთი', job.employmentType],
+    ['სამუშაო რეჟიმი', job.mode],
+    ['სამუშაო გრაფიკი', schedule.join(' · ')],
+  ].filter(([, value]) => value?.trim());
   const summary = vacancySummary(job);
   const extractedPay = payExcerpts(job.description);
   const payConditions =
@@ -183,6 +190,13 @@ export default function VacancyPage({
   const contacts = vacancyContacts(job);
   const hasContact = Boolean(contacts.emails.length || contacts.phones.length);
   const hasAction = hasContact || Boolean(applicationDestination(job));
+  const hasDescriptionContent = Boolean(
+    description.trim() ||
+    links.some((link) => !link.application) ||
+    job.facts?.length ||
+    job.companyProfile?.website ||
+    job.companyProfile?.description,
+  );
   return (
     <div
       className={`board-shell vacancy-page ${hasAction ? 'has-contact' : ''}`}
@@ -258,24 +272,16 @@ export default function VacancyPage({
                 )}
               </div>
             </div>
-            <dl className="detail-facts">
-              {[
-                ['ანაზღაურება', job.salary || 'არ არის მითითებული'],
-                ['ქალაქი', job.city || 'არ არის მითითებული'],
-                ['განაკვეთი', job.employmentType],
-                ['სამუშაო რეჟიმი', job.mode],
-                [
-                  'სამუშაო გრაფიკი',
-                  schedule.length ? schedule.join(' · ') : 'არ არის მითითებული',
-                ],
-              ]
-                .filter(([, value]) => value)
-                .map(([label, value]) => (
+            {facts.length > 0 && (
+              <dl
+                className={`detail-facts ${facts.filter(([label]) => label !== 'სამუშაო გრაფიკი').length < 2 ? 'single-fact-column' : ''}`}
+              >
+                {facts.map(([label, value]) => (
                   <div
                     key={label}
                     className={
                       label === 'სამუშაო გრაფიკი'
-                        ? `schedule-fact ${schedule.length ? '' : 'schedule-missing'}`
+                        ? 'schedule-fact'
                         : label === 'ანაზღაურება' && job.salary
                           ? 'salary-fact'
                           : undefined
@@ -285,7 +291,8 @@ export default function VacancyPage({
                     <dd>{value}</dd>
                   </div>
                 ))}
-            </dl>
+              </dl>
+            )}
             {payConditions.length > 0 && (
               <section
                 className="vacancy-pay-details"
@@ -349,7 +356,6 @@ export default function VacancyPage({
             {!hasAction && (
               <div className="vacancy-contact-guidance">
                 <strong>დაკავშირების გზა</strong>
-                <p>შემოტანილ განცხადებაში ტელეფონი და ელფოსტა არ ჩანს.</p>
                 <a href={job.url} target="_blank" rel="noopener noreferrer">
                   კონტაქტი ნახე ორიგინალ განცხადებაში <ArrowUpRight size={15} />
                 </a>
@@ -364,87 +370,87 @@ export default function VacancyPage({
               <QuickApply job={job} />
             </aside>
           )}
-          <section className="vacancy-description-panel">
-            <h2 className="description-heading">სრული აღწერა</h2>
-            {job.description.trim() ? (
-              <Description text={description} />
-            ) : (
-              <p className="filter-help">
-                დამატებითი აღწერა არ არის მითითებული.
-              </p>
-            )}
-            {links.some((link) => !link.application) && (
-              <section
-                className="vacancy-related-links"
-                aria-label="განცხადების ბმულები"
-              >
-                <div className="application-links">
-                  {links
-                    .filter((link) => !link.application)
-                    .map((l) => (
-                      <a
-                        className={
-                          l.application
-                            ? 'primary vacancy-apply-link'
-                            : 'vacancy-employer-link'
-                        }
-                        key={l.url}
-                        href={l.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {l.label}
-                        <ArrowUpRight size={15} />
-                        <small>{l.host}</small>
-                      </a>
+          {hasDescriptionContent && (
+            <section className="vacancy-description-panel">
+              {description.trim() && (
+                <>
+                  <h2 className="description-heading">სრული აღწერა</h2>
+                  <Description text={description} />
+                </>
+              )}
+              {links.some((link) => !link.application) && (
+                <section
+                  className="vacancy-related-links"
+                  aria-label="განცხადების ბმულები"
+                >
+                  <div className="application-links">
+                    {links
+                      .filter((link) => !link.application)
+                      .map((l) => (
+                        <a
+                          className={
+                            l.application
+                              ? 'primary vacancy-apply-link'
+                              : 'vacancy-employer-link'
+                          }
+                          key={l.url}
+                          href={l.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {l.label}
+                          <ArrowUpRight size={15} />
+                          <small>{l.host}</small>
+                        </a>
+                      ))}
+                  </div>
+                </section>
+              )}
+              {!hasAction && <TranslationHelp job={job} />}
+              {!!job.facts?.length && (
+                <section className="extra-facts">
+                  <h3>დამატებითი პირობები და მოთხოვნები</h3>
+                  <dl>
+                    {job.facts.map((f) => (
+                      <div key={f.label}>
+                        <dt>{f.label}</dt>
+                        <dd>{f.value}</dd>
+                      </div>
                     ))}
-                </div>
-              </section>
-            )}
-            {!hasAction && <TranslationHelp job={job} />}
-            {!!job.facts?.length && (
-              <section className="extra-facts">
-                <h3>დამატებითი პირობები და მოთხოვნები</h3>
-                <dl>
-                  {job.facts.map((f) => (
-                    <div key={f.label}>
-                      <dt>{f.label}</dt>
-                      <dd>{f.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
-            )}
-            {(job.companyProfile?.website ||
-              job.companyProfile?.description) && (
-              <section className="company-about">
-                <h2>დამსაქმებლის შესახებ</h2>
-                {job.companyProfile.description && (
-                  <p>{job.companyProfile.description}</p>
-                )}
-                {job.companyProfile.website && (
-                  <a
-                    href={job.companyProfile.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Globe2 size={14} />
-                    კომპანიის ვებსაიტი <ArrowUpRight size={14} />
-                  </a>
-                )}
-              </section>
-            )}
-            <details className="application-tracker">
-              <summary>
-                განაცხადის ეტაპის აღნიშვნა <span>სურვილისამებრ</span>
-              </summary>
-              <ApplicationControl
-                job={job}
-                space={personal}
-                disabled={preview}
-              />
-            </details>
-          </section>
+                  </dl>
+                </section>
+              )}
+              {(job.companyProfile?.website ||
+                job.companyProfile?.description) && (
+                <section className="company-about">
+                  <h2>დამსაქმებლის შესახებ</h2>
+                  {job.companyProfile.description && (
+                    <p>{job.companyProfile.description}</p>
+                  )}
+                  {job.companyProfile.website && (
+                    <a
+                      href={job.companyProfile.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Globe2 size={14} />
+                      კომპანიის ვებსაიტი <ArrowUpRight size={14} />
+                    </a>
+                  )}
+                </section>
+              )}
+              <details className="application-tracker">
+                <summary>
+                  განაცხადის ეტაპის აღნიშვნა <span>სურვილისამებრ</span>
+                </summary>
+                <ApplicationControl
+                  job={job}
+                  space={personal}
+                  disabled={preview}
+                />
+              </details>
+            </section>
+          )}
           {!preview && <SimilarVacancies id={job.id} returnTo={returnTo} />}
           <footer className="vacancy-source" id="vacancy-source">
             <h2>ორიგინალი განცხადება</h2>
@@ -452,12 +458,6 @@ export default function VacancyPage({
               <p className="source-update-note">
                 წყაროზე ცვლილებაა დაფიქსირებული. განაცხადის გაგზავნამდე
                 გადაამოწმე განახლებული პირობები.
-              </p>
-            )}
-            {!hasAction && (
-              <p>
-                საკონტაქტო ინფორმაცია აღწერაში არ არის მითითებული. დაკავშირების
-                გზა შეგიძლია განცხადების ორიგინალში ნახო.
               </p>
             )}
             {job.fullTextUrl && (

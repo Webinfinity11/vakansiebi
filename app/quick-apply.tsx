@@ -67,9 +67,7 @@ export function QuickApply({
                 )}
               >
                 <Mail size={16} />
-                {contact.application
-                  ? 'CV-ის გაგზავნა'
-                  : 'წერილის გახსნა'}
+                {contact.application ? 'CV-ის გაგზავნა' : 'წერილის გახსნა'}
               </a>
               <button
                 className="secondary-button"
@@ -107,7 +105,6 @@ export function QuickApply({
       )}
       {!phones.length && !emails.length && !application && (
         <p className="contact-missing">
-          აღწერაში ტელეფონი ან ელფოსტა არ არის მითითებული.{' '}
           <a href={job.url} target="_blank" rel="noopener noreferrer">
             კონტაქტი ნახე პირველწყაროზე <ArrowUpRight size={13} />
           </a>

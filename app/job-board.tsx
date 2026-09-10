@@ -1015,12 +1015,8 @@ export default function JobBoard() {
                               )}
                             </div>
                             <div className="card-bottom">
-                              {j.salary ? (
+                              {j.salary && (
                                 <span className="salary">{j.salary}</span>
-                              ) : (
-                                <span className="no-salary">
-                                  ანაზღაურება არ არის მითითებული
-                                </span>
                               )}
                               <span className="category-tag">{j.category}</span>
                             </div>
