@@ -2,6 +2,15 @@ import { z } from 'zod';
 import { safeLogoUrl } from './vacancy-media';
 export const vacancySchema = z
   .object({
+    fullTextUrl: z
+      .url()
+      .refine(
+        (v) =>
+          new URL(v).protocol === 'https:' &&
+          !new URL(v).username &&
+          !new URL(v).password,
+      )
+      .optional(),
     logoUrl: z
       .string()
       .max(2000)

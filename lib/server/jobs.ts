@@ -64,7 +64,7 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
   const summary = params.get('summary') === '1';
   const snapshot = preview ? 'j.draft' : 'j.published';
   const projection = summary
-    ? `(${snapshot} - ARRAY['description','facts','applicationLinks','warnings'])`
+    ? `(${snapshot} - ARRAY['description','facts','applicationLinks','warnings','fullTextUrl'])`
     : snapshot;
   const rows = (
     await db().query(

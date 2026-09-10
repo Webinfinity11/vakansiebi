@@ -59,6 +59,30 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
       quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0 WHERE id=$1`,
       [itemId],
     );
+    // A catalogue refresh explicitly requests current source text, including older paused snapshots.
+    // A newer editor change wins over the queued refresh request.
+    if (
+      item.job_id &&
+      item.refresh_requested_at &&
+      (!item.refresh_completed_at ||
+        item.refresh_requested_at > item.refresh_completed_at)
+    ) {
+      const resumed = await c.query(
+        `UPDATE jobs SET automation_managed=true,automation_paused=false WHERE id=$1
+        AND status='published' AND published->>'url'=$2 AND updated_at<=$3
+        AND (NOT automation_managed OR automation_paused) RETURNING id`,
+        [item.job_id, item.url, item.refresh_requested_at],
+      );
+      if (resumed.rowCount)
+        await audit(
+          c,
+          item.job_id,
+          'automation.resumed',
+          'requested:full-description-refresh',
+          { refreshRequestedAt: item.refresh_requested_at },
+          { automation_managed: true, automation_paused: false },
+        );
+    }
     const hash = hashVacancy(v);
     if (!item.job_id && v.deadline && v.deadline < tbilisiDate()) {
       await c.query(
@@ -113,7 +137,7 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
     }
     // Existing editorial draft and published snapshot are never overwritten by crawling.
     await c.query(
-      "UPDATE source_items SET job_id=$2,raw=$3,content_hash=$4,last_checked_at=now(),last_verified_at=now(),next_check_at=now()+($5*interval '1 hour'),error=NULL,failures=0 WHERE id=$1",
+      "UPDATE source_items SET job_id=$2,raw=$3,content_hash=$4,last_checked_at=now(),last_verified_at=now(),refresh_completed_at=CASE WHEN refresh_requested_at IS NOT NULL THEN now() ELSE refresh_completed_at END,next_check_at=now()+($5*interval '1 hour'),error=NULL,failures=0 WHERE id=$1",
       [itemId, jobId, v, hash, hours],
     );
     if (outcome !== 'unchanged')

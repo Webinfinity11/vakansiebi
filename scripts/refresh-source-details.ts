@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { completeDescription } from '../worker/linked-description';
 import { db } from '../lib/server/db';
 import { configs, parseDetail, sourceLockIds } from '../worker/adapters';
 import { sourceFetch } from '../worker/http';
@@ -44,10 +45,8 @@ try {
       ).rows;
       for (const item of items) {
         try {
-          const data = parseDetail(
-            source,
-            await sourceFetch(source, item.url),
-            item.url,
+          const data = await completeDescription(
+            parseDetail(source, await sourceFetch(source, item.url), item.url),
           );
           const outcome = await stageVacancy(item.id, data);
           console.log(

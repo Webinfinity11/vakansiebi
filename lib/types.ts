@@ -7,6 +7,7 @@ export const sourceNames: Record<ActiveSourceId, string> = {
   hrgov: 'vacancy.hr.gov.ge',
 };
 export type Vacancy = {
+  fullTextUrl?: string;
   logoUrl?: string;
   employmentType?: string;
   facts?: { label: string; value: string }[];

@@ -108,10 +108,18 @@ export function cleanText(html: string) {
     const phone = telephoneHref($(el).attr('href') || '');
     if (phone && !$(el).text().replace(/\D/g, '').includes(phone.slice(4)))
       $(el).append(' ტელეფონი: ' + phone);
+    const href = $(el).attr('href') || '';
+    if (
+      href.startsWith('https://') &&
+      safeExternalUrl(href) &&
+      !$(el).text().includes(href)
+    )
+      $(el).append(' ' + href);
   });
   $('br').replaceWith('\n');
   $('li').prepend('• ');
-  $('p,div,li,h1,h2,h3,tr').each((_, el) => {
+  $('td,th').append(' | ');
+  $('p,div,li,h1,h2,h3,h4,h5,h6,tr,dt,dd,section').each((_, el) => {
     $(el).append('\n');
   });
   return $.text()
@@ -284,7 +292,15 @@ export function parseDetail(
       j.title = String(a.title || '');
       j.company = String(a.customerName || '');
       j.city = Array.isArray(a.addresses) ? a.addresses.join(', ') : '';
-      j.description = cleanText($('.description').first().html() || '');
+      j.description = [
+        ...new Set(
+          $('.description')
+            .map((_, el) => cleanText($(el).html() || ''))
+            .get(),
+        ),
+      ]
+        .filter(Boolean)
+        .join('\n\n');
       j.deadline = dateOnly(a.deadlineDate);
       j.datePosted = dateOnly(a.publishDate);
       j.mode = a.employmentFormTypeName?.includes('ოფისიდან')
@@ -322,7 +338,15 @@ export function parseDetail(
       j.title = $('.ann-title-container__text').first().text().trim();
       j.company = $('.company-name__link').first().text().trim();
       j.city = $('.main-info .location-items').first().text().trim();
-      j.description = cleanText($('.description').first().html() || '');
+      j.description = [
+        ...new Set(
+          $('.description')
+            .map((_, el) => cleanText($(el).html() || ''))
+            .get(),
+        ),
+      ]
+        .filter(Boolean)
+        .join('\n\n');
     }
     const visible = visibleFields(j.description);
     if (!j.salary && visible.salary && !visible.warning) {
@@ -505,13 +529,13 @@ export function parseDetail(
       j.company.trim().length > 0;
     j.city = translated(data.address?.cityTitle);
     j.description = [
-      translated(data.description),
-      translated(data.duties),
-      translated(data.requirements),
-      translated(data.conditions),
+      ['', translated(data.description)],
+      ['მოვალეობები', translated(data.duties)],
+      ['მოთხოვნები', translated(data.requirements)],
+      ['პირობები', translated(data.conditions)],
     ]
-      .filter(Boolean)
-      .map(cleanText)
+      .filter(([, value]) => value)
+      .map(([label, value]) => (label ? label + ':\n' : '') + cleanText(value))
       .join('\n\n');
     // Only vacancy-bound contacts confirmed by public contact controls.
     // Never read companyInfo/userInfo or arbitrary profile contact fields.
@@ -657,24 +681,9 @@ export function parseDetail(
       j.currency = 'GEL';
       j.salary = salaryText(j.salaryMin, null, 'GEL', '');
     }
-    const detailLabels = [
-      'ორგანიზაციის შესახებ',
-      'ფუნქციები',
-      'მინიმალური განათლება',
-      'სამუშაო გამოცდილება',
-      'პროფესია',
-      'საკონტაქტო ტელეფონები',
-      'ელექტრონული ფოსტა',
-      'საკონტაქტო ელფოსტა',
-      'საკონტაქტო პირი',
-      'საკონკურსო თემატიკა',
-      'დამატებითი მოთხოვნები',
-      'დამატებითი ინფორმაცია',
-      'გადაწყვეტილების მიღების ფორმა და ვადა',
-    ];
-    j.description = detailLabels
-      .filter((k) => fields.has(k))
-      .map((k) => k + '\n' + fields.get(k))
+    // Keep every labelled vacancy section, including new labels introduced by the source.
+    j.description = [...fields.entries()]
+      .map(([label, value]) => label + ':\n' + value)
       .join('\n\n');
     for (const label of [
       'კონკურსის ტიპი',

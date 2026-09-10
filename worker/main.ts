@@ -3,6 +3,8 @@ import { appendFileSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { db } from '../lib/server/db';
 import { runSource } from './run';
+import { refreshDescriptions } from './refresh';
+import type { ActiveSourceId } from '../lib/types';
 import { configs } from './adapters';
 import type { SourceId } from '../lib/types';
 import { reconcileSource } from './automation';
@@ -19,6 +21,26 @@ const dueOnly = process.argv.includes('--due');
 if (arg && !(arg in configs)) throw Error('Unknown source');
 try {
   do {
+    const refreshedSources = new Set<string>();
+    for (const source of arg ? [arg] : Object.keys(configs)) {
+      const refresh = await refreshDescriptions(source as ActiveSourceId, 500);
+      if (
+        refresh.refreshed ||
+        refresh.failed ||
+        refresh.held ||
+        refresh.removed
+      ) {
+        console.log(JSON.stringify({ descriptionRefresh: refresh }));
+        refreshedSources.add(source);
+        if ((once || arg) && (refresh.failed || refresh.held))
+          process.exitCode = 1;
+        if (process.env.GITHUB_STEP_SUMMARY)
+          appendFileSync(
+            process.env.GITHUB_STEP_SUMMARY,
+            `Full description refresh — ${source}: updated ${refresh.refreshed}, held ${refresh.held}, failed ${refresh.failed}, removed ${refresh.removed}, remaining ${refresh.remaining}.\n\n`,
+          );
+      }
+    }
     for (const source of arg ? [arg] : Object.keys(configs)) {
       const result = await reconcileSource(source);
       if (Object.keys(result).length)
@@ -43,6 +65,7 @@ try {
       );
     for (const source of sources) {
       if (stopped) break;
+      if (refreshedSources.has(source.id)) continue;
       const result = await runSource(source.id as SourceId);
       const automation = await reconcileSource(source.id);
       if (Object.keys(automation).length)

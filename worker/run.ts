@@ -1,3 +1,4 @@
+import { completeDescription } from './linked-description';
 import { assessReportedTotal } from './quality';
 import { randomUUID } from 'node:crypto';
 import {
@@ -241,10 +242,8 @@ export async function runSource(
         break;
       }
       try {
-        const data = parseDetail(
-          source,
-          await sourceFetch(source, item.url),
-          item.url,
+        const data = await completeDescription(
+          parseDetail(source, await sourceFetch(source, item.url), item.url),
         );
         const outcome = await stageVacancy(
           item.id,

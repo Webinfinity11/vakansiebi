@@ -161,3 +161,9 @@ See [automation rules](docs/automation.md). Migration 007 adds opt-in source pub
 `npx tsx scripts/enrich-existing.ts` previews additive pay extraction across currently searchable jobs in batches of 100. Use `--apply` to write validated changes and audit entries. By default only automatically managed, unpaused jobs are eligible. An explicit `--include-editorial` also fills missing pay and adds source-text pay excerpts to editorial/paused records; it preserves existing salary text, publication state and automation flags. This option is for an intentional catalogue repair, not a scheduled override of editorial choices. Source advisory locks prevent overlap with crawlers. No source verification timestamp is advanced because this operation only reinterprets stored text.
 
 Source comparison and recovery scope: [2026-09-10 audit](docs/source-audit-2026-09-10.md).
+
+### Full source text and old records
+
+Vacancy details retain the complete source description and add important conditions above it. Supported linked employer vacancy pages are also imported in full; source text is not replaced by a generated summary. Extra source facts are visible without expanding a disclosure. A rejected or unavailable external response retains the last verified text and stays in the refresh queue.
+
+After `npm run db:migrate`, use `npx tsx scripts/queue-description-refresh.ts --apply` to explicitly request a fresh fetch of all currently published primary sources, including older paused records. The existing GitHub scraper drains that queue first. Progress is stored in `source_items.refresh_requested_at` / `refresh_completed_at` and `source_runs`; newer editorial edits take precedence over queued requests. See [source adapters](worker/SOURCES.md).

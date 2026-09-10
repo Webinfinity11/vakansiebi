@@ -365,7 +365,7 @@ export default function VacancyPage({
             </aside>
           )}
           <section className="vacancy-description-panel">
-            <h2 className="description-heading">პოზიციის შესახებ</h2>
+            <h2 className="description-heading">სრული აღწერა</h2>
             {job.description.trim() ? (
               <Description text={description} />
             ) : (
@@ -401,11 +401,8 @@ export default function VacancyPage({
             )}
             {!hasContact && <TranslationHelp job={job} />}
             {!!job.facts?.length && (
-              <details className="extra-facts">
-                <summary>
-                  დამატებითი პირობები და მოთხოვნები{' '}
-                  <span>{job.facts.length}</span>
-                </summary>
+              <section className="extra-facts">
+                <h3>დამატებითი პირობები და მოთხოვნები</h3>
                 <dl>
                   {job.facts.map((f) => (
                     <div key={f.label}>
@@ -414,7 +411,7 @@ export default function VacancyPage({
                     </div>
                   ))}
                 </dl>
-              </details>
+              </section>
             )}
             {(job.companyProfile?.website ||
               job.companyProfile?.description) && (
@@ -460,6 +457,16 @@ export default function VacancyPage({
                 საკონტაქტო ინფორმაცია აღწერაში არ არის მითითებული. დაკავშირების
                 გზა შეგიძლია განცხადების ორიგინალში ნახო.
               </p>
+            )}
+            {job.fullTextUrl && (
+              <a
+                className="vacancy-fulltext-source"
+                href={job.fullTextUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                სრული ტექსტი დამსაქმებლის გვერდზე <ArrowUpRight size={14} />
+              </a>
             )}
             <div className="vacancy-source-links">
               {(job.sources.length
