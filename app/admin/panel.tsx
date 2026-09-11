@@ -34,6 +34,8 @@ import { CompanyLogo } from '../company-logo';
 import { CompanyEditor } from './company-editor';
 import type { AdminJob, Source, Vacancy, SourceRun } from '@/lib/types';
 import { categories, sourceNames } from '@/lib/types';
+import { sourceHealth } from '@/lib/scraper-status';
+import type { githubScraperStatus } from '@/lib/server/scraper-github';
 const names: Record<string, string> = {
   pending: 'შემოტანილი',
   published: 'გამოქვეყნებული',
@@ -49,7 +51,8 @@ const names: Record<string, string> = {
 };
 const time = (v: string | null) =>
   v
-    ? new Date(v).toLocaleString('ka-GE', {
+    ? new Date(v).toLocaleString('en-GB', {
+        timeZone: 'Asia/Tbilisi',
         dateStyle: 'short',
         timeStyle: 'short',
       })
@@ -74,6 +77,10 @@ async function request(url: string, body?: unknown) {
   return d;
 }
 export default function AdminPanel() {
+  const [observedAt, setObservedAt] = useState(0);
+  const [github, setGithub] = useState<Awaited<
+    ReturnType<typeof githubScraperStatus>
+  > | null>(null);
   const [tab, setTab] = useState('vacancies'),
     [status, setStatus] = useState('review'),
     [query, setQuery] = useState(''),
@@ -112,6 +119,8 @@ export default function AdminPanel() {
       setCounts(a.counts);
       setSources(b.sources);
       setRuns(b.runs);
+      setGithub(b.github);
+      setObservedAt(Date.parse(b.observedAt));
       setError('');
     } catch (e) {
       setError((e as Error).message);
@@ -190,8 +199,13 @@ export default function AdminPanel() {
       await load();
     }
   };
-  const sourceAction = async (s: Source, body: Record<string, unknown>) => {
+  const sourceAction = async (
+    s: { id: Source['id'] | 'all' },
+    body: Record<string, unknown>,
+  ) => {
     setBusy(true);
+    setError('');
+    setMessage('');
     try {
       const d = await request('/api/admin/sources', { id: s.id, ...body });
       setMessage(d.message || 'წყაროს პარამეტრები შენახულია.');
@@ -206,7 +220,7 @@ export default function AdminPanel() {
     setDraft((d) => (d ? { ...d, [key]: value } : d));
   return (
     <>
-      <header className="topbar">
+      <header className="topbar admin-topbar">
         <div className="header-inner">
           <Brand />
           <nav>
@@ -424,6 +438,82 @@ export default function AdminPanel() {
             </div>
           </TabsContent>
           <TabsContent value="sources">
+            <section className="scraper-overview" aria-label="სკრაპერის მართვა">
+              <div>
+                <span className="scraper-eyebrow">GITHUB ACTIONS</span>
+                <h2>ავტომატური შემოტანის მართვა</h2>
+                <p>
+                  სკრაპერი GitHub-ზე მუშაობს. შენი კომპიუტერის ჩართვა საჭირო არ
+                  არის.
+                </p>
+                <p className="scraper-schedule">
+                  გაშვების განრიგი: ყოველ 30 წუთში · GitHub-ს შეუძლია გაშვება
+                  დააგვიანოს. მონაცემები აქ ყოველ 10 წამში ახლდება.
+                </p>
+              </div>
+              <div className="scraper-controls">
+                <button
+                  className="primary"
+                  disabled={busy || !sources.some((s) => s.enabled)}
+                  onClick={() =>
+                    void sourceAction({ id: 'all' }, { action: 'run' })
+                  }
+                >
+                  <RefreshCw size={16} />
+                  ყველას შემოწმება
+                </button>
+                <button
+                  className="secondary-button"
+                  disabled={busy}
+                  onClick={() =>
+                    void sourceAction(
+                      { id: 'all' },
+                      {
+                        action: 'configure',
+                        autoEnabled: !sources.some((s) => s.auto_enabled),
+                      },
+                    )
+                  }
+                >
+                  {sources.some((s) => s.auto_enabled)
+                    ? 'ავტომატური ძებნის შეჩერება'
+                    : 'ავტომატური ძებნის ჩართვა'}
+                </button>
+              </div>
+              <div className="scraper-connection">
+                <span>
+                  <strong>
+                    {sources.filter((s) => s.enabled && s.auto_enabled).length}{' '}
+                    / {sources.length}
+                  </strong>{' '}
+                  წყაროზე ავტომატური ძებნაა ჩართული
+                </span>
+                {github?.latest && (
+                  <a href={github.latest.url} target="_blank" rel="noreferrer">
+                    ბოლო GitHub გაშვება: {time(github.latest.startedAt)} ·{' '}
+                    {github.latest.status === 'completed'
+                      ? github.latest.conclusion === 'success'
+                        ? 'დასრულდა'
+                        : 'შედეგი შესამოწმებელია'
+                      : 'რიგშია / მიმდინარეობს'}{' '}
+                    <ExternalLink size={13} />
+                  </a>
+                )}
+                {github && !github.available && (
+                  <span>
+                    GitHub-ის სტატუსი დროებით ვერ ჩაიტვირთა. ქვემოთ ბაზაში
+                    შენახული შედეგებია.
+                  </span>
+                )}
+              </div>
+              {github && !github.dispatchConfigured && (
+                <p className="scraper-setup-note">
+                  პირდაპირი გაშვების კავშირი ჯერ არ არის დამატებული. ღილაკით
+                  მოთხოვნა ინახება და GitHub-ის შემდეგ ავტომატურ ციკლში
+                  სრულდება.
+                </p>
+              )}
+            </section>
             <div className="source-grid">
               {sources.map((s) => (
                 <section className="source-card" key={s.id}>
@@ -433,15 +523,47 @@ export default function AdminPanel() {
                     </div>
                     <h2>{s.name}</h2>
                     <span
-                      className={`status ${s.enabled ? 'status-published' : 'status-archived'}`}
+                      className={`source-health health-${sourceHealth(s, observedAt).tone}`}
                     >
-                      {s.enabled ? 'ჩართულია' : 'გამორთულია'}
+                      {sourceHealth(s, observedAt).label}
                     </span>
                   </div>
                   <p className="source-last">
                     <Clock3 size={15} />
                     ბოლო წარმატება: {time(s.last_success_at)}
                   </p>
+                  <dl className="source-timing">
+                    <div>
+                      <dt>ბოლო აქტივობა</dt>
+                      <dd>
+                        {time(s.latest_run?.started_at || s.last_started_at)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>შემდეგი შემოწმება</dt>
+                      <dd>
+                        {!s.enabled
+                          ? 'წყარო გამორთულია'
+                          : s.requested_at
+                            ? 'გაშვების რიგშია'
+                            : !s.auto_enabled
+                              ? 'მხოლოდ მოთხოვნით'
+                              : Date.parse(s.next_run_at) <= observedAt
+                                ? 'GitHub-ის შემდეგ ციკლში'
+                                : time(s.next_run_at)}
+                      </dd>
+                    </div>
+                    {!!s.latest_run && (
+                      <div>
+                        <dt>ბოლო შედეგი</dt>
+                        <dd>
+                          {names[s.latest_run.status] || s.latest_run.status} ·
+                          ახალი {s.latest_run.imported} · შეცვლილი{' '}
+                          {s.latest_run.changed}
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
                   <div className="source-numbers">
                     <span>
                       <strong>{s.discovered ?? s.imported}</strong> აღმოჩენილი
@@ -450,6 +572,27 @@ export default function AdminPanel() {
                       <strong>{s.queued}</strong> რიგში
                     </span>
                   </div>
+                  {!!s.refresh_pending && (
+                    <div className="source-repair-note">
+                      <strong>
+                        სრული ტექსტის განახლება: {s.refresh_pending}
+                      </strong>
+                      <p>
+                        {s.refresh_retrying || 0} განცხადება განმეორებით
+                        შემოწმებას ელოდება. ეს ახალი ვაკანსიების ძებნას აღარ
+                        აჩერებს.
+                      </p>
+                      <button
+                        className="text-button"
+                        disabled={busy || !s.enabled}
+                        onClick={() =>
+                          void sourceAction(s, { action: 'retry' })
+                        }
+                      >
+                        პრობლემურის ხელახალი შემოწმება
+                      </button>
+                    </div>
+                  )}
                   {(s.quality_warning || !!s.quality_held) && (
                     <div className="source-quality-note">
                       <strong>ავტომატური ხელახალი შემოწმება</strong>
@@ -475,10 +618,7 @@ export default function AdminPanel() {
                     </p>
                     <p>
                       ბოლო 24 საათში გავლილი გვერდები:{' '}
-                      <b>
-                        {s.observed_pages ?? 0}
-                        {s.reported_pages ? ` / ${s.reported_pages}` : ''}
-                      </b>
+                      <b>{s.observed_pages ?? 0}</b>
                     </p>
                     <small>
                       წყაროს საერთო რაოდენობა შეიძლება შეიცავდეს დუბლიკატებსა და
@@ -514,28 +654,44 @@ export default function AdminPanel() {
                         })
                       }
                     />
-                    ავტომატური შემოწმება
+                    ახალი ვაკანსიების ავტომატური ძებნა
+                  </label>
+                  <label
+                    className="check-row"
+                    htmlFor={`source-publish-${s.id}`}
+                  >
+                    <Checkbox
+                      id={`source-publish-${s.id}`}
+                      checked={!!s.auto_publish}
+                      disabled={busy}
+                      onCheckedChange={(v) =>
+                        void sourceAction(s, {
+                          action: 'configure',
+                          autoPublish: v,
+                        })
+                      }
+                    />
+                    შემოწმებული ვაკანსიების ავტომატური გამოქვეყნება
                   </label>
                   <div className="interval-row">
                     <span>სიის შემოწმება</span>
-                    <Choice
-                      label="ინტერვალი"
-                      value={`${s.interval_minutes} წუთი`}
-                      options={[
-                        '15 წუთი',
-                        '30 წუთი',
-                        '60 წუთი',
-                        '180 წუთი',
-                        '1440 წუთი',
-                      ]}
-                      onChange={(v) => {
-                        if (v !== 'ყველა')
-                          void sourceAction(s, {
-                            action: 'configure',
-                            intervalMinutes: parseInt(v),
-                          });
-                      }}
-                    />
+                    <select
+                      className="choice"
+                      aria-label={`${s.name}: შემოწმების ინტერვალი`}
+                      value={s.interval_minutes}
+                      disabled={busy}
+                      onChange={(e) =>
+                        void sourceAction(s, {
+                          action: 'configure',
+                          intervalMinutes: Number(e.target.value),
+                        })
+                      }
+                    >
+                      <option value={30}>30 წუთი</option>
+                      <option value={60}>1 საათი</option>
+                      <option value={180}>3 საათი</option>
+                      <option value={1440}>24 საათი</option>
+                    </select>
                   </div>
                   <p className="source-last">
                     არსებული ვაკანსიების ხელახალი შემოწმების სამიზნე ინტერვალი:{' '}
@@ -555,19 +711,24 @@ export default function AdminPanel() {
                   )}
                   <button
                     className="secondary-button"
-                    disabled={busy || !s.enabled || !!s.requested_at}
+                    disabled={busy || !s.enabled}
                     onClick={() => void sourceAction(s, { action: 'run' })}
                   >
                     <RefreshCw size={16} />
-                    {s.requested_at ? 'რიგშია…' : 'ახლავე შემოწმება'}
+                    {s.requested_at
+                      ? 'გაშვების ხელახლა მოთხოვნა'
+                      : github?.dispatchConfigured
+                        ? 'ახლავე შემოწმება'
+                        : 'შემოწმების მოთხოვნა'}
                   </button>
                 </section>
               ))}
             </div>
             <p className="admin-helper">
-              რიგში მოთავსებულ დავალებებს ცალკე ფონური პროცესი ასრულებს.
-              დროებითი შეცდომისას შემოწმების ინტერვალი იზრდება; შენახული
-              ვაკანსიები რჩება.
+              ავტომატური ძებნის შეჩერება ახალ გაშვებებს ეხება; უკვე მიმდინარე
+              ციკლი დასრულდება. მოთხოვნილი ძველი ტექსტების აღდგენა ცალკე
+              გრძელდება. ყველაფრის შესაჩერებლად გამორთე „წყაროს გამოყენება“.
+              დროებითი შეცდომები რიგში რჩება და შემდეგ ციკლში მოწმდება.
             </p>
           </TabsContent>
           <TabsContent value="runs">

@@ -66,6 +66,10 @@ export type Source = {
   name: string;
   enabled: boolean;
   auto_enabled: boolean;
+  auto_publish?: boolean;
+  refresh_pending?: number;
+  refresh_retrying?: number;
+  latest_run?: SourceRun | null;
   interval_minutes: number;
   detail_interval_hours: number;
   last_started_at: string | null;

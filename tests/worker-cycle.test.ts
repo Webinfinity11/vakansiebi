@@ -18,9 +18,9 @@ function fixture({ due = true, failed = 14, stopped = false } = {}) {
         remaining: failed,
       };
     },
-    discover: async (source) => {
+    discover: async () => {
       events.push('discover');
-      return { source, skipped: true };
+      return { skipped: true };
     },
     reconcile: async () => {
       events.push('reconcile');

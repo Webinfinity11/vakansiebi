@@ -1,3 +1,4 @@
+import './admin.css';
 import { isAdmin } from '@/lib/server/auth';
 import AdminPanel from './panel';
 import Login from './login';

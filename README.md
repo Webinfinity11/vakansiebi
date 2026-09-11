@@ -103,7 +103,7 @@ Vercel-ის Production გარემოში საჭიროა `DATABAS
 
 The scraper runs in GitHub Actions (`.github/workflows/scrape.yml`) at minutes 17 and 47 of each hour. Each source respects its admin interval, enabled status and manual request. Admin requests are picked up by the next workflow run; Actions > Vacancy scraper > Run workflow also checks due sources. The local computer is no longer required.
 
-`SCRAPER_DATABASE_URL` is a GitHub Actions secret containing the Neon direct connection URL; session advisory locks require the direct endpoint. Four independent jobs process up to 50 details per source. Overlapping workflows queue, and database locks also protect against a local worker. Three consecutive detail failures stop that source's batch, retaining the remaining queue. Partial and failed results appear as failed Actions jobs and remain visible in the admin history. Sources with auto_publish enabled validate, publish, update and archive automatically. Invalid records wait for source recovery without a manual-review flag. The scraper never sends messages.
+`SCRAPER_DATABASE_URL` is a GitHub Actions secret containing the Neon direct connection URL; session advisory locks require the direct endpoint. Four independent jobs process up to 100 details per source. Overlapping workflows queue, and database locks also protect against a local worker. Three consecutive detail failures stop that source's batch, retaining the remaining queue. Partial and failed results appear as failed Actions jobs and remain visible in the admin history. Sources with auto_publish enabled validate, publish, update and archive automatically. Invalid records wait for source recovery without a manual-review flag. The scraper never sends messages.
 
 GitHub schedules may be delayed. In public repositories, schedules disable after 60 days without repository activity and must be re-enabled. Standard GitHub-hosted runners are free for this public repository; Neon usage is separate.
 
@@ -167,3 +167,12 @@ Source comparison and recovery scope: [2026-09-10 audit](docs/source-audit-2026-
 Vacancy details retain the complete source description and add important conditions above it. Supported linked employer vacancy pages are also imported in full; source text is not replaced by a generated summary. Extra source facts are visible without expanding a disclosure. A rejected or unavailable external response retains the last verified text and stays in the refresh queue.
 
 After `npm run db:migrate`, use `npx tsx scripts/queue-description-refresh.ts --apply` to explicitly request a fresh fetch of all currently published primary sources, including older paused records. The existing GitHub scraper drains that queue first. Progress is stored in `source_items.refresh_requested_at` / `refresh_completed_at` and `source_runs`; newer editorial edits take precedence over queued requests. See [source adapters](worker/SOURCES.md).
+
+
+## Admin scraper control
+
+In **ადმინი → წყაროები და განახლება**, manage discovery, publication and source intervals; request a run for one/all enabled sources; retry pending description repairs; inspect GitHub and per-source history. The GitHub schedule requests a run every 30 minutes; GitHub may delay scheduled runs. Turning off automatic discovery leaves previously requested description repairs enabled; disabling the source stops both on subsequent batches.
+
+Description repair gets at most 20 items / a 3-minute budget before due discovery runs. Failed repairs remain queued and emit warnings; they cannot starve discovery. Hard infrastructure errors still fail the worker. Discovery quality warnings remain visible in Actions and the admin history.
+
+For immediate admin-to-GitHub dispatch, set server-only `GITHUB_ACTIONS_TOKEN` in Vercel Production: a fine-grained token restricted to `Webinfinity11/vakansiebi`, **Actions: read and write**, with an explicit expiry/rotation plan. No client environment variable. The endpoint is fixed to `scrape.yml` on `main`, requires an admin session and same-origin POST, and coalesces dispatches for 60 seconds using a database lock. If the token is missing or GitHub rejects a request, the durable queue remains and the UI explicitly says it is awaiting a scheduled run. Never copy a token into this README, a screenshot or a chat message.

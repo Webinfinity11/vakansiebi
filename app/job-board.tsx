@@ -670,50 +670,50 @@ export default function JobBoard() {
                   </button>
                 ))}
               </div>
-              <form
-                role="search"
-                aria-label="ვაკანსიის ძებნა"
-                className="searchbar"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  document.getElementById('results')?.scrollIntoView({
-                    behavior: window.matchMedia(
-                      '(prefers-reduced-motion: reduce)',
-                    ).matches
-                      ? 'auto'
-                      : 'smooth',
-                  });
-                }}
-              >
-                <Search size={22} />
-                <input
-                  aria-label="მოძებნე ვაკანსია ან კომპანია"
-                  maxLength={200}
-                  placeholder="პოზიცია, კომპანია ან საკვანძო სიტყვა"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-                <div className="search-city">
-                  <MapPin size={18} />
-                  <Choice
-                    label="ყველა ქალაქი"
-                    value={city}
-                    onChange={setCity}
-                    options={cities}
-                  />
-                </div>
-                <button
-                  className="primary"
-                  type="submit"
-                  aria-label="მოძებნე ვაკანსია"
+              <search aria-label="ვაკანსიის ძებნა">
+                <form
+                  className="searchbar"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    document.getElementById('results')?.scrollIntoView({
+                      behavior: window.matchMedia(
+                        '(prefers-reduced-motion: reduce)',
+                      ).matches
+                        ? 'auto'
+                        : 'smooth',
+                    });
+                  }}
                 >
-                  <span className="search-label-full">მოძებნე ვაკანსია</span>
-                  <span className="search-label-short" aria-hidden="true">
-                    ძებნა
-                  </span>
-                  <ArrowRight size={18} />
-                </button>
-              </form>
+                  <Search size={22} />
+                  <input
+                    aria-label="მოძებნე ვაკანსია ან კომპანია"
+                    maxLength={200}
+                    placeholder="პოზიცია, კომპანია ან საკვანძო სიტყვა"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <div className="search-city">
+                    <MapPin size={18} />
+                    <Choice
+                      label="ყველა ქალაქი"
+                      value={city}
+                      onChange={setCity}
+                      options={cities}
+                    />
+                  </div>
+                  <button
+                    className="primary"
+                    type="submit"
+                    aria-label="მოძებნე ვაკანსია"
+                  >
+                    <span className="search-label-full">მოძებნე ვაკანსია</span>
+                    <span className="search-label-short" aria-hidden="true">
+                      ძებნა
+                    </span>
+                    <ArrowRight size={18} />
+                  </button>
+                </form>
+              </search>
             </div>
             <div className="hero-assurance">
               <span>
