@@ -9,6 +9,7 @@ import {
 import {
   EmployerHttpError,
   publicPage,
+  UnusableEmployerLink,
   validateLinkedUrl,
 } from './public-page';
 import { sourceFetch } from './http';
@@ -20,8 +21,11 @@ export class ClosedEmployerVacancy extends Error {
     super('Employer vacancy is closed');
   }
 }
-/** The linked page is readable but is not this vacancy's text; retrying cannot change that. */
-export class UnusableEmployerLink extends Error {}
+export { UnusableEmployerLink };
+/**
+ * A reachable employer link that cannot supply this vacancy's text. Timeouts, rate limits and
+ * server errors stay retryable; every other definite response means retrying reproduces it.
+ */
 export function unusableEmployerLink(error: unknown) {
   return (
     error instanceof UnusableEmployerLink ||
@@ -31,6 +35,8 @@ export function unusableEmployerLink(error: unknown) {
       ![408, 429].includes(error.status))
   );
 }
+/** Retries that must elapse before a snapshot stops waiting for its verified employer link. */
+export const verifiedLinkRetryLimit = 5;
 export type LinkedText = {
   title: string;
   text: string;
@@ -272,19 +278,26 @@ export async function readLinkedText(
 }
 /**
  * Appends the employer's own vacancy text when the linked page is verifiably the same vacancy.
- * A link that is readable but is not this vacancy never blocks the source text itself: the
+ * A link that is reachable but is not this vacancy never blocks the source text itself: the
  * vacancy is kept with its primary description instead of failing the whole import. A snapshot
- * that already carries verified employer text keeps that text and stays queued for a retry.
+ * that already carries verified employer text keeps that text and is retried, but only until
+ * `verifiedLinkRetryLimit`, so a permanently broken link cannot freeze its other source fields.
  */
 export async function completeDescription(
   job: Vacancy,
   previous?: Vacancy | null,
+  failures = 0,
 ): Promise<Vacancy> {
   const links = job.applicationLinks || [];
   const candidates = links
     .map((l) => ({ url: l.url, provider: linkedProvider(l.url) }))
     .filter((l) => l.provider);
-  const keepVerified = Boolean(previous?.fullTextUrl);
+  const keepVerified =
+    Boolean(previous?.fullTextUrl) && failures < verifiedLinkRetryLimit;
+  const dropped = (url: string, reason: string) =>
+    console.log(
+      JSON.stringify({ employerLinkSkipped: url, reason, vacancy: job.url }),
+    );
   // Follow only vacancy-specific links supplied by the source, never arbitrary site navigation.
   let linked: LinkedText | null = null;
   for (const candidate of candidates.slice(0, 3)) {
@@ -309,12 +322,17 @@ export async function completeDescription(
             'Linked employer vacancy title differs from original',
           );
       } catch (error) {
+        // A closed posting under this vacancy's own title retires the vacancy; a closed posting
+        // under a different title only proves the link points at something else.
+        const closed = error instanceof ClosedEmployerVacancy;
         if (
-          error instanceof ClosedEmployerVacancy &&
-          sameLinkedTitle(job.title, error.title)
+          closed &&
+          sameLinkedTitle(job.title, (error as ClosedEmployerVacancy).title)
         )
           throw new UnavailableVacancy();
-        if (!unusableEmployerLink(error) || keepVerified) throw error;
+        if (keepVerified || !(closed || unusableEmployerLink(error)))
+          throw error;
+        dropped(candidate.url, (error as Error).message);
         linked = null;
         continue;
       }
@@ -326,11 +344,9 @@ export async function completeDescription(
   if (job.description.includes(linked.text)) return { ...job, logoUrl };
   const description =
     job.description + '\n\nსრული ინფორმაცია დამსაქმებლისგან:\n\n' + linked.text;
+  // Deterministic in both texts, so retrying reproduces it; keep the vacancy rather than loop.
   if (description.length > 100000) {
-    if (keepVerified)
-      throw new UnusableEmployerLink(
-        'Complete description exceeds supported size',
-      );
+    dropped(linked.url, 'Complete description exceeds supported size');
     return { ...job, logoUrl };
   }
   return enrichVacancy({

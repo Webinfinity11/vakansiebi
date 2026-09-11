@@ -39,7 +39,7 @@ try {
       }
       const items = (
         await client.query(
-          'SELECT id,url FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND ($3::uuid IS NULL OR job_id=$3::uuid) ORDER BY last_checked_at NULLS FIRST,id LIMIT $2',
+          'SELECT id,url,raw,failures FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND ($3::uuid IS NULL OR job_id=$3::uuid) ORDER BY last_checked_at NULLS FIRST,id LIMIT $2',
           [source, limit, jobId || null],
         )
       ).rows;
@@ -47,6 +47,8 @@ try {
         try {
           const data = await completeDescription(
             parseDetail(source, await sourceFetch(source, item.url), item.url),
+            item.raw,
+            item.failures,
           );
           const outcome = await stageVacancy(item.id, data);
           console.log(

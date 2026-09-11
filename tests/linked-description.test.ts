@@ -8,6 +8,7 @@ import {
   sameLinkedTitle,
   linkedProvider,
   unusableEmployerLink,
+  verifiedLinkRetryLimit,
 } from '../worker/linked-description';
 import type { Vacancy } from '../lib/types';
 import { validateLinkedUrl } from '../worker/public-page';
@@ -335,6 +336,105 @@ void test('a snapshot that already carries verified employer text retains it and
         ),
       (error: unknown) => unusableEmployerLink(error),
     );
+  } finally {
+    mock.mock.restore();
+  }
+});
+
+void test('a closed employer posting under a different title leaves the vacancy with its own text', async (t) => {
+  const mock = t.mock.method(
+    globalThis,
+    'fetch',
+    async (input: URL | string) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/robots.txt')
+        return new Response('', { status: 404 });
+      return new Response(
+        '<h1 class="job-title">გაყიდვების მენეჯერი</h1><div class="jobad--empty-state">This job has expired</div>',
+        { status: 200 },
+      );
+    },
+  );
+  try {
+    const job = vacancy({
+      applicationLinks: [
+        { label: 'განაცხადი', url: 'https://jobs.smartrecruiters.com/co/1' },
+      ],
+    });
+    assert.equal((await completeDescription(job)).description, job.description);
+  } finally {
+    mock.mock.restore();
+  }
+});
+
+void test('an employer link disallowed by robots keeps the vacancy instead of blocking the import', async (t) => {
+  const mock = t.mock.method(
+    globalThis,
+    'fetch',
+    async (input: URL | string) => {
+      const url = new URL(String(input));
+      if (url.pathname === '/robots.txt')
+        return new Response('User-agent: *\nDisallow: /', { status: 200 });
+      return new Response(employerPage('მოლარე'), { status: 200 });
+    },
+  );
+  try {
+    const job = vacancy({
+      applicationLinks: [
+        { label: 'განაცხადი', url: 'https://blocked.selfrecruit.ge/abc' },
+      ],
+    });
+    assert.equal((await completeDescription(job)).description, job.description);
+  } finally {
+    mock.mock.restore();
+  }
+});
+
+void test('a permanently broken employer link stops freezing the rest of the vacancy after the retry limit', async (t) => {
+  const mock = employerResponses(t, () => new Response('', { status: 404 }));
+  try {
+    const job = vacancy({
+      applicationLinks: [
+        { label: 'განაცხადი', url: 'https://stale.selfrecruit.ge/abc' },
+      ],
+    });
+    const previous = vacancy({
+      fullTextUrl: 'https://stale.selfrecruit.ge/abc',
+    });
+    await assert.rejects(
+      () => completeDescription(job, previous, verifiedLinkRetryLimit - 1),
+      (error: unknown) => unusableEmployerLink(error),
+    );
+    assert.equal(
+      (await completeDescription(job, previous, verifiedLinkRetryLimit))
+        .description,
+      job.description,
+    );
+  } finally {
+    mock.mock.restore();
+  }
+});
+
+void test('an oversized combined description keeps the vacancy rather than retrying a fixed condition', async (t) => {
+  const mock = employerResponses(
+    t,
+    () => new Response(employerPage('მოლარე'), { status: 200 }),
+  );
+  try {
+    const job = vacancy({
+      description: 'ვ'.repeat(99_900),
+      applicationLinks: [
+        { label: 'განაცხადი', url: 'https://big.selfrecruit.ge/abc' },
+      ],
+    });
+    const result = await completeDescription(
+      job,
+      vacancy({
+        fullTextUrl: 'https://big.selfrecruit.ge/abc',
+      }),
+    );
+    assert.equal(result.description, job.description);
+    assert.equal(result.fullTextUrl, undefined);
   } finally {
     mock.mock.restore();
   }

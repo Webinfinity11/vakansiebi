@@ -245,6 +245,7 @@ export async function runSource(
         const data = await completeDescription(
           parseDetail(source, await sourceFetch(source, item.url), item.url),
           item.raw,
+          item.failures,
         );
         const outcome = await stageVacancy(
           item.id,

@@ -55,7 +55,7 @@ export async function refreshDescriptions(
     for (const item of removedItems) await reconcileRemovedRefresh(item.id);
     const items = (
       await c.query(
-        `SELECT i.id,i.url,i.raw FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now()
+        `SELECT i.id,i.url,i.raw,i.failures FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now()
         ORDER BY CASE WHEN length(COALESCE(i.raw->>'description',''))<700 AND jsonb_array_length(COALESCE(i.raw->'applicationLinks','[]'::jsonb))>0 THEN 0 ELSE 1 END,i.next_check_at,i.id LIMIT $2`,
         [source, Math.max(1, Math.min(1000, limit))],
       )
@@ -75,6 +75,7 @@ export async function refreshDescriptions(
         const data = await completeDescription(
           parseDetail(source, html, item.url),
           item.raw,
+          item.failures,
         );
         const result = await stageVacancy(item.id, data);
         if (result === 'quality_held') held++;

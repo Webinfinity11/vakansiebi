@@ -24,10 +24,15 @@ export const linkedHosts = [
 ];
 /** A definite employer response code; 4xx means this link will not become readable by retrying. */
 export class EmployerHttpError extends Error {
-  constructor(public status: number) {
-    super(`Employer returned HTTP ${status}`);
+  constructor(
+    public status: number,
+    message = `Employer returned HTTP ${status}`,
+  ) {
+    super(message);
   }
 }
+/** The linked page is reachable but is not usable as this vacancy's text; retrying cannot change that. */
+export class UnusableEmployerLink extends Error {}
 export function validateLinkedUrl(value: string) {
   const u = new URL(value);
   if (
@@ -40,7 +45,7 @@ export function validateLinkedUrl(value: string) {
       /^[a-z0-9-]+\.selfrecruit\.ge$/.test(u.hostname)
     )
   )
-    throw Error('Unsupported employer URL');
+    throw new UnusableEmployerLink('Unsupported employer URL');
   return u;
 }
 async function request(url: URL) {
@@ -56,7 +61,7 @@ async function request(url: URL) {
   });
   if (Number(r.headers.get('content-length')) > 6000000) {
     await r.body?.cancel();
-    throw Error('Employer response too large');
+    throw new UnusableEmployerLink('Employer response too large');
   }
   const reader = r.body?.getReader();
   const chunks: Uint8Array[] = [];
@@ -68,7 +73,7 @@ async function request(url: URL) {
       size += value.byteLength;
       if (size > 6000000) {
         await reader.cancel();
-        throw Error('Employer response too large');
+        throw new UnusableEmployerLink('Employer response too large');
       }
       chunks.push(value);
     }
@@ -83,7 +88,8 @@ export async function publicPage(
   redirects = 0,
 ): Promise<{ url: string; text: string }> {
   const u = validateLinkedUrl(value);
-  if (redirects > 5) throw Error('Too many employer redirects');
+  if (redirects > 5)
+    throw new UnusableEmployerLink('Too many employer redirects');
   let rules = robots.get(u.origin);
   if (!rules) {
     const robotUrl = new URL('/robots.txt', u);
@@ -98,14 +104,18 @@ export async function publicPage(
       r = await request(target);
     }
     if (![200, 404, 410].includes(r.status))
-      throw Error(`Employer robots unavailable (${r.status})`);
+      throw new EmployerHttpError(
+        r.status,
+        `Employer robots unavailable (${r.status})`,
+      );
     rules = robotsParser(robotUrl.href, r.status === 200 ? r.text : '');
     robots.set(u.origin, rules);
   }
   if (rules.isAllowed(u.href, agent) === false)
-    throw Error('Employer robots disallow vacancy');
+    throw new UnusableEmployerLink('Employer robots disallow vacancy');
   const crawlDelay = rules.getCrawlDelay(agent) || 0;
-  if (crawlDelay > 60) throw Error('Employer crawl delay exceeds budget');
+  if (crawlDelay > 60)
+    throw new UnusableEmployerLink('Employer crawl delay exceeds budget');
   if (crawlDelay) await delay(crawlDelay * 1000);
   const r = await request(u);
   if (r.status >= 300 && r.status < 400 && r.location)
