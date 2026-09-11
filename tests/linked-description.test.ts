@@ -1,12 +1,15 @@
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ClosedEmployerVacancy,
+  completeDescription,
   parseHelio,
   parseLinkedPage,
   sameLinkedTitle,
   linkedProvider,
+  unusableEmployerLink,
 } from '../worker/linked-description';
+import type { Vacancy } from '../lib/types';
 import { validateLinkedUrl } from '../worker/public-page';
 import { cleanText, parseDetail } from '../worker/adapters';
 void test('linked employer description keeps all paragraphs, bullets, contacts and final requirements', () => {
@@ -236,4 +239,103 @@ void test('Helio terminal states close only the identified posting; unknown or m
       (error) =>
         error instanceof Error && !(error instanceof ClosedEmployerVacancy),
     );
+});
+
+const vacancy = (over: Partial<Vacancy> = {}): Vacancy => ({
+  title: 'მოლარე',
+  company: 'კომპანია',
+  city: 'თბილისი',
+  category: 'გაყიდვები',
+  salary: '',
+  salaryMin: null,
+  currency: '',
+  salaryPeriod: '',
+  mode: '',
+  description: 'ვაკანსიის ძირითადი აღწერა წყაროდან. '.repeat(10),
+  url: 'https://jobs.ge/ge/?view=jobs&id=751437',
+  source: 'jobs',
+  deadline: '',
+  datePosted: '2026-09-09',
+  applicationLinks: [
+    { label: 'განაცხადი', url: 'https://demo.selfrecruit.ge/abc' },
+  ],
+  ...over,
+});
+const employerPage = (title: string) =>
+  `<div class="pub-vac-text"><div class="vacancy_title_inner">${title}</div><div class="pub_vac_text_detail">${'დამსაქმებლის სრული პირობები და მოთხოვნები. '.repeat(5)}</div></div>`;
+function employerResponses(t: TestContext, page: () => Response) {
+  return t.mock.method(globalThis, 'fetch', async (input: URL | string) => {
+    const url = new URL(String(input));
+    if (url.pathname === '/robots.txt')
+      return new Response('', { status: 404 });
+    return page();
+  });
+}
+
+void test('an employer link that is a different vacancy keeps the source text instead of losing the vacancy', async (t) => {
+  const mock = employerResponses(
+    t,
+    () => new Response(employerPage('გაყიდვების მენეჯერი'), { status: 200 }),
+  );
+  try {
+    const job = vacancy();
+    const result = await completeDescription(job);
+    assert.equal(result.description, job.description);
+    assert.equal(result.fullTextUrl, undefined);
+  } finally {
+    mock.mock.restore();
+  }
+});
+
+void test('a removed employer page keeps the source text, while a temporary employer failure stays retryable', async (t) => {
+  const missing = employerResponses(t, () => new Response('', { status: 404 }));
+  try {
+    const job = vacancy({
+      applicationLinks: [
+        { label: 'განაცხადი', url: 'https://gone.selfrecruit.ge/abc' },
+      ],
+    });
+    assert.equal((await completeDescription(job)).description, job.description);
+  } finally {
+    missing.mock.restore();
+  }
+  const broken = employerResponses(t, () => new Response('', { status: 503 }));
+  try {
+    await assert.rejects(
+      () =>
+        completeDescription(
+          vacancy({
+            applicationLinks: [
+              { label: 'განაცხადი', url: 'https://down.selfrecruit.ge/abc' },
+            ],
+          }),
+        ),
+      (error: unknown) => !unusableEmployerLink(error),
+    );
+  } finally {
+    broken.mock.restore();
+  }
+});
+
+void test('a snapshot that already carries verified employer text retains it and stays queued', async (t) => {
+  const mock = employerResponses(
+    t,
+    () => new Response(employerPage('გაყიდვების მენეჯერი'), { status: 200 }),
+  );
+  try {
+    await assert.rejects(
+      () =>
+        completeDescription(
+          vacancy({
+            applicationLinks: [
+              { label: 'განაცხადი', url: 'https://kept.selfrecruit.ge/abc' },
+            ],
+          }),
+          vacancy({ fullTextUrl: 'https://kept.selfrecruit.ge/abc' }),
+        ),
+      (error: unknown) => unusableEmployerLink(error),
+    );
+  } finally {
+    mock.mock.restore();
+  }
 });

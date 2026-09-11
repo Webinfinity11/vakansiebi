@@ -6,7 +6,11 @@ import {
   parseDetail,
   UnavailableVacancy,
 } from './adapters';
-import { publicPage, validateLinkedUrl } from './public-page';
+import {
+  EmployerHttpError,
+  publicPage,
+  validateLinkedUrl,
+} from './public-page';
 import { sourceFetch } from './http';
 import { enrichVacancy } from './enrich';
 import { safeLogoUrl } from '../lib/vacancy-media';
@@ -15,6 +19,17 @@ export class ClosedEmployerVacancy extends Error {
   constructor(public title: string) {
     super('Employer vacancy is closed');
   }
+}
+/** The linked page is readable but is not this vacancy's text; retrying cannot change that. */
+export class UnusableEmployerLink extends Error {}
+export function unusableEmployerLink(error: unknown) {
+  return (
+    error instanceof UnusableEmployerLink ||
+    (error instanceof EmployerHttpError &&
+      error.status >= 400 &&
+      error.status < 500 &&
+      ![408, 429].includes(error.status))
+  );
 }
 export type LinkedText = {
   title: string;
@@ -183,7 +198,8 @@ export function parseLinkedPage(
           if (v['@type'] === 'JobPosting') posts.push(v);
       } catch {}
     });
-    if (posts.length !== 1) throw Error('Employer posting structure missing');
+    if (posts.length !== 1)
+      throw new UnusableEmployerLink('Employer posting structure missing');
     const post = posts[0];
     if (typeof post.url === 'string') {
       const expected = new URL(url),
@@ -192,13 +208,14 @@ export function parseLinkedPage(
         expected.hostname !== actual.hostname ||
         expected.pathname !== actual.pathname
       )
-        throw Error('Employer posting URL mismatch');
+        throw new UnusableEmployerLink('Employer posting URL mismatch');
     }
     title = typeof post.title === 'string' ? post.title : '';
     body = typeof post.description === 'string' ? post.description : '';
   }
   const text = cleanText(body);
-  if (!title || text.length < 100) throw Error('Employer description missing');
+  if (!title || text.length < 100)
+    throw new UnusableEmployerLink('Employer description missing');
   return { title, text, url, ...(logoUrl ? { logoUrl } : {}) };
 }
 export function parseHelio(
@@ -207,7 +224,7 @@ export function parseHelio(
   url: string,
 ): LinkedText {
   if (data.public_url_token !== token)
-    throw Error('Employer vacancy token or status mismatch');
+    throw new UnusableEmployerLink('Employer vacancy token or status mismatch');
   const text = cleanText(
     typeof data.description === 'string' ? data.description : '',
   );
@@ -220,8 +237,9 @@ export function parseHelio(
   if (title && ['completed', 'canceled'].includes(String(data.status)))
     throw new ClosedEmployerVacancy(title);
   if (data.status !== 'active')
-    throw Error('Employer vacancy token or status mismatch');
-  if (!title || text.length < 100) throw Error('Employer description missing');
+    throw new UnusableEmployerLink('Employer vacancy token or status mismatch');
+  if (!title || text.length < 100)
+    throw new UnusableEmployerLink('Employer description missing');
   const logoUrl = safeLogoUrl(data.company_logo);
   return { title, text, url, ...(logoUrl ? { logoUrl } : {}) };
 }
@@ -239,11 +257,12 @@ export async function readLinkedText(
         !['app.helio-ai.com', 'www.app.helio-ai.com'].includes(u.hostname) ||
         !/^\/apply\/[a-zA-Z0-9]+\/?$/.test(u.pathname)
       )
-        throw Error('Unsupported Helio target');
+        throw new UnusableEmployerLink('Unsupported Helio target');
       page = { url: u.href, text: '' };
     }
     const token = new URL(page.url).pathname.split('/')[2];
-    if (!/^[a-zA-Z0-9]+$/.test(token || '')) throw Error('Invalid Helio token');
+    if (!/^[a-zA-Z0-9]+$/.test(token || ''))
+      throw new UnusableEmployerLink('Invalid Helio token');
     const response = await publicPage(
       'https://api.helio-ai.com/apply/' + token,
     );
@@ -251,11 +270,21 @@ export async function readLinkedText(
   }
   return parseLinkedPage(page.text, page.url, provider);
 }
-export async function completeDescription(job: Vacancy): Promise<Vacancy> {
+/**
+ * Appends the employer's own vacancy text when the linked page is verifiably the same vacancy.
+ * A link that is readable but is not this vacancy never blocks the source text itself: the
+ * vacancy is kept with its primary description instead of failing the whole import. A snapshot
+ * that already carries verified employer text keeps that text and stays queued for a retry.
+ */
+export async function completeDescription(
+  job: Vacancy,
+  previous?: Vacancy | null,
+): Promise<Vacancy> {
   const links = job.applicationLinks || [];
   const candidates = links
     .map((l) => ({ url: l.url, provider: linkedProvider(l.url) }))
     .filter((l) => l.provider);
+  const keepVerified = Boolean(previous?.fullTextUrl);
   // Follow only vacancy-specific links supplied by the source, never arbitrary site navigation.
   let linked: LinkedText | null = null;
   for (const candidate of candidates.slice(0, 3)) {
@@ -275,16 +304,20 @@ export async function completeDescription(job: Vacancy): Promise<Vacancy> {
     } else {
       try {
         linked = await readLinkedText(candidate.url, candidate.provider!);
+        if (!sameLinkedTitle(job.title, linked.title))
+          throw new UnusableEmployerLink(
+            'Linked employer vacancy title differs from original',
+          );
       } catch (error) {
         if (
           error instanceof ClosedEmployerVacancy &&
           sameLinkedTitle(job.title, error.title)
         )
           throw new UnavailableVacancy();
-        throw error;
+        if (!unusableEmployerLink(error) || keepVerified) throw error;
+        linked = null;
+        continue;
       }
-      if (!sameLinkedTitle(job.title, linked.title))
-        throw Error('Linked employer vacancy title differs from original');
     }
     if (linked) break;
   }
@@ -293,8 +326,13 @@ export async function completeDescription(job: Vacancy): Promise<Vacancy> {
   if (job.description.includes(linked.text)) return { ...job, logoUrl };
   const description =
     job.description + '\n\nსრული ინფორმაცია დამსაქმებლისგან:\n\n' + linked.text;
-  if (description.length > 100000)
-    throw Error('Complete description exceeds supported size');
+  if (description.length > 100000) {
+    if (keepVerified)
+      throw new UnusableEmployerLink(
+        'Complete description exceeds supported size',
+      );
+    return { ...job, logoUrl };
+  }
   return enrichVacancy({
     ...job,
     description,

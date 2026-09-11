@@ -55,7 +55,7 @@ export async function refreshDescriptions(
     for (const item of removedItems) await reconcileRemovedRefresh(item.id);
     const items = (
       await c.query(
-        `SELECT i.id,i.url FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now()
+        `SELECT i.id,i.url,i.raw FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now()
         ORDER BY CASE WHEN length(COALESCE(i.raw->>'description',''))<700 AND jsonb_array_length(COALESCE(i.raw->'applicationLinks','[]'::jsonb))>0 THEN 0 ELSE 1 END,i.next_check_at,i.id LIMIT $2`,
         [source, Math.max(1, Math.min(1000, limit))],
       )
@@ -74,6 +74,7 @@ export async function refreshDescriptions(
         primaryFailures = 0;
         const data = await completeDescription(
           parseDetail(source, html, item.url),
+          item.raw,
         );
         const result = await stageVacancy(item.id, data);
         if (result === 'quality_held') held++;
@@ -88,7 +89,9 @@ export async function refreshDescriptions(
           e instanceof UnavailableVacancy ||
           (e instanceof SourceHttpError && [404, 410].includes(e.status));
         await c.query(
-          `UPDATE source_items SET last_checked_at=now(),error=$2,failures=failures+1,next_check_at=now()+interval '30 minutes',refresh_completed_at=CASE WHEN $3 THEN now() ELSE refresh_completed_at END WHERE id=$1`,
+          `UPDATE source_items SET last_checked_at=now(),error=$2,failures=failures+1,
+          next_check_at=now()+(LEAST(1440,30*power(2,LEAST(failures,5)))*interval '1 minute'),
+          refresh_completed_at=CASE WHEN $3 THEN now() ELSE refresh_completed_at END WHERE id=$1`,
           [item.id, (e as Error).message.slice(0, 500), gone],
         );
         if (gone) {

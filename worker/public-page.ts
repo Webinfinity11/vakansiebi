@@ -22,6 +22,12 @@ export const linkedHosts = [
   'jsc-georgian-card.hirehive.com',
   'tp-georgia.softgarden.io',
 ];
+/** A definite employer response code; 4xx means this link will not become readable by retrying. */
+export class EmployerHttpError extends Error {
+  constructor(public status: number) {
+    super(`Employer returned HTTP ${status}`);
+  }
+}
 export function validateLinkedUrl(value: string) {
   const u = new URL(value);
   if (
@@ -104,7 +110,6 @@ export async function publicPage(
   const r = await request(u);
   if (r.status >= 300 && r.status < 400 && r.location)
     return publicPage(new URL(r.location, u).href, redirects + 1);
-  if (r.status < 200 || r.status >= 300)
-    throw Error(`Employer returned HTTP ${r.status}`);
+  if (r.status < 200 || r.status >= 300) throw new EmployerHttpError(r.status);
   return { url: u.href, text: r.text };
 }
