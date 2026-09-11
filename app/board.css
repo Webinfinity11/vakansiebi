@@ -2924,3 +2924,43 @@
     transition: none;
   }
 }
+
+/* Phone corrections.
+   The hero's decorative circle sits 160px past the right edge and its grid overlay is scaled
+   beyond the hero box. On a wide screen there is room to absorb that; on a phone both push the
+   page sideways, so the whole document scrolls horizontally. They are decoration only.
+   Form controls under 16px make iOS Safari zoom the page in on focus and never zoom back,
+   which affects every search, filter and application control on the site. */
+@media (max-width: 760px) {
+  .board-shell .discovery-hero::after {
+    display: none;
+  }
+  .board-shell .discovery-hero::before {
+    transform: skewX(-12deg);
+  }
+  .board-shell .searchbar input,
+  .board-shell .discovery-hero .searchbar > input,
+  .board-shell .search-city input,
+  .advanced-filters select,
+  .advanced-filters input,
+  .salary-range input,
+  .vacancy-page .application-control select {
+    font-size: 16px;
+  }
+}
+
+/* Touch targets. These controls are 25-36px tall, which is reliable with a cursor and not with
+   a fingertip; 44px is the established minimum. Raised only on phones so the denser desktop
+   layout is unchanged. Each of these sits in a wrapping flex row, so the extra height reflows. */
+@media (max-width: 760px) {
+  .board-shell .quick button,
+  .board-shell .active-filters button,
+  .board-shell .filter-head > button,
+  .board-shell .job-side .save-button,
+  .board-shell .personal-tools .secondary-button,
+  .vacancy-tools .secondary-button,
+  .discovery-section-heading > button,
+  .board-pagination button {
+    min-height: 44px;
+  }
+}
