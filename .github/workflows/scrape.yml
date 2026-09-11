@@ -12,7 +12,7 @@ jobs:
   scrape:
     if: github.repository == 'Webinfinity11/vakansiebi' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -29,7 +29,7 @@ jobs:
         run: npm run worker -- --source=${{ matrix.source }} --due --once
         env:
           DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
-          CRAWL_BATCH_SIZE: '100'
+          CRAWL_BATCH_SIZE: '300'
           DISCOVERY_PAGE_BUDGET: '30'
           CRAWL_DELAY_MS: '2000'
       - name: Verify refreshed descriptions match published text

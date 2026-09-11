@@ -37,7 +37,7 @@ export async function runSource(
   const startedAt = Date.now();
   const lock = await db().connect();
   const lockId = sourceLockIds[source];
-  limit = Math.max(1, Math.min(100, Math.floor(limit) || 20));
+  limit = Math.max(1, Math.min(300, Math.floor(limit) || 20));
   let locked = false;
   const runId = randomUUID();
   let started = false;
@@ -244,7 +244,10 @@ export async function runSource(
       0,
       limit,
     )) {
-      if (Date.now() - startedAt > 16 * 60 * 1000) {
+      // Measured on 2026-09-11: jobs.ge spends 11 minutes on 70 details because each one may
+      // follow an employer link, while hr/ss/gancxadebebi spend about 4. The budget stays well
+      // inside the workflow timeout, and an unfinished batch is retained for the next run.
+      if (Date.now() - startedAt > 22 * 60 * 1000) {
         budgetExhausted = true;
         break;
       }
