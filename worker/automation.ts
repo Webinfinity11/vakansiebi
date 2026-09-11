@@ -1,6 +1,11 @@
 import type { PoolClient } from 'pg';
 import { vacancySchema } from '../lib/vacancy-schema';
-import { sourceNames, type ActiveSourceId, type Vacancy } from '../lib/types';
+import {
+  employerlessSources,
+  sourceNames,
+  type ActiveSourceId,
+  type Vacancy,
+} from '../lib/types';
 import { externalId, fingerprint, tbilisiDate } from './adapters';
 import { db, transaction } from '../lib/server/db';
 import { safeLogoUrl } from '../lib/vacancy-media';
@@ -20,8 +25,9 @@ export function publishable(
   const parsed = vacancySchema.safeParse(candidate);
   if (!parsed.success || !(source in sourceNames)) return null;
   const v = parsed.data;
+  // A classified board has no employer to verify, only a contact inside the advertisement.
   if (
-    !v.company.trim() ||
+    (!v.company.trim() && !employerlessSources.includes(v.source)) ||
     v.url !== url ||
     v.source !== sourceNames[source as ActiveSourceId]
   )

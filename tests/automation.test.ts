@@ -92,3 +92,33 @@ void test('unsupported optional logo does not unpublish valid text or weaken cor
     supported,
   );
 });
+
+void test('a private advertisement publishes without an employer; other sources still need one', () => {
+  const ad = {
+    title: 'მზარეული',
+    company: '',
+    city: 'თბილისი',
+    category: 'სხვა',
+    salary: '',
+    salaryMin: null,
+    currency: '',
+    salaryPeriod: '',
+    mode: '',
+    description:
+      'საოჯახო სამზარეულოში გვჭირდება მზარეული, გრაფიკი შეთანხმებით.',
+    url: 'https://gancxadebebi.ge/ka/განცხადებები/დასაქმება-სამუშაო-3/ვაკანსია-25/mzareuli-GEO1514848',
+    source: 'gancxadebebi.ge',
+    deadline: '',
+    datePosted: '2026-09-01',
+  };
+  assert.ok(publishable(ad, 'gancxadebebi', ad.url, '2026-09-11'));
+  assert.equal(
+    publishable(
+      { ...ad, source: 'jobs.ge', url: 'https://jobs.ge/ge/?view=jobs&id=1' },
+      'jobs',
+      'https://jobs.ge/ge/?view=jobs&id=1',
+      '2026-09-11',
+    ),
+    null,
+  );
+});
