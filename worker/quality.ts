@@ -204,3 +204,33 @@ export function assessReportedTotal(
     observations: hold ? state.observations : 0,
   };
 }
+
+/**
+ * The part of a run that needs a person, as opposed to the part the backoff repairs on its own.
+ * Individual detail pages fail transiently and are retried with a growing interval, and held
+ * snapshots are the guard working as intended; neither means the source check itself failed.
+ * A changed listing shape, an aborted batch, or a batch where most pages failed does.
+ */
+export function structuralFailure(run: {
+  discoveryWarning?: string | null;
+  discoveryStructural?: boolean;
+  stoppedEarly?: boolean;
+  failed?: number;
+  attempted?: number;
+}): string | null {
+  const failed = run.failed || 0;
+  const attempted = run.attempted || 0;
+  return (
+    [
+      run.discoveryStructural ? run.discoveryWarning : null,
+      run.stoppedEarly
+        ? 'Stopped after 3 consecutive detail failures; remaining items retained for retry'
+        : null,
+      failed >= 3 && failed * 2 >= attempted
+        ? `${failed} of ${attempted} detail pages failed`
+        : null,
+    ]
+      .filter(Boolean)
+      .join('; ') || null
+  );
+}

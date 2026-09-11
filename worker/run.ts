@@ -1,5 +1,5 @@
 import { completeDescription } from './linked-description';
-import { assessReportedTotal } from './quality';
+import { assessReportedTotal, structuralFailure } from './quality';
 import { randomUUID } from 'node:crypto';
 import {
   readDiscoveryInfo,
@@ -127,6 +127,9 @@ export async function runSource(
     // The full HR search is authoritative for discovery; its sitemap is only a fallback.
     const sitemap = info?.totalPages ? null : activeConfig.sitemap;
     let discoveryWarning = countQuality?.warning || '';
+    // A source whose shape or coverage looks different needs a person; a single failed
+    // fetch that the backoff will retry does not.
+    let discoveryStructural = Boolean(countQuality?.warning);
     const pageBudget = Math.max(
       1,
       Math.min(50, Number(process.env.DISCOVERY_PAGE_BUDGET) || 20),
@@ -147,9 +150,11 @@ export async function runSource(
               ).filter((url): url is string => !!url),
             ),
           ];
-    if (paginated && !info?.totalPages)
+    if (paginated && !info?.totalPages) {
       discoveryWarning =
         'Listing page count is unavailable; first page retained and discovery will retry';
+      discoveryStructural = true;
+    }
     for (const extra of extraPages) {
       try {
         const pageLinks = listLinks(
@@ -163,6 +168,7 @@ export async function runSource(
             'Pagination returned ' +
             accepted +
             ' page; cursor retained for retry';
+          discoveryStructural = true;
           break;
         }
         await rememberPage(extra, pageLinks);
@@ -233,6 +239,7 @@ export async function runSource(
     const newCount = Math.min(pending.length, limit - existing.length);
     let consecutiveDetailFailures = 0;
     let stoppedEarly = false;
+    let attempted = 0;
     for (const item of [...pending.slice(0, newCount), ...existing].slice(
       0,
       limit,
@@ -241,6 +248,7 @@ export async function runSource(
         budgetExhausted = true;
         break;
       }
+      attempted++;
       try {
         const data = await completeDescription(
           parseDetail(source, await sourceFetch(source, item.url), item.url),
@@ -323,6 +331,16 @@ export async function runSource(
       ]
         .filter(Boolean)
         .join('; ') || null;
+    // Individual pages fail transiently and retry with backoff; that is a degraded run, not a
+    // broken source. Only a changed listing shape, an aborted batch or a mostly-failing batch
+    // means the check itself did not succeed.
+    const structural = structuralFailure({
+      discoveryWarning,
+      discoveryStructural,
+      stoppedEarly,
+      failed,
+      attempted,
+    });
     const unresolvedQuality = Number(
       (
         await db().query(
@@ -345,8 +363,8 @@ export async function runSource(
       qualityWarning,
     ]);
     await db().query(
-      "UPDATE sources SET last_success_at=CASE WHEN $2::text IS NULL THEN now() ELSE last_success_at END,last_error=$2,consecutive_failures=0,next_run_at=now()+(interval_minutes*interval '1 minute') WHERE id=$1",
-      [source, operationalWarning],
+      "UPDATE sources SET last_success_at=CASE WHEN $3::text IS NULL THEN now() ELSE last_success_at END,last_error=$2,consecutive_failures=0,next_run_at=now()+(interval_minutes*interval '1 minute') WHERE id=$1",
+      [source, operationalWarning, structural],
     );
     return {
       source,
@@ -360,6 +378,7 @@ export async function runSource(
       budgetExhausted,
       qualityHeld,
       warning,
+      structural,
     };
   } catch (e) {
     const error = (e as Error).message.slice(0, 500);

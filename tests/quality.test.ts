@@ -4,6 +4,7 @@ import {
   assessVacancy,
   assessReportedTotal,
   noObservation,
+  structuralFailure,
 } from '../worker/quality';
 import type { Vacancy } from '../lib/types';
 const v: Vacancy = {
@@ -126,4 +127,37 @@ void test('source total sharp drop retains baseline until independent confirmati
     true,
   );
   assert.equal(assessReportedTotal(null, 1000, undefined, time).hold, false);
+});
+
+void test('a run needs attention only when the source itself looks wrong, not when pages retry', () => {
+  // The shape observed on 2026-09-11: 73 imported, one transient gateway timeout.
+  assert.equal(structuralFailure({ failed: 1, attempted: 74 }), null);
+  assert.equal(structuralFailure({ failed: 2, attempted: 74 }), null);
+  assert.equal(
+    structuralFailure({
+      discoveryWarning: 'Listing page: Source request failed: ECONNRESET',
+      discoveryStructural: false,
+      failed: 0,
+      attempted: 74,
+    }),
+    null,
+  );
+  assert.equal(structuralFailure({}), null);
+  // Most of the batch failing, an aborted batch, or a changed listing shape does need a person.
+  assert.match(
+    structuralFailure({ failed: 3, attempted: 5 }) || '',
+    /3 of 5 detail pages failed/,
+  );
+  assert.match(
+    structuralFailure({ stoppedEarly: true, failed: 3, attempted: 3 }) || '',
+    /Stopped after 3 consecutive detail failures/,
+  );
+  assert.match(
+    structuralFailure({
+      discoveryWarning:
+        'Pagination returned duplicate page; cursor retained for retry',
+      discoveryStructural: true,
+    }) || '',
+    /Pagination returned duplicate page/,
+  );
 });

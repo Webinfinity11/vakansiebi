@@ -77,22 +77,31 @@ try {
                 ? 'deferred: network unavailable; automatic retry scheduled'
                 : 'error' in result
                   ? 'failed'
-                  : 'warning' in result && result.warning
-                    ? 'partial'
-                    : 'skipped' in result
-                      ? 'skipped'
-                      : 'success';
+                  : 'structural' in result && result.structural
+                    ? 'needs attention'
+                    : 'warning' in result && result.warning
+                      ? 'partial: retried automatically'
+                      : 'skipped' in result
+                        ? 'skipped'
+                        : 'success';
             appendFileSync(
               process.env.GITHUB_STEP_SUMMARY,
               `Source: ${source}: ${status}\n\nImported: ${'imported' in result ? result.imported : 0}; changed: ${'changed' in result ? result.changed : 0}; failed: ${'failed' in result ? result.failed : 0}. Automatic publication follows each source's database setting.\n\n`,
             );
           }
-          if (
-            (once || arg) &&
-            (('error' in result && result.error && !result.deferred) ||
-              ('warning' in result && result.warning))
-          )
-            process.exitCode = 1;
+          const structural =
+            ('error' in result && result.error && !result.deferred
+              ? result.error
+              : null) || ('structural' in result ? result.structural : null);
+          const degraded =
+            !structural && 'warning' in result ? result.warning : null;
+          // A red job must mean the source needs a person. Transient page failures and quality
+          // holds retry on their own, so they stay visible as warnings instead.
+          if (process.env.GITHUB_ACTIONS && (structural || degraded))
+            console.warn(
+              `::${structural ? 'error' : 'warning'} title=Source ${source}::${structural || degraded}`,
+            );
+          if ((once || arg) && structural) process.exitCode = 1;
         },
       });
     }
