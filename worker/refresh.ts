@@ -11,7 +11,11 @@ import { completeDescription } from './linked-description';
 import { sourceFetch, SourceHttpError } from './http';
 import { reconcileJob } from './automation';
 import type { ActiveSourceId } from '../lib/types';
-export async function refreshDescriptions(source: ActiveSourceId, limit = 100) {
+export async function refreshDescriptions(
+  source: ActiveSourceId,
+  limit = 100,
+  timeBudgetMs = 18 * 60_000,
+) {
   if (!(source in configs)) throw Error('Unsupported source');
   const c = await db().connect();
   let locked = false;
@@ -64,7 +68,7 @@ export async function refreshDescriptions(source: ActiveSourceId, limit = 100) {
       runStarted = true;
     }
     for (const item of items) {
-      if (Date.now() - started > 18 * 60000) break;
+      if (Date.now() - started >= timeBudgetMs) break;
       try {
         const html = await sourceFetch(source, item.url);
         primaryFailures = 0;
