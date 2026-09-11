@@ -1,11 +1,21 @@
-export type SourceId = 'hr' | 'samushao' | 'jobs' | 'ss' | 'hrgov';
+export type SourceId =
+  | 'hr'
+  | 'samushao'
+  | 'jobs'
+  | 'ss'
+  | 'hrgov'
+  | 'gancxadebebi';
 export type ActiveSourceId = Exclude<SourceId, 'samushao'>;
 export const sourceNames: Record<ActiveSourceId, string> = {
   hr: 'hr.ge',
   jobs: 'jobs.ge',
   ss: 'jobs.ss.ge',
   hrgov: 'vacancy.hr.gov.ge',
+  gancxadebebi: 'gancxadebebi.ge',
 };
+/** Sources whose postings carry no employer entity, only a private contact. */
+export const employerlessSources: readonly string[] = ['gancxadebebi.ge'];
+export const privateListingLabel = 'კერძო განცხადება';
 export type Vacancy = {
   fullTextUrl?: string;
   logoUrl?: string;

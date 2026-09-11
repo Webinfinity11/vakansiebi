@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { Vacancy } from '../lib/types';
+import { employerlessSources, type Vacancy } from '../lib/types';
 import { vacancySchema } from '../lib/vacancy-schema';
 
 type Observation = {
@@ -76,10 +76,12 @@ export function assessVacancy(
   prior: Observation = noObservation,
   now = new Date(),
 ): QualityDecision {
+  // A classified board publishes private advertisements with a contact instead of an employer;
+  // requiring a company there would hold every record forever.
   const structural =
     !vacancySchema.safeParse(next).success ||
     typeof next.company !== 'string' ||
-    !next.company.trim();
+    (!next.company.trim() && !employerlessSources.includes(next.source));
   const reasons: string[] = [];
   let severe = structural;
   if (structural) reasons.push('invalid identity or required fields');

@@ -54,7 +54,12 @@ type JobPosting = {
   };
 };
 
-import { sourceNames, type SourceId, type Vacancy } from '../../lib/types';
+import {
+  employerlessSources,
+  sourceNames,
+  type SourceId,
+  type Vacancy,
+} from '../../lib/types';
 const legacyConfigs = {
   ss: {
     origin: 'https://jobs.ss.ge',
@@ -86,6 +91,14 @@ const legacyConfigs = {
     sitemap: null,
     hosts: ['jobs.ge', 'www.jobs.ge'],
   },
+  // Only the vacancy category. The neighbouring job-seeker, student and internship
+  // categories of the same board are deliberately not collected.
+  gancxadebebi: {
+    origin: 'https://gancxadebebi.ge',
+    list: 'https://gancxadebebi.ge/ka/%E1%83%92%E1%83%90%E1%83%9C%E1%83%AA%E1%83%AE%E1%83%90%E1%83%93%E1%83%94%E1%83%91%E1%83%94%E1%83%91%E1%83%98/%E1%83%93%E1%83%90%E1%83%A1%E1%83%90%E1%83%A5%E1%83%9B%E1%83%94%E1%83%91%E1%83%90-%E1%83%A1%E1%83%90%E1%83%9B%E1%83%A3%E1%83%A8%E1%83%90%E1%83%9D-3/%E1%83%95%E1%83%90%E1%83%99%E1%83%90%E1%83%9C%E1%83%A1%E1%83%98%E1%83%90-25',
+    sitemap: null,
+    hosts: ['gancxadebebi.ge', 'www.gancxadebebi.ge'],
+  },
 };
 // Legacy parsing remains for existing audit records; no retired source can be fetched.
 export const configs = {
@@ -93,6 +106,7 @@ export const configs = {
   jobs: legacyConfigs.jobs,
   ss: legacyConfigs.ss,
   hrgov: legacyConfigs.hrgov,
+  gancxadebebi: legacyConfigs.gancxadebebi,
 };
 export function getSourceConfig(source: SourceId) {
   if (source === 'samushao' || !(source in configs))
@@ -135,8 +149,11 @@ export function cleanText(html: string) {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
-export function fingerprint(j: Pick<Vacancy, 'title' | 'company' | 'city'>) {
-  return [j.title, j.company, j.city]
+export function fingerprint(
+  j: Pick<Vacancy, 'title' | 'company' | 'city'> &
+    Partial<Pick<Vacancy, 'source' | 'url'>>,
+) {
+  const base = [j.title, j.company, j.city]
     .map((s) =>
       s
         .normalize('NFKC')
@@ -144,6 +161,11 @@ export function fingerprint(j: Pick<Vacancy, 'title' | 'company' | 'city'>) {
         .replace(/[^\p{L}\p{N}]/gu, ''),
     )
     .join('|');
+  // A classified board has no employer to match on. Two unrelated private advertisements
+  // sharing a job title in the same city are not the same posting, so they never pair up.
+  return employerlessSources.includes(j.source || '')
+    ? base + '|' + (j.url || '')
+    : base;
 }
 export function externalId(source: SourceId, url: string) {
   const u = new URL(url);
@@ -167,6 +189,18 @@ export function externalId(source: SourceId, url: string) {
     return u.pathname.match(/^\/announcement\/(\d+)(?:\/|$)/)?.[1] ?? null;
   if (source === 'samushao')
     return u.pathname.match(/^\/vakansia\/[^/]*-(\d+)\/?$/)?.[1] ?? null;
+  if (source === 'gancxadebebi') {
+    let path = '';
+    try {
+      path = decodeURIComponent(u.pathname);
+    } catch {
+      return null;
+    }
+    // The category segment keeps job-seeker and other employment listings out.
+    return path.includes('/დასაქმება-სამუშაო-3/ვაკანსია-25/')
+      ? (path.match(/-GEO(\d+)\/?$/)?.[1] ?? null)
+      : null;
+  }
   return u.searchParams.get('view') === 'jobs' &&
     /^\d+$/.test(u.searchParams.get('id') || '')
     ? u.searchParams.get('id')
@@ -662,6 +696,39 @@ export function parseDetail(
         label: 'განაცხადის გაგზავნა',
         url: safeExternalUrl(data.resumeLink),
       });
+  } else if (source === 'gancxadebebi') {
+    // Everything is read inside the advertisement container; the page also lists unrelated ads.
+    const ad = $('.am[itemscope]').first();
+    if (
+      ad.find('.ar').first().text().trim() !==
+      'GEO' + externalId(source, url)
+    )
+      throw new UnavailableVacancy();
+    j.title = ad.find('h1.at').first().text().trim();
+    j.city = ad.find('.av').first().text().trim();
+    j.description = cleanText(ad.find('.atx').first().html() || '');
+    j.datePosted = gancxadebebiDate(ad.find('.ad').first().text());
+    // A classified board carries no employer entity, only the contact inside the text.
+    j.company = '';
+    ad.find('ul.dtl li').each((_, el) => {
+      const label = $(el)
+        .find('span')
+        .first()
+        .text()
+        .replace(/:\s*$/, '')
+        .trim();
+      const value = $(el)
+        .clone()
+        .children('span')
+        .remove()
+        .end()
+        .text()
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (label && value && value.length < 1500) j.facts.push({ label, value });
+    });
+    j.employmentType =
+      j.facts.find((f) => f.label === 'სასურველი სამუშაო საათები')?.value || '';
   } else if (source === 'hrgov') {
     if ($('#ID').attr('value') !== externalId(source, url))
       throw Error('Public service vacancy ID does not match');
@@ -795,6 +862,11 @@ export function parseDetail(
   return enrichVacancy(j);
 }
 
+/** gancxadebebi.ge prints "აგვისტო 08, 2026"; the shared helper expects "08 აგვისტო 2026". */
+export function gancxadebebiDate(value: string) {
+  const match = value.trim().match(/^(\S+)\s+(\d{1,2}),\s*(\d{4})$/);
+  return match ? georgianDate(`${match[2]} ${match[1]} ${match[3]}`, 0) : '';
+}
 export function georgianDate(value: string, year: number) {
   const months = [
     'იანვარი',
@@ -828,7 +900,12 @@ export function additionalListing(
   html: string,
   cursor: number,
 ): string | null {
-  const key = source === 'ss' ? 'page' : source === 'hrgov' ? 'pageNo' : null;
+  const key =
+    source === 'ss' || source === 'gancxadebebi'
+      ? 'page'
+      : source === 'hrgov'
+        ? 'pageNo'
+        : null;
   if (!key) return null;
   const $ = load(html);
   let last = 1;
@@ -871,6 +948,7 @@ export const sourceLockIds: Record<SourceId, number> = {
   jobs: 917412,
   ss: 917413,
   hrgov: 917414,
+  gancxadebebi: 917415,
 };
 
 // Georgian listings omit the year; compare against their local calendar date, including around midnight/New Year.

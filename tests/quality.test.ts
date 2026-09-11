@@ -161,3 +161,28 @@ void test('a run needs attention only when the source itself looks wrong, not wh
     /Pagination returned duplicate page/,
   );
 });
+
+void test('a classified board publishes without an employer; the other sources still require one', () => {
+  const ad = {
+    title: 'მზარეული',
+    company: '',
+    city: 'თბილისი',
+    category: 'სხვა',
+    salary: '',
+    salaryMin: null,
+    currency: '',
+    salaryPeriod: '',
+    mode: '',
+    description:
+      'საოჯახო სამზარეულოში გვჭირდება მზარეული, გრაფიკი შეთანხმებით.',
+    url: 'https://gancxadebebi.ge/ka/a-GEO1',
+    source: 'gancxadebebi.ge',
+    deadline: '',
+    datePosted: '2026-09-01',
+  };
+  assert.equal(assessVacancy(null, ad).hold, false);
+  assert.equal(
+    assessVacancy(null, { ...ad, source: 'hr.ge' }).warning,
+    'Source quality review: invalid identity or required fields',
+  );
+});

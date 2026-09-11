@@ -11,6 +11,7 @@ import {
   tbilisiDate,
   configs,
   getSourceConfig,
+  UnavailableVacancy,
 } from '../worker/adapters';
 import { validateUrl } from '../worker/http';
 void test('deduplicates listing links and rejects links to other origins', () => {
@@ -343,5 +344,87 @@ void test('SS pagination reaches distant pages using the public result count', (
   assert.equal(
     additionalListing('ss', '<script id="__NEXT_DATA__">broken</script>', 70),
     null,
+  );
+});
+
+const gxCategory =
+  'https://gancxadebebi.ge/ka/%E1%83%92%E1%83%90%E1%83%9C%E1%83%AA%E1%83%AE%E1%83%90%E1%83%93%E1%83%94%E1%83%91%E1%83%94%E1%83%91%E1%83%98/%E1%83%93%E1%83%90%E1%83%A1%E1%83%90%E1%83%A5%E1%83%9B%E1%83%94%E1%83%91%E1%83%90-%E1%83%A1%E1%83%90%E1%83%9B%E1%83%A3%E1%83%A8%E1%83%90%E1%83%9D-3/%E1%83%95%E1%83%90%E1%83%99%E1%83%90%E1%83%9C%E1%83%A1%E1%83%98%E1%83%90-25';
+const gxVacancyUrl = gxCategory + '/amwis-operatori-GEO1514848';
+const gxPage = (id = 'GEO1514848') =>
+  `<div class="am" id="a1514848" itemscope itemtype="http://schema.org/Product">
+     <div class="av"><span>თბილისი</span></div>
+     <div class="ah">
+       <h1 class="at" itemprop="name">ამწის ოპერატორი</h1>
+       <div class="ad">აგვისტო 25, 2026</div>
+       <div class="ar" itemprop="sku">${id}</div>
+     </div>
+     <div class="atx" itemprop="description">კომპანიაში გვჭირდება კოშკურა ამწის ოპერატორი.<br />სამუშაო საათები: 09:00 - 18:00<br />ანაზღაურება: დღეში - 125 ლარი.</div>
+     <ul class="dtl dtlemploi">
+       <li class="dtl_sexe"><span>სქესი :</span> მამაკაცი</li>
+       <li class="dtl_experience"><span>გამოცდილება :</span> &lt; 1 წელი</li>
+     </ul>
+   </div>
+   <div class="am" id="a999" itemscope><div class="av"><span>ქუთაისი</span></div>
+     <div class="ah"><h1 class="at">სხვისი განცხადება</h1><div class="ar">GEO999</div></div>
+     <div class="atx">სულ სხვა განცხადების ტექსტი, რომელიც იმავე გვერდზეა ჩამონათვალში.</div>
+   </div>`;
+
+void test('the classified board collects only its vacancy category', () => {
+  assert.equal(externalId('gancxadebebi', gxVacancyUrl), '1514848');
+  for (const rejected of [
+    gxCategory.replace('-25', '-24') + '/vedzeb-samsakhurs-GEO1',
+    'https://gancxadebebi.ge/ka/%E1%83%92%E1%83%90%E1%83%9C%E1%83%AA%E1%83%AE%E1%83%90%E1%83%93%E1%83%94%E1%83%91%E1%83%94%E1%83%91%E1%83%98/-GEO1454103',
+    'https://evil.test' + new URL(gxVacancyUrl).pathname,
+  ])
+    assert.equal(externalId('gancxadebebi', rejected), null);
+});
+
+void test('a private advertisement keeps its own text and never borrows a neighbouring one', () => {
+  const v = parseDetail('gancxadebebi', gxPage(), gxVacancyUrl);
+  assert.equal(v.title, 'ამწის ოპერატორი');
+  assert.equal(v.city, 'თბილისი');
+  assert.equal(v.datePosted, '2026-08-25');
+  assert.equal(v.company, '');
+  assert.match(v.description, /კოშკურა ამწის ოპერატორი/);
+  assert.doesNotMatch(v.description, /სხვა განცხადების ტექსტი/);
+  // The source's own labelled fields are kept; pay excerpts are added by the enricher.
+  assert.deepEqual(v.facts?.map((f) => f.label).slice(0, 2), [
+    'სქესი',
+    'გამოცდილება',
+  ]);
+  assert.equal(v.salary, 'დღეში - 125 ლარი.');
+  assert.throws(
+    () => parseDetail('gancxadebebi', gxPage('GEO7777777'), gxVacancyUrl),
+    UnavailableVacancy,
+  );
+});
+
+void test('private advertisements without an employer never pair up as duplicates', () => {
+  const base = {
+    title: 'მზარეული',
+    company: '',
+    city: 'თბილისი',
+    source: 'gancxadebebi.ge',
+  };
+  assert.notEqual(
+    fingerprint({ ...base, url: 'https://gancxadebebi.ge/a-GEO1' }),
+    fingerprint({ ...base, url: 'https://gancxadebebi.ge/b-GEO2' }),
+  );
+  // Employers on the existing sources still match across different listing URLs.
+  assert.equal(
+    fingerprint({
+      title: 'მზარეული',
+      company: 'კომპანია',
+      city: 'თბილისი',
+      source: 'hr.ge',
+      url: 'https://www.hr.ge/announcement/1/a',
+    }),
+    fingerprint({
+      title: 'მზარეული',
+      company: 'კომპანია',
+      city: 'თბილისი',
+      source: 'jobs.ge',
+      url: 'https://jobs.ge/ge/?view=jobs&id=2',
+    }),
   );
 });

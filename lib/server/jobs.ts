@@ -1,3 +1,4 @@
+import { employerlessSources, privateListingLabel } from '../types';
 import { z } from 'zod';
 import { db, transaction } from './db';
 import { ApiError } from './auth';
@@ -111,6 +112,12 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
         r.published.salaryMin > 100000000 ||
         r.published.salaryMin < 0)
         ? { salary: '', salaryMin: null, currency: '', salaryPeriod: '' }
+        : {}),
+      // A classified board carries no employer; name the listing honestly instead of
+      // leaving the employer line blank or inventing a company.
+      ...(!String(r.published.company || '').trim() &&
+      employerlessSources.includes(String(r.published.source || ''))
+        ? { company: privateListingLabel }
         : {}),
       id: r.id,
       sourceChanged: !preview && r.source_changed,
