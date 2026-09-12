@@ -28,8 +28,9 @@
   line-height: 1.4;
   letter-spacing: 0.1px;
 }
-/* Desktop shows the deadline in the side column and icon-only paging. */
+/* Desktop shows the deadline in the side column, icon-only paging and the full tab label. */
 @media (min-width: 761px) {
+  .search-modes .mode-label-short,
   .board-shell .job-when,
   .board-pagination .page-next-label,
   .board-pagination .page-prev-label,
@@ -75,25 +76,25 @@
   .board-shell .discovery-hero .hero-search-wrap {
     padding: 0 16px 16px;
   }
+  /* Four tabs do not fit one phone row. Wrapping shows all four; scrolling sideways hid two
+     of them behind an edge that gives no sign there is more. */
   .search-modes {
-    gap: 18px;
-    scroll-snap-type: x proximity;
-    scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(
-      90deg,
-      #000 calc(100% - 28px),
-      transparent
-    );
-    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
-  }
-  .search-modes::-webkit-scrollbar {
-    display: none;
+    flex-wrap: wrap;
+    gap: 0 18px;
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
   .search-modes button {
-    font-size: 13px;
-    min-height: 44px;
-    padding: 12px 0 10px;
-    scroll-snap-align: start;
+    font-size: 12.5px;
+    min-height: 42px;
+    padding: 10px 0 8px;
+  }
+  .search-modes .mode-label-full {
+    display: none;
+  }
+  .search-modes .mode-label-short {
+    display: inline;
   }
   .board-shell .discovery-hero .searchbar > input {
     height: 44px;
@@ -111,35 +112,29 @@
     white-space: nowrap;
   }
 
-  /* ---------- Quick shortcuts: one scrolling chip row instead of a 2×2 tile grid ---------- */
+  /* ---------- Quick shortcuts ----------
+     Two by two, the way the wider layout has them: four tiles fit a phone row-wise and none
+     of them ends up past the right edge. */
   .discovery-shortcuts {
-    display: flex;
-    overflow-x: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    margin: 12px 0 0;
-    padding: 0 16px 4px;
-    scrollbar-width: none;
-    grid-template-columns: none;
-  }
-  .discovery-shortcuts::-webkit-scrollbar {
-    display: none;
+    margin: 12px 16px 0;
+    padding: 0;
+    overflow: visible;
   }
   .discovery-shortcut {
-    flex: 0 0 auto;
-    min-height: 44px;
-    padding: 0 14px;
-    border-radius: 999px;
+    min-height: 52px;
+    padding: 8px 12px;
     gap: 8px;
-    border: 1px solid #dfe6f1;
-    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f2;
+    background: #f2f6fc;
   }
   .discovery-shortcut:hover,
   .discovery-shortcut[aria-pressed='true'] {
     border-color: #96b5ec;
     background: #e5edfc;
-  }
-  .discovery-shortcut > span:nth-child(2) {
-    display: block;
   }
   .shortcut-icon {
     flex-basis: 18px;
@@ -148,16 +143,45 @@
     width: 18px;
     height: 18px;
   }
+  .discovery-shortcut > span:nth-child(2) {
+    min-width: 0;
+  }
   .discovery-shortcut strong {
-    font-size: 13px;
-    white-space: nowrap;
+    font-size: 12.5px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
   }
   .discovery-shortcut small,
   .shortcut-arrow {
     display: none;
   }
 
-  /* ---------- Categories strip ---------- */
+  /* ---------- Categories ----------
+     Eight directions as wrapping pills. The strip that scrolled sideways kept five of them
+     off screen, and it sat directly above two other sideways strips.
+
+     Wrapped, they take three rows, which on a phone is three rows between the reader and the
+     first vacancy. They move below the list instead: the sticky filter button already opens
+     the same eight directions with a count against each, so nothing is lost from the top of
+     the page. Source order is unchanged, so the keyboard and a screen reader still meet them
+     where the markup puts them. */
+  .board-shell main {
+    display: flex;
+    flex-direction: column;
+  }
+  .board-shell main > .hero {
+    order: 1;
+  }
+  .board-shell main > .discovery-shortcuts {
+    order: 2;
+  }
+  .board-shell main > .board-page {
+    order: 3;
+  }
+  .board-shell main > .discovery-categories {
+    order: 4;
+    margin-bottom: 20px;
+  }
   .discovery-categories {
     margin: 12px 16px 0;
   }
@@ -165,19 +189,31 @@
     display: none;
   }
   .category-gallery {
-    scrollbar-width: none;
-  }
-  .category-gallery::-webkit-scrollbar {
-    display: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    overflow: visible;
   }
   .category-gallery button {
-    flex: 0 0 96px;
-    min-height: 64px;
-    gap: 6px;
-    padding: 8px 6px;
+    flex: 0 0 auto;
+    flex-direction: row;
+    min-height: 44px;
+    min-width: 0;
+    gap: 7px;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f2;
+    border-radius: 999px;
+    background: #fff;
+  }
+  .category-gallery button svg {
+    width: 17px;
+    height: 17px;
   }
   .category-gallery button > span {
-    font-size: 12px;
+    font-size: 12.5px;
   }
 
   /* ---------- Results head ---------- */
@@ -643,5 +679,16 @@
   .board-shell .hidden-vacancies,
   .board-shell .hidden-vacancies summary {
     font-size: 13px;
+  }
+}
+
+/* The narrowest phones still in use: two tiles across leaves 138px each, which the longest
+   shortcut label overruns by a few pixels at 12.5px. */
+@media (max-width: 359px) {
+  .discovery-shortcut strong {
+    font-size: 12px;
+  }
+  .category-gallery button > span {
+    font-size: 12px;
   }
 }

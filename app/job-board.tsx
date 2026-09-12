@@ -937,15 +937,18 @@ export default function JobBoard() {
           <div className="hero-search-wrap">
             <div className="search-panel">
               <div className="search-modes" aria-label="სამუშაოს ტიპი">
+                {/* The third entry is the label a phone shows: the full one is 179px wide,
+                    which pushes four tabs onto three rows on a 360px screen. */}
                 {[
                   ['all', 'ყველა განაკვეთი'],
-                  ['daily', 'ერთდღიანი / ერთჯერადი'],
+                  ['daily', 'ერთდღიანი / ერთჯერადი', 'ერთდღიანი'],
                   ['part-time', 'ნახევარი განაკვეთი'],
                   ['internship', 'სტაჟირება'],
-                ].map(([value, label]) => (
+                ].map(([value, label, short]) => (
                   <button
                     key={value}
                     type="button"
+                    aria-label={label}
                     aria-pressed={advanced.employment === value}
                     onClick={() => {
                       if (advanced.employment !== value)
@@ -955,7 +958,10 @@ export default function JobBoard() {
                         });
                     }}
                   >
-                    {label}
+                    <span className={short ? 'mode-label-full' : undefined}>
+                      {label}
+                    </span>
+                    {short && <span className="mode-label-short">{short}</span>}
                   </button>
                 ))}
               </div>

@@ -1720,8 +1720,8 @@
 }
 @media (max-width: 760px) {
   :root[data-theme='dark'] .discovery-shortcut {
-    border: 1px solid #243043;
-    background: #131b2c;
+    border: 1px solid #232e40;
+    background: #232e3e;
   }
 }
 @media (max-width: 760px) {
@@ -1729,6 +1729,12 @@
 :root[data-theme='dark'] .discovery-shortcut[aria-pressed='true'] {
     border-color: #b3c9ef;
     background: #1f2b42;
+  }
+}
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .category-gallery button {
+    border: 1px solid #232e40;
+    background: #131b2c;
   }
 }
 @media (max-width: 760px) {
