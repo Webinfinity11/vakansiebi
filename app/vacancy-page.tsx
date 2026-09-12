@@ -24,6 +24,7 @@ import {
 } from '@/lib/vacancy-details';
 import { emailDraft } from '@/lib/application-contact';
 import { vacancyPath } from '@/lib/vacancy-navigation';
+import { shareLink } from '@/lib/share';
 import type { PublicJob } from '@/lib/types';
 import { vacancySummary } from '@/lib/vacancy-summary';
 import {
@@ -36,6 +37,14 @@ import { vacancyLinks } from '@/lib/vacancy-links';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { SimilarVacancies } from './similar-vacancies';
 
+/* Whole days from today's local midnight to the deadline's; negative once it has passed. */
+function daysUntil(date: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
 function ApplyAction({ job }: { job: PublicJob }) {
   const contacts = vacancyContacts(job);
   const emails = contacts.emails.filter((c) => c.application);
@@ -164,14 +173,19 @@ export default function VacancyPage({
     }
   }
   async function share() {
-    try {
-      await navigator.clipboard.writeText(
-        window.location.origin + vacancyPath(job.id),
-      );
-      setFeedback('ვაკანსიის ბმული დაკოპირებულია');
-    } catch {
-      setFeedback('ბმულის კოპირება ვერ მოხერხდა.');
-    }
+    const outcome = await shareLink(
+      window.location.origin + vacancyPath(job.id),
+      `${job.title} — ${job.company}`,
+      [job.city, compactSalary(job.salary)].filter(Boolean).join(' · ') ||
+        undefined,
+    );
+    setFeedback(
+      outcome === 'shared'
+        ? 'ვაკანსია გაზიარებულია'
+        : outcome === 'copied'
+          ? 'ვაკანსიის ბმული დაკოპირებულია'
+          : 'ბმულის კოპირება ვერ მოხერხდა.',
+    );
   }
   const schedule = workSchedule(job);
   const facts = [
@@ -242,8 +256,11 @@ export default function VacancyPage({
             className="vacancy-header-link"
             href={returnTo}
             prefetch={false}
+            aria-label="ვაკანსიებზე დაბრუნება"
           >
-            <ArrowLeft size={16} /> ვაკანსიებზე დაბრუნება
+            <ArrowLeft size={16} />
+            <span className="back-label-full">ვაკანსიებზე დაბრუნება</span>
+            <span className="back-label-short">უკან</span>
           </Link>
         </div>
       </header>
@@ -284,12 +301,18 @@ export default function VacancyPage({
                 {job.datePosted && (
                   <span>გამოქვეყნდა {formatDate(job.datePosted)}</span>
                 )}
-                {job.deadline && (
-                  <span>
-                    <Clock3 size={14} />
-                    ბოლო ვადა: {formatDate(job.deadline)}
-                  </span>
-                )}
+                {job.deadline &&
+                  (() => {
+                    const left = daysUntil(job.deadline);
+                    const urgent = left >= 0 && left <= 3;
+                    return (
+                      <span className={urgent ? 'deadline-urgent' : undefined}>
+                        <Clock3 size={14} />
+                        ბოლო ვადა: {formatDate(job.deadline)}
+                        {urgent && ' · იწურება'}
+                      </span>
+                    );
+                  })()}
               </div>
               <div className="vacancy-tools">
                 <button
@@ -360,7 +383,12 @@ export default function VacancyPage({
             {!hasAction && (
               <div className="vacancy-contact-guidance">
                 <strong>დაკავშირების გზა</strong>
-                <a href={job.url} target="_blank" rel="noopener noreferrer">
+                <a
+                  className="secondary-button"
+                  href={job.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   კონტაქტი ნახე ორიგინალ განცხადებაში <ArrowUpRight size={15} />
                 </a>
               </div>
@@ -531,9 +559,12 @@ export default function VacancyPage({
         </article>
       </main>
       {hasAction && (
-        <div className="vacancy-mobile-action">
+        <section
+          className="vacancy-mobile-action"
+          aria-label="დამსაქმებელთან დაკავშირება"
+        >
           <ApplyAction job={job} />
-        </div>
+        </section>
       )}
       {feedback && (
         <output className="feedback-toast">

@@ -376,6 +376,7 @@ export function PersonalSpace({
                         ძიების გახსნა <ArrowUpRight size={15} />
                       </button>
                       <button
+                        type="button"
                         className="icon-button"
                         aria-label={`${record.name} — წაშლა`}
                         onClick={() => space.remove(record)}
@@ -457,10 +458,14 @@ export function PersonalSpace({
                         წაშლის შემდეგაც.
                       </p>
                       <div className="personal-actions">
-                        <a href={`/vacancies/${record.id}`}>
+                        <a
+                          className="secondary-button"
+                          href={`/vacancies/${record.id}`}
+                        >
                           ვაკანსიის ნახვა <ArrowUpRight size={14} />
                         </a>
                         <button
+                          type="button"
                           className="icon-button"
                           aria-label={`${record.title} — პირადი ისტორიიდან წაშლა`}
                           onClick={() => space.remove(record)}
@@ -496,6 +501,8 @@ export function PersonalSpace({
               value={name}
               maxLength={80}
               required
+              enterKeyHint="done"
+              autoComplete="off"
               onChange={(e) => setName(e.target.value)}
             />
             <p>{summary(filters)}</p>

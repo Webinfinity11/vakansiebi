@@ -70,6 +70,7 @@ export function QuickApply({
                 {contact.application ? 'CV-ის გაგზავნა' : 'წერილის გახსნა'}
               </a>
               <button
+                type="button"
                 className="secondary-button"
                 aria-label={`${contact.email} — კოპირება`}
                 title="ელფოსტის კოპირება"

@@ -21,6 +21,7 @@ import {
   restoreSearch,
 } from '@/lib/vacancy-navigation';
 import { readSearch, searchParams } from '@/lib/search-state';
+import { shareLink } from '@/lib/share';
 import {
   ArrowUpRight,
   ArrowRight,
@@ -112,6 +113,18 @@ const cities = [
   'ოზურგეთი',
   'სხვა',
 ];
+const dayMs = 86400000;
+function daysUntil(date: string) {
+  const at = Date.parse(date);
+  return Number.isFinite(at) ? Math.ceil((at - Date.now()) / dayMs) : NaN;
+}
+function isNew(datePosted?: string) {
+  if (!datePosted) return false;
+  const at = Date.parse(datePosted);
+  if (!Number.isFinite(at)) return false;
+  const age = Date.now() - at;
+  return age >= 0 && age <= 2 * dayMs;
+}
 export default function JobBoard() {
   const params = useSearchParams();
   const demo = params.get('preview') === '1';
@@ -162,6 +175,7 @@ export default function JobBoard() {
   const [mobileMeta, setMobileMeta] = useState<{
     key: string;
     data: SearchMeta;
+    total: number;
   } | null>(null);
 
   const [catalogue, setCatalogue] = useState<{
@@ -200,7 +214,7 @@ export default function JobBoard() {
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (d && !controller.signal.aborted)
-            setMobileMeta({ key: mobileKey, data: d.search });
+            setMobileMeta({ key: mobileKey, data: d.search, total: d.total });
         })
         .catch(() => {});
     }, 350);
@@ -675,6 +689,7 @@ export default function JobBoard() {
                   className="searchbar"
                   onSubmit={(e) => {
                     e.preventDefault();
+                    (document.activeElement as HTMLElement | null)?.blur();
                     document.getElementById('results')?.scrollIntoView({
                       behavior: window.matchMedia(
                         '(prefers-reduced-motion: reduce)',
@@ -686,6 +701,12 @@ export default function JobBoard() {
                 >
                   <Search size={22} />
                   <input
+                    type="search"
+                    enterKeyHint="search"
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     aria-label="მოძებნე ვაკანსია ან კომპანია"
                     maxLength={200}
                     placeholder="პოზიცია, კომპანია ან საკვანძო სიტყვა"
@@ -806,9 +827,10 @@ export default function JobBoard() {
             <h2 id="category-heading">რომელი მიმართულება გაინტერესებს?</h2>
             <button
               onClick={() => {
-                document
-                  .querySelector('.desktop-filters')
-                  ?.scrollIntoView({ block: 'start' });
+                if (window.innerWidth > 760)
+                  document
+                    .querySelector('.desktop-filters')
+                    ?.scrollIntoView({ block: 'start' });
                 if (window.innerWidth <= 760) {
                   setMobileDraft(currentSearch);
                   setFiltersOpen(true);
@@ -903,20 +925,25 @@ export default function JobBoard() {
                 {activeCount > 0 && (
                   <button
                     className="share-search"
+                    aria-label="ძიების გაზიარება"
                     onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(
-                          window.location.origin +
-                            '/?' +
-                            searchParams(currentSearch),
-                        );
-                        setFeedback('ძიების ბმული დაკოპირებულია');
-                      } catch {
-                        setFeedback('ბმულის კოპირება ვერ მოხერხდა');
-                      }
+                      const outcome = await shareLink(
+                        window.location.origin +
+                          '/?' +
+                          searchParams(currentSearch),
+                        'ერთად — ვაკანსიების ძებნა',
+                      );
+                      setFeedback(
+                        outcome === 'shared'
+                          ? 'ძიება გაზიარებულია'
+                          : outcome === 'copied'
+                            ? 'ძიების ბმული დაკოპირებულია'
+                            : 'ბმულის კოპირება ვერ მოხერხდა',
+                      );
                     }}
                   >
-                    <Share2 size={14} /> ძიების გაზიარება
+                    <Share2 size={14} />{' '}
+                    <span className="share-label">ძიების გაზიარება</span>
                   </button>
                 )}
               </div>
@@ -1128,6 +1155,27 @@ export default function JobBoard() {
                                   {j.category}
                                 </span>
                               )}
+                              {isNew(j.datePosted) && (
+                                <span className="job-new">ახალი</span>
+                              )}
+                              {(() => {
+                                const left = j.deadline
+                                  ? daysUntil(j.deadline)
+                                  : NaN;
+                                const urgent = left >= 0 && left <= 3;
+                                const text = j.deadline
+                                  ? `${urgent ? 'იწურება' : 'ვადა:'} ${formatDate(j.deadline)}`
+                                  : j.datePosted
+                                    ? formatDate(j.datePosted)
+                                    : '';
+                                return text ? (
+                                  <span
+                                    className={`job-when${urgent ? ' is-urgent' : ''}`}
+                                  >
+                                    {text}
+                                  </span>
+                                ) : null;
+                              })()}
                             </div>
                           </div>
                           <div className="job-side">
@@ -1219,12 +1267,14 @@ export default function JobBoard() {
                     onClick={() => paginate(page - 1)}
                   >
                     <ChevronLeft size={18} />
+                    <span className="page-prev-label">წინა</span>
                   </button>
                   <button
                     aria-label="შემდეგი გვერდი"
                     disabled={page === pages || resultsPending}
                     onClick={() => paginate(page + 1)}
                   >
+                    <span className="page-next-label">შემდეგი</span>
                     <ChevronRight size={18} />
                   </button>
                 </div>
@@ -1299,23 +1349,33 @@ export default function JobBoard() {
           if (!open) setMobileDraft(null);
         }}
       >
-        <SheetContent side="left" className="mobile-filters-sheet">
+        <SheetContent side="bottom" className="mobile-filters-sheet">
           <SheetHeader>
-            <SheetTitle>მოარგე ძებნა შენს სურვილებს</SheetTitle>
+            <SheetTitle>ფილტრები</SheetTitle>
             <SheetDescription>
               აირჩიე მიმართულება და სამუშაო პირობები.
             </SheetDescription>
           </SheetHeader>
           <div className="filters">{renderFilters('mobile')}</div>
           <button
-            className="primary"
+            className="primary filters-apply"
             onClick={() => {
               if (mobileDraft) applySearch(mobileDraft);
               setFiltersOpen(false);
               setMobileDraft(null);
             }}
           >
-            ფილტრების გამოყენება <ArrowRight size={16} />
+            {mobileMeta?.key === mobileKey ? (
+              mobileMeta.total === 0 ? (
+                'ვაკანსია ვერ მოიძებნა'
+              ) : (
+                `ნახე ${mobileMeta.total} ვაკანსია`
+              )
+            ) : (
+              <>
+                ფილტრების გამოყენება <ArrowRight size={16} />
+              </>
+            )}
           </button>
         </SheetContent>
       </Sheet>

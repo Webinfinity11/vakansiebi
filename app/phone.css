@@ -1,0 +1,647 @@
+/* Phone layer (≤760px). Loaded after globals.css and board.css, so every phone
+   correction lives here instead of being spread across three stylesheets.
+   Findings it answers (390×844 audit, 2026-09-12): the first vacancy started 931px down,
+   dozens of labels were 9–11px, the results toolbar wrapped into a 2×2 jumble, the sort
+   select truncated its value, the search-mode tabs were cut off with no scroll cue, the
+   filter sheet's apply button covered the last rows, close buttons were 28px, and the card
+   hid the deadline. Type floor here: nothing user-facing under 12px. */
+
+/* All widths: the search field is type="search"; keep the native clear button but drop the
+   platform styling so the rounded panel stays consistent. */
+.searchbar input[type='search'] {
+  appearance: none;
+  -webkit-appearance: none;
+}
+.searchbar input[type='search']::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+/* All widths: "ახალი" pill for vacancies posted in the last two days. */
+.board-shell .job-new {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #e3ecff;
+  color: #1e4bbf;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.1px;
+}
+/* Desktop shows the deadline in the side column and icon-only paging. */
+@media (min-width: 761px) {
+  .board-shell .job-when,
+  .board-pagination .page-next-label,
+  .board-pagination .page-prev-label,
+  .vacancy-page .vacancy-header-link .back-label-short {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  /* ---------- Header ---------- */
+  .board-shell .header-inner {
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
+  }
+  .board-shell .saved-nav {
+    min-height: 44px;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  .board-shell .saved-nav b {
+    font-size: 12px;
+  }
+
+  /* ---------- Hero ---------- */
+  .board-shell .discovery-hero .eyebrow {
+    display: none;
+  }
+  .board-shell .discovery-hero .hero-inner {
+    padding: 18px 18px 12px;
+  }
+  .board-shell .discovery-hero h1,
+  .board-shell .hero h1 {
+    font-size: 26px;
+    line-height: 1.35;
+    letter-spacing: -0.5px;
+  }
+  /* The tagline repeats the headline's promise; on a phone it only pushes the search field and
+     the first vacancy further down, so the headline carries the message alone. */
+  .board-shell .discovery-hero .hero-copy > p,
+  .board-shell .hero-copy > p {
+    display: none;
+  }
+  .board-shell .discovery-hero .hero-search-wrap {
+    padding: 0 16px 16px;
+  }
+  .search-modes {
+    gap: 18px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      #000 calc(100% - 28px),
+      transparent
+    );
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  }
+  .search-modes::-webkit-scrollbar {
+    display: none;
+  }
+  .search-modes button {
+    font-size: 13px;
+    min-height: 44px;
+    padding: 12px 0 10px;
+    scroll-snap-align: start;
+  }
+  .board-shell .discovery-hero .searchbar > input {
+    height: 44px;
+  }
+  .board-shell .discovery-hero .searchbar .primary {
+    font-size: 13px;
+  }
+  .hero-assurance {
+    flex-wrap: wrap;
+    font-size: 12px;
+    margin-top: 12px;
+    gap: 6px 14px;
+  }
+  .hero-assurance > span {
+    white-space: nowrap;
+  }
+
+  /* ---------- Quick shortcuts: one scrolling chip row instead of a 2×2 tile grid ---------- */
+  .discovery-shortcuts {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0 16px 4px;
+    scrollbar-width: none;
+    grid-template-columns: none;
+  }
+  .discovery-shortcuts::-webkit-scrollbar {
+    display: none;
+  }
+  .discovery-shortcut {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    gap: 8px;
+    border: 1px solid #dfe6f1;
+    background: #fff;
+  }
+  .discovery-shortcut:hover,
+  .discovery-shortcut[aria-pressed='true'] {
+    border-color: #96b5ec;
+    background: #e5edfc;
+  }
+  .discovery-shortcut > span:nth-child(2) {
+    display: block;
+  }
+  .shortcut-icon {
+    flex-basis: 18px;
+  }
+  .shortcut-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  .discovery-shortcut strong {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .discovery-shortcut small,
+  .shortcut-arrow {
+    display: none;
+  }
+
+  /* ---------- Categories strip ---------- */
+  .discovery-categories {
+    margin: 12px 16px 0;
+  }
+  .discovery-section-heading {
+    display: none;
+  }
+  .category-gallery {
+    scrollbar-width: none;
+  }
+  .category-gallery::-webkit-scrollbar {
+    display: none;
+  }
+  .category-gallery button {
+    flex: 0 0 96px;
+    min-height: 64px;
+    gap: 6px;
+    padding: 8px 6px;
+  }
+  .category-gallery button > span {
+    font-size: 12px;
+  }
+
+  /* ---------- Results head ---------- */
+  .board-shell .results-head h2 {
+    font-size: 20px;
+  }
+  .board-shell .result-count {
+    font-size: 13px;
+  }
+  .board-shell .results-head .choice {
+    width: auto;
+    min-width: 0;
+    max-width: 170px;
+    min-height: 44px;
+    font-size: 13px !important;
+  }
+
+  /* ---------- Results toolbar ----------
+     A two-column grid. Without active filters it is one row: [ფილტრები] [ჩემი სივრცე], stuck to
+     the top while the list scrolls. With active filters a first row [ძიების შენახვა] [share]
+     appears above it; that row belongs to the search, not to navigation, so the bar's sticky
+     offset is raised by exactly that row's height and only the second row stays on screen. */
+  .board-shell .results-tools {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    padding: 8px 0;
+    background: #f6f7fa;
+    box-shadow: 0 6px 12px -10px #18243b40;
+  }
+  .board-shell .results-tools:has(.share-search) {
+    top: -60px; /* padding 8 + row 44 + gap 8 */
+  }
+  .board-shell .results-tools .personal-tools {
+    display: contents;
+  }
+  .board-shell .results-tools .personal-tools > button:first-child {
+    order: 1;
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 13px;
+    justify-content: center;
+    margin: 0;
+  }
+  .board-shell .results-tools .personal-tools > button:first-child:disabled {
+    display: none;
+  }
+  .board-shell .results-tools .share-search {
+    order: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid #dcddde;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .board-shell .results-tools .share-search > span {
+    display: none;
+  }
+  .board-shell .results-tools .share-search svg {
+    width: 18px;
+    height: 18px;
+  }
+  .board-shell .results-tools .mobile-filter-toggle {
+    order: 3;
+    width: auto;
+    min-height: 44px;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    justify-content: center;
+    gap: 8px;
+  }
+  .board-shell .results-tools .mobile-filter-toggle b {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: #2457e6;
+    color: #fff;
+    font-size: 12px;
+  }
+  .board-shell .results-tools .personal-tools > button:nth-child(2) {
+    order: 4;
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 13px;
+    justify-content: center;
+    margin: 0;
+  }
+  .board-shell .results-tools .personal-tools .personal-feedback,
+  .board-shell .results-tools .personal-tools .personal-error {
+    order: 10;
+    grid-column: 1 / -1;
+  }
+  .board-shell .active-filters {
+    gap: 6px;
+  }
+  .board-shell .active-filters button {
+    font-size: 12px;
+  }
+
+  /* ---------- Vacancy cards ---------- */
+  .board-shell .job-card {
+    padding: 14px;
+  }
+  .board-shell .job-title {
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  .board-shell .job-company {
+    font-size: 12px;
+  }
+  .board-shell .job-meta {
+    font-size: 12px;
+  }
+  .board-shell .salary {
+    font-size: 13px;
+  }
+  .board-shell .category-tag,
+  .category-tag {
+    font-size: 12px;
+  }
+  .board-shell .filters h3 small {
+    font-size: 12px;
+  }
+  .vacancy-page .vacancy-summary dt,
+  .vacancy-page .extra-facts dt {
+    font-size: 12px;
+  }
+  .board-shell .no-salary {
+    font-size: 12px;
+  }
+  .board-shell .job-when {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #64676c;
+  }
+  .board-shell .job-when.is-urgent {
+    color: #9a332f;
+    font-weight: 600;
+  }
+  .board-shell .job-side .save-button {
+    width: 44px;
+    height: 44px;
+    max-width: 44px;
+    margin-right: -6px;
+  }
+  .board-shell .job-side {
+    width: 40px;
+    max-width: 40px;
+  }
+
+  /* ---------- Pagination ---------- */
+  .board-shell .board-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .board-shell .board-pagination > span {
+    font-size: 13px;
+    flex: 1 1 100%;
+    text-align: center;
+  }
+  .board-shell .board-pagination button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 48px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .board-shell .board-pagination button:first-of-type {
+    flex: 0 0 48px;
+    width: 48px;
+    padding: 0;
+  }
+  .board-shell .board-pagination button:last-of-type {
+    flex: 1 1 auto;
+    padding: 0 18px;
+    background: #2457e6;
+    color: #fff;
+    border-color: #2457e6;
+  }
+  .board-shell .board-pagination button:last-of-type:disabled {
+    background: #e9ecf3;
+    color: #8a93a5;
+    border-color: #e9ecf3;
+  }
+  .board-pagination .page-prev-label {
+    display: none;
+  }
+  .board-shell .results-foot {
+    font-size: 12px;
+  }
+
+  /* ---------- Filter sheet: a bottom sheet ---------- */
+  .mobile-filters-sheet[data-slot='sheet-content'],
+  .mobile-filters-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: min(92dvh, 100%);
+    max-height: min(92dvh, 100%);
+    inset-inline: 0;
+    bottom: 0;
+    top: auto;
+    border-radius: 18px 18px 0 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 26px 18px calc(10px + env(safe-area-inset-bottom)) !important;
+    gap: 12px;
+  }
+  /* position: sticky is constrained to the parent's content box, so bottom padding on the sheet
+     would hold the apply button up by that amount; the button therefore keeps its own margin and
+     the sheet's padding stays small. At scroll end the button sits in flow below the last row. */
+  .mobile-filters-sheet::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 999px;
+    background: #cfd6e2;
+  }
+  .mobile-filters-sheet [data-slot='sheet-header'] {
+    padding: 0 96px 0 0;
+    gap: 2px;
+  }
+  .mobile-filters-sheet [data-slot='sheet-title'] {
+    font-size: 17px;
+    line-height: 1.4;
+  }
+  .mobile-filters-sheet [data-slot='sheet-description'] {
+    display: none;
+  }
+  .mobile-filters-sheet [data-slot='sheet-close'] {
+    top: 10px;
+    right: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+  .mobile-filters-sheet [data-slot='sheet-close'] svg {
+    width: 20px;
+    height: 20px;
+  }
+  .mobile-filters-sheet .filter-head {
+    display: block;
+    margin: 0;
+    min-height: 0;
+  }
+  .mobile-filters-sheet .filter-head > button {
+    position: absolute;
+    top: 10px;
+    right: 60px;
+    min-height: 44px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  .mobile-filters-sheet .filters {
+    padding: 0;
+  }
+  .mobile-filters-sheet .filters h3 {
+    font-size: 14px;
+  }
+  /* The sheet is portaled outside .board-shell, so board-scoped rules never reach it. */
+  .mobile-filters-sheet .filters h3 small {
+    font-size: 12px;
+  }
+  .mobile-filters-sheet .check-row {
+    min-height: 48px;
+    font-size: 14px;
+    padding: 6px 8px;
+  }
+  .mobile-filters-sheet .check-row input[type='radio'],
+  .mobile-filters-sheet input[type='radio'],
+  .mobile-filters-sheet .advanced-filters input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+  }
+  .mobile-filters-sheet .facet-count {
+    font-size: 12px;
+  }
+  .mobile-filters-sheet .filter-divider {
+    margin: 14px 0;
+  }
+  .mobile-filters-sheet .source-note {
+    margin-top: 12px;
+  }
+  .mobile-filters-sheet > .primary,
+  .mobile-filters-sheet .filters-apply {
+    position: sticky;
+    bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 50px;
+    margin: 12px 0 0;
+    font-size: 15px;
+    box-shadow:
+      0 -18px 18px -6px #fff,
+      0 -34px 24px -10px #fffffff0;
+  }
+
+  /* ---------- Personal sheet ---------- */
+  .personal-sheet [data-slot='sheet-close'] {
+    top: 10px;
+    right: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+  }
+  .personal-sheet [data-slot='sheet-close'] svg {
+    width: 20px;
+    height: 20px;
+  }
+  .personal-sheet .personal-tabs button {
+    min-height: 44px;
+  }
+  .personal-sheet .personal-storage-note {
+    font-size: 13px;
+  }
+  .personal-sheet .personal-card p,
+  .personal-sheet .personal-body > p {
+    font-size: 13px;
+  }
+  .personal-sheet .personal-card small,
+  .personal-sheet .personal-snapshot-note {
+    font-size: 12px;
+  }
+
+  /* ---------- Vacancy page ---------- */
+  .vacancy-page .vacancy-header-link {
+    min-height: 44px;
+    max-width: none;
+    font-size: 14px;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  .vacancy-page .vacancy-header-link .back-label-full {
+    display: none;
+  }
+  .vacancy-page .vacancy-header-link .back-label-short {
+    display: inline;
+  }
+  .vacancy-page .detail-dates {
+    font-size: 13px;
+  }
+  .vacancy-tools .secondary-button {
+    font-size: 13px;
+  }
+  .vacancy-page .detail-facts dt {
+    font-size: 12px;
+  }
+  .vacancy-summary > p {
+    font-size: 12px;
+  }
+  .seen-badge {
+    font-size: 12px;
+  }
+  .application-control p,
+  .vacancy-page .application-control p {
+    font-size: 12px;
+  }
+  .vacancy-page .vacancy-hide-action {
+    font-size: 13px;
+    min-height: 44px;
+  }
+  .vacancy-source .job-evidence,
+  .vacancy-page .job-evidence {
+    font-size: 12px;
+  }
+  .similar-card p {
+    font-size: 12px;
+  }
+  .vacancy-page .quick-apply-note {
+    font-size: 13px;
+  }
+  .application-email > span {
+    font-size: 12px;
+  }
+  .vacancy-mobile-action .primary {
+    font-size: 14px;
+  }
+  .vacancy-mobile-action .secondary-button {
+    font-size: 13px;
+  }
+  .vacancy-contact-guidance a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+  }
+  .vacancy-page .feedback-toast {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+  .vacancy-page.has-contact .feedback-toast {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+  .feedback-toast {
+    font-size: 13px;
+  }
+
+  /* ---------- Type floor ---------- */
+  .board-shell .section-kicker {
+    font-size: 12px;
+  }
+  .site-footer > span,
+  .site-footer > div,
+  .site-footer a {
+    font-size: 12px;
+  }
+  .site-footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .how-grid p,
+  .board-shell .how-grid p {
+    font-size: 14px;
+  }
+  .board-shell .source-note p {
+    font-size: 12px;
+  }
+  .filter-help,
+  .filter-error,
+  .salary-range label {
+    font-size: 12px;
+  }
+  .advanced-filters > label,
+  .advanced-filters legend,
+  .advanced-filters fieldset > label {
+    font-size: 13px;
+  }
+  .board-shell .personal-tools .secondary-button {
+    font-size: 13px;
+  }
+  .board-shell .job-company .source-pill {
+    font-size: 12px;
+  }
+  .board-shell .hidden-vacancies,
+  .board-shell .hidden-vacancies summary {
+    font-size: 13px;
+  }
+}
