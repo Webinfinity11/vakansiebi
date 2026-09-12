@@ -6,6 +6,8 @@
 #   zsh scripts/local-gov-sources.sh          one pass over the due government sources
 #   zsh scripts/local-gov-sources.sh --loop   keep passing every 30 minutes (Ctrl+C to stop)
 #
+# The source is checked whether or not its interval says it is due: this pass exists precisely
+# because the cloud cannot reach these hosts, and a cloud deferral pushes the next run a day out.
 # PostgreSQL advisory locks make this safe to run while the scheduled workflow is also running.
 set -u
 cd "$(dirname "$0")/.." || exit 1
@@ -16,7 +18,7 @@ pass() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') start $source"
     CRAWL_BATCH_SIZE="${CRAWL_BATCH_SIZE:-300}" \
       SCRAPE_BUDGET_MINUTES="${SCRAPE_BUDGET_MINUTES:-12}" \
-      npx tsx worker/main.ts --source="$source" --due --once
+      npx tsx worker/main.ts --source="$source" --once
     echo "$(date '+%Y-%m-%d %H:%M:%S') end $source exit=$?"
   done
 }

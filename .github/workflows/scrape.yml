@@ -15,10 +15,12 @@ jobs:
     timeout-minutes: 35
     strategy:
       fail-fast: false
-      # vacancy.hr.gov.ge times out from every GitHub-hosted runner (verified 2026-09-09) and
-      # is collected from a reachable network instead; see README.
+      # The two government hosts time out from every GitHub-hosted runner: vacancy.hr.gov.ge
+      # (verified 2026-09-09) and worknet.moh.gov.ge (verified 2026-09-12, run 34701274010).
+      # They are collected from a reachable network instead; see README. Keeping them here
+      # would also push their next run a day out on every deferral, delaying that collection.
       matrix:
-        source: [hr, jobs, ss, gancxadebebi, worknet, myjobs]
+        source: [hr, jobs, ss, gancxadebebi, myjobs]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
