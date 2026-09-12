@@ -118,12 +118,18 @@ export function SearchSuggest({
       void fetch('/api/suggest?q=' + encodeURIComponent(trimmed), {
         signal: controller.signal,
       })
-        .then((r) => (r.ok ? r.json() : { suggestions: [] }))
-        .then((d) => {
-          if (controller.signal.aborted) return;
-          const list: Suggestion[] = Array.isArray(d.suggestions)
-            ? d.suggestions
+        .then(async (response) => {
+          /* Only an answer is worth remembering. The endpoint refuses a request when it is
+             busy, and memoising that refusal as "this prefix has no suggestions" would keep
+             the panel empty for the rest of the session; the next keystroke asks again. */
+          if (!response.ok) return null;
+          const body = await response.json();
+          return Array.isArray(body.suggestions)
+            ? (body.suggestions as Suggestion[])
             : [];
+        })
+        .then((list) => {
+          if (!list || controller.signal.aborted) return;
           remember(key, list);
           setResult({ key, list });
         })
