@@ -102,6 +102,8 @@ export function searchPlan(
   const p = (key: string) => `j.p_${key}`;
   const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' THEN j.id::text ELSE regexp_replace(${normalized(`concat_ws('|',${p('title')},${p('company')},${p('city')})`)},'[^[:alnum:]|]','','g') END`;
   const numericSalary = `jsonb_typeof(${p('salaryMin')})='number'`;
+  const monthlyFloor = 100;
+  const monthlyCeiling = 50000;
   const salaryAmount = `(${p('salaryMin')}#>>'{}')::numeric`;
   const unless = (needed: boolean, sql: string, empty = "''::text") =>
     needed ? sql : empty;
@@ -115,7 +117,13 @@ export function searchPlan(
     `COALESCE(CASE WHEN ${p('datePosted')} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${p('datePosted')}>='2000-01-01' THEN ${p('datePosted')} END,to_char(${posted} AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AS posted_on`,
     // Most sources omit the period for an ordinary monthly figure; an empty
     // period is monthly unless the text itself says daily, hourly or weekly.
-    `${unless(pricing, `CASE WHEN ${p('currency')}='GEL' AND ${numericSalary} AND (${p('salaryPeriod')}='თვე' OR (COALESCE(${p('salaryPeriod')},'')='' AND lower(COALESCE(${p('salary')},'')) !~ '(დღ|საათ|კვირ|hour|dail|day|week)')) THEN ${salaryAmount} END`, 'NULL::numeric')} AS salary_month`,
+    /* A monthly figure is compared only when it is plausible as a month's pay. Measured on the
+       public catalogue: the 99th percentile is 4,000 GEL and nothing lies between 15,000 and a
+       placeholder 111,111; below 100 GEL, every record sampled was a day or shift rate a source
+       form had labelled "month", or a placeholder like 1. The card still shows the source's text;
+       only sorting, the pay filter and the pay spread stop ranking such a number as a wage. A
+       rate per square metre, piece, kilogram or tonne is not a month's pay whatever its size. */
+    `${unless(pricing, `CASE WHEN ${p('currency')}='GEL' AND ${numericSalary} AND ${salaryAmount} BETWEEN ${monthlyFloor} AND ${monthlyCeiling} AND (${p('salaryPeriod')}='თვე' OR (COALESCE(${p('salaryPeriod')},'')='' AND lower(COALESCE(${p('salary')},'')) !~ '(დღ|საათ|კვირ|hour|dail|day|week|მ²|მ2|კვ\\.?\\s*მ|ცალ|კგ|ტონ)')) THEN ${salaryAmount} END`, 'NULL::numeric')} AS salary_month`,
     `${unless(pricing, `CASE WHEN ${p('currency')}='GEL' AND ${numericSalary} AND ${p('salaryPeriod')}='დღე' THEN ${salaryAmount} END`, 'NULL::numeric')} AS salary_day`,
     `${unless(folding, groupKey, 'j.id::text')} AS group_key`,
   ];
