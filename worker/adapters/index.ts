@@ -958,6 +958,45 @@ export function parseDetail(
     });
   return finishVacancy(source, j, hints, fromSource, verifiedMinimalSs);
 }
+const unclearLocation = 'სამუშაოს მდებარეობა დასაზუსტებელია.';
+/**
+ * Applies what a listing page said to a vacancy that was already parsed without it.
+ *
+ * Hints are stored when a listing is read, but used only when a detail is parsed, so a
+ * vacancy imported before its hint arrived kept an empty city and a title-guessed category
+ * until the worker happened to read its detail again. The importer calls this on the stored
+ * copy the moment the hint is stored. It follows the detail parse exactly — the city fills
+ * only an empty city and clears the "location unclear" warning, the source label becomes a
+ * fact once, and a jobs.ge category is classified the same way, so the source's generic
+ * bucket still defers to the title — and tests/parsers.test.ts holds the two paths equal.
+ */
+export function applyListingHints(
+  source: SourceId,
+  input: Vacancy,
+  hints?: ListingHints | null,
+): Vacancy {
+  if (!hints) return input;
+  const j = {
+    ...input,
+    facts: [...(input.facts || [])],
+    warnings: [...(input.warnings || [])],
+  };
+  if (!j.city && hints.city) {
+    j.city = hints.city.replace(/\s+/g, ' ').trim();
+    j.warnings = j.warnings.filter((w) => w !== unclearLocation);
+  }
+  if (hints.categoryLabel && !j.facts.some((f) => f.label === 'კატეგორია'))
+    j.facts.push({
+      label: 'კატეგორია',
+      value: hints.categoryLabel.slice(0, 150),
+    });
+  if (source === 'jobs' && hints.category)
+    j.category = classify(
+      j.title,
+      sourceCategory('jobs', hints.categoryLabel || ''),
+    );
+  return j;
+}
 /** Shared normalisation and validation for every source. */
 function finishVacancy(
   source: SourceId,
@@ -995,10 +1034,7 @@ function finishVacancy(
   // The description may still name the city; only warn when it does not.
   const enriched = enrichVacancy(j);
   if (!enriched.city && enriched.mode !== 'დისტანციური')
-    enriched.warnings = [
-      ...(enriched.warnings || []),
-      'სამუშაოს მდებარეობა დასაზუსტებელია.',
-    ];
+    enriched.warnings = [...(enriched.warnings || []), unclearLocation];
   return enriched;
 }
 

@@ -1,7 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { db, transaction } from '../lib/server/db';
-import { fingerprint, tbilisiDate, type ListingHints } from './adapters';
+import {
+  applyListingHints,
+  fingerprint,
+  tbilisiDate,
+  type ListingHints,
+} from './adapters';
 import { samePosting } from '../lib/job-intelligence';
 import type { SourceId, Vacancy } from '../lib/types';
 import { reconcileJob } from './automation';
@@ -179,6 +184,52 @@ export async function discoverItems(
         listing_hints=CASE WHEN excluded.listing_hints IS NULL THEN source_items.listing_hints ELSE COALESCE(source_items.listing_hints,'{}'::jsonb)||excluded.listing_hints END`,
         values,
       );
+    if (chunk.length)
+      await applyStoredHints(
+        source,
+        chunk.map((a) => a.externalId),
+      );
+  }
+}
+/**
+ * A hint that arrives after a vacancy was imported is applied to the stored copy right away.
+ *
+ * Until now it waited for the worker to parse that detail page again, and on jobs.ge, read
+ * slowly under its crawl delay, 265 published vacancies went without the city and 179 without
+ * the category their own listing named. The stored copy is updated through the same function
+ * the detail parse uses, with its hash, so the next read of that page finds nothing changed;
+ * the job is moved to the front of the reconcile queue so automation publishes the fuller copy
+ * on its next pass. An editor's published text is untouched — only the source copy moves.
+ */
+async function applyStoredHints(source: SourceId, externalIds: string[]) {
+  const items = (
+    await db().query(
+      `SELECT id, job_id, raw, listing_hints FROM source_items
+       WHERE source_id=$1 AND external_id = ANY($2) AND job_id IS NOT NULL AND raw IS NOT NULL AND listing_hints IS NOT NULL`,
+      [source, externalIds],
+    )
+  ).rows;
+  for (const item of items) {
+    const next = applyListingHints(source, item.raw, item.listing_hints);
+    const hash = hashVacancy(next);
+    if (hash === hashVacancy(item.raw)) continue;
+    await transaction(async (c) => {
+      await c.query(
+        'UPDATE source_items SET raw=$2, content_hash=$3 WHERE id=$1',
+        [item.id, next, hash],
+      );
+      await c.query('UPDATE jobs SET automation_checked_at=NULL WHERE id=$1', [
+        item.job_id,
+      ]);
+      await audit(
+        c,
+        item.job_id,
+        'source.hints_applied',
+        'importer',
+        { city: item.raw.city, category: item.raw.category },
+        { city: next.city, category: next.category },
+      );
+    });
   }
 }
 const plainObject = (v: unknown): v is Record<string, unknown> =>

@@ -12,6 +12,7 @@ import {
   configs,
   getSourceConfig,
   UnavailableVacancy,
+  applyListingHints,
 } from '../worker/adapters';
 import { validateUrl } from '../worker/http';
 void test('deduplicates listing links and rejects links to other origins', () => {
@@ -467,7 +468,10 @@ void test('Jobs listing rows carry the work location and the salary marker as hi
 void test('a category listing names the category for standard rows but never for the site-wide VIP block', () => {
   const listing = { categoryLabel: 'გაყიდვები', category: 'გაყიდვები' };
   const byId = Object.fromEntries(
-    listLinks('jobs', jobsListing, undefined, listing).map((l) => [l.externalId, l]),
+    listLinks('jobs', jobsListing, undefined, listing).map((l) => [
+      l.externalId,
+      l,
+    ]),
   );
   assert.deepEqual(byId['750087'].hints, {
     city: 'თბილისი, რუსთავი',
@@ -506,15 +510,56 @@ void test('Jobs detail takes the listing city and category hints and keeps the l
   );
   // The source's generic bucket says nothing; the title decides.
   assert.equal(
-    parseDetail('jobs', jobsDetail(), jobsUrl, { categoryLabel: 'სხვა', category: 'სხვა' })
-      .category,
+    parseDetail('jobs', jobsDetail(), jobsUrl, {
+      categoryLabel: 'სხვა',
+      category: 'სხვა',
+    }).category,
     'მარკეტინგი',
   );
   // A tender listed among vacancies is still not a vacancy.
   assert.throws(
-    () => parseDetail('jobs', jobsDetail('ტენდერი სამშენებლო სამუშაოებზე'), jobsUrl, { city: 'თბილისი' }),
+    () =>
+      parseDetail(
+        'jobs',
+        jobsDetail('ტენდერი სამშენებლო სამუშაოებზე'),
+        jobsUrl,
+        { city: 'თბილისი' },
+      ),
     UnavailableVacancy,
   );
+});
+
+void test('a hint stored after import gives the same vacancy as a detail parsed with it', () => {
+  // The importer applies a late hint to the stored copy; it must not become a second rulebook.
+  const bare = parseDetail('jobs', jobsDetail(), jobsUrl);
+  for (const hints of [
+    {
+      city: 'თბილისი, რუსთავი',
+      salaried: true,
+      categoryLabel: 'გაყიდვები',
+      category: 'გაყიდვები',
+    },
+    { city: 'ბათუმი' },
+    { categoryLabel: 'IT/პროგრამირება', category: 'ტექნოლოგიები' },
+    { categoryLabel: 'სხვა', category: 'სხვა' },
+  ]) {
+    const late = applyListingHints('jobs', bare, hints);
+    const parsed = parseDetail('jobs', jobsDetail(), jobsUrl, hints);
+    const pick = (v: typeof bare) => ({
+      city: v.city,
+      category: v.category,
+      facts: v.facts?.filter((f) => f.label === 'კატეგორია'),
+      locationWarning: v.warnings?.some((w) => w.includes('მდებარეობა')),
+    });
+    assert.deepEqual(pick(late), pick(parsed), JSON.stringify(hints));
+  }
+  // A hint never overwrites what the detail page stated.
+  const stated = { ...bare, city: 'ქუთაისი' };
+  assert.equal(
+    applyListingHints('jobs', stated, { city: 'ბათუმი' }).city,
+    'ქუთაისი',
+  );
+  assert.equal(applyListingHints('jobs', bare, null), bare);
 });
 
 void test('SS keeps the public sphere as a fact and classifies by it before the title', () => {
@@ -538,7 +583,13 @@ void test('SS keeps the public sphere as a fact and classifies by it before the 
           detailsInitData: d,
           spheresInitData: {
             items: [
-              { id: 63, title: { ka: 'ბუღალტერია, ფინანსები', en: 'Accounting, Finance' } },
+              {
+                id: 63,
+                title: {
+                  ka: 'ბუღალტერია, ფინანსები',
+                  en: 'Accounting, Finance',
+                },
+              },
               { id: 68, title: { ka: 'ინფორმაციული ტექნოლოგიები', en: 'IT' } },
               { id: 52, title: { ka: 'სხვა', en: 'Other' } },
             ],
@@ -579,7 +630,11 @@ void test('SS internships are marked as such', () => {
     isInternship: true,
   };
   const html = `<script id="__NEXT_DATA__">${JSON.stringify({ props: { pageProps: { detailsInitData: d } } })}</script>`;
-  const j = parseDetail('ss', html, 'https://jobs.ss.ge/ka/details/designer-123');
+  const j = parseDetail(
+    'ss',
+    html,
+    'https://jobs.ss.ge/ka/details/designer-123',
+  );
   assert.deepEqual(
     j.facts?.filter((f) => f.label === 'სტაჟირება'),
     [{ label: 'სტაჟირება', value: 'დიახ' }],
@@ -593,7 +648,12 @@ void test('HR shows public benefits, languages, driving licences and student sui
     title: 'ოფისის ასისტენტი',
     customerName: 'კომპანია',
     addresses: ['თბილისი'],
-    benefits: ['ჯანმრთელობის დაზღვევა', { id: '67614d2f' }, ' კორპორატიული ტელეფონი ', ''],
+    benefits: [
+      'ჯანმრთელობის დაზღვევა',
+      { id: '67614d2f' },
+      ' კორპორატიული ტელეფონი ',
+      '',
+    ],
     languages: ['ქართული', 'ინგლისური'],
     showLanguages: true,
     drivingLicenses: ['B'],
@@ -603,14 +663,20 @@ void test('HR shows public benefits, languages, driving licences and student sui
   const page = (a: Record<string, unknown>, extra = '') =>
     `<script id="ng-state" type="application/json">${JSON.stringify({ a: { b: { data: { announcement: a } } } })}</script>${extra}<div class="description">${'გამოცდილი თანამშრომლის ვაკანსია. '.repeat(3)}</div>`;
   const url = 'https://www.hr.ge/announcement/123/test';
-  const labels = (j: ReturnType<typeof parseDetail>) => j.facts?.map((f) => f.label) || [];
+  const labels = (j: ReturnType<typeof parseDetail>) =>
+    j.facts?.map((f) => f.label) || [];
   const j = parseDetail('hr', page(announcement), url);
   assert.deepEqual(
     j.facts?.filter((f) =>
-      ['ბენეფიტები', 'ენები', 'მართვის მოწმობა', 'სტუდენტებისთვის'].includes(f.label),
+      ['ბენეფიტები', 'ენები', 'მართვის მოწმობა', 'სტუდენტებისთვის'].includes(
+        f.label,
+      ),
     ),
     [
-      { label: 'ბენეფიტები', value: 'ჯანმრთელობის დაზღვევა, კორპორატიული ტელეფონი' },
+      {
+        label: 'ბენეფიტები',
+        value: 'ჯანმრთელობის დაზღვევა, კორპორატიული ტელეფონი',
+      },
       { label: 'ენები', value: 'ქართული, ინგლისური' },
       { label: 'სტუდენტებისთვის', value: 'დიახ' },
     ],
@@ -635,7 +701,12 @@ void test('HR shows public benefits, languages, driving licences and student sui
   // Absent flags default to shown; empty lists add no fact.
   const minimal = parseDetail(
     'hr',
-    page({ ...announcement, showLanguages: undefined, drivingLicenses: [], benefits: undefined }),
+    page({
+      ...announcement,
+      showLanguages: undefined,
+      drivingLicenses: [],
+      benefits: undefined,
+    }),
     url,
   );
   assert.ok(labels(minimal).includes('ენები'));
@@ -644,7 +715,8 @@ void test('HR shows public benefits, languages, driving licences and student sui
   // Facts are capped at 30 however many labelled rows the page shows.
   const rows = Array.from(
     { length: 40 },
-    (_, i) => `<div><span class="list-item-label">ველი ${i}:</span><span>მნიშვნელობა ${i}</span></div>`,
+    (_, i) =>
+      `<div><span class="list-item-label">ველი ${i}:</span><span>მნიშვნელობა ${i}</span></div>`,
   ).join('');
   const capped = parseDetail('hr', page(announcement, rows), url);
   assert.equal(capped.facts?.length, 30);
