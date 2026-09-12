@@ -227,3 +227,110 @@
 .source-errors small {
   opacity: 0.72;
 }
+
+/* Anonymous analytics tab. */
+.admin-analytics {
+  display: grid;
+  gap: 16px;
+  padding: 8px 0 24px;
+}
+.admin-analytics-note,
+.admin-analytics-hint,
+.admin-analytics-empty {
+  color: #626467;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+.admin-analytics-windows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.admin-analytics-windows button {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid #dcddde;
+  border-radius: 8px;
+  background: #fff;
+}
+.admin-analytics-windows button[aria-pressed='true'] {
+  border-color: #2457e6;
+  color: #2457e6;
+  font-weight: 600;
+}
+.admin-analytics-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.admin-analytics-totals > div {
+  border: 1px solid #e4e4e5;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fff;
+}
+.admin-analytics-totals dt {
+  font-size: 12px;
+  color: #626467;
+}
+.admin-analytics-totals dd {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+.admin-analytics-lists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.admin-analytics-list {
+  border: 1px solid #e4e4e5;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #fff;
+  min-width: 0;
+}
+.admin-analytics-list h3 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.admin-analytics-list ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-analytics-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid #f0f1f2;
+  font-size: 13px;
+}
+.admin-analytics-list li:first-child {
+  border-top: 0;
+}
+.admin-analytics-list li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.admin-analytics-gone {
+  color: #8a8c90;
+}
+@media (max-width: 760px) {
+  .admin-analytics-totals,
+  .admin-analytics-lists {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-analytics-lists {
+    grid-template-columns: 1fr;
+  }
+}
+.admin-analytics-windows {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}

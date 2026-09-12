@@ -9,6 +9,7 @@ import { configs } from './adapters';
 import { runSourceCycle } from './cycle';
 import { reconcileSource } from './automation';
 import { purgeEnded } from './purge';
+import { rollupAnalytics } from '../lib/server/analytics';
 let stopped = false;
 let lastPurge = 0;
 process.on('SIGTERM', () => {
@@ -120,6 +121,14 @@ try {
           );
           return null;
         });
+    // Separate from the purge: an analytics failure must not hold back deleting ended vacancies.
+    if (purgeDue)
+      await rollupAnalytics(db()).catch((error) =>
+        console.warn(
+          'Analytics rollup skipped:',
+          error instanceof Error ? error.message : error,
+        ),
+      );
     if (purged?.applied && purged.expired + purged.removed > 0)
       console.log(
         `Purged ended vacancies: ${purged.expired} expired, ${purged.removed} removed`,

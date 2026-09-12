@@ -35,6 +35,7 @@ import { CompanyEditor } from './company-editor';
 import type { AdminJob, Source, Vacancy, SourceRun } from '@/lib/types';
 import { categories, sourceNames } from '@/lib/types';
 import { sourceHealth } from '@/lib/scraper-status';
+import { AnalyticsPanel } from './analytics';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
 const names: Record<string, string> = {
   pending: 'შემოტანილი',
@@ -342,6 +343,7 @@ export default function AdminPanel() {
             <TabsTrigger value="vacancies">ვაკანსიები</TabsTrigger>
             <TabsTrigger value="sources">წყაროები და განახლება</TabsTrigger>
             <TabsTrigger value="runs">შემოტანის ისტორია</TabsTrigger>
+            <TabsTrigger value="analytics">ანალიტიკა</TabsTrigger>
           </TabsList>
           <TabsContent value="vacancies">
             <div className="admin-toolbar">
@@ -839,6 +841,9 @@ export default function AdminPanel() {
               გრძელდება. ყველაფრის შესაჩერებლად გამორთე „წყაროს გამოყენება“.
               დროებითი შეცდომები რიგში რჩება და შემდეგ ციკლში მოწმდება.
             </p>
+          </TabsContent>
+          <TabsContent value="analytics">
+            {tab === 'analytics' && <AnalyticsPanel />}
           </TabsContent>
           <TabsContent value="runs">
             <div className="run-list">

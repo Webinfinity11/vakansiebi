@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -27,6 +27,7 @@ import {
 import { applicationBody, emailDraft } from '@/lib/application-contact';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
+import { track } from '@/lib/analytics-client';
 import type { PublicJob } from '@/lib/types';
 import { vacancySummary } from '@/lib/vacancy-summary';
 import {
@@ -183,6 +184,14 @@ export default function VacancyPage({
     const timer = setTimeout(() => markSeen(job.id), 0);
     return () => clearTimeout(timer);
   }, [job.id, preview, markSeen]);
+  /* One view per vacancy per page load; the ref keeps a re-run of the effect from counting twice. */
+  const viewed = useRef('');
+  useEffect(() => {
+    if (preview || viewed.current === job.id) return;
+    viewed.current = job.id;
+    track('view', job.id);
+  }, [job.id, preview]);
+  const leftFor = useRef(false);
   const [saved, setSaved] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -275,6 +284,18 @@ export default function VacancyPage({
   function recordContactOpen(event: MouseEvent<HTMLDivElement>) {
     if (preview || !(event.target instanceof Element)) return;
     const href = event.target.closest('a')?.getAttribute('href');
+    /* Leaving for the employer — a mail, a call, the application form or the original posting —
+       is the nearest sign of an application the site can see. Counted once per page load. */
+    if (
+      href &&
+      !leftFor.current &&
+      (/^(?:mailto:|tel:)/i.test(href) ||
+        (/^https?:/i.test(href) &&
+          new URL(href).origin !== window.location.origin))
+    ) {
+      leftFor.current = true;
+      track('outbound', job.id);
+    }
     if (
       href &&
       (/^(?:mailto:|tel:)/i.test(href) ||

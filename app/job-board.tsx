@@ -28,6 +28,7 @@ import {
 } from '@/lib/vacancy-navigation';
 import { readSearch, searchParams } from '@/lib/search-state';
 import { shareLink } from '@/lib/share';
+import { track } from '@/lib/analytics-client';
 import {
   ArrowUpRight,
   ArrowRight,
@@ -665,6 +666,22 @@ export default function JobBoard() {
       .getElementById('results')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  /* A search counts once the reader has stopped typing it and its results are on screen, so
+     "გა", "გაყ" and "გაყი" on the way to a word are not three searches. Each distinct query is
+     counted once per page load, and a search that found nothing is also counted as such. */
+  const trackedSearches = useRef(new Set<string>());
+  useEffect(() => {
+    const settled = query.trim();
+    if (demo || resultsPending || settled.length < 2) return;
+    const timer = setTimeout(() => {
+      const key = settled.toLowerCase();
+      if (trackedSearches.current.has(key)) return;
+      trackedSearches.current.add(key);
+      track('search', settled);
+      if (total === 0) track('search_empty', settled);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [query, total, resultsPending, demo]);
   const initialPageRestored = useRef(false);
   useEffect(() => {
     if (!storageReady || !activity.ready || initialPageRestored.current) return;
