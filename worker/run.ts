@@ -235,7 +235,10 @@ export async function runSource(
             'Pagination returned ' +
             accepted +
             ' page; cursor retained for retry';
-          discoveryStructural = true;
+          // A page whose every entry is closed carries no link and is ordinary on a board
+          // that keeps expired records in its listing. A page repeating one already read is
+          // the pagination itself behaving differently than the source described.
+          discoveryStructural = accepted === 'repeated';
           break;
         }
         await rememberPage(extra, pageLinks);
