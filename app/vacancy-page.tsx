@@ -12,17 +12,19 @@ import {
   X,
 } from 'lucide-react';
 import { Brand } from './brand';
+import { ThemeToggle } from './theme-toggle';
 import { CompanyLogo } from './company-logo';
 import { Description, SourceStatus, formatDate } from './vacancy-text';
 import { QuickApply, TranslationHelp } from './quick-apply';
 import { ApplicationControl, usePersonalSpace } from './personal-space';
+import { readApplicant, type Applicant } from '@/lib/personal-space';
 import {
   vacancyContacts,
   workSchedule,
   applicationDestination,
   defaultApplicationBody,
 } from '@/lib/vacancy-details';
-import { emailDraft } from '@/lib/application-contact';
+import { applicationBody, emailDraft } from '@/lib/application-contact';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
 import type { PublicJob } from '@/lib/types';
@@ -63,7 +65,28 @@ function daysUntil(date: string) {
   target.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
+/* The details a person saved in their own browser, read after mount because localStorage is
+   not there during render. Absent details mean the letter is exactly what it was before. */
+function useApplicant() {
+  const [applicant, setApplicant] = useState<Applicant | null>(null);
+  useEffect(() => {
+    const read = () => {
+      try {
+        setApplicant(readApplicant(localStorage));
+      } catch {}
+    };
+    const timer = setTimeout(read, 0);
+    window.addEventListener('storage', read);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('storage', read);
+    };
+  }, []);
+  return applicant;
+}
 function ApplyAction({ job }: { job: PublicJob }) {
+  const applicant = useApplicant();
+  const letter = (base: string) => applicationBody(base, applicant);
   const contacts = vacancyContacts(job);
   const emails = contacts.emails.filter((c) => c.application);
   const external = applicationDestination(job);
@@ -81,9 +104,11 @@ function ApplyAction({ job }: { job: PublicJob }) {
           href={emailDraft(
             contacts.emails[0].email,
             job.title,
-            contacts.emails[0].application
-              ? defaultApplicationBody
-              : 'გამარჯობა,\n\nთქვენს ვაკანსიასთან დაკავშირებით მაქვს კითხვა.',
+            letter(
+              contacts.emails[0].application
+                ? defaultApplicationBody
+                : 'გამარჯობა,\n\nთქვენს ვაკანსიასთან დაკავშირებით მაქვს კითხვა.',
+            ),
           )}
         >
           {contacts.emails[0].application ? 'CV-ის გაგზავნა' : 'წერილის გახსნა'}{' '}
@@ -95,7 +120,11 @@ function ApplyAction({ job }: { job: PublicJob }) {
     return (
       <a
         className="primary"
-        href={emailDraft(emails[0].email, job.title, defaultApplicationBody)}
+        href={emailDraft(
+          emails[0].email,
+          job.title,
+          letter(defaultApplicationBody),
+        )}
       >
         CV-ის გაგზავნა მეილით <ArrowUpRight size={17} />
       </a>
@@ -272,6 +301,7 @@ export default function VacancyPage({
       <header className="topbar">
         <div className="header-inner">
           <Brand />
+          <ThemeToggle />
           <Link
             className="vacancy-header-link"
             href={returnTo}

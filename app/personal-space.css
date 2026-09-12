@@ -1,0 +1,115 @@
+/* Saved-search freshness and the personal details form.
+   Both live in the "ჩემი სივრცე" sheet, which is portaled outside .board-shell, so these
+   selectors are deliberately unscoped. Type floor here is 12px, targets 44px on phones. */
+
+.personal-card .saved-freshness {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #5b6679;
+}
+.personal-card .saved-open-new {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.saved-freshness-note {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f1f5ff;
+  color: #42618a;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* The details tab carries an icon; the shared tab rule is not a flex row, so it would stack. */
+.personal-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.applicant-form {
+  display: block;
+}
+.applicant-form .applicant-note {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f1f1f2;
+  color: #585a5e;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.applicant-form label {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.8;
+  color: #36393f;
+}
+.applicant-form input {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin: 6px 0 0;
+  padding: 8px 12px;
+  border: 1px solid #cfd0d3;
+  border-radius: 8px;
+  background: #fff;
+  color: #323439;
+  font: inherit;
+  font-size: 14px;
+}
+.applicant-form input:focus-visible {
+  outline: 3px solid #a3a7af;
+  outline-offset: 2px;
+}
+.applicant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+.applicant-actions .primary,
+.applicant-actions .secondary-button {
+  font-size: 13px;
+}
+.applicant-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.apply-prefill-hint {
+  display: block;
+  margin-top: 8px;
+  color: #696b6f;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 760px) {
+  .personal-card .saved-open-new {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+  }
+  .saved-freshness-note,
+  .applicant-form .applicant-note {
+    font-size: 12px;
+  }
+  .applicant-form input {
+    min-height: 44px;
+    /* 16px keeps iOS Safari from zooming the sheet in when the field takes focus. */
+    font-size: 16px;
+  }
+  .applicant-actions .primary,
+  .applicant-actions .secondary-button {
+    flex: 1;
+    min-height: 44px;
+    justify-content: center;
+  }
+}

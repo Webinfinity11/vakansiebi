@@ -2,11 +2,17 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './board.css';
 import './phone.css';
+/* Last, so its `:root[data-theme='dark']` rules restate the light ones above. */
+import './theme-dark.css';
+import { themeScript } from '@/lib/theme';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#ffffff',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e1523' },
+  ],
 };
 export const metadata: Metadata = {
   title: 'ერთად — ვაკანსიები ერთ სივრცეში',
@@ -21,7 +27,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ka">
+    <html lang="ka" suppressHydrationWarning>
+      <head>
+        {/* Before the first paint: a themed page never flashes the other theme. */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

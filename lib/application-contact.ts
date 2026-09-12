@@ -1,3 +1,4 @@
+import type { Applicant } from './personal-space';
 export function safeEmail(value: string): string | null {
   const email = value.trim();
   return email.length <= 254 &&
@@ -43,6 +44,26 @@ export function applicationContacts(description: string) {
       return [{ email, application, context }];
     })
     .slice(0, 8);
+}
+export const applicantPlaceholder = '[შენი სახელი]';
+/* Fills the letter the mail client will open. Nothing here is sent: the draft is handed to the
+   person's own mail app, which is also why an empty applicant has to leave the text untouched. */
+export function applicationBody(base: string, applicant: Applicant | null) {
+  if (!applicant) return base;
+  const { fullName, phone, email } = applicant;
+  if (!fullName && !phone && !email) return base;
+  const signed = Boolean(fullName) && base.includes(applicantPlaceholder);
+  const body = fullName
+    ? base.split(applicantPlaceholder).join(fullName)
+    : base;
+  /* The letter already signs off with the name where the placeholder was; repeating it in the
+     contact block would read as a form, not a letter. */
+  const details = [
+    !signed && fullName && `სახელი: ${fullName}`,
+    phone && `ტელეფონი: ${phone}`,
+    email && `ელფოსტა: ${email}`,
+  ].filter(Boolean);
+  return details.length ? `${body}\n\n${details.join('\n')}` : body;
 }
 export function emailDraft(email: string, title: string, body: string) {
   const recipient = safeEmail(email);

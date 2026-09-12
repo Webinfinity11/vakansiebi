@@ -1,6 +1,13 @@
 'use client';
-import { useCallback, useEffect, useState, useId } from 'react';
-import { FolderHeart, Search, Trash2, ArrowUpRight } from 'lucide-react';
+import './personal-space.css';
+import { useCallback, useEffect, useRef, useState, useId } from 'react';
+import {
+  FolderHeart,
+  Search,
+  Trash2,
+  ArrowUpRight,
+  UserRound,
+} from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -23,12 +30,17 @@ import {
   putPersonal,
   saveSearch,
   recordKey,
+  readApplicant,
+  writeApplicant,
+  filterIdentity,
+  type Applicant,
   type PersonalRecord,
   type SearchFilters,
   type Application,
   type SavedSearch,
 } from '@/lib/personal-space';
 import type { PublicJob } from '@/lib/types';
+import { searchParams } from '@/lib/search-state';
 
 const personalChanged = 'ertad-personal-changed';
 export function usePersonalSpace() {
@@ -244,6 +256,37 @@ export function ApplicationControl({
     </section>
   );
 }
+/* The server honours only these windows, so a saved search can only be asked about one of them.
+   The window chosen is never wider than the time since the search was saved: a wider one would
+   count vacancies that were already there, and "new" has to mean new. */
+const freshnessWindows = [1, 3, 7, 30] as const;
+type FreshnessWindow = (typeof freshnessWindows)[number];
+export function freshnessWindow(savedAt: string, now = Date.now()) {
+  const days = Math.floor((now - Date.parse(savedAt)) / 86400000);
+  let chosen: FreshnessWindow = 1;
+  for (const window of freshnessWindows)
+    if (window <= Math.max(1, days)) chosen = window;
+  return chosen;
+}
+type Freshness = { total: number; fresh: number; days: FreshnessWindow };
+const freshnessKey = (record: SavedSearch) =>
+  record.id + '|' + filterIdentity(record.filters);
+async function countMatches(
+  filters: SearchFilters,
+  signal: AbortSignal,
+  days?: FreshnessWindow,
+) {
+  const params = searchParams(
+    days ? { ...filters, postedWithin: days } : filters,
+  );
+  params.set('countsOnly', '1');
+  const response = await fetch('/api/jobs?' + params, { signal });
+  if (!response.ok) throw Error('unavailable');
+  const data = await response.json();
+  if (typeof data.total !== 'number') throw Error('unavailable');
+  return data.total as number;
+}
+
 export function PersonalSpace({
   space,
   filters,
@@ -263,16 +306,83 @@ export function PersonalSpace({
 }) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
-  const [section, setSection] = useState<'searches' | 'applications'>(
-    'applications',
-  );
+  const [section, setSection] = useState<
+    'searches' | 'applications' | 'details'
+  >('applications');
   const [stage, setStage] = useState('all');
+  const [counts, setCounts] = useState<Record<string, Freshness | 'error'>>({});
+  const requested = useRef(new Set<string>());
+  const [applicant, setApplicant] = useState<Applicant | null>(null);
+  const [details, setDetails] = useState<Applicant>({
+    fullName: '',
+    phone: '',
+    email: '',
+  });
+  const [detailsError, setDetailsError] = useState('');
+  const [detailsMessage, setDetailsMessage] = useState('');
+  const nameId = useId();
+  const phoneId = useId();
+  const emailId = useId();
   const searches = space.records.filter(
     (r): r is SavedSearch => r.kind === 'search',
   );
   const applications = space.records.filter(
     (r): r is Application => r.kind === 'application',
   );
+  /* Checked only while the tab is open, two at a time, and never again for the same saved
+     filters in this session. Nothing is scheduled, nothing is sent: this is the whole of
+     "notifications" that a page which never contacts anyone can honestly offer. */
+  const checkable = searches.slice(0, 8);
+  const checkKeys = checkable.map(freshnessKey).join('~');
+  useEffect(() => {
+    if (!open || section !== 'searches' || !checkKeys) return;
+    const controller = new AbortController();
+    const queue = checkable.filter(
+      (record) => !requested.current.has(freshnessKey(record)),
+    );
+    if (!queue.length) return;
+    for (const record of queue) requested.current.add(freshnessKey(record));
+    const worker = async () => {
+      for (let record = queue.shift(); record; record = queue.shift()) {
+        const key = freshnessKey(record);
+        const days = freshnessWindow(record.updatedAt);
+        try {
+          const [total, fresh] = await Promise.all([
+            countMatches(record.filters, controller.signal),
+            countMatches(record.filters, controller.signal, days),
+          ]);
+          if (controller.signal.aborted) return;
+          setCounts((prev) => ({ ...prev, [key]: { total, fresh, days } }));
+        } catch {
+          if (controller.signal.aborted) return;
+          requested.current.delete(key);
+          setCounts((prev) => ({ ...prev, [key]: 'error' }));
+        }
+      }
+    };
+    void Promise.all([worker(), worker()]);
+    return () => controller.abort();
+    // checkable is derived from checkKeys; listing it would refetch on every render.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, section, checkKeys]);
+  useEffect(() => {
+    if (!open) return;
+    const read = () => {
+      try {
+        const stored = readApplicant(localStorage);
+        setApplicant(stored);
+        setDetails(stored || { fullName: '', phone: '', email: '' });
+      } catch {
+        setApplicant(null);
+      }
+    };
+    const timer = setTimeout(read, 0);
+    window.addEventListener('storage', read);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('storage', read);
+    };
+  }, [open]);
   const summary = (f: SearchFilters) =>
     [
       f.query,
@@ -345,11 +455,23 @@ export function PersonalSpace({
               >
                 განაცხადები ({applications.length})
               </button>
+              <button
+                aria-pressed={section === 'details'}
+                onClick={() => setSection('details')}
+              >
+                <UserRound size={15} /> ჩემი მონაცემები
+              </button>
             </div>
             <Feedback space={space} />
             {!space.ready && !space.error && <p>იტვირთება…</p>}
             {section === 'searches' ? (
               <>
+                {!!searches.length && (
+                  <p className="saved-freshness-note">
+                    შეტყობინებები არ იგზავნება — რაოდენობა მოწმდება მხოლოდ ამ
+                    გვერდის გახსნისას.
+                  </p>
+                )}
                 {!searches.length && (
                   <div className="personal-empty">
                     <h3>სასურველი ძიება შეინახე</h3>
@@ -360,33 +482,153 @@ export function PersonalSpace({
                     </p>
                   </div>
                 )}
-                {searches.map((record) => (
-                  <article className="personal-card" key={record.id}>
-                    <h3>{record.name}</h3>
-                    <p>{summary(record.filters)}</p>
-                    <small>დალაგება: {record.filters.sort}</small>
-                    <div className="personal-actions">
-                      <button
-                        className="primary"
-                        onClick={() => {
-                          onApply(record.filters);
-                          setOpen(false);
-                        }}
-                      >
-                        ძიების გახსნა <ArrowUpRight size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-button"
-                        aria-label={`${record.name} — წაშლა`}
-                        onClick={() => space.remove(record)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                {searches.map((record) => {
+                  const freshness = counts[freshnessKey(record)];
+                  const counted =
+                    freshness && freshness !== 'error' ? freshness : null;
+                  return (
+                    <article className="personal-card" key={record.id}>
+                      <h3>{record.name}</h3>
+                      <p>{summary(record.filters)}</p>
+                      <small>დალაგება: {record.filters.sort}</small>
+                      <p className="saved-freshness">
+                        {!freshness
+                          ? 'მოწმდება…'
+                          : freshness === 'error'
+                            ? 'რაოდენობა ვერ შემოწმდა'
+                            : `სულ ${counted!.total} ვაკანსია · ბოლო ${counted!.days} დღეში ${counted!.fresh}`}
+                      </p>
+                      {!!counted?.fresh && (
+                        <button
+                          type="button"
+                          className="secondary-button saved-open-new"
+                          onClick={() => {
+                            onApply({
+                              ...record.filters,
+                              postedWithin: counted.days,
+                            });
+                            setOpen(false);
+                          }}
+                        >
+                          ნახე ახლები ({counted.fresh})
+                        </button>
+                      )}
+                      <div className="personal-actions">
+                        <button
+                          className="primary"
+                          onClick={() => {
+                            onApply(record.filters);
+                            setOpen(false);
+                          }}
+                        >
+                          ძიების გახსნა <ArrowUpRight size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button"
+                          aria-label={`${record.name} — წაშლა`}
+                          onClick={() => space.remove(record)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
               </>
+            ) : section === 'details' ? (
+              <form
+                className="applicant-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  try {
+                    const saved = writeApplicant(localStorage, details);
+                    setApplicant(saved);
+                    setDetailsError('');
+                    setDetailsMessage(
+                      saved
+                        ? 'მონაცემები შენახულია ამ ბრაუზერში.'
+                        : 'მონაცემები წაიშალა.',
+                    );
+                  } catch (error) {
+                    setDetailsMessage('');
+                    setDetailsError(
+                      error instanceof Error
+                        ? error.message
+                        : 'შენახვა ვერ მოხერხდა.',
+                    );
+                  }
+                }}
+              >
+                <p className="applicant-note">
+                  ინახება მხოლოდ ამ ბრაუზერში და მხოლოდ წერილის ტექსტში
+                  ჩაისმება. არსად არ იგზავნება.
+                </p>
+                <label htmlFor={nameId}>სახელი და გვარი</label>
+                <input
+                  id={nameId}
+                  value={details.fullName}
+                  maxLength={80}
+                  autoComplete="name"
+                  enterKeyHint="done"
+                  onChange={(event) =>
+                    setDetails({ ...details, fullName: event.target.value })
+                  }
+                />
+                <label htmlFor={phoneId}>ტელეფონი</label>
+                <input
+                  id={phoneId}
+                  value={details.phone}
+                  maxLength={32}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  enterKeyHint="done"
+                  onChange={(event) =>
+                    setDetails({ ...details, phone: event.target.value })
+                  }
+                />
+                <label htmlFor={emailId}>ელფოსტა</label>
+                <input
+                  id={emailId}
+                  value={details.email}
+                  maxLength={120}
+                  inputMode="email"
+                  autoComplete="email"
+                  enterKeyHint="done"
+                  onChange={(event) =>
+                    setDetails({ ...details, email: event.target.value })
+                  }
+                />
+                {detailsError && (
+                  <p role="alert" className="personal-error">
+                    {detailsError}
+                  </p>
+                )}
+                <output aria-live="polite" className="personal-feedback">
+                  {detailsMessage}
+                </output>
+                <div className="applicant-actions">
+                  <button className="primary" type="submit">
+                    შენახვა
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={!applicant}
+                    onClick={() => {
+                      try {
+                        writeApplicant(localStorage, {});
+                      } catch {}
+                      setApplicant(null);
+                      setDetails({ fullName: '', phone: '', email: '' });
+                      setDetailsError('');
+                      setDetailsMessage('მონაცემები წაიშალა.');
+                    }}
+                  >
+                    წაშლა
+                  </button>
+                </div>
+              </form>
             ) : (
               <>
                 <p>

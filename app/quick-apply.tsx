@@ -1,7 +1,12 @@
 'use client';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Mail, Phone, Copy, ArrowUpRight, Languages } from 'lucide-react';
-import { emailDraft, hasEnglishDescription } from '@/lib/application-contact';
+import {
+  applicationBody,
+  emailDraft,
+  hasEnglishDescription,
+} from '@/lib/application-contact';
+import { readApplicant, type Applicant } from '@/lib/personal-space';
 import {
   applicationDestination,
   defaultApplicationBody,
@@ -21,6 +26,22 @@ export function QuickApply({
   const { emails, phones } = vacancyContacts(job);
   const application = applicationDestination(job);
   const [message, setMessage] = useState('');
+  /* Read after mount: localStorage does not exist while the server renders this. The details
+     only ever reach the draft the person's own mail client opens. */
+  const [applicant, setApplicant] = useState<Applicant | null>(null);
+  useEffect(() => {
+    const read = () => {
+      try {
+        setApplicant(readApplicant(localStorage));
+      } catch {}
+    };
+    const timer = setTimeout(read, 0);
+    window.addEventListener('storage', read);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('storage', read);
+    };
+  }, []);
   return (
     <section className="quick-apply" id="vacancy-contacts" tabIndex={-1}>
       <h3>დაუკავშირდი დამსაქმებელს</h3>
@@ -61,9 +82,12 @@ export function QuickApply({
                 href={emailDraft(
                   contact.email,
                   job.title,
-                  contact.application
-                    ? defaultApplicationBody
-                    : 'გამარჯობა,\n\nთქვენს განცხადებასთან დაკავშირებით მაქვს კითხვა.\n\n[შენი სახელი]',
+                  applicationBody(
+                    contact.application
+                      ? defaultApplicationBody
+                      : 'გამარჯობა,\n\nთქვენს განცხადებასთან დაკავშირებით მაქვს კითხვა.\n\n[შენი სახელი]',
+                    applicant,
+                  ),
                 )}
               >
                 <Mail size={16} />
@@ -89,6 +113,11 @@ export function QuickApply({
                 <span className="email-copy-label">კოპირება</span>
               </button>
             </div>
+            {applicant && (
+              <small className="apply-prefill-hint">
+                წერილში ჩაისმება შენი შენახული მონაცემები.
+              </small>
+            )}
             {!contact.application && (
               <small>
                 განცხადებაში გადაამოწმე, იღებს თუ არა ეს მისამართი CV-ს.

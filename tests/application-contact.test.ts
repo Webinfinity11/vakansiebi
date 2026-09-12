@@ -5,7 +5,9 @@ import {
   mailtoAddress,
   emailDraft,
   hasEnglishDescription,
+  applicationBody,
 } from '../lib/application-contact';
+import { defaultApplicationBody } from '../lib/vacancy-details';
 import { cleanText } from '../worker/adapters';
 void test('emails in recruitment instructions are visible and deduplicated', () => {
   const contacts = applicationContacts(
@@ -65,4 +67,48 @@ void test('translation is offered for substantial English text, not an email in 
     ),
     false,
   );
+});
+void test('a letter carries the saved details and is left untouched when there are none', () => {
+  assert.equal(
+    applicationBody(defaultApplicationBody, null),
+    defaultApplicationBody,
+  );
+  assert.equal(
+    applicationBody(defaultApplicationBody, {
+      fullName: '',
+      phone: '',
+      email: '',
+    }),
+    defaultApplicationBody,
+  );
+  const full = applicationBody(defaultApplicationBody, {
+    fullName: 'ნინო ბერიძე',
+    phone: '+995 555 12 34 56',
+    email: 'nino@example.com',
+  });
+  assert.equal(full.includes('[შენი სახელი]'), false);
+  /* The signature already carries the name, so the contact block below it adds only the ways
+     to reach the person back. */
+  assert.equal(full.includes('სახელი: ნინო ბერიძე'), false);
+  assert.ok(full.includes('ნინო ბერიძე'));
+  assert.equal(
+    full.endsWith('\n\nტელეფონი: +995 555 12 34 56\nელფოსტა: nino@example.com'),
+    true,
+  );
+  /* A letter with no placeholder to sign is a different case: there the name has to be stated
+     or it is nowhere at all. */
+  const unsigned = applicationBody('გამარჯობა,\n\nკითხვა მაქვს.', {
+    fullName: 'ნინო ბერიძე',
+    phone: '',
+    email: '',
+  });
+  assert.ok(unsigned.endsWith('\n\nსახელი: ნინო ბერიძე'));
+  // Only what was filled in appears; the placeholder stays when no name was given.
+  const partial = applicationBody(defaultApplicationBody, {
+    fullName: '',
+    phone: '',
+    email: 'nino@example.com',
+  });
+  assert.equal(partial.includes('[შენი სახელი]'), true);
+  assert.equal(partial.endsWith('\n\nელფოსტა: nino@example.com'), true);
 });

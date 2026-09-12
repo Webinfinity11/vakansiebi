@@ -185,3 +185,38 @@
     transition: none;
   }
 }
+
+/* Theme switch. It sits in the masthead next to the saved counter, so it keeps that row's
+   height and never becomes the widest thing in it. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-left: auto;
+  border: 1px solid #e4e4e5;
+  border-radius: 9px;
+  background: #fff;
+  color: #5c5e62;
+}
+.theme-toggle:hover {
+  color: #2457e6;
+  border-color: #a4b9eb;
+}
+.saved-nav + .theme-toggle,
+.theme-toggle + .saved-nav {
+  margin-left: 8px;
+}
+.vacancy-page .theme-toggle {
+  margin-left: auto;
+}
+.vacancy-page .vacancy-header-link {
+  margin-left: 8px;
+}
+@media (max-width: 760px) {
+  .theme-toggle {
+    width: 44px;
+    height: 44px;
+  }
+}

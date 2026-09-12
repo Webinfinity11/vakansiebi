@@ -7,6 +7,10 @@ import {
   putPersonal,
   saveSearch,
   recordKey,
+  readApplicant,
+  writeApplicant,
+  clearApplicant,
+  APPLICANT_KEY,
   PERSONAL_PREFIX,
   type PersonalStorage,
   type SearchFilters,
@@ -177,4 +181,57 @@ void test('new stages round trip while existing records and unrelated browsing a
     JSON.parse(store.getItem('ertad-vacancy-activity')!).seen[0],
     'existing',
   );
+});
+void test('personal details round trip beside the records without becoming one', () => {
+  const store = memory();
+  assert.equal(readApplicant(store), null);
+  putPersonal(store, application());
+  const saved = writeApplicant(store, {
+    fullName: '  ნინო ბერიძე  ',
+    phone: '+995 555 12 34 56',
+    email: 'nino@example.com',
+  });
+  assert.deepEqual(saved, {
+    fullName: 'ნინო ბერიძე',
+    phone: '+995 555 12 34 56',
+    email: 'nino@example.com',
+  });
+  assert.deepEqual(readApplicant(store), saved);
+  // The details share the namespace but are not a record: they must not be listed or counted
+  // as unreadable, which would put a false "some records could not be read" warning on screen.
+  const result = readPersonal(store);
+  assert.equal(result.invalid, 0);
+  assert.equal(result.records.length, 1);
+  assert.equal(store.getItem(APPLICANT_KEY) !== null, true);
+  clearApplicant(store);
+  assert.equal(readApplicant(store), null);
+});
+void test('personal details reject what cannot be a phone or an address and cap what is too long', () => {
+  const store = memory();
+  assert.throws(
+    () => writeApplicant(store, { email: 'nino at example' }),
+    /ელფოსტა/,
+  );
+  assert.throws(() => writeApplicant(store, { phone: 'დამირეკე' }), /ტელეფონ/);
+  assert.equal(readApplicant(store), null);
+  // A name is trimmed to fit; an address is not, because a shortened address is a wrong one.
+  assert.throws(
+    () => writeApplicant(store, { email: 'a'.repeat(200) + '@example.com' }),
+    /გრძელია/,
+  );
+  assert.throws(
+    () => writeApplicant(store, { phone: '5'.repeat(40) }),
+    /გრძელია/,
+  );
+  const long = writeApplicant(store, { fullName: 'ა'.repeat(200) });
+  assert.equal(long?.fullName.length, 80);
+  assert.equal(long?.email, '');
+  // Saving nothing removes them; an empty shell would read back as details that exist.
+  assert.equal(writeApplicant(store, {}), null);
+  assert.equal(readApplicant(store), null);
+  // A browser that stored records before this feature existed simply has no details.
+  const older = memory();
+  putPersonal(older, application());
+  assert.equal(readApplicant(older), null);
+  assert.equal(readPersonal(older).invalid, 0);
 });

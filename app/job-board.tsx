@@ -17,6 +17,7 @@ import type { SearchMeta, FilterKey } from '@/lib/server/search-plan';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Brand } from './brand';
+import { ThemeToggle } from './theme-toggle';
 export { Brand } from './brand';
 import { formatDate } from './vacancy-text';
 import {
@@ -887,6 +888,7 @@ export default function JobBoard() {
             <button onClick={() => setPersonalOpen(true)}>ჩემი სივრცე</button>
             <a href="#how-it-works">როგორ მუშაობს</a>
           </nav>
+          <ThemeToggle />
           <button
             className={`saved-nav ${savedOnly ? 'is-active' : ''}`}
             aria-label="შენახული ვაკანსიები"
