@@ -4,7 +4,10 @@ import { randomUUID } from 'node:crypto';
 import {
   readDiscoveryInfo,
   discoveryListingUrl,
+  discoverySources,
+  jobsCategoryListingUrl,
   planDiscoveryPages,
+  planJobsCategoryPages,
   DiscoveryPageGuard,
   listingFingerprint,
   type DiscoverySource,
@@ -15,12 +18,14 @@ import { reconcileJob } from './automation';
 import type { SourceId } from '../lib/types';
 import {
   getSourceConfig,
+  detailRequestUrl,
   externalId,
   listLinks,
   parseDetail,
   additionalListing,
   sourceLockIds,
   UnavailableVacancy,
+  type ListedLink,
 } from './adapters';
 import {
   sourceFetch,
@@ -29,15 +34,30 @@ import {
   deferredSourceFailure,
 } from './http';
 import { discoverItems, stageVacancy } from './importer';
+/** Wall-clock budget for one source run; the workflow's job timeout must stay above it. */
+export function runBudgetMs() {
+  const minutes = Number(process.env.SCRAPE_BUDGET_MINUTES);
+  return Math.max(1, Math.min(300, minutes > 0 ? minutes : 22)) * 60_000;
+}
+/**
+ * Detail pages are processed by a few workers at once. Requests to one host are still
+ * spaced by the host queue in http.ts, so the parallelism only overlaps network waits with
+ * database writes and with fetches to employers' own sites.
+ */
+export function detailConcurrency() {
+  const configured = Number(process.env.DETAIL_CONCURRENCY);
+  return Math.max(1, Math.min(6, configured > 0 ? Math.floor(configured) : 3));
+}
 export async function runSource(
   source: SourceId,
   limit = Number(process.env.CRAWL_BATCH_SIZE) || 20,
 ) {
   const activeConfig = getSourceConfig(source);
   const startedAt = Date.now();
+  const budgetMs = runBudgetMs();
   const lock = await db().connect();
   const lockId = sourceLockIds[source];
-  limit = Math.max(1, Math.min(300, Math.floor(limit) || 20));
+  limit = Math.max(1, Math.min(1000, Math.floor(limit) || 20));
   let locked = false;
   const runId = randomUUID();
   let started = false;
@@ -72,12 +92,12 @@ export async function runSource(
       'UPDATE sources SET last_started_at=now(),requested_at=NULL WHERE id=$1',
       [source],
     );
-    const paginated = source === 'hr' || source === 'jobs' || source === 'ss';
+    const paginated = (discoverySources as readonly string[]).includes(source);
     const listUrl = paginated
       ? discoveryListingUrl(source as DiscoverySource)
       : activeConfig.list;
     const html = await sourceFetch(source, listUrl);
-    const links = listLinks(source, html, listUrl);
+    const links: ListedLink[] = listLinks(source, html, listUrl);
     if (!links.length)
       throw Error(
         'Listing returned no vacancy links; source structure may have changed',
@@ -87,10 +107,7 @@ export async function runSource(
       : null;
     const guard = new DiscoveryPageGuard();
     guard.accept(links);
-    const rememberPage = async (
-      url: string,
-      pageLinks: { externalId: string; url: string }[],
-    ) => {
+    const rememberPage = async (url: string, pageLinks: ListedLink[]) => {
       await discoverItems(source, pageLinks);
       await db().query(
         `INSERT INTO source_discovery_pages(source_id,url,signature,item_count) VALUES($1,$2,$3,$4)
@@ -136,24 +153,69 @@ export async function runSource(
     );
     const extraPages = countQuality?.hold
       ? []
-      : paginated
-        ? planDiscoveryPages(
-            source as DiscoverySource,
-            info!,
-            config.discovery_cursor,
-            pageBudget,
-          ).urls
-        : [
-            ...new Set(
-              Array.from({ length: 3 }, (_, offset) =>
-                additionalListing(source, html, config.sitemap_cursor + offset),
-              ).filter((url): url is string => !!url),
-            ),
-          ];
+      : source === 'jobs'
+        ? []
+        : paginated
+          ? planDiscoveryPages(
+              source as DiscoverySource,
+              info!,
+              config.discovery_cursor,
+              pageBudget,
+            ).urls
+          : [
+              ...new Set(
+                Array.from({ length: 3 }, (_, offset) =>
+                  additionalListing(
+                    source,
+                    html,
+                    config.sitemap_cursor + offset,
+                  ),
+                ).filter((url): url is string => !!url),
+              ),
+            ];
     if (paginated && !info?.totalPages) {
       discoveryWarning =
         'Listing page count is unavailable; first page retained and discovery will retry';
       discoveryStructural = true;
+    }
+    // Jobs.ge is discovered through its category listings: the same pages, but each row then
+    // carries its category and work location, and the vacancy-only filter keeps tenders and
+    // trainings out. The start category rotates so a small budget still covers every category.
+    if (source === 'jobs' && !countQuality?.hold && info?.totalPages) {
+      const plan = planJobsCategoryPages(config.discovery_cursor, pageBudget);
+      let used = 0;
+      categories: for (const category of plan.order) {
+        if (used >= plan.budget) break;
+        let pages = 1;
+        for (let page = 1; page <= pages && used < plan.budget; page++) {
+          const url = jobsCategoryListingUrl(category.cid, page);
+          try {
+            const pageHtml = await sourceFetch(source, url);
+            used++;
+            if (page === 1)
+              pages = Math.min(
+                50,
+                readDiscoveryInfo('jobs', pageHtml).totalPages || 1,
+              );
+            const pageLinks = listLinks(source, pageHtml, url, {
+              categoryLabel: category.label,
+              category: category.category,
+            });
+            // A repeated or empty page inside one category is that category's end, not a
+            // broken source; the shared first page already proved the listing shape.
+            if (guard.accept(pageLinks) !== 'accepted') break;
+            await rememberPage(url, pageLinks);
+            links.push(...pageLinks);
+          } catch (e) {
+            discoveryWarning = 'Listing page: ' + (e as Error).message;
+            break categories;
+          }
+        }
+        await db().query(
+          'UPDATE sources SET discovery_cursor=discovery_cursor+1 WHERE id=$1',
+          [source],
+        );
+      }
     }
     for (const extra of extraPages) {
       try {
@@ -224,15 +286,18 @@ export async function runSource(
     discovered = unique.length;
     // Split the budget between backlog and rechecks so neither can starve the other.
     const quota = Math.max(1, Math.floor(limit * 0.75));
+    // Newest postings first: they are what readers look for, and an old backlog entry that
+    // has meanwhile expired costs a fetch either way. Rechecks start with records that have
+    // dropped out of the listings, the cheapest signal that a vacancy was withdrawn.
     const pending = (
       await db().query(
-        'SELECT * FROM source_items WHERE source_id=$1 AND raw IS NULL AND next_check_at<=now() ORDER BY discovered_at,id LIMIT $2',
+        'SELECT * FROM source_items WHERE source_id=$1 AND raw IS NULL AND next_check_at<=now() ORDER BY discovered_at DESC,id LIMIT $2',
         [source, limit],
       )
     ).rows;
     const existing = (
       await db().query(
-        'SELECT * FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND next_check_at<=now() ORDER BY next_check_at LIMIT $2',
+        "SELECT * FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND next_check_at<=now() ORDER BY (last_seen_at<now()-interval '36 hours') DESC,next_check_at LIMIT $2",
         [source, Math.max(1, limit - Math.min(pending.length, quota))],
       )
     ).rows;
@@ -240,23 +305,21 @@ export async function runSource(
     let consecutiveDetailFailures = 0;
     let stoppedEarly = false;
     let attempted = 0;
-    for (const item of [...pending.slice(0, newCount), ...existing].slice(
-      0,
-      limit,
-    )) {
-      // Measured on 2026-09-11: jobs.ge spends 11 minutes on 70 details because each one may
-      // follow an employer link, while hr/ss/gancxadebebi spend about 4. The budget stays well
-      // inside the workflow timeout, and an unfinished batch is retained for the next run.
-      if (Date.now() - startedAt > 22 * 60 * 1000) {
-        budgetExhausted = true;
-        break;
-      }
-      attempted++;
+    const queue = [...pending.slice(0, newCount), ...existing].slice(0, limit);
+    let next = 0;
+    let halt = false;
+    const processItem = async (item: (typeof queue)[number]) => {
       try {
         const data = await completeDescription(
-          parseDetail(source, await sourceFetch(source, item.url), item.url),
+          parseDetail(
+            source,
+            await sourceFetch(source, detailRequestUrl(source, item.url)),
+            item.url,
+            item.listing_hints,
+          ),
           item.raw,
           item.failures,
+          { reuseVerified: true },
         );
         const outcome = await stageVacancy(
           item.id,
@@ -276,8 +339,9 @@ export async function runSource(
         ) {
           removed++;
           consecutiveDetailFailures = 0;
+          // A withdrawn vacancy is re-confirmed at a growing interval, not every week forever.
           await db().query(
-            "UPDATE source_items SET last_checked_at=now(),error=$2,quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0,next_check_at=now()+interval '7 days' WHERE id=$1",
+            "UPDATE source_items SET last_checked_at=now(),error=$2,failures=failures+1,quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0,next_check_at=now()+(LEAST(112,7*power(2,LEAST(failures,4)))*interval '1 day') WHERE id=$1",
             [item.id, e.message],
           );
           if (item.job_id)
@@ -287,7 +351,7 @@ export async function runSource(
             );
           if (item.job_id)
             await transaction((c) => reconcileJob(c, item.job_id));
-          continue;
+          return;
         }
         failed++;
         consecutiveDetailFailures++;
@@ -298,10 +362,31 @@ export async function runSource(
         // Stop a broken source without exhausting its backlog.
         if (consecutiveDetailFailures >= 3) {
           stoppedEarly = true;
-          break;
+          halt = true;
         }
       }
-    }
+    };
+    const worker = async () => {
+      while (!halt) {
+        // Measured on 2026-09-11: jobs.ge spends 11 minutes on 70 details because its
+        // robots.txt asks for a 5-second gap, while hr/ss spend about 4. An unfinished batch
+        // is retained for the next run.
+        if (Date.now() - startedAt > budgetMs) {
+          if (next < queue.length) budgetExhausted = true;
+          return;
+        }
+        const item = queue[next++];
+        if (!item) return;
+        attempted++;
+        await processItem(item);
+      }
+    };
+    await Promise.all(
+      Array.from(
+        { length: Math.min(detailConcurrency(), queue.length) },
+        worker,
+      ),
+    );
     const warning =
       [
         discoveryWarning,

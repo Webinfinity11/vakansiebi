@@ -16,7 +16,7 @@ export function readSearch(params: URLSearchParams): SearchFilters {
   return {
     query: (params.get('q') || '').slice(0, 200),
     city: (params.get('city') || 'ყველა').slice(0, 300),
-    category: categories.includes(params.get('category') || '')
+    category: (categories as readonly string[]).includes(params.get('category') || '')
       ? params.get('category')!
       : 'ყველა',
     source: Object.values(sourceNames).includes(params.get('source') || '')

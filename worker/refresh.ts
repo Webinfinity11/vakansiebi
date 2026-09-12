@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { db, transaction } from '../lib/server/db';
 import {
   configs,
+  detailRequestUrl,
   parseDetail,
   sourceLockIds,
   UnavailableVacancy,
@@ -55,7 +56,7 @@ export async function refreshDescriptions(
     for (const item of removedItems) await reconcileRemovedRefresh(item.id);
     const items = (
       await c.query(
-        `SELECT i.id,i.url,i.raw,i.failures FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now()
+        `SELECT i.id,i.url,i.raw,i.failures,i.listing_hints FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now()
         ORDER BY CASE WHEN length(COALESCE(i.raw->>'description',''))<700 AND jsonb_array_length(COALESCE(i.raw->'applicationLinks','[]'::jsonb))>0 THEN 0 ELSE 1 END,i.next_check_at,i.id LIMIT $2`,
         [source, Math.max(1, Math.min(1000, limit))],
       )
@@ -70,10 +71,14 @@ export async function refreshDescriptions(
     for (const item of items) {
       if (Date.now() - started >= timeBudgetMs) break;
       try {
-        const html = await sourceFetch(source, item.url);
+        const html = await sourceFetch(
+          source,
+          detailRequestUrl(source, item.url),
+        );
         primaryFailures = 0;
+        // An explicit refresh always re-reads the employer's page.
         const data = await completeDescription(
-          parseDetail(source, html, item.url),
+          parseDetail(source, html, item.url, item.listing_hints),
           item.raw,
           item.failures,
         );

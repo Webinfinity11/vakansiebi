@@ -1,13 +1,19 @@
 import { createHash } from 'node:crypto';
 import { load } from 'cheerio';
 
-export type DiscoverySource = 'hr' | 'jobs' | 'ss';
-export type DiscoveryInfo = {
-  /** Exact source-reported listing total. Null means the source did not expose one. */
-  reportedTotal: number | null;
-  pageSize: number | null;
-  totalPages: number | null;
-};
+import { modules } from './adapters';
+import { jobsCategories } from './categories';
+import type { ListingInfo } from './adapters/module';
+
+export type DiscoverySource = 'hr' | 'jobs' | 'ss' | 'worknet' | 'myjobs';
+export type DiscoveryInfo = ListingInfo;
+export const discoverySources: readonly DiscoverySource[] = [
+  'hr',
+  'jobs',
+  'ss',
+  'worknet',
+  'myjobs',
+];
 const limits = { pages: 1000, total: 1000000, budget: 50 };
 function positive(value: unknown, max: number): number | null {
   return typeof value === 'number' &&
@@ -30,7 +36,7 @@ function parseJson(value: string): unknown {
   }
 }
 function supported(source: DiscoverySource) {
-  if (!['hr', 'jobs', 'ss'].includes(source))
+  if (!discoverySources.includes(source))
     throw Error('Source has no active listing discovery');
 }
 /** Call on the canonical FIRST listing page: last-page item count is not a page size. */
@@ -39,6 +45,7 @@ export function readDiscoveryInfo(
   firstPageHtml: string,
 ): DiscoveryInfo {
   supported(source);
+  if (modules[source]) return modules[source].listingInfo(firstPageHtml);
   const $ = load(firstPageHtml);
   let reportedTotal: number | null = null;
   let pageSize: number | null = null;
@@ -90,9 +97,38 @@ export function readDiscoveryInfo(
 export function discoveryListingUrl(source: DiscoverySource, page = 1): string {
   supported(source);
   if (!positive(page, limits.pages)) throw Error('Invalid discovery page');
+  if (modules[source]) return modules[source].listingUrl(page);
   if (source === 'hr') return `https://www.hr.ge/search-posting?pg=${page}`;
-  if (source === 'jobs') return `https://jobs.ge/ge/ads/?page=${page}`;
+  // Vacancies only (`jid=1`): tenders, trainings and scholarships are not vacancies.
+  if (source === 'jobs') return `https://jobs.ge/ge/ads/?page=${page}&jid=1`;
   return `https://jobs.ss.ge/ka/l/vacancies?page=${page}`;
+}
+/** A jobs.ge category listing; each category paginates on its own and names the category. */
+export function jobsCategoryListingUrl(cid: number, page = 1) {
+  if (!jobsCategories.some((c) => c.cid === cid))
+    throw Error('Unknown jobs.ge category');
+  if (!positive(page, limits.pages)) throw Error('Invalid discovery page');
+  return `https://jobs.ge/ge/ads/?page=${page}&cid=${cid}&jid=1`;
+}
+/**
+ * Category pages to fetch this run: every category's first page, then the remaining pages of
+ * categories that have them, rotating the starting category so a small budget still covers
+ * all of them across runs. Page counts are only known after each first page is read, so the
+ * caller feeds them back through `pagesFor`.
+ */
+export function planJobsCategoryPages(cursor = 0, budget = 30) {
+  const start = jobsCategories.length
+    ? (Number.isSafeInteger(cursor) && cursor >= 0 ? cursor : 0) %
+      jobsCategories.length
+    : 0;
+  const order = [
+    ...jobsCategories.slice(start),
+    ...jobsCategories.slice(0, start),
+  ];
+  return {
+    order,
+    budget: Math.max(1, Math.min(limits.budget, Math.floor(budget) || 1)),
+  };
 }
 /** Additional pages after the already fetched first page. Persist cursor only for pages actually fetched. */
 export function planDiscoveryPages(

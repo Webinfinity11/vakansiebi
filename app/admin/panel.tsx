@@ -861,7 +861,7 @@ export default function AdminPanel() {
                     onChange={(v) =>
                       change('category', v === 'ყველა' ? 'სხვა' : v)
                     }
-                    options={categories}
+                    options={[...categories]}
                   />
                 </label>
                 <label>

@@ -77,6 +77,75 @@ void test(
       { title: 'Developer expired', deadline: '2020-01-01' },
     ];
     const ids = fixtures.map(() => randomUUID());
+    // A second set exercises the public listing without an ids restriction:
+    // duplicate folding, empty salary periods, remote titles, unlisted and
+    // missing cities, and unusable source dates.
+    const marker = 'zqlisting' + randomUUID().slice(0, 8);
+    const listing: Partial<Vacancy>[] = [
+      {
+        title: 'Warehouse Lead',
+        company: 'Listing fixture',
+        salary: '2500 ლარი',
+        salaryMin: 2500,
+        salaryPeriod: '',
+        datePosted: '0001-01-01',
+        source: 'hr.ge',
+      },
+      {
+        title: 'Warehouse Lead',
+        company: 'Listing fixture',
+        salary: '2500',
+        salaryMin: 2500,
+        salaryPeriod: '',
+        source: 'jobs.ge',
+        url: 'https://jobs.ge/ge/?view=jobs&id=9998882',
+      },
+      {
+        title: 'დისტანციური მხარდაჭერა',
+        company: 'Listing fixture',
+        city: 'მარნეული',
+        salary: '',
+        salaryMin: null,
+        currency: '',
+        salaryPeriod: '',
+        datePosted: '',
+      },
+      {
+        title: 'Field Agent',
+        company: 'Listing fixture',
+        city: '',
+        mode: 'სამუშაო სახლიდან',
+        salary: '',
+        salaryMin: null,
+        currency: '',
+        salaryPeriod: '',
+        description: 'სამუშაო ადგილი თბილისში, კატეგორია: მომსახურება.',
+      },
+      {
+        title: 'Hourly helper',
+        company: 'Listing fixture',
+        salary: '8 ლარი საათში',
+        salaryMin: 8,
+        salaryPeriod: '',
+      },
+      {
+        title: 'Warehouse Lead',
+        company: '',
+        salary: '',
+        salaryMin: null,
+        currency: '',
+        salaryPeriod: '',
+      },
+      {
+        title: 'Warehouse Lead',
+        company: '',
+        salary: '',
+        salaryMin: null,
+        currency: '',
+        salaryPeriod: '',
+      },
+    ];
+    const listingIds = listing.map(() => randomUUID());
     try {
       for (let i = 0; i < ids.length; i++) {
         const v = { ...base, ...fixtures[i] };
@@ -187,11 +256,103 @@ void test(
         ),
       );
       assert.ok(similar.some(({ job }) => job.id === ids[6]));
+
+      for (let i = 0; i < listingIds.length; i++) {
+        const v = {
+          ...base,
+          ...listing[i],
+          description: `${listing[i].description || base.description} ${marker}`,
+        };
+        await db().query(
+          "INSERT INTO jobs(id,draft,published,status,fingerprint,published_at) VALUES($1::uuid,$2,$2,'published',$1::text,now()+($3||' seconds')::interval)",
+          [listingIds[i], v, i],
+        );
+        await db().query(
+          'INSERT INTO source_items(id,source_id,external_id,url,job_id,raw,last_checked_at) VALUES($1::uuid,$2,$1::text,$3,$1::uuid,$4,now())',
+          [listingIds[i], v.source === 'jobs.ge' ? 'jobs' : 'hr', v.url, v],
+        );
+      }
+      const list = (values: Record<string, string> = {}) =>
+        publicJobs(new URLSearchParams({ q: marker, ...values }));
+      const grouped = await list();
+      assert.equal(
+        grouped.total,
+        6,
+        'identical title, employer and city fold into one row; classifieds without an employer never do',
+      );
+      const kept = grouped.jobs.find((job) => job.id === listingIds[1]);
+      assert.ok(kept, 'the most recently published duplicate is the one shown');
+      assert.ok(!grouped.jobs.some((job) => job.id === listingIds[0]));
+      assert.deepEqual(
+        kept.sources.map((source: { source: string }) => source.source).sort(),
+        ['hr.ge', 'jobs.ge'],
+        'the folded posting keeps every original link',
+      );
+      assert.equal(
+        grouped.search.categoryTotal,
+        6,
+        'facets count the grouped set',
+      );
+      const folded = await publicJobs(
+        new URLSearchParams({ ids: listingIds[0] }),
+      );
+      assert.equal(folded.total, 1, 'a folded id still opens on its own');
+      assert.equal(folded.jobs[0].sources.length, 2);
+      assert.equal(
+        (await list({ salaryFrom: '2000' })).total,
+        1,
+        'an empty period is an ordinary monthly figure',
+      );
+      assert.equal(
+        (await list({ salaryFrom: '2000', source: 'hr.ge' })).total,
+        1,
+        'a folded source still satisfies the source filter',
+      );
+      assert.equal(
+        (await list({ salaryFrom: '1', salaryTo: '100' })).total,
+        0,
+        'an hourly figure without a period never enters the monthly range',
+      );
+      assert.equal((await list({ sort: 'salary' })).jobs[0].id, listingIds[1]);
+      assert.equal(
+        (await list({ remote: 'true' })).total,
+        2,
+        'a remote title or a work-from-home mode both count as remote',
+      );
+      assert.equal(
+        (await list({ city: 'სხვა' })).total,
+        1,
+        'other means a city outside the offered list',
+      );
+      assert.equal(
+        (await list({ city: 'თბილისი' })).total,
+        4,
+        'a missing city falls back to the city named in the text',
+      );
+      assert.equal(
+        (await list({ postedWithin: '1' })).total,
+        6,
+        'unusable source dates fall back to our publication day',
+      );
+      assert.equal((await list({ q: marker + ' lead' })).total, 3);
+      assert.equal(
+        (await list({ q: marker + ' lea' })).total,
+        0,
+        'short Latin terms match whole words only',
+      );
+      assert.equal(
+        (await list({ q: marker + ' ის' })).total,
+        6,
+        'a two-letter particle beside other words is ignored',
+      );
+      assert.equal((await list({ q: marker + ' Listing fixture' })).total, 4);
     } finally {
       await db().query('DELETE FROM source_items WHERE id=ANY($1::uuid[])', [
-        ids,
+        [...ids, ...listingIds],
       ]);
-      await db().query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [ids]);
+      await db().query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [
+        [...ids, ...listingIds],
+      ]);
       await db().end();
     }
   },

@@ -1,0 +1,43 @@
+{
+  "data": {
+    "id": 21988,
+    "title": "გაყიდვების კონსულტანტი",
+    "company_id": 1193,
+    "recruiter_company_name": null,
+    "salary_type": "range",
+    "salary_from": 1200,
+    "salary_to": 1500,
+    "description": "<p><strong>ვაკანსია: გაყიდვების კონსულტანტი ვეიპ-შოპში</strong></p><p>📍 სამუშაო ადგილი: გონიო<br>🕐 სამუშაო გრაფიკი: ორშაბათი–პარასკევი, 14:00-დან 22:00 საათამდე</p><p><strong>მოვალეობები:</strong></p><p>— მომხმარებლების კონსულტაცია;<br>— სალარო აპარატთან მუშაობა.</p>",
+    "show_salary": 1,
+    "created_at": "2026-09-10T22:05:51.000000Z",
+    "salary_period": "monthly",
+    "status": "active",
+    "duration": 30,
+    "source": "standard",
+    "helio": false,
+    "is_international": false,
+    "country": { "id": 1, "title": "საქართველო", "city": { "id": 4, "title": "ბათუმი" } },
+    "education_levels": ["without_education"],
+    "skills": [],
+    "category_data": { "id": 236, "title": "მომსახურე პერსონალი", "sub_category": { "id": 258, "title": "სხვა" } },
+    "is_vip": false,
+    "is_urgently_hiring": false,
+    "job_type": "on_site",
+    "employment_type": "full_time",
+    "hire_types": ["urgent"],
+    "benefits": [{ "id": 4, "title": "დაზღვევა" }, { "id": 10, "title": "ბონუსი" }],
+    "company": {
+      "id": 1193,
+      "brand_name": "Storm Vape",
+      "description": null,
+      "has_logo": null,
+      "logo_version": null,
+      "legal_city_title": "ბათუმი"
+    },
+    "work_experiences": [{ "experience_from": null, "experience_to": 2 }],
+    "experience_levels": [{ "vacancy_id": 21988, "experience_level": "junior" }],
+    "languages": [{ "language_id": 1, "level": "native" }, { "language_id": 3, "level": "fluent" }],
+    "seo_keywords": { "category": "momsaxure-personali", "sub_category": "sxva", "title": "gaqidvebis-konsultanti" },
+    "vacancy_emails": []
+  }
+}

@@ -1,7 +1,6 @@
 import robotsParser from 'robots-parser';
-import { setTimeout as delay } from 'node:timers/promises';
+import { hostTurn } from './http';
 const agent = 'ErtadVacancyBot/0.1';
-const last = new Map<string, number>();
 const robots = new Map<string, ReturnType<typeof robotsParser>>();
 export const linkedHosts = [
   'hel-ai.com',
@@ -48,9 +47,10 @@ export function validateLinkedUrl(value: string) {
     throw new UnusableEmployerLink('Unsupported employer URL');
   return u;
 }
-async function request(url: URL) {
-  await delay(Math.max(0, 1000 - (Date.now() - (last.get(url.hostname) || 0))));
-  last.set(url.hostname, Date.now());
+async function request(url: URL, gapMs = 1000) {
+  // Details are fetched by several workers at once; the shared host queue keeps requests to
+  // one employer host a second apart instead of letting them overlap.
+  await hostTurn(url.hostname, gapMs);
   const r = await fetch(url, {
     redirect: 'manual',
     signal: AbortSignal.timeout(25000),
@@ -116,8 +116,8 @@ export async function publicPage(
   const crawlDelay = rules.getCrawlDelay(agent) || 0;
   if (crawlDelay > 60)
     throw new UnusableEmployerLink('Employer crawl delay exceeds budget');
-  if (crawlDelay) await delay(crawlDelay * 1000);
-  const r = await request(u);
+  // The employer's published crawl-delay becomes the gap between requests to that host.
+  const r = await request(u, Math.max(1000, crawlDelay * 1000));
   if (r.status >= 300 && r.status < 400 && r.location)
     return publicPage(new URL(r.location, u).href, redirects + 1);
   if (r.status < 200 || r.status >= 300) throw new EmployerHttpError(r.status);

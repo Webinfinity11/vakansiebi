@@ -4,7 +4,9 @@ export type SourceId =
   | 'jobs'
   | 'ss'
   | 'hrgov'
-  | 'gancxadebebi';
+  | 'gancxadebebi'
+  | 'worknet'
+  | 'myjobs';
 export type ActiveSourceId = Exclude<SourceId, 'samushao'>;
 export const sourceNames: Record<ActiveSourceId, string> = {
   hr: 'hr.ge',
@@ -12,6 +14,8 @@ export const sourceNames: Record<ActiveSourceId, string> = {
   ss: 'jobs.ss.ge',
   hrgov: 'vacancy.hr.gov.ge',
   gancxadebebi: 'gancxadebebi.ge',
+  worknet: 'worknet.moh.gov.ge',
+  myjobs: 'myjobs.ge',
 };
 /** Sources whose postings carry no employer entity, only a private contact. */
 export const employerlessSources: readonly string[] = ['gancxadebebi.ge'];
@@ -98,6 +102,12 @@ export type Source = {
   discovery_observed_at?: string | null;
   quality_warning?: string | null;
   quality_held?: number;
+  due?: number;
+  errored?: number;
+  top_errors?: { message: string; count: number }[];
+  /** Runs deferred because this network could not reach the source at all. */
+  deferred_runs?: number;
+  retired?: boolean;
 };
 export const categories = [
   'ტექნოლოგიები',
@@ -109,8 +119,13 @@ export const categories = [
   'მომსახურება',
   'სამედიცინო',
   'განათლება',
+  'მშენებლობა',
+  'დაცვა',
+  'წარმოება',
+  'იურიდიული',
+  'სილამაზე',
   'სხვა',
-];
+] as const;
 export type SourceRun = {
   id: string;
   source_id: SourceId;

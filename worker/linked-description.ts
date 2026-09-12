@@ -283,15 +283,40 @@ export async function readLinkedText(
  * that already carries verified employer text keeps that text and is retried, but only until
  * `verifiedLinkRetryLimit`, so a permanently broken link cannot freeze its other source fields.
  */
+const linkedSeparator = '\n\nსრული ინფორმაცია დამსაქმებლისგან:\n\n';
+/** Every verified employer link is re-read about every third day; the day rotates per vacancy. */
+export function linkedRefreshDue(url: string, now = Date.now()) {
+  let hash = 0;
+  for (const ch of url) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return (Math.floor(now / 86400000) + hash) % 3 === 0;
+}
 export async function completeDescription(
   job: Vacancy,
   previous?: Vacancy | null,
   failures = 0,
+  options: { reuseVerified?: boolean } = {},
 ): Promise<Vacancy> {
   const links = job.applicationLinks || [];
   const candidates = links
     .map((l) => ({ url: l.url, provider: linkedProvider(l.url) }))
     .filter((l) => l.provider);
+  // A routine recheck whose source text is unchanged keeps the employer text it already
+  // verified instead of fetching the employer's page again; the link is still re-read
+  // periodically so a posting closed on the employer's side is noticed.
+  if (
+    options.reuseVerified &&
+    previous?.fullTextUrl &&
+    failures === 0 &&
+    candidates.some((c) => c.url === previous.fullTextUrl) &&
+    previous.description.startsWith(job.description + linkedSeparator) &&
+    !linkedRefreshDue(job.url)
+  )
+    return enrichVacancy({
+      ...job,
+      description: previous.description,
+      logoUrl: job.logoUrl || previous.logoUrl || '',
+      fullTextUrl: previous.fullTextUrl,
+    });
   const keepVerified =
     Boolean(previous?.fullTextUrl) && failures < verifiedLinkRetryLimit;
   const dropped = (url: string, reason: string) =>
@@ -342,8 +367,7 @@ export async function completeDescription(
   if (!linked) return job;
   const logoUrl = job.logoUrl || linked.logoUrl || '';
   if (job.description.includes(linked.text)) return { ...job, logoUrl };
-  const description =
-    job.description + '\n\nსრული ინფორმაცია დამსაქმებლისგან:\n\n' + linked.text;
+  const description = job.description + linkedSeparator + linked.text;
   // Deterministic in both texts, so retrying reproduces it; keep the vacancy rather than loop.
   if (description.length > 100000) {
     dropped(linked.url, 'Complete description exceeds supported size');

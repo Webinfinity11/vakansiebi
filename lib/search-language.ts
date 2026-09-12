@@ -1,8 +1,20 @@
-import { searchTerms } from './job-intelligence';
+import {
+  isCyrillicWord,
+  isGeorgianWord,
+  searchTerms,
+} from './job-intelligence';
 
 // A small reviewed vocabulary, not automatic translation or unrestricted stemming.
+// The first entry of each group is the Georgian stem a query is compared with.
 const roles = [
-  ['ბუღალტერ', 'ბუღალტერი', 'ბუღალტერია', 'accountant', 'accounting'],
+  [
+    'ბუღალტერ',
+    'ბუღალტერი',
+    'ბუღალტერია',
+    'accountant',
+    'accounting',
+    'бухгалтер',
+  ],
   [
     'დეველოპერ',
     'დეველოპერი',
@@ -10,27 +22,49 @@ const roles = [
     'პროგრამისტ',
     'პროგრამისტი',
     'programmer',
+    'программист',
   ],
-  ['დიზაინერ', 'დიზაინერი', 'designer'],
-  ['მოლარე', 'cashier'],
-  ['მიმტან', 'მიმტანი', 'waiter', 'waitress'],
+  ['დიზაინერ', 'დიზაინერი', 'designer', 'дизайнер'],
+  ['მოლარე', 'cashier', 'кассир'],
+  ['მიმტან', 'მიმტანი', 'waiter', 'waitress', 'официант'],
   ['ბარისტა', 'barista'],
-  ['მძღოლ', 'მძღოლი', 'driver'],
-  ['კურიერ', 'კურიერი', 'courier'],
-  ['მზარეულ', 'მზარეული', 'cook', 'chef'],
-  ['ექთან', 'ექთანი', 'nurse'],
-  ['ფარმაცევტ', 'ფარმაცევტი', 'pharmacist'],
+  ['მძღოლ', 'მძღოლი', 'driver', 'водитель'],
+  ['კურიერ', 'კურიერი', 'courier', 'курьер'],
+  ['მზარეულ', 'მზარეული', 'cook', 'chef', 'повар'],
+  ['ექთან', 'ექთანი', 'nurse', 'медсестра'],
+  ['ექიმ', 'ექიმი', 'doctor', 'physician', 'врач'],
+  ['ფარმაცევტ', 'ფარმაცევტი', 'pharmacist', 'фармацевт'],
   ['რეკრუტერ', 'რეკრუტერი', 'recruiter'],
-  ['მარკეტინგ', 'მარკეტინგი', 'marketing'],
+  ['მარკეტინგ', 'მარკეტინგი', 'marketing', 'маркетинг'],
+  ['გამყიდველ', 'გამყიდველი', 'salesperson', 'продавец'],
+  ['გაყიდვ', 'გაყიდვები', 'გაყიდვების', 'sales', 'продаж'],
+  ['მენეჯერ', 'მენეჯერი', 'manager', 'менеджер'],
+  ['იურისტ', 'იურისტი', 'lawyer', 'юрист'],
+  ['მასწავლებელ', 'მასწავლებელი', 'teacher', 'учитель'],
+  ['მცველ', 'მცველი', 'დაცვის თანამშრომ', 'security guard', 'охранник'],
 ];
+// Longest suffix first; a case ending is removed once and only from a word that
+// keeps a stem of at least three letters.
+const georgianSuffixes = ['ები', 'ებს', 'ის', 'ში', 'ით', 'ს', 'ი'];
+export function stemGeorgian(term: string): string {
+  if (!isGeorgianWord(term)) return term;
+  for (const suffix of georgianSuffixes)
+    if (term.endsWith(suffix) && term.length - suffix.length >= 3)
+      return term.slice(0, -suffix.length);
+  return term;
+}
 export function searchGroups(query: string): string[][] {
   return searchTerms(query).map((term) => {
+    const stem = stemGeorgian(term);
     const role = roles.find(
       (group) =>
         group.includes(term) ||
-        (/^[ა-ჰ]+$/.test(term) && term.startsWith(group[0])),
+        group.includes(stem) ||
+        (isGeorgianWord(stem) && stem.startsWith(group[0])) ||
+        (isCyrillicWord(term) &&
+          group.some((word) => isCyrillicWord(word) && term.startsWith(word))),
     );
-    return [...new Set([term, ...(role || [])])];
+    return [...new Set([stem, ...(role || [])])];
   });
 }
 // Bounded Damerau–Levenshtein: adjacent transpositions count as one edit.
@@ -66,7 +100,9 @@ export function suggestSearch(query: string): string | null {
       .flatMap((group) => group.slice(1))
       .filter(
         (word) =>
-          /^[ა-ჰ]+$/.test(word) === /^[ა-ჰ]+$/.test(term) &&
+          isGeorgianWord(word) === isGeorgianWord(term) &&
+          isCyrillicWord(word) === isCyrillicWord(term) &&
+          !word.includes(' ') &&
           Math.abs(word.length - term.length) <= 2,
       )
       .map((word) => ({ word, score: distance(term, word) }))

@@ -24,9 +24,12 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
     Math.min(10000, Math.floor(Number(params.get('page'))) || 1),
   );
   const limit = 20;
+  // The public listing shows one row per identical posting; a lookup by id
+  // (detail page, saved list) keeps every row reachable, sources folded either way.
   const { where, args, ordering, metrics, filters, cte } = searchPlan(
     params,
     preview,
+    { grouped: true },
   );
   const measured = (await db().query(metrics, args)).rows[0];
   const count = measured.total;
@@ -44,7 +47,7 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
   if (correction) {
     const corrected = new URLSearchParams(params);
     corrected.set('q', correction);
-    const plan = searchPlan(corrected, preview);
+    const plan = searchPlan(corrected, preview, { grouped: true });
     const n = (
       await db().query(
         `${plan.cte} SELECT count(*)::int count FROM searchable j WHERE ${plan.where}`,
@@ -69,7 +72,7 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
     : snapshot;
   const rows = (
     await db().query(
-      `${cte} SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error)) FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired),'[]'::jsonb) AS sources FROM searchable j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
+      `${cte} SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error) ORDER BY (m.id=j.id) DESC,m.posted_at DESC,s.name,si.url) FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired),'[]'::jsonb) AS sources FROM searchable j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
       [...args, limit, (page - 1) * limit],
     )
   ).rows;

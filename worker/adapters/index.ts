@@ -9,6 +9,21 @@ import { visibleFields } from '../visible-fields';
 import { enrichVacancy } from '../enrich';
 import { load } from 'cheerio';
 import { safeLogoUrl, safeExternalUrl } from '../../lib/vacancy-media';
+import { classify, sourceCategory, type Category } from '../categories';
+import {
+  UnavailableVacancy,
+  type ListedLink,
+  type ListingHints,
+  type SourceModule,
+} from './module';
+import { worknet } from './worknet';
+import { myjobs } from './myjobs';
+export type { ListedLink, ListingHints } from './module';
+/** JSON-backed boards live in their own modules; the HTML boards below share this file. */
+export const modules: Partial<Record<SourceId, SourceModule>> = {
+  worknet,
+  myjobs,
+};
 
 type HrAnnouncement = {
   announcementId: number;
@@ -24,13 +39,15 @@ type HrAnnouncement = {
   salaryFrom?: number;
   salaryTo?: number;
   isWithBonus?: boolean;
+  benefits?: string[];
+  languages?: string[];
+  showLanguages?: boolean;
+  drivingLicenses?: string[];
+  showDrivingLicenses?: boolean;
+  isSuitableForStudent?: boolean;
 };
 type HrState = { b?: { data?: { announcement?: HrAnnouncement } } };
-export class UnavailableVacancy extends Error {
-  constructor() {
-    super('Source vacancy unavailable');
-  }
-}
+export { UnavailableVacancy } from './module';
 type Location = { address?: { addressLocality?: string } };
 type JobPosting = {
   '@type'?: string;
@@ -99,6 +116,8 @@ const legacyConfigs = {
     sitemap: null,
     hosts: ['gancxadebebi.ge', 'www.gancxadebebi.ge'],
   },
+  worknet: worknet.config,
+  myjobs: myjobs.config,
 };
 // Legacy parsing remains for existing audit records; no retired source can be fetched.
 export const configs = {
@@ -107,7 +126,16 @@ export const configs = {
   ss: legacyConfigs.ss,
   hrgov: legacyConfigs.hrgov,
   gancxadebebi: legacyConfigs.gancxadebebi,
+  worknet: legacyConfigs.worknet,
+  myjobs: legacyConfigs.myjobs,
 };
+/** The document fetched for a public vacancy URL; JSON boards read their public API instead. */
+export function detailRequestUrl(source: SourceId, url: string) {
+  return modules[source]?.detailRequestUrl(url) ?? url;
+}
+export function maxResponseBytes(source: SourceId) {
+  return modules[source]?.maxResponseBytes ?? 6000000;
+}
 export function getSourceConfig(source: SourceId) {
   if (source === 'samushao' || !(source in configs))
     throw Error('Source is retired or unsupported');
@@ -187,6 +215,7 @@ export function externalId(source: SourceId, url: string) {
     );
   if (source === 'hr')
     return u.pathname.match(/^\/announcement\/(\d+)(?:\/|$)/)?.[1] ?? null;
+  if (modules[source]) return modules[source].externalId(u);
   if (source === 'samushao')
     return u.pathname.match(/^\/vakansia\/[^/]*-(\d+)\/?$/)?.[1] ?? null;
   if (source === 'gancxadebebi') {
@@ -206,22 +235,71 @@ export function externalId(source: SourceId, url: string) {
     ? u.searchParams.get('id')
     : null;
 }
+/**
+ * Vacancy links on a listing document. Jobs.ge rows also carry the work location and, on a
+ * category listing, the category itself; the site-wide VIP block repeated on every category
+ * page is deliberately not attributed to that category.
+ */
 export function listLinks(
   source: SourceId,
   html: string,
   base = legacyConfigs[source].list,
-) {
+  listing?: { categoryLabel: string; category: string },
+): ListedLink[] {
+  if (modules[source]) return modules[source].listLinks(html);
   const $ = load(html);
-  const result = new Map<string, string>();
-  $('a[href]').each((_, a) => {
+  const result = new Map<string, ListedLink>();
+  const add = (href: string | undefined, hints?: ListingHints) => {
     try {
-      const u = new URL($(a).attr('href')!, base);
+      const u = new URL(href!, base);
       u.hash = '';
       const id = externalId(source, u.href);
-      if (id) result.set(id, u.href);
+      if (!id) return;
+      const existing = result.get(id);
+      const merged = { ...existing?.hints, ...hints };
+      result.set(id, {
+        externalId: id,
+        url: u.href,
+        ...(Object.keys(merged).length ? { hints: merged } : {}),
+      });
     } catch {}
-  });
-  return [...result].map(([externalId, url]) => ({ externalId, url }));
+  };
+  if (source === 'jobs') {
+    $('table').each((_, table) => {
+      const header = $(table).find('tr').first().text();
+      const vip = /VIP/i.test(header);
+      $(table)
+        .find('tr')
+        .each((_, row) => {
+          const link = $(row).find('a[href*="view=jobs&id="]').first();
+          if (!link.length) return;
+          const hints: ListingHints = {};
+          const city = link
+            .parent()
+            .children('i')
+            .first()
+            .text()
+            .replace(/^\s*-\s*/, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (city && city.length <= 300) hints.city = city;
+          if ($(row).find('img[src*="/i/salary."]').length)
+            hints.salaried = true;
+          if (listing && !vip) {
+            hints.categoryLabel = listing.categoryLabel;
+            hints.category = listing.category;
+          }
+          add(link.attr('href'), hints);
+        });
+    });
+    // Links outside any table (defensive against markup changes).
+    $('a[href*="view=jobs&id="]').each((_, a) => {
+      if (!$(a).closest('table').length) add($(a).attr('href'));
+    });
+    return [...result.values()];
+  }
+  $('a[href]').each((_, a) => add($(a).attr('href')));
+  return [...result.values()];
 }
 function dateOnly(value: unknown) {
   return typeof value === 'string' &&
@@ -240,24 +318,6 @@ function number(value: unknown) {
     ? value
     : null;
 }
-function category(title: string) {
-  const t = title.toLowerCase();
-  const rules: [RegExp, string][] = [
-    [
-      /დეველოპ|პროგრამისტ|developer|software|ტექნიკოს|ინფორმაციულ/,
-      'ტექნოლოგიები',
-    ],
-    [/გაყიდვ|კონსულტანტ|ექაუნთ|sales/, 'გაყიდვები'],
-    [/მარკეტინგ|რეკლამ|marketing/, 'მარკეტინგი'],
-    [/ბუღალტ|ფინანს|accountant/, 'ფინანსები'],
-    [/მძღოლ|საწყობ|ლოჯისტ|დისპეტჩ|dispatcher/, 'ლოჯისტიკა'],
-    [/ადმინისტრ|ასისტენტ|ოფის|ადამიანური|\bhr\b/, 'ადმინისტრაცია'],
-    [/ექიმ|ექთან|ფარმაც/, 'სამედიცინო'],
-    [/მასწავლებ|ლექტორ|პედაგოგ/, 'განათლება'],
-    [/მიმტან|ბარისტ|მზარეულ|დასუფთავ|დიასახლის/, 'მომსახურება'],
-  ];
-  return rules.find(([r]) => r.test(t))?.[1] || 'სხვა';
-}
 function salaryText(
   min: number | null,
   max: number | null,
@@ -274,10 +334,18 @@ export function parseDetail(
   source: SourceId,
   html: string,
   url: string,
+  hints?: ListingHints | null,
 ): Vacancy {
-  const $ = load(html);
   if (!externalId(source, url)) throw Error('Invalid vacancy URL');
+  if (modules[source])
+    return finishVacancy(
+      source,
+      modules[source].parseDetail(html, url, hints || undefined),
+      hints,
+    );
+  const $ = load(html);
   let verifiedMinimalSs = false;
+  let fromSource: Category | '' = '';
   const j: Vacancy &
     Required<Pick<Vacancy, 'facts' | 'applicationLinks' | 'warnings'>> = {
     logoUrl: '',
@@ -388,6 +456,35 @@ export function parseDetail(
         .filter(Boolean)
         .join('\n\n');
     }
+    // Public structured extras hr.ge shows on the page: benefits, languages, driving licences.
+    const list = (value: unknown, shown: unknown) =>
+      shown !== false && Array.isArray(value)
+        ? value
+            .filter(
+              (v): v is string => typeof v === 'string' && v.trim() !== '',
+            )
+            .map((v) => v.trim())
+        : [];
+    const benefits = list(a?.benefits, true);
+    if (benefits.length)
+      j.facts.push({
+        label: 'ბენეფიტები',
+        value: benefits.join(', ').slice(0, 1500),
+      });
+    const languages = list(a?.languages, a?.showLanguages);
+    if (languages.length)
+      j.facts.push({
+        label: 'ენები',
+        value: languages.join(', ').slice(0, 300),
+      });
+    const licences = list(a?.drivingLicenses, a?.showDrivingLicenses);
+    if (licences.length)
+      j.facts.push({
+        label: 'მართვის მოწმობა',
+        value: licences.join(', ').slice(0, 300),
+      });
+    if (a?.isSuitableForStudent === true)
+      j.facts.push({ label: 'სტუდენტებისთვის', value: 'დიახ' });
     const visible = visibleFields(j.description);
     if (!j.salary && visible.salary && !visible.warning) {
       j.salary = visible.salary;
@@ -544,6 +641,8 @@ export function parseDetail(
       resumeLink?: string;
       phones?: { applicationId?: number; phoneNumber?: string }[];
       email?: string;
+      sphereId?: number;
+      isInternship?: boolean;
     };
     let data: SsDetail | undefined;
     try {
@@ -563,6 +662,20 @@ export function parseDetail(
       typeof v === 'string' ? v : v?.ka || v?.text || '';
     j.title = translated(data.title);
     j.company = data.publisherName || '';
+    // The board's own sphere, with its public title, is a better classification than the
+    // title keywords alone.
+    fromSource = sourceCategory('ss', data.sphereId);
+    const sphere = (
+      (
+        JSON.parse($('#__NEXT_DATA__').text()).props?.pageProps?.spheresInitData
+          ?.items as { id?: number; title?: Translated }[] | undefined
+      )?.find((s) => s?.id === data.sphereId) || null
+    )?.title;
+    const sphereTitle = typeof sphere === 'string' ? sphere : sphere?.ka || '';
+    if (sphereTitle && sphereTitle !== 'სხვა')
+      j.facts.push({ label: 'სფერო', value: sphereTitle.slice(0, 150) });
+    if (data.isInternship === true)
+      j.facts.push({ label: 'სტაჟირება', value: 'დიახ' });
     verifiedMinimalSs =
       data.status === 0 &&
       j.title.trim().length >= 2 &&
@@ -660,6 +773,7 @@ export function parseDetail(
           5: 'ერთდღიანი სამუშაო',
         } as Record<number, string>
       )[data.workingSchedule ?? -1] || '';
+    if (data.isInternship === true) j.employmentType ||= 'სტაჟირება';
     // Only map the currency observed in the visible page; unknown enum values remain unpriced.
     j.currency = data.currencyId === 1 ? 'GEL' : '';
     j.salaryPeriod =
@@ -811,6 +925,9 @@ export function parseDetail(
     );
     if (j.deadline && j.datePosted && j.deadline < j.datePosted)
       j.deadline = georgianDate(dates[1], Number(j.datePosted.slice(0, 4)) + 1);
+    // A removed jobs.ge advertisement still renders the empty table shell.
+    if (!j.title && !j.company && !j.description && cells.length >= 3)
+      throw new UnavailableVacancy();
     const fields = visibleFields(j.description);
     j.city = fields.location;
     j.salary = fields.salary;
@@ -832,26 +949,41 @@ export function parseDetail(
             url: href,
           });
       });
+  if (source === 'jobs' && hints?.category)
+    fromSource = sourceCategory('jobs', hints.categoryLabel || '');
+  if (hints?.categoryLabel && !j.facts.some((f) => f.label === 'კატეგორია'))
+    j.facts.push({
+      label: 'კატეგორია',
+      value: hints.categoryLabel.slice(0, 150),
+    });
+  return finishVacancy(source, j, hints, fromSource, verifiedMinimalSs);
+}
+/** Shared normalisation and validation for every source. */
+function finishVacancy(
+  source: SourceId,
+  input: Vacancy,
+  hints?: ListingHints | null,
+  fromSource: Category | '' = '',
+  verifiedMinimalSs = false,
+): Vacancy {
+  const j = {
+    ...input,
+    facts: input.facts || [],
+    applicationLinks: input.applicationLinks || [],
+    warnings: input.warnings || [],
+  };
   j.applicationLinks = [
     ...new Map(j.applicationLinks.map((l) => [l.url, l])).values(),
   ].slice(0, 12);
-  j.category = category(j.title);
-  if (
-    source === 'jobs' &&
-    !j.title &&
-    !j.company &&
-    !j.description &&
-    $('.dtitle').length >= 3
-  )
-    throw new UnavailableVacancy();
   j.title = j.title.replace(/\s+/g, ' ').trim();
   if (/^(?:ტენდერი(?:\s|$)|tender\s+for\s)/i.test(j.title))
     throw new UnavailableVacancy();
   j.company = j.company.replace(/\s+/g, ' ').trim();
   j.city = j.city.replace(/\s+/g, ' ').trim();
+  // A listing already named the work location when the detail page did not.
+  if (!j.city && hints?.city) j.city = hints.city.replace(/\s+/g, ' ').trim();
+  j.category = classify(j.title, fromSource);
   if (!j.company) j.warnings.push('კომპანიის სახელი წყაროზე ვერ მოიძებნა.');
-  if (!j.city && j.mode !== 'დისტანციური')
-    j.warnings.push('სამუშაოს მდებარეობა დასაზუსტებელია.');
   if (j.title.length < 2 || (!verifiedMinimalSs && j.description.length < 40))
     throw Error('Vacancy structure changed or description is missing');
   if (verifiedMinimalSs && !j.description)
@@ -859,7 +991,15 @@ export function parseDetail(
       'პირველწყაროზე აღწერა მითითებული არ არის. დეტალებისთვის გახსენი განცხადება.',
     );
   if (j.description.length > 100000) throw Error('Description exceeds limit');
-  return enrichVacancy(j);
+  j.facts = j.facts.slice(0, 30);
+  // The description may still name the city; only warn when it does not.
+  const enriched = enrichVacancy(j);
+  if (!enriched.city && enriched.mode !== 'დისტანციური')
+    enriched.warnings = [
+      ...(enriched.warnings || []),
+      'სამუშაოს მდებარეობა დასაზუსტებელია.',
+    ];
+  return enriched;
 }
 
 /** gancxadebebi.ge prints "აგვისტო 08, 2026"; the shared helper expects "08 აგვისტო 2026". */
@@ -949,6 +1089,8 @@ export const sourceLockIds: Record<SourceId, number> = {
   ss: 917413,
   hrgov: 917414,
   gancxadebebi: 917415,
+  worknet: 917416,
+  myjobs: 917417,
 };
 
 // Georgian listings omit the year; compare against their local calendar date, including around midnight/New Year.

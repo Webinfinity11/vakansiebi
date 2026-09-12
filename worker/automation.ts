@@ -7,6 +7,7 @@ import {
   type Vacancy,
 } from '../lib/types';
 import { externalId, fingerprint, tbilisiDate } from './adapters';
+import { auditChange } from './importer';
 import { db, transaction } from '../lib/server/db';
 import { safeLogoUrl } from '../lib/vacancy-media';
 
@@ -148,14 +149,13 @@ export async function reconcileJob(c: PoolClient, id: string) {
     [id, draft, published, status, reason, fingerprint(draft)],
   );
   if (!changed.rowCount) return 'unchanged';
+  const [from, to] = auditChange(
+    { status: job.status, published: job.published },
+    { status, published, reason },
+  );
   await c.query(
     `INSERT INTO audit_log(job_id,action,actor,before_data,after_data) VALUES($1,$2,'automation',$3,$4)`,
-    [
-      id,
-      'automation.' + status,
-      { status: job.status, published: job.published },
-      { status, published, reason },
-    ],
+    [id, 'automation.' + status, from, to],
   );
   return status;
 }

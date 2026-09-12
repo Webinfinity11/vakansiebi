@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { db } from '@/lib/server/db';
 import { githubScraperStatus } from '@/lib/server/scraper-github';
 import { wakeScraper } from '@/lib/server/scraper-control';
+import { sourceNames } from '@/lib/types';
 import {
   apiError,
   requireAdmin,
@@ -24,6 +25,10 @@ export async function GET() {
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.quality_warning IS NOT NULL) quality_held,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NOT NULL) imported,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NULL AND (i.error IS NULL OR i.failures>0)) queued,
+        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NULL AND i.error IS NULL AND i.next_check_at<=now()) due,
+        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.error IS NOT NULL) errored,
+        (SELECT COALESCE(jsonb_agg(e),'[]'::jsonb) FROM (SELECT left(i.error,120) message,count(*)::int count FROM source_items i WHERE i.source_id=s.id AND i.error IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 3) e) top_errors,
+        (SELECT count(*)::int FROM source_runs r WHERE r.source_id=s.id AND r.status='deferred' AND r.started_at>now()-interval '3 days') deferred_runs,
         (SELECT count(DISTINCT j.id)::int FROM source_items i JOIN jobs j ON j.id=i.job_id WHERE i.source_id=s.id AND j.status='published' AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))) published_count,
         (SELECT count(*)::int FROM source_discovery_pages p WHERE p.source_id=s.id AND p.observed_at>now()-interval '24 hours') observed_pages
         FROM sources s WHERE NOT s.retired ORDER BY s.id`,
@@ -51,11 +56,13 @@ export async function POST(req: Request) {
     checkOrigin(req);
     const data = z
       .object({
-        id: z.enum(['hr', 'jobs', 'ss', 'hrgov', 'all']),
+        // Every active source, so a new board is controllable the moment it is added.
+        id: z.enum([...(Object.keys(sourceNames) as [string, ...string[]]), 'all']),
         action: z.enum(['run', 'configure', 'retry']),
         enabled: z.boolean().optional(),
         autoEnabled: z.boolean().optional(),
-        intervalMinutes: z.number().int().min(30).max(1440).optional(),
+        intervalMinutes: z.number().int().min(15).max(1440).optional(),
+        detailIntervalHours: z.number().int().min(1).max(168).optional(),
         autoPublish: z.boolean().optional(),
       })
       .parse(await readBody(req));
@@ -89,6 +96,7 @@ export async function POST(req: Request) {
     await db().query(
       `UPDATE sources SET enabled=COALESCE($2,enabled),auto_enabled=COALESCE($3,auto_enabled),
        interval_minutes=COALESCE($4,interval_minutes),auto_publish=COALESCE($5,auto_publish),
+       detail_interval_hours=COALESCE($6,detail_interval_hours),
        requested_at=CASE WHEN $2=false OR $3=false THEN NULL ELSE requested_at END,
        next_run_at=CASE WHEN $3=true AND NOT auto_enabled THEN now() ELSE next_run_at END
        WHERE ($1='all' OR id=$1) AND NOT retired`,
@@ -98,6 +106,7 @@ export async function POST(req: Request) {
         data.autoEnabled,
         data.intervalMinutes,
         data.autoPublish,
+        data.detailIntervalHours,
       ],
     );
     return Response.json({ ok: true });

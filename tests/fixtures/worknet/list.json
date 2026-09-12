@@ -1,0 +1,158 @@
+{
+ "items": [
+  {
+   "id": 28847,
+   "vacancyName": "გაყიდვების მენეჯერი",
+   "exactSalary": "1500",
+   "organizationName": "შპს გლობალ ფროფერთი ბუტიკ",
+   "occupationId": 5592,
+   "fieldOfWorkIds": [],
+   "startDate": "2026-09-11T00:00:00",
+   "endDate": "2026-09-25T23:59:59",
+   "vacancyStatusId": 1,
+   "workContractIds": [
+    1
+   ],
+   "specialWorkConditionIds": [
+    11
+   ],
+   "salaryRangeIds": [
+    12
+   ],
+   "regionIds": [
+    90
+   ],
+   "occupationName": "გაყიდვების კონსულტანტი",
+   "experienceLevelIds": [
+    7
+   ],
+   "municipalityId": [
+    95
+   ],
+   "vacancyPositionId": 150,
+   "organizationDTO": {
+    "id": 11920,
+    "organizationName": "შპს გლობალ ფროფერთი ბუტიკ",
+    "logo": null
+   },
+   "logoData": null
+  },
+  {
+   "id": 28846,
+   "vacancyName": "საერთაშორისო გადაიდვების მძღოლი-ექსპედიტორი",
+   "exactSalary": "შეთანხმებით",
+   "organizationName": "შპს ასტერიუმ ლოჯისტიკს ჯორჯია",
+   "occupationId": 5613,
+   "fieldOfWorkIds": [],
+   "startDate": "2026-09-11T00:00:00",
+   "endDate": "2026-09-25T23:59:59",
+   "vacancyStatusId": 1,
+   "workContractIds": [
+    1
+   ],
+   "specialWorkConditionIds": [
+    11
+   ],
+   "salaryRangeIds": [
+    7
+   ],
+   "regionIds": [
+    1
+   ],
+   "occupationName": "მძღოლი-ექსპედიტორი",
+   "experienceLevelIds": [
+    7
+   ],
+   "municipalityId": [
+    4
+   ],
+   "vacancyPositionId": 1515,
+   "organizationDTO": {
+    "id": 11000,
+    "organizationName": "შპს ასტერიუმ ლოჯისტიკს ჯორჯია",
+    "logo": null
+   },
+   "logoData": null
+  },
+  {
+   "id": 28000,
+   "vacancyName": "მცხობელი",
+   "exactSalary": "2000",
+   "organizationName": "შპს ეი სი ჯგუფი",
+   "occupationId": 6459,
+   "fieldOfWorkIds": [],
+   "startDate": "2026-09-11T00:00:00",
+   "endDate": "2026-09-25T23:59:59",
+   "vacancyStatusId": 2,
+   "workContractIds": [
+    1
+   ],
+   "specialWorkConditionIds": [
+    10
+   ],
+   "salaryRangeIds": [
+    12
+   ],
+   "regionIds": [
+    90
+   ],
+   "occupationName": "მცხობელი",
+   "experienceLevelIds": [
+    17
+   ],
+   "municipalityId": [
+    95
+   ],
+   "vacancyPositionId": 2598,
+   "organizationDTO": {
+    "id": 11075,
+    "organizationName": "შპს ეი სი ჯგუფი",
+    "logo": null
+   },
+   "logoData": null
+  },
+  {
+   "id": "abc",
+   "vacancyName": "მოლარე-კონსულტანტი",
+   "exactSalary": "850",
+   "organizationName": "ი.მ ნინო ზუროშვილი",
+   "occupationId": 5971,
+   "fieldOfWorkIds": [],
+   "startDate": "2026-09-11T00:00:00",
+   "endDate": "2026-10-22T23:59:59",
+   "vacancyStatusId": 1,
+   "workContractIds": [
+    1
+   ],
+   "specialWorkConditionIds": [
+    10
+   ],
+   "salaryRangeIds": [
+    10
+   ],
+   "regionIds": [
+    19
+   ],
+   "occupationName": "მოლარე-კონსულტანტი",
+   "experienceLevelIds": [
+    7
+   ],
+   "municipalityId": [
+    25
+   ],
+   "vacancyPositionId": 2037,
+   "organizationDTO": {
+    "id": 19383,
+    "organizationName": "ი.მ ნინო ზუროშვილი",
+    "logo": null
+   },
+   "logoData": null
+  }
+ ],
+ "pageIndex": 1,
+ "pageSize": 100,
+ "totalPages": 98,
+ "totalCount": 9707,
+ "hasPreviousPage": false,
+ "hasNextPage": true
+}

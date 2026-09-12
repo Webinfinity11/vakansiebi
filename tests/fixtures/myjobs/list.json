@@ -1,0 +1,37 @@
+{
+  "data": [
+    {
+      "id": 21988,
+      "title": "გაყიდვების კონსულტანტი",
+      "salary_type": "range",
+      "salary_from": 1200,
+      "salary_to": 1500,
+      "show_salary": 1,
+      "status": "active",
+      "country": { "id": 1, "title": "საქართველო", "city": { "id": 4, "title": "ბათუმი" } }
+    },
+    {
+      "id": 21990,
+      "title": "ბუღალტერი",
+      "salary_type": "negotiable",
+      "salary_from": null,
+      "salary_to": null,
+      "show_salary": "1",
+      "status": "active",
+      "country": { "id": 1, "title": "საქართველო", "city": null }
+    },
+    {
+      "id": 21991,
+      "title": "ძველი განცხადება",
+      "salary_type": "fixed",
+      "salary_from": 900,
+      "show_salary": 1,
+      "status": "expired",
+      "country": { "id": 1, "title": "საქართველო", "city": { "id": 2, "title": "თბილისი" } }
+    },
+    { "id": "abc", "title": "გაუგებარი", "status": "active" },
+    { "id": 21988, "title": "დუბლიკატი", "status": "active" }
+  ],
+  "links": { "first": "https://api.myjobs.ge/api/ka/public/vacancies?page=1", "next": "https://api.myjobs.ge/api/ka/public/vacancies?page=2" },
+  "meta": { "current_page": 1, "from": 1, "last_page": 73, "per_page": 10, "to": 10, "total": 723 }
+}

@@ -16,6 +16,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "worker": "tsx worker/main.ts",
     "source:probe": "tsx scripts/probe.ts",
+    "worker:gov": "zsh scripts/local-gov-sources.sh --loop",
     "admin:setup": "node scripts/admin-setup.mjs",
     "local:start": "node scripts/local-start.mjs"
   },

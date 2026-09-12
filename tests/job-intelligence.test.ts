@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  escapeRegex,
   samePosting,
   searchTerms,
   sourceHealth,
+  termPattern,
 } from '../lib/job-intelligence';
 import type { Vacancy } from '../lib/types';
 const vacancy: Vacancy = {
@@ -37,6 +39,32 @@ void test('search normalizes terms, removes duplicates and bounds expensive quer
     searchTerms(Array.from({ length: 30 }, (_, i) => 'word' + i).join(' '))
       .length,
     12,
+  );
+});
+void test('particles that occur in every text are dropped unless they are the whole query', () => {
+  assert.deepEqual(searchTerms('java ის და'), ['java']);
+  assert.deepEqual(searchTerms('менеджер по продажам'), [
+    'менеджер',
+    'продажам',
+  ]);
+  assert.deepEqual(searchTerms('ის'), ['ის'], 'the whole query survives');
+  assert.deepEqual(searchTerms('qa engineer'), ['qa', 'engineer']);
+  assert.deepEqual(searchTerms('1c hr c#'), ['1c', 'hr', 'c#']);
+  assert.deepEqual(searchTerms('a b'), ['a', 'b']);
+});
+void test('match patterns bound Latin words, keep Georgian stems as substrings and never leak metacharacters', () => {
+  assert.equal(termPattern('დეველოპერ'), null);
+  assert.equal(termPattern('დაცვის თანამშრომ'), null);
+  assert.equal(termPattern('ის'), '\\mის\\M');
+  assert.equal(termPattern('java'), '\\mjava(e?s)?\\M');
+  assert.equal(termPattern('react'), '\\mreact');
+  assert.equal(termPattern('бухгалтер'), '\\mбухгалтер');
+  assert.equal(termPattern('врач'), '\\mврач', 'Cyrillic inflects by suffix');
+  assert.equal(termPattern('c++'), '\\mc\\+\\+($|[^[:alnum:]_])');
+  assert.equal(termPattern('.net'), '\\.net\\M');
+  assert.equal(
+    escapeRegex('a.b|c(d)[e]{f}^$*+?\\-#'),
+    'a\\.b\\|c\\(d\\)\\[e\\]\\{f\\}\\^\\$\\*\\+\\?\\\\\\-\\#',
   );
 });
 void test('duplicate linking requires identical content, cycle, conditions and employer', () => {

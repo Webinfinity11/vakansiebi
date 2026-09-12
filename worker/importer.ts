@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { db, transaction } from '../lib/server/db';
-import { fingerprint, tbilisiDate } from './adapters';
+import { fingerprint, tbilisiDate, type ListingHints } from './adapters';
 import { samePosting } from '../lib/job-intelligence';
 import type { SourceId, Vacancy } from '../lib/types';
 import { reconcileJob } from './automation';
@@ -153,24 +153,75 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
     return outcome;
   });
 }
+/** Listing hints accumulate: a later page without a category keeps the one already known. */
 export async function discoverItems(
   source: SourceId,
-  links: { externalId: string; url: string }[],
+  links: { externalId: string; url: string; hints?: ListingHints }[],
 ) {
   for (let i = 0; i < links.length; i += 100) {
     const chunk = links.slice(i, i + 100);
     const values: unknown[] = [];
     const placeholders = chunk.map((a, k) => {
-      values.push(randomUUID(), source, a.externalId, a.url);
-      const n = k * 4;
-      return `($${n + 1},$${n + 2},$${n + 3},$${n + 4})`;
+      values.push(
+        randomUUID(),
+        source,
+        a.externalId,
+        a.url,
+        a.hints && Object.keys(a.hints).length ? a.hints : null,
+      );
+      const n = k * 5;
+      return `($${n + 1},$${n + 2},$${n + 3},$${n + 4},$${n + 5})`;
     });
     if (chunk.length)
       await db().query(
-        `INSERT INTO source_items(id,source_id,external_id,url) VALUES ${placeholders.join(',')} ON CONFLICT(source_id,external_id) DO UPDATE SET last_seen_at=now(),url=excluded.url`,
+        `INSERT INTO source_items(id,source_id,external_id,url,listing_hints) VALUES ${placeholders.join(',')}
+        ON CONFLICT(source_id,external_id) DO UPDATE SET last_seen_at=now(),url=excluded.url,
+        listing_hints=CASE WHEN excluded.listing_hints IS NULL THEN source_items.listing_hints ELSE COALESCE(source_items.listing_hints,'{}'::jsonb)||excluded.listing_hints END`,
         values,
       );
   }
+}
+const plainObject = (v: unknown): v is Record<string, unknown> =>
+  Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+/** Long text is kept as a readable head plus its original length, at every depth. */
+const shortened = (v: unknown): unknown => {
+  if (typeof v === 'string')
+    return v.length > 240 ? v.slice(0, 240) + `…(${v.length})` : v;
+  if (Array.isArray(v)) return v.map(shortened);
+  if (plainObject(v))
+    return Object.fromEntries(
+      Object.entries(v).map(([k, value]) => [k, shortened(value)]),
+    );
+  return v;
+};
+/**
+ * The trail records what changed, not a second copy of the record. Both sides carried a full
+ * vacancy on every automatic publication, which made audit_log the largest table in the
+ * database while nothing ever read those payloads back. Differing fields are kept, nested
+ * objects are compared field by field, and long text is shortened with its original length.
+ */
+export function auditChange(
+  before: unknown,
+  after: unknown,
+): [unknown, unknown] {
+  if (!plainObject(before) || !plainObject(after))
+    return [shortened(before), shortened(after)];
+  const left: Record<string, unknown> = {};
+  const right: Record<string, unknown> = {};
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    const a = before[key],
+      b = after[key];
+    if (JSON.stringify(a) === JSON.stringify(b)) continue;
+    if (plainObject(a) && plainObject(b)) {
+      const [l, r] = auditChange(a, b);
+      left[key] = l;
+      right[key] = r;
+    } else {
+      if (key in before) left[key] = shortened(a);
+      if (key in after) right[key] = shortened(b);
+    }
+  }
+  return [left, right];
 }
 export async function audit(
   c: PoolClient,
@@ -180,8 +231,9 @@ export async function audit(
   before: unknown,
   after: unknown,
 ) {
+  const [from, to] = auditChange(before, after);
   await c.query(
     'INSERT INTO audit_log(job_id,action,actor,before_data,after_data) VALUES($1,$2,$3,$4,$5)',
-    [jobId, action, actor, before, after],
+    [jobId, action, actor, from, to],
   );
 }

@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { readSearch } from '../search-state';
 import { searchGroups } from '../search-language';
+import { escapeRegex, termPattern } from '../job-intelligence';
 import { requiredExperiencePattern } from '../experience';
+import { cities, cityStem, otherCity } from '../cities';
 
 export const filterLabels = {
   query: 'საძიებო სიტყვა',
@@ -22,9 +24,23 @@ export type SearchMeta = {
   relaxations: { key: FilterKey; label: string; count: number }[];
   suggestion: { query: string; count: number } | null;
 };
+export type SearchPlanOptions = {
+  /**
+   * Public listing mode: one row per identical posting (normalized title,
+   * employer and city) survives — the most recently published — and the
+   * others fold their source links into it. Employer-less classifieds are
+   * never grouped. Direct lookups by id keep every row reachable.
+   */
+  grouped?: boolean;
+};
 const normalized = (sql: string) =>
   `lower(CASE WHEN COALESCE(${sql},'') IS NFKC NORMALIZED THEN COALESCE(${sql},'') ELSE normalize(COALESCE(${sql},''),NFKC) END)`;
-export function searchPlan(params: URLSearchParams, preview = false) {
+const today = "to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')";
+export function searchPlan(
+  params: URLSearchParams,
+  preview = false,
+  options: SearchPlanOptions = {},
+) {
   const filters = readSearch(params);
   const snapshot = preview ? 'j.draft' : 'j.published';
   const args: unknown[] = [];
@@ -32,40 +48,102 @@ export function searchPlan(params: URLSearchParams, preview = false) {
     args.push(value);
     return `$${args.length}`;
   };
-  const groups = bind(JSON.stringify(searchGroups(filters.query)));
-  const documentExpression = normalized(
-    `concat_ws(' ',${snapshot}->>'title',${snapshot}->>'company',${snapshot}->>'city',${snapshot}->>'description')`,
+  // Every alternative carries the literal text a document must contain (cheap
+  // strpos prefilter) and, unless it is a Georgian stem, the bounded regex that
+  // confirms the match. Parameters stay bound; user text never enters the SQL.
+  const groups = bind(
+    JSON.stringify(
+      searchGroups(filters.query).map((group) =>
+        group.map((term) => ({ t: term, p: termPattern(term) })),
+      ),
+    ),
   );
-  const queryMatch = (text: string) =>
-    `NOT EXISTS(SELECT 1 FROM jsonb_array_elements(${groups}::jsonb) terms WHERE NOT EXISTS(SELECT 1 FROM jsonb_array_elements_text(terms) term WHERE strpos(${text},term)>0))`;
   const field = (key: string) => `${snapshot}->>'${key}'`;
-  const salary = `CASE WHEN ${field('currency')}='GEL' AND ${field('salaryPeriod')}='${filters.salaryPeriod === 'day' ? 'დღე' : 'თვე'}' AND jsonb_typeof(${snapshot}->'salaryMin')='number' THEN (${field('salaryMin')})::numeric END`;
+  const posted = preview
+    ? 'j.created_at'
+    : 'COALESCE(j.published_at,j.created_at)';
+  const termMatch = (text: string) =>
+    `EXISTS(SELECT 1 FROM jsonb_array_elements(terms) term WHERE strpos(${text},term->>'t')>0 AND (term->>'p' IS NULL OR ${text} ~ (term->>'p')))`;
+  const queryMatch = (text: string) =>
+    `NOT EXISTS(SELECT 1 FROM jsonb_array_elements(${groups}::jsonb) terms WHERE NOT ${termMatch(text)})`;
+  const searching = Boolean(filters.query.trim());
+  const grouped = Boolean(options.grouped) && !params.has('ids');
+  const folding = grouped || params.has('ids');
+  const pricing =
+    filters.salaryFrom !== null ||
+    filters.salaryTo !== null ||
+    filters.salaryPeriod === 'day' ||
+    params.get('sort') === 'salary';
+  // Every ->> on the large snapshot detoasts it again, so each scalar the plan
+  // needs is pulled out exactly once behind an optimizer fence (OFFSET 0), the
+  // snapshot is the only jsonb the CTE carries, and derived columns are only
+  // computed for the filters, facets and orderings actually in play.
+  const extracted = [
+    'title',
+    'company',
+    'city',
+    'category',
+    'datePosted',
+    'deadline',
+    ...(filters.remote ? ['mode'] : []),
+    ...(pricing ? ['salaryPeriod', 'currency'] : []),
+    ...(pricing || filters.paid ? ['salary'] : []),
+  ];
+  const extraction = (alias: string) =>
+    `SELECT ${alias}.id,${alias}.${snapshot.slice(2)},${alias}.created_at,${alias}.published_at,${alias}.needs_review,${alias}.fingerprint,${extracted.map((key) => `${alias}.${snapshot.slice(2)}->>'${key}' AS p_${key}`).join(',')}${pricing ? `,${alias}.${snapshot.slice(2)}->'salaryMin' AS p_salaryMin` : ''}`;
+  const p = (key: string) => `j.p_${key}`;
+  const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' THEN j.id::text ELSE regexp_replace(${normalized(`concat_ws('|',${p('title')},${p('company')},${p('city')})`)},'[^[:alnum:]|]','','g') END`;
+  const numericSalary = `jsonb_typeof(${p('salaryMin')})='number'`;
+  const salaryAmount = `(${p('salaryMin')}#>>'{}')::numeric`;
+  const unless = (needed: boolean, sql: string, empty = "''::text") =>
+    needed ? sql : empty;
+  const columns = [
+    `${unless(searching, normalized(`concat_ws(' ',${p('title')},${p('company')},${p('city')},${field('description')})`))} AS search_document`,
+    `${unless(searching || filters.remote, normalized(p('title')))} AS title_norm`,
+    `${unless(searching, normalized(p('company')))} AS company_norm`,
+    `${unless(filters.city !== 'ყველა', normalized(p('city')))} AS city_norm`,
+    // A source date is trusted only when it is a real calendar date; ss.ge
+    // sends 0001-01-01 and hr.gov.ge nothing, both fall back to our publication day.
+    `COALESCE(CASE WHEN ${p('datePosted')} ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' AND ${p('datePosted')}>='2000-01-01' THEN ${p('datePosted')} END,to_char(${posted} AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AS posted_on`,
+    // Most sources omit the period for an ordinary monthly figure; an empty
+    // period is monthly unless the text itself says daily, hourly or weekly.
+    `${unless(pricing, `CASE WHEN ${p('currency')}='GEL' AND ${numericSalary} AND (${p('salaryPeriod')}='თვე' OR (COALESCE(${p('salaryPeriod')},'')='' AND lower(COALESCE(${p('salary')},'')) !~ '(დღ|საათ|კვირ|hour|dail|day|week)')) THEN ${salaryAmount} END`, 'NULL::numeric')} AS salary_month`,
+    `${unless(pricing, `CASE WHEN ${p('currency')}='GEL' AND ${numericSalary} AND ${p('salaryPeriod')}='დღე' THEN ${salaryAmount} END`, 'NULL::numeric')} AS salary_day`,
+    `${unless(folding, groupKey, 'j.id::text')} AS group_key`,
+  ];
+  const salary =
+    filters.salaryPeriod === 'day' ? 'j.salary_day' : 'j.salary_month';
   const employmentText = normalized(
     `concat_ws(' ',${field('employmentType')},${field('title')})`,
   );
   const experienceText = normalized(
     `concat_ws(' ',${field('description')},${snapshot}->>'facts')`,
   );
+  const cityCondition = () => {
+    if (filters.city === 'ყველა') return 'true';
+    if (filters.city === otherCity)
+      return `j.city_norm<>'' AND NOT EXISTS(SELECT 1 FROM unnest(${bind([...cities])}::text[]) known WHERE strpos(j.city_norm,lower(known))>0)`;
+    // A posting without a city field often names the city in its text; the
+    // stem is matched at a word start so გორი never means კატეგორია.
+    return `CASE WHEN strpos(j.city_norm,${bind(filters.city.normalize('NFKC').toLowerCase())})>0 THEN true WHEN j.city_norm='' THEN ${normalized(`concat_ws(' ',${p('title')},${field('description')})`)} ~ ${bind('\\m' + escapeRegex(cityStem(filters.city)))} ELSE false END`;
+  };
   const conditions: Record<FilterKey, string> = {
     query: queryMatch('j.search_document'),
-    city:
-      filters.city === 'ყველა'
-        ? 'true'
-        : `strpos(${normalized(field('city'))},${bind(filters.city.toLowerCase())})>0`,
+    city: cityCondition(),
     category:
       filters.category === 'ყველა'
         ? 'true'
-        : `${field('category')}=${bind(filters.category)}`,
+        : `${p('category')}=${bind(filters.category)}`,
     source:
       filters.source === 'ყველა'
         ? 'true'
-        : `EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired AND s.name=${bind(filters.source)})`,
-    paid: filters.paid ? `COALESCE(${field('salary')},'')<>''` : 'true',
-    remote: filters.remote ? `${field('mode')}='დისტანციური'` : 'true',
+        : `j.group_key IN (SELECT m.group_key FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE NOT s.retired AND s.name=${bind(filters.source)})`,
+    paid: filters.paid ? `COALESCE(${p('salary')},'')<>''` : 'true',
+    remote: filters.remote
+      ? `(${p('mode')} IN ('დისტანციური','სამუშაო სახლიდან') OR j.title_norm ~ '(დისტანციურ|\\mremote)')`
+      : 'true',
     salary: [
-      filters.salaryPeriod === 'day'
-        ? `${field('salaryPeriod')}='დღე' AND ${field('currency')}='GEL'`
-        : 'true',
+      filters.salaryPeriod === 'day' ? `${salary} IS NOT NULL` : 'true',
       filters.salaryFrom !== null
         ? `${salary}>=${bind(filters.salaryFrom)}`
         : 'true',
@@ -81,11 +159,15 @@ export function searchPlan(params: URLSearchParams, preview = false) {
       ? `${experienceText} ~ ${bind('გამოცდილების[[:space:]]+გარეშე|გამოცდილება[[:space:]:–-]+(არ[[:space:]]+(არის[[:space:]]+)?(სავალდებულო|აუცილებელი|საჭირო)|არ[[:space:]]+მოითხოვება)|no[[:space:]]+(previous[[:space:]]+|prior[[:space:]]+)?experience[[:space:]]+(is[[:space:]]+)?(required|needed|necessary)|experience[[:space:]]+(is[[:space:]]+)?not[[:space:]]+(required|needed|necessary)')}`
       : 'true',
     postedWithin: filters.postedWithin
-      ? `${field('datePosted')} BETWEEN to_char((now() AT TIME ZONE 'Asia/Tbilisi')::date-(${bind(filters.postedWithin)}::int-1),'YYYY-MM-DD') AND to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')`
+      ? `j.posted_on BETWEEN to_char((now() AT TIME ZONE 'Asia/Tbilisi')::date-(${bind(filters.postedWithin)}::int-1),'YYYY-MM-DD') AND ${today}`
       : 'true',
   };
-  let base = `${preview ? "j.status IN ('pending','published')" : "j.status='published'"} AND ${snapshot} IS NOT NULL AND (COALESCE(${field('deadline')},'')='' OR ${field('deadline')}>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AND EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired)`;
-  base += ` AND NOT (lower(${field('title')}) ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]])')`;
+  // The predicate every public surface shares: published snapshot with at
+  // least one active source (checked on the row), then a live deadline and no
+  // procurement tenders (checked on the extracted scalars).
+  let base = `${preview ? "j.status IN ('pending','published')" : "j.status='published'"} AND ${snapshot} IS NOT NULL AND EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired)`;
+  const visible = base;
+  const current = `(COALESCE(${p('deadline')},'')='' OR ${p('deadline')}>=${today}) AND NOT (lower(${p('title')}) ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]])')`;
   if (filters.entryLevel)
     conditions.entryLevel += ` AND NOT (${experienceText} ~ ${bind(requiredExperiencePattern)})`;
   if (params.has('ids'))
@@ -102,9 +184,21 @@ export function searchPlan(params: URLSearchParams, preview = false) {
         .filter((id) => z.uuid().safeParse(id).success)
         .slice(0, 100),
     )}::text[]))`;
-  const cte = `WITH searchable AS MATERIALIZED (SELECT j.*,${filters.query.trim() ? documentExpression : "''::text"} AS search_document FROM jobs j WHERE ${base})`;
+  const groupRank = grouped
+    ? `,row_number() OVER (PARTITION BY ${groupKey} ORDER BY ${posted} DESC NULLS LAST,j.id) AS group_rank`
+    : ',1::bigint AS group_rank';
+  // Members of every group present in the result. A lookup by id must also see
+  // duplicates outside its restricted set; the indexed import fingerprint (the
+  // same three fields, taken from the draft) narrows that scan to candidates.
+  const members = params.has('ids')
+    ? `SELECT j.id,${groupKey} AS group_key,${posted} AS posted_at FROM (${extraction('j')} FROM jobs j WHERE ${visible} AND j.fingerprint IN (SELECT fingerprint FROM searchable) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
+    : `SELECT j.id,j.group_key,${posted} AS posted_at FROM searchable j`;
+  const cte = `WITH searchable AS MATERIALIZED (SELECT j.*,${columns.join(',')}${groupRank} FROM (${extraction('j')} FROM jobs j WHERE ${base} OFFSET 0) j WHERE ${current}), members AS MATERIALIZED (${members})`;
+  const kept = grouped ? 'j.group_rank=1' : 'true';
   const keys = Object.keys(conditions) as FilterKey[];
-  const where = [base, ...keys.map((key) => `(${conditions[key]})`)].join(
+  // searchable already satisfies the base predicate; only the grouping and the
+  // filters are evaluated again on the page.
+  const where = [kept, ...keys.map((key) => `(${conditions[key]})`)].join(
     ' AND ',
   );
   const all = (except?: FilterKey) =>
@@ -112,21 +206,23 @@ export function searchPlan(params: URLSearchParams, preview = false) {
       .filter((key) => key !== except)
       .map((key) => `"${key}"`)
       .join(' AND ');
-  const metrics = `${cte}, matches AS MATERIALIZED (SELECT ${field('category')} AS category_name,${keys.map((key) => `COALESCE((${conditions[key]}),false) AS "${key}"`).join(',')} FROM searchable j)
+  const metrics = `${cte}, matches AS MATERIALIZED (SELECT ${p('category')} AS category_name,${keys.map((key) => `COALESCE((${conditions[key]}),false) AS "${key}"`).join(',')} FROM searchable j WHERE ${kept})
     SELECT (SELECT count(*)::int FROM matches WHERE ${all()}) total,
     (SELECT count(*)::int FROM matches WHERE ${all('category')}) category_total,
     COALESCE((SELECT jsonb_agg(c) FROM (SELECT category_name name,count(*)::int count FROM matches WHERE ${all('category')} GROUP BY category_name) c),'[]'::jsonb) categories,
     jsonb_build_object(${keys.map((key) => `'${key}',(SELECT count(*)::int FROM matches WHERE ${all(key)})`).join(',')}) relaxed`;
-  const posted = preview ? 'j.created_at' : 'j.published_at';
-  let ordering = `${posted} DESC`;
+  // One canonical "newest" order: the posting date the filter uses, then our
+  // own publication time, and finally the id so pages never overlap.
+  const newest = `j.posted_on DESC,${posted} DESC`;
+  let ordering = newest;
   if (params.get('sort') === 'salary')
-    ordering = `${salary} DESC NULLS LAST,${posted} DESC`;
+    ordering = `${salary} DESC NULLS LAST,${newest}`;
   if (params.get('sort') === 'deadline')
-    ordering = `NULLIF(${field('deadline')},'') ASC NULLS LAST,${posted} DESC`;
+    ordering = `NULLIF(${p('deadline')},'') ASC NULLS LAST,${newest}`;
   if (
-    filters.query.trim() &&
+    searching &&
     !['salary', 'new', 'deadline'].includes(params.get('sort') || '')
   )
-    ordering = `(SELECT COALESCE(sum(CASE WHEN EXISTS(SELECT 1 FROM jsonb_array_elements_text(terms) term WHERE strpos(${normalized(field('title'))},term)>0) THEN 5 ELSE 0 END + CASE WHEN EXISTS(SELECT 1 FROM jsonb_array_elements_text(terms) term WHERE strpos(${normalized(field('company'))},term)>0) THEN 2 ELSE 0 END),0) FROM jsonb_array_elements(${groups}::jsonb) terms) DESC,${posted} DESC`;
-  return { where, args, ordering, metrics, filters, cte };
+    ordering = `(SELECT COALESCE(sum(CASE WHEN ${termMatch('j.title_norm')} THEN 5 ELSE 0 END + CASE WHEN ${termMatch('j.company_norm')} THEN 2 ELSE 0 END),0) FROM jsonb_array_elements(${groups}::jsonb) terms) DESC,${newest}`;
+  return { where, args, ordering, metrics, filters, cte, grouped };
 }

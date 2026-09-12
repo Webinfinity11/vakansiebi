@@ -2,6 +2,7 @@ import 'dotenv/config';
 import fs from 'node:fs/promises';
 import {
   configs,
+  detailRequestUrl,
   getSourceConfig,
   listLinks,
   parseDetail,
@@ -19,20 +20,25 @@ for (const source of (requested
     const html = await sourceFetch(source, getSourceConfig(source).list);
     const links = listLinks(source, html);
     if (!links[0]) throw Error('No vacancy links');
-    const detail = await sourceFetch(source, links[0].url);
+    const detail = await sourceFetch(
+      source,
+      detailRequestUrl(source, links[0].url),
+    );
     if (process.argv.includes('--save')) {
       await fs.mkdir('.local/probes', { recursive: true });
       await fs.writeFile('.local/probes/' + source + '-list.html', html);
       await fs.writeFile('.local/probes/' + source + '-detail.html', detail);
       await fs.writeFile('.local/probes/' + source + '-url.txt', links[0].url);
     }
-    const job = parseDetail(source, detail, links[0].url);
+    const job = parseDetail(source, detail, links[0].url, links[0].hints);
     console.log(
       JSON.stringify({
         source,
         links: links.length,
         title: job.title,
         company: job.company,
+        city: job.city,
+        category: job.category,
         descriptionLength: job.description.length,
         datePosted: job.datePosted,
         deadline: job.deadline,

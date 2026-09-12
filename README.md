@@ -12,6 +12,8 @@
 - `jobs.ss.ge`: საჯარო ვაკანსიები, დამსაქმებლის ლოგო და განაცხადის ბმული.
 - `vacancy.hr.gov.ge`: საჯარო სამსახურის ვაკანსიები, პირობები და ბოლო ვადა.
 - `jobs.ge`: საჯარო HTML განცხადებების სია და დეტალები.
+- `worknet.moh.gov.ge`: დასაქმების სახელმწიფო სააგენტოს საჯარო JSON (2026-09-12-ზე ~9,700 აქტიური ვაკანსია). ქალაქი მისამართის ტექსტიდან იკითხება; დამსაქმებლის საიდენტიფიკაციო კოდი და საკონტაქტო პირი არ ინახება.
+- `myjobs.ge`: საჯარო JSON და SSR დეტალები (~720 ვაკანსია): ქალაქი, ხელფასი, კატეგორია, გამოცდილება, ენები.
 - `gancxadebebi.ge`: მხოლოდ `ვაკანსია` კატეგორია. ამ განცხადებებს დამსაქმებელი არ ჰყავთ — კონტაქტი ტექსტშია. საჯარო კატალოგში ისინი „კერძო განცხადებად" აღინიშნება, დუბლიკატებში არ წყვილდებიან, გამოქვეყნება ავტომატურია, დანარჩენი წყაროების მსგავსად. `ვეძებ სამსახურს`, სტუდენტური, დისტანციური და სტაჟირების კატეგორიები არ შემოდის.
 - დამატებითი აღმოჩენა HR.ge-ს sitemap-ებიდან და SS / საჯარო სამსახურის სიის გვერდებიდან; გვერდები ნაწილდება გაშვებებს შორის.
 - შემოტანილი ვაკანსიის რედაქცია, ხელით გამოქვეყნება, არქივი, უარყოფა და აღდგენა.
@@ -63,7 +65,9 @@ npm run worker
 4. ახალი ვაკანსია იღებს `pending` სტატუსს. ცვლილება ააქტიურებს `needs_review`-ს, საჯარო ტექსტს არ ეხება.
 5. ადმინი საჭიროებისამებრ ჩასვამს წყაროს ახალ ტექსტს, დაარედაქტირებს და გამოაქვეყნებს.
 
-სიის საწყისი ინტერვალია 30 წუთი; უკვე შემოტანილი დეტალების შემოწმება ინიშნება 6 საათში. მიმდინარე ვერსია თითო გაშვებაზე ამუშავებს შეზღუდულ ნაკადს (`CRAWL_BATCH_SIZE=20`), ამიტომ დიდი საწყისი რიგის ამოწურვა რამდენიმე გაშვებას მოითხოვს. აღმოჩენილი ბმულების რაოდენობა **არ არის** შემოტანილი ვაკანსიების რაოდენობა.
+სიის საწყისი ინტერვალია 30 წუთი; hr/jobs/ss-ის უკვე შემოტანილი დეტალები დღეში ერთხელ მოწმდება (სიიდან გამქრალი ჩანაწერები პირველ რიგში), ახალი ბმულები კი უახლესიდან ძველისკენ. თითო გაშვება შემოსაზღვრულია დროით (`SCRAPE_BUDGET_MINUTES`, ნაგულისხმევად 22) და რაოდენობით (`CRAWL_BATCH_SIZE`); დეტალებს სამი პარალელური მუშა ამუშავებს (`DETAIL_CONCURRENCY`), თუმცა ერთ ჰოსტზე მოთხოვნები არასდროს ერთდროულია: hr/jobs/ss-ზე წამში ერთი, დანარჩენზე ორ წამში ერთი, robots.txt-ის `Crawl-delay` კი უპირატესია (jobs.ge — 5 წამი). აღმოჩენილი ბმულების რაოდენობა **არ არის** შემოტანილი ვაკანსიების რაოდენობა.
+
+Jobs.ge კატეგორიების სიებიდან იკითხება (`jid=1` — მხოლოდ ვაკანსიები, ტენდერები/ტრენინგები აღარ შემოდის), ამიტომ თითო ჩანაწერს წყაროს კატეგორია და ქალაქი სიიდანვე მოჰყვება. ss.ge-ს სფერო და hr.ge-ს ბენეფიტები/ენები/მართვის მოწმობა ფაქტებში ჩანს. კატალოგის კატეგორიები 15-ია; კლასიფიკაციაში წყაროს საკუთარი კატეგორია უპირატესია, დანარჩენი სათაურის წესებით იხსნება (`worker/categories.ts`).
 
 404/410, დროებითი ქსელური შეცდომა ან შეცვლილი HTML ვაკანსიას არ შლის. პრობლემურ დეტალს ხელახლა შემოწმება მზარდი ინტერვალით ენიშნება. წყაროს ერთდროული გაშვება PostgreSQL advisory lock-ით იზღუდება. გასული ბოლო ვადის მქონე გამოქვეყნებული ჩანაწერები საჯარო ძებნაში აღარ ჩანს.
 
@@ -104,7 +108,9 @@ Vercel-ის Production გარემოში საჭიროა `DATABAS
 
 The scraper runs in GitHub Actions (`.github/workflows/scrape.yml`) at minutes 17 and 47 of each hour. Each source respects its admin interval, enabled status and manual request. Admin requests are picked up by the next workflow run; Actions > Vacancy scraper > Run workflow also checks due sources. The local computer is no longer required.
 
-`SCRAPER_DATABASE_URL` is a GitHub Actions secret containing the Neon direct connection URL; session advisory locks require the direct endpoint. Five independent jobs process up to 300 details per source, bounded by a 22-minute per-source budget inside a 35-minute job timeout; an unfinished batch is retained for the next run. Measured on 2026-09-11, jobs.ge needs about 11 minutes for 70 details because each one may follow an employer link, while the other sources need about four, so the budget rather than the batch size is what limits the slowest source. Overlapping workflows queue, and database locks also protect against a local worker. Three consecutive detail failures stop that source's batch, retaining the remaining queue. A job fails only when the source itself needs attention: the run threw, the listing shape or reported coverage changed, three consecutive detail failures aborted the batch, or at least three pages and half the batch failed. Individual transient page failures and quality holds are posted as Actions warnings, keep the job green and still advance the source's last successful check, because the backoff retries them on its own. Every result remains visible in the admin history and the step summary. Sources with auto_publish enabled validate, publish, update and archive automatically. Invalid records wait for source recovery without a manual-review flag. The scraper never sends messages.
+`SCRAPER_DATABASE_URL` is a GitHub Actions secret containing the Neon direct connection URL; session advisory locks require the direct endpoint. Six independent jobs (hr, jobs, ss, gancxadebebi, worknet, myjobs) process up to 600 details per source, bounded by a 22-minute per-source budget inside a 35-minute job timeout; an unfinished batch is retained for the next run. Jobs.ge's robots.txt asks for a 5-second gap between requests, so it manages roughly 250 details per run; the other boards run at one request a second. GitHub's cron is best-effort: in practice the workflow ran 8–15 times a day, not 48, so a persistent host (the prepared Railway worker, `npm run worker`) is the way to make collection continuous.
+
+`vacancy.hr.gov.ge` is not in the matrix: it times out from every GitHub-hosted runner. It is collected from this Mac by `npm run worker:gov` (a terminal tab; one pass every 30 minutes over hrgov and worknet, advisory locks keep it from overlapping the workflow). `scripts/install-local-gov-sources.sh` registers the same pass as a launchd agent, but macOS privacy protection blocks a launchd agent from reading a project under `~/Desktop`: either grant Full Disk Access to `/bin/zsh` or move the project, otherwise use the terminal tab. The install script checks this and says which applies. Overlapping workflows queue, and database locks also protect against a local worker. Three consecutive detail failures stop that source's batch, retaining the remaining queue. A job fails only when the source itself needs attention: the run threw, the listing shape or reported coverage changed, three consecutive detail failures aborted the batch, or at least three pages and half the batch failed. Individual transient page failures and quality holds are posted as Actions warnings, keep the job green and still advance the source's last successful check, because the backoff retries them on its own. Every result remains visible in the admin history and the step summary. Sources with auto_publish enabled validate, publish, update and archive automatically. Invalid records wait for source recovery without a manual-review flag. The scraper never sends messages.
 
 GitHub schedules may be delayed. In public repositories, schedules disable after 60 days without repository activity and must be re-enabled. Standard GitHub-hosted runners are free for this public repository; Neon usage is separate.
 
@@ -124,7 +130,7 @@ Railway-ის secrets-ში მიუთითე `DATABASE_URL`, `APP_URL`, `
 ## მიმდინარე საზღვრები
 
 - ერთი ადმინისტრატორის ანგარიში; მომხმარებლის რეგისტრაცია და CV-ების ატვირთვა ჯერ არ შედის.
-- ავტომატური კატეგორიზაცია სათაურის წესებზეა დაფუძნებული და ადმინის შემოწმებას საჭიროებს.
+- ავტომატური კატეგორიზაცია წყაროს კატეგორიას (jobs.ge, ss.ge, myjobs.ge) ან სათაურის წესებს ეყრდნობა და ადმინის შემოწმებას საჭიროებს.
 - დუბლიკატების დამთხვევა კანდიდატებს აჩვენებს; სხვადასხვა ენით დაწერილი კომპანიების/პოზიციების სემანტიკური შედარება ჯერ არ კეთდება.
 - ხელფასით დალაგება პირველ რიგში მხოლოდ მკაფიოდ მითითებულ თვიურ GEL თანხებს ადარებს. საათობრივ/წლიურ თანხებსა და უცხოურ ვალუტებს არ ურევს.
 - ავტომატურად მართვადი ჩანაწერები ქვეყნდება, ახლდება და არქივდება. ხელით შესწორება კონკრეტული ჩანაწერის ავტომატიზაციას აჩერებს.

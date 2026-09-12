@@ -15,8 +15,10 @@ jobs:
     timeout-minutes: 35
     strategy:
       fail-fast: false
+      # vacancy.hr.gov.ge times out from every GitHub-hosted runner (verified 2026-09-09) and
+      # is collected from a reachable network instead; see README.
       matrix:
-        source: [hr, jobs, ss, hrgov, gancxadebebi]
+        source: [hr, jobs, ss, gancxadebebi, worknet, myjobs]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -24,14 +26,19 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
+          cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Import, validate and publish due vacancies
         run: npm run worker -- --source=${{ matrix.source }} --due --once
         env:
           DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
-          CRAWL_BATCH_SIZE: '300'
+          # The wall-clock budget, not the batch size, bounds a run: jobs.ge's robots.txt asks
+          # for a 5-second gap, so it manages ~250 details in 22 minutes; hr/ss/JSON boards
+          # run at one request a second and can reach the batch size.
+          CRAWL_BATCH_SIZE: '600'
+          SCRAPE_BUDGET_MINUTES: '22'
+          DETAIL_CONCURRENCY: '3'
           DISCOVERY_PAGE_BUDGET: '30'
-          CRAWL_DELAY_MS: '2000'
       - name: Verify refreshed descriptions match published text
         if: always()
         run: npx tsx scripts/verify-description-refresh.ts --source=${{ matrix.source }}

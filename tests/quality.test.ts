@@ -1,3 +1,4 @@
+import { auditChange } from '../worker/importer';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -185,4 +186,35 @@ void test('a classified board publishes without an employer; the other sources s
     assessVacancy(null, { ...ad, source: 'hr.ge' }).warning,
     'Source quality review: invalid identity or required fields',
   );
+});
+
+void test('the audit trail records what changed instead of a second copy of the record', () => {
+  const vacancy = {
+    title: 'მოლარე',
+    company: 'კომპანია',
+    description: 'დ'.repeat(3000),
+    salary: '',
+  };
+  const [from, to] = auditChange(
+    { status: 'pending', published: vacancy },
+    {
+      status: 'published',
+      published: { ...vacancy, salary: '1500 ლარი' },
+      reason: null,
+    },
+  );
+  assert.deepEqual(from, { status: 'pending', published: { salary: '' } });
+  assert.deepEqual(to, {
+    status: 'published',
+    published: { salary: '1500 ლარი' },
+    reason: null,
+  });
+  // Unchanged text is never carried; changed long text keeps a readable head and its length.
+  const [, changed] = auditChange(
+    { description: 'ა' },
+    { description: 'ბ'.repeat(3000) },
+  );
+  const text = (changed as { description: string }).description;
+  assert.equal(text.length, 240 + '…(3000)'.length);
+  assert.ok(JSON.stringify(to).length < 200);
 });
