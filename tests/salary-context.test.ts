@@ -25,4 +25,6 @@ void test('a monthly figure is compared only when it is plausible as a month of 
   assert.match(priced.cte, /BETWEEN 100 AND 50000/);
   // A rate per square metre is not a month's pay, whatever its size.
   assert.match(priced.cte, /მ²/);
+  // A monthly wage labelled "per day" is not ranked among day rates; a small day rate is kept.
+  assert.match(priced.cte, /<= 500 AND[^']*'დღე' THEN/);
 });

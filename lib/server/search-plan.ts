@@ -104,6 +104,7 @@ export function searchPlan(
   const numericSalary = `jsonb_typeof(${p('salaryMin')})='number'`;
   const monthlyFloor = 100;
   const monthlyCeiling = 50000;
+  const dailyCeiling = 500;
   const salaryAmount = `(${p('salaryMin')}#>>'{}')::numeric`;
   const unless = (needed: boolean, sql: string, empty = "''::text") =>
     needed ? sql : empty;
@@ -124,7 +125,12 @@ export function searchPlan(
        only sorting, the pay filter and the pay spread stop ranking such a number as a wage. A
        rate per square metre, piece, kilogram or tonne is not a month's pay whatever its size. */
     `${unless(pricing, `CASE WHEN ${p('currency')}='GEL' AND ${numericSalary} AND ${salaryAmount} BETWEEN ${monthlyFloor} AND ${monthlyCeiling} AND (${p('salaryPeriod')}='თვე' OR (COALESCE(${p('salaryPeriod')},'')='' AND lower(COALESCE(${p('salary')},'')) !~ '(დღ|საათ|კვირ|hour|dail|day|week|მ²|მ2|კვ\\.?\\s*მ|ცალ|კგ|ტონ)')) THEN ${salaryAmount} END`, 'NULL::numeric')} AS salary_month`,
-    `${unless(pricing, `CASE WHEN ${p('currency')}='GEL' AND ${numericSalary} AND ${p('salaryPeriod')}='დღე' THEN ${salaryAmount} END`, 'NULL::numeric')} AS salary_day`,
+    /* The daily figure gets a ceiling and no floor. The top of the catalogue was a waiter at
+       1,600, a bartender at 1,300 and a cleaner at 1,000 GEL "a day" — monthly wages a source form
+       labelled daily — and no record lies between 300 and 999; the highest plausible one is 250.
+       At the bottom, 20 or 30 GEL for a promo shift or a day of cleaning is a real day's pay, so
+       nothing there is dropped. */
+    `${unless(pricing, `CASE WHEN ${p('currency')}='GEL' AND ${numericSalary} AND ${salaryAmount} <= ${dailyCeiling} AND ${p('salaryPeriod')}='დღე' THEN ${salaryAmount} END`, 'NULL::numeric')} AS salary_day`,
     `${unless(folding, groupKey, 'j.id::text')} AS group_key`,
   ];
   const salary =
