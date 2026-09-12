@@ -479,6 +479,7 @@ export async function runSource(
   } catch (e) {
     const error = (e as Error).message.slice(0, 500);
     const deferred = deferredSourceFailure(source, error);
+    let consecutiveFailures: number | undefined;
     if (started) {
       await db().query(
         'UPDATE source_runs SET status=$7,finished_at=now(),error=$2,discovered=$3,imported=$4,changed=$5,failed=$6 WHERE id=$1',
@@ -492,12 +493,14 @@ export async function runSource(
           deferred ? 'deferred' : 'failed',
         ],
       );
-      await db().query(
-        "UPDATE sources SET last_error=$2,consecutive_failures=consecutive_failures+1,next_run_at=now()+CASE WHEN $3 THEN interval '1 day' ELSE (LEAST(1440,interval_minutes*power(2,LEAST(consecutive_failures,5)))*interval '1 minute') END WHERE id=$1",
-        [source, error, deferred],
-      );
+      consecutiveFailures = (
+        await db().query(
+          "UPDATE sources SET last_error=$2,consecutive_failures=consecutive_failures+1,next_run_at=now()+CASE WHEN $3 THEN interval '1 day' ELSE (LEAST(1440,interval_minutes*power(2,LEAST(consecutive_failures,5)))*interval '1 minute') END WHERE id=$1 RETURNING consecutive_failures",
+          [source, error, deferred],
+        )
+      ).rows[0]?.consecutive_failures;
     }
-    return { source, error, deferred };
+    return { source, error, deferred, consecutiveFailures };
   } finally {
     if (locked) await lock.query('SELECT pg_advisory_unlock($1)', [lockId]);
     lock.release();

@@ -2,7 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { publishable } from '../worker/automation';
 import { parseDetail, UnavailableVacancy } from '../worker/adapters';
-import { deferredSourceFailure } from '../worker/http';
+import {
+  deferredSourceFailure,
+  failureNeedsPerson,
+  timeoutsBeforeAlarm,
+} from '../worker/http';
 const vacancy = {
   title: 'Developer',
   company: 'Studio',
@@ -20,6 +24,45 @@ const vacancy = {
   datePosted: '2026-09-01',
   deadline: '2026-10-01',
 };
+void test('a timeout needs a person only when it keeps happening; anything else needs one at once', () => {
+  const timeout = 'Source request failed: UND_ERR_CONNECT_TIMEOUT';
+  assert.equal(timeoutsBeforeAlarm, 3);
+  assert.equal(
+    failureNeedsPerson(timeout, false, 1),
+    false,
+    'first timeout is the network',
+  );
+  assert.equal(
+    failureNeedsPerson(timeout, false, 2),
+    false,
+    'second in a row is still the network',
+  );
+  assert.equal(
+    failureNeedsPerson(timeout, false, 3),
+    true,
+    'third in a row may be a block',
+  );
+  assert.equal(
+    failureNeedsPerson(timeout, false, undefined),
+    true,
+    'an unknown count is not assumed benign',
+  );
+  assert.equal(
+    failureNeedsPerson(timeout, true, 9),
+    false,
+    'a deferred source is already expected to time out',
+  );
+  assert.equal(
+    failureNeedsPerson('Vacancy structure changed', false, 1),
+    true,
+    'a parser failure is never waited out',
+  );
+  assert.equal(
+    failureNeedsPerson('Source returned HTTP 403', false, 1),
+    true,
+    'a refusal is an answer, not a timeout',
+  );
+});
 void test('known government network failure is deferred without disguising parser or other source failures', () => {
   assert.equal(
     deferredSourceFailure(

@@ -9,6 +9,7 @@ import { configs } from './adapters';
 import { runSourceCycle } from './cycle';
 import { reconcileSource } from './automation';
 import { purgeEnded } from './purge';
+import { failureNeedsPerson, timeoutsBeforeAlarm } from './http';
 import { rollupAnalytics } from '../lib/server/analytics';
 let stopped = false;
 let lastPurge = 0;
@@ -74,30 +75,46 @@ try {
         },
         reportDiscovery: (result) => {
           console.log(JSON.stringify(result));
+          // A timeout that has not yet repeated is the network, not the source.
+          const failed = 'error' in result && Boolean(result.error);
+          const needsPerson =
+            failed &&
+            failureNeedsPerson(
+              result.error || '',
+              Boolean(result.deferred),
+              result.consecutiveFailures,
+            );
+          const retriedTimeout = failed && !result.deferred && !needsPerson;
           if (process.env.GITHUB_STEP_SUMMARY) {
             const status =
               'deferred' in result && result.deferred
                 ? 'deferred: network unavailable; automatic retry scheduled'
-                : 'error' in result
-                  ? 'failed'
-                  : 'structural' in result && result.structural
-                    ? 'needs attention'
-                    : 'warning' in result && result.warning
-                      ? 'partial: retried automatically'
-                      : 'skipped' in result
-                        ? 'skipped'
-                        : 'success';
+                : retriedTimeout
+                  ? 'network timeout: retried automatically'
+                  : 'error' in result
+                    ? 'failed'
+                    : 'structural' in result && result.structural
+                      ? 'needs attention'
+                      : 'warning' in result && result.warning
+                        ? 'partial: retried automatically'
+                        : 'skipped' in result
+                          ? 'skipped'
+                          : 'success';
             appendFileSync(
               process.env.GITHUB_STEP_SUMMARY,
               `Source: ${source}: ${status}\n\nImported: ${'imported' in result ? result.imported : 0}; changed: ${'changed' in result ? result.changed : 0}; failed: ${'failed' in result ? result.failed : 0}. Automatic publication follows each source's database setting.\n\n`,
             );
           }
           const structural =
-            ('error' in result && result.error && !result.deferred
-              ? result.error
-              : null) || ('structural' in result ? result.structural : null);
-          const degraded =
-            !structural && 'warning' in result ? result.warning : null;
+            (needsPerson && 'error' in result ? result.error : null) ||
+            ('structural' in result ? result.structural : null);
+          const degraded = structural
+            ? null
+            : retriedTimeout && 'error' in result
+              ? `${result.error} (${result.consecutiveFailures} of ${timeoutsBeforeAlarm} in a row before this needs a person)`
+              : 'warning' in result
+                ? result.warning
+                : null;
           // A red job must mean the source needs a person. Transient page failures and quality
           // holds retry on their own, so they stay visible as warnings instead.
           if (process.env.GITHUB_ACTIONS && (structural || degraded))

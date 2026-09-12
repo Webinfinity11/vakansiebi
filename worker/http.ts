@@ -3,13 +3,39 @@ import { setTimeout as delay } from 'node:timers/promises';
 import type { SourceId } from '../lib/types';
 import { getSourceConfig, maxResponseBytes } from './adapters';
 /** Government hosts are unreachable from some networks (GitHub runners); that is a network fact, not a source failure. */
+/** The request never got an answer: a timeout or an abort, not an answer the parser disliked. */
+export function transientNetworkFailure(error: string) {
+  return /^Source request failed: (UND_ERR_CONNECT_TIMEOUT|AbortError|TimeoutError)$/.test(
+    error,
+  );
+}
+/** Sources that cannot be reached from cloud runners at all are retried tomorrow, not now. */
 export function deferredSourceFailure(source: SourceId, error: string) {
   return (
     (source === 'hrgov' || source === 'worknet') &&
-    /^Source request failed: (UND_ERR_CONNECT_TIMEOUT|AbortError|TimeoutError)$/.test(
-      error,
-    )
+    transientNetworkFailure(error)
   );
+}
+/**
+ * A connection that times out once or twice is the network; the third in a row is a source that
+ * may be blocking the scraper, and that needs a person. Only the colour of the job depends on
+ * this — the source keeps its normal backoff either way. Anything that is not a timeout, such as
+ * a changed page structure, needs a person the first time.
+ */
+export const timeoutsBeforeAlarm = 3;
+export function failureNeedsPerson(
+  error: string,
+  deferred: boolean,
+  consecutiveFailures?: number,
+) {
+  if (deferred) return false;
+  if (
+    transientNetworkFailure(error) &&
+    typeof consecutiveFailures === 'number' &&
+    consecutiveFailures < timeoutsBeforeAlarm
+  )
+    return false;
+  return true;
 }
 export class SourceHttpError extends Error {
   constructor(public status: number) {
