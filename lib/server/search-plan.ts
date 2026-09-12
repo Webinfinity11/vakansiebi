@@ -32,6 +32,13 @@ export type SearchPlanOptions = {
    * never grouped. Direct lookups by id keep every row reachable.
    */
   grouped?: boolean;
+  /**
+   * Compute the comparable salary columns even when the query does not filter
+   * or sort by pay. They are skipped by default because each one detoasts the
+   * snapshot again; a caller that reads them itself, such as the category pay
+   * spread, has to ask for them or it sees NULL in every row.
+   */
+  pricing?: boolean;
 };
 const normalized = (sql: string) =>
   `lower(CASE WHEN COALESCE(${sql},'') IS NFKC NORMALIZED THEN COALESCE(${sql},'') ELSE normalize(COALESCE(${sql},''),NFKC) END)`;
@@ -70,6 +77,7 @@ export function searchPlan(
   const grouped = Boolean(options.grouped) && !params.has('ids');
   const folding = grouped || params.has('ids');
   const pricing =
+    options.pricing === true ||
     filters.salaryFrom !== null ||
     filters.salaryTo !== null ||
     filters.salaryPeriod === 'day' ||

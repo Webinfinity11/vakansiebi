@@ -20,7 +20,10 @@ export const salaryContext = cache(
     period: 'month' | 'day' = 'month',
   ): Promise<SalaryContext | null> => {
     if (!category || category === 'სხვა') return null;
-    const plan = searchPlan(new URLSearchParams(), false, { grouped: true });
+    const plan = searchPlan(new URLSearchParams(), false, {
+      grouped: true,
+      pricing: true,
+    });
     const args = [...plan.args, category];
     const column = period === 'day' ? 'j.salary_day' : 'j.salary_month';
     const { rows } = await db().query(
