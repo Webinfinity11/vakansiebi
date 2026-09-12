@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { genericCompanyKeys } from '../company-logo-identity';
 import { readSearch } from '../search-state';
 import { searchGroups } from '../search-language';
 import { escapeRegex, termPattern } from '../job-intelligence';
@@ -100,7 +101,16 @@ export function searchPlan(
   const extraction = (alias: string) =>
     `SELECT ${alias}.id,${alias}.${snapshot.slice(2)},${alias}.created_at,${alias}.published_at,${alias}.needs_review,${alias}.fingerprint,${extracted.map((key) => `${alias}.${snapshot.slice(2)}->>'${key}' AS p_${key}`).join(',')}${pricing ? `,${alias}.${snapshot.slice(2)}->'salaryMin' AS p_salaryMin` : ''}`;
   const p = (key: string) => `j.p_${key}`;
-  const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' THEN j.id::text ELSE regexp_replace(${normalized(`concat_ws('|',${p('title')},${p('company')},${p('city')})`)},'[^[:alnum:]|]','','g') END`;
+  /* A vacancy is grouped with another only when its employer name identifies someone. A blank
+     name never did; neither does a placeholder or a kind of business. Two cooks in Tbilisi under
+     the employer "კომპანია" — a Vake restaurant on jobs.ge and a four-star hotel in Avlabari on
+     ss.ge — were folded into one, and the hotel's vacancy vanished from the list. A single letter
+     is not a name either, but two letters can be a brand ("S.G"), so those keep grouping. */
+  const employerKey = `regexp_replace(${normalized(p('company'))},'[^a-z0-9ა-ჰ]','','g')`;
+  const genericEmployers = [...genericCompanyKeys]
+    .map((key) => `'${key.replace(/'/g, "''")}'`)
+    .join(',');
+  const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' OR length(${employerKey}) < 2 OR ${employerKey} IN (${genericEmployers}) THEN j.id::text ELSE regexp_replace(${normalized(`concat_ws('|',${p('title')},${p('company')},${p('city')})`)},'[^[:alnum:]|]','','g') END`;
   const numericSalary = `jsonb_typeof(${p('salaryMin')})='number'`;
   const monthlyFloor = 100;
   const monthlyCeiling = 50000;

@@ -28,3 +28,13 @@ void test('a monthly figure is compared only when it is plausible as a month of 
   // A monthly wage labelled "per day" is not ranked among day rates; a small day rate is kept.
   assert.match(priced.cte, /<= 500 AND[^']*'დღე' THEN/);
 });
+
+void test('duplicate grouping never joins two vacancies on a name that identifies no employer', async () => {
+  const { genericCompanyKeys } = await import('../lib/company-logo-identity');
+  for (const key of ['კომპანია', 'company', 'გიორგი', 'სასტუმრო'])
+    assert.ok(genericCompanyKeys.has(key), key);
+  const plan = searchPlan(new URLSearchParams(), false, { grouped: true });
+  // Placeholder names and single letters get their own group; two letters may be a brand.
+  assert.match(plan.cte, /IN \('კომპანია'/);
+  assert.match(plan.cte, /< 2 OR/);
+});

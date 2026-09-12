@@ -10,7 +10,7 @@ export const sortKeys: Record<string, string> = {
    text outright: ?city=%00 turned the whole list request into a 500. The two free-text filters
    are cleaned here, where every other filter is already whitelisted. */
 const typed = (value: string | null) =>
-  (value || '').replace(/[\u0000-\u001f\u007f]/g, '');
+  (value || '').replace(/\p{Cc}/gu, '');
 export function readSearch(params: URLSearchParams): SearchFilters {
   const amount = (key: string) => {
     const value = params.get(key);
