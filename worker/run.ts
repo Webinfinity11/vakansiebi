@@ -201,11 +201,16 @@ export async function runSource(
               categoryLabel: category.label,
               category: category.category,
             });
-            // A repeated or empty page inside one category is that category's end, not a
-            // broken source; the shared first page already proved the listing shape.
-            if (guard.accept(pageLinks) !== 'accepted') break;
-            await rememberPage(url, pageLinks);
-            links.push(...pageLinks);
+            const accepted = guard.accept(pageLinks);
+            // A small category's first page can repeat what the shared first page already
+            // showed; that is not a reason to skip the pages behind it. A repeated or empty
+            // page deeper in is this category's end, not a broken source.
+            if (accepted === 'empty' || (accepted === 'repeated' && page > 1))
+              break;
+            if (accepted === 'accepted') {
+              await rememberPage(url, pageLinks);
+              links.push(...pageLinks);
+            }
           } catch (e) {
             discoveryWarning = 'Listing page: ' + (e as Error).message;
             break categories;

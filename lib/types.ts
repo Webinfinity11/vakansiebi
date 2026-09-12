@@ -65,12 +65,21 @@ export type AdminJob = {
   version: number;
   created_at: string;
   updated_at: string;
+  /** false once an editor has taken the record over; the crawler then stops changing it. */
+  automation_managed: boolean;
+  automation_paused: boolean;
+  /** Why automation did not publish: expired, removed, unverified, invalid_source_data… */
+  automation_reason: string | null;
+  automation_checked_at: string | null;
   items: {
     id: string;
     source_id: SourceId;
     url: string;
     raw: Vacancy;
     last_checked_at: string;
+    next_check_at: string | null;
+    failures: number;
+    quality_warning: string | null;
     error: string | null;
   }[];
   duplicates: { id: string; title: string; company: string }[];

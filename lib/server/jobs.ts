@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db, transaction } from './db';
 import { ApiError } from './auth';
 import { audit } from '../../worker/importer';
+import { reconcileJob } from '../../worker/automation';
 import { fingerprint } from '../../worker/adapters';
 import type { Vacancy } from '../types';
 import { vacancySchema } from '../vacancy-schema';
@@ -160,23 +161,47 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
     pages: Math.ceil(count / limit),
   };
 }
-export async function adminJobs(status: string, q: string, page = 1) {
-  const where = `j.status<>'merged' AND ($1='all' OR ($1='review' AND j.needs_review=true) OR j.status=$1) AND ($2='' OR strpos(lower(concat_ws(' ',j.draft->>'title',j.draft->>'company')),lower($2))>0)`;
+export async function adminJobs(
+  status: string,
+  q: string,
+  page = 1,
+  source = '',
+) {
+  // `paused` and `manual` are automation states rather than record statuses: with automatic
+  // publication on, the records an editor has to look at are the ones automation stopped
+  // managing, not the whole catalogue.
+  // The source parameter is numbered differently in the page and count queries, so the
+  // predicate is built once and given the placeholder each one uses.
+  const where = (sourceParam: string) => `j.status<>'merged'
+    AND ($1='all' OR ($1='review' AND j.needs_review=true)
+      OR ($1='paused' AND j.automation_paused AND j.status<>'rejected')
+      OR ($1='manual' AND NOT j.automation_managed AND j.status<>'rejected')
+      OR ($1='blocked' AND j.automation_reason IS NOT NULL AND j.status<>'published')
+      OR j.status=$1)
+    AND ($2='' OR strpos(lower(concat_ws(' ',j.draft->>'title',j.draft->>'company')),lower($2))>0)
+    AND (${sourceParam}='' OR EXISTS (SELECT 1 FROM source_items f WHERE f.job_id=j.id AND f.source_id=${sourceParam}))`;
   const rows = (
     await db().query(
-      `SELECT j.*,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
-      [status, q, (page - 1) * 30],
+      `SELECT j.*,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where('$4')} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
+      [status, q, (page - 1) * 30, source],
     )
   ).rows;
   const total = (
-    await db().query(`SELECT count(*)::int count FROM jobs j WHERE ${where}`, [
-      status,
-      q,
-    ])
+    await db().query(
+      `SELECT count(*)::int count FROM jobs j WHERE ${where('$3')}`,
+      [status, q, source],
+    )
   ).rows[0].count;
   const counts = (
     await db().query(
-      "SELECT count(*) FILTER(WHERE status='pending')::int pending,count(*) FILTER(WHERE status='published')::int published,count(*) FILTER(WHERE needs_review AND status<>'merged')::int review,count(*) FILTER(WHERE status='archived')::int archived FROM jobs",
+      `SELECT count(*) FILTER(WHERE status='pending')::int pending,
+      count(*) FILTER(WHERE status='published')::int published,
+      count(*) FILTER(WHERE needs_review AND status<>'merged')::int review,
+      count(*) FILTER(WHERE status='archived')::int archived,
+      count(*) FILTER(WHERE automation_paused AND status NOT IN ('merged','rejected'))::int paused,
+      count(*) FILTER(WHERE NOT automation_managed AND status NOT IN ('merged','rejected'))::int manual,
+      count(*) FILTER(WHERE automation_reason IS NOT NULL AND status NOT IN ('merged','rejected','published'))::int blocked
+      FROM jobs`,
     )
   ).rows[0];
   return { jobs: rows, total, counts };
@@ -232,6 +257,7 @@ export async function mutateJob(input: unknown) {
         'apply-source',
         'dismiss-update',
         'merge',
+        'resume-automation',
       ]),
       draft: vacancySchema.optional(),
       itemId: z.uuid().optional(),
@@ -266,6 +292,28 @@ export async function mutateJob(input: unknown) {
     }
     if (job.status === 'merged')
       throw new ApiError('ვაკანსია უკვე გაერთიანებულია', 409);
+    // Handing a record back to automation is the one action that must not pause it again.
+    // The source snapshot then decides what the record becomes, exactly as for a new import.
+    if (data.action === 'resume-automation') {
+      await c.query(
+        `UPDATE jobs SET automation_managed=true,automation_paused=false,needs_review=false,
+         version=version+1,updated_at=now() WHERE id=$1`,
+        [job.id],
+      );
+      await audit(
+        c,
+        job.id,
+        'automation.resumed',
+        'admin',
+        {
+          automation_managed: job.automation_managed,
+          automation_paused: job.automation_paused,
+        },
+        { automation_managed: true, automation_paused: false },
+      );
+      const outcome = await reconcileJob(c, job.id);
+      return { ok: true, outcome };
+    }
     let draft: Vacancy = data.draft || job.draft;
     let published = job.published;
     let status = job.status;

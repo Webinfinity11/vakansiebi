@@ -49,6 +49,24 @@ const names: Record<string, string> = {
   deferred: 'ავტომატური გამეორების მოლოდინში',
   interrupted: 'შეწყდა',
 };
+const automationReasons: Record<string, string> = {
+  expired: 'ბოლო ვადა გასულია',
+  removed: 'წყაროზე აღარ არსებობს',
+  unverified: 'დიდი ხანია ვერ მოწმდება',
+  invalid_source_data: 'წყაროს მონაცემები არასრულია',
+  awaiting_source: 'წყაროს პირველ შემოწმებას ელოდება',
+};
+/** `Choice` prepends its own "ყველა" option, which maps back to the unfiltered `all`. */
+const statusFilters: Record<string, string> = {
+  review: 'შესამოწმებელი',
+  paused: 'ავტომატიზაცია შეჩერებული',
+  manual: 'ხელით მართული',
+  blocked: 'ავტომატურად ვერ ქვეყნდება',
+  pending: 'შემოტანილი',
+  published: 'გამოქვეყნებული',
+  archived: 'არქივი',
+  rejected: 'უარყოფილი',
+};
 const time = (v: string | null) =>
   v
     ? new Date(v).toLocaleString('en-GB', {
@@ -83,6 +101,7 @@ export default function AdminPanel() {
   > | null>(null);
   const [tab, setTab] = useState('vacancies'),
     [status, setStatus] = useState('review'),
+    [sourceFilter, setSourceFilter] = useState(''),
     [query, setQuery] = useState(''),
     [page, setPage] = useState(1),
     [jobs, setJobs] = useState<AdminJob[]>([]),
@@ -92,6 +111,9 @@ export default function AdminPanel() {
       published: 0,
       review: 0,
       archived: 0,
+      paused: 0,
+      manual: 0,
+      blocked: 0,
     }),
     [sources, setSources] = useState<Source[]>([]),
     [runs, setRuns] = useState<SourceRun[]>([]),
@@ -110,7 +132,7 @@ export default function AdminPanel() {
     try {
       const [a, b] = await Promise.all([
         request(
-          `/api/admin/jobs?status=${status}&q=${encodeURIComponent(query)}&page=${page}`,
+          `/api/admin/jobs?status=${status}&q=${encodeURIComponent(query)}&page=${page}&source=${sourceFilter}`,
         ),
         request('/api/admin/sources'),
       ]);
@@ -127,7 +149,7 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [status, query, page]);
+  }, [status, query, page, sourceFilter]);
   useEffect(() => {
     const t = setTimeout(() => void load(), 250);
     return () => clearTimeout(t);
@@ -267,16 +289,35 @@ export default function AdminPanel() {
           </div>
         </div>
         <div className="admin-stats">
-          {[
-            ['შემოტანილი', counts.pending],
-            ['შესამოწმებელი', counts.review],
-            ['გამოქვეყნებული', counts.published],
-            ['წყარო', sources.length],
-          ].map(([name, count]) => (
-            <div key={name}>
+          {(
+            [
+              ['გამოქვეყნებული', counts.published, 'published'],
+              ['შესამოწმებელი', counts.review, 'review'],
+              ['ხელით მართული', counts.manual, 'manual'],
+              ['ავტომატურად ვერ ქვეყნდება', counts.blocked, 'blocked'],
+              ['არქივი', counts.archived, 'archived'],
+              [
+                'ჩართული წყარო',
+                `${sources.filter((s) => s.enabled).length} / ${sources.length}`,
+                '',
+              ],
+            ] as [string, number | string, string][]
+          ).map(([name, count, filter]) => (
+            <button
+              type="button"
+              key={name}
+              className={filter && status === filter ? 'stat-active' : ''}
+              disabled={!filter}
+              onClick={() => {
+                if (!filter) return;
+                setTab('vacancies');
+                setPage(1);
+                setStatus(filter);
+              }}
+            >
               <span>{name}</span>
               <strong>{count}</strong>
-            </div>
+            </button>
           ))}
         </div>
         {error && (
@@ -327,36 +368,33 @@ export default function AdminPanel() {
               </div>
               <Choice
                 label="სტატუსი"
-                value={
-                  {
-                    review: 'შესამოწმებელი',
-                    all: 'ყველა',
-                    pending: 'შემოტანილი',
-                    published: 'გამოქვეყნებული',
-                    archived: 'არქივი',
-                    rejected: 'უარყოფილი',
-                  }[status] || 'ყველა'
-                }
+                value={statusFilters[status] || 'ყველა'}
                 onChange={(v) => {
                   setPage(1);
                   setStatus(
-                    Object.entries({
-                      review: 'შესამოწმებელი',
-                      all: 'ყველა',
-                      pending: 'შემოტანილი',
-                      published: 'გამოქვეყნებული',
-                      archived: 'არქივი',
-                      rejected: 'უარყოფილი',
-                    }).find(([, n]) => n === v)?.[0] || 'all',
+                    Object.entries(statusFilters).find(
+                      ([, n]) => n === v,
+                    )?.[0] || 'all',
                   );
                 }}
-                options={[
-                  'შესამოწმებელი',
-                  'შემოტანილი',
-                  'გამოქვეყნებული',
-                  'არქივი',
-                  'უარყოფილი',
-                ]}
+                options={Object.values(statusFilters)}
+              />
+              <Choice
+                label="წყარო"
+                value={
+                  sourceFilter
+                    ? sourceNames[sourceFilter as keyof typeof sourceNames] ||
+                      sourceFilter
+                    : 'ყველა'
+                }
+                onChange={(v) => {
+                  setPage(1);
+                  setSourceFilter(
+                    Object.entries(sourceNames).find(([, n]) => n === v)?.[0] ||
+                      '',
+                  );
+                }}
+                options={Object.values(sourceNames)}
               />
               <button
                 className="icon-button"
@@ -406,6 +444,15 @@ export default function AdminPanel() {
                       <span className={`status status-${j.status}`}>
                         {names[j.status]}
                       </span>
+                      {(j.automation_paused || !j.automation_managed) && (
+                        <span className="review-label">ხელით მართული</span>
+                      )}
+                      {j.automation_reason && j.status !== 'published' && (
+                        <span className="review-label">
+                          {automationReasons[j.automation_reason] ||
+                            j.automation_reason}
+                        </span>
+                      )}
                       {j.needs_review && j.status !== 'pending' && (
                         <span className="review-label">
                           ცვლილება შესამოწმებელია
@@ -444,7 +491,9 @@ export default function AdminPanel() {
                 <h2>ავტომატური შემოტანის მართვა</h2>
                 <p>
                   სკრაპერი GitHub-ზე მუშაობს. შენი კომპიუტერის ჩართვა საჭირო არ
-                  არის.
+                  არის. გამონაკლისია სახელმწიფო წყაროები: GitHub-ის ქსელიდან ვერ
+                  იხსნება და ლოკალურად შემოდის (<code>npm run worker:gov</code>
+                  ).
                 </p>
                 <p className="scraper-schedule">
                   გაშვების განრიგი: ყოველ 30 წუთში · GitHub-ს შეუძლია გაშვება
@@ -570,8 +619,46 @@ export default function AdminPanel() {
                     </span>
                     <span>
                       <strong>{s.queued}</strong> რიგში
+                      {typeof s.due === 'number' && s.due !== s.queued
+                        ? ` (${s.due} მზადაა)`
+                        : ''}
                     </span>
+                    {!!s.errored && (
+                      <span>
+                        <strong>{s.errored}</strong> შეცდომით
+                      </span>
+                    )}
                   </div>
+                  {!!s.top_errors?.length && (
+                    <details className="source-errors">
+                      <summary>
+                        ყველაზე ხშირი პასუხი წყაროდან ({s.errored})
+                      </summary>
+                      <ul>
+                        {s.top_errors.map((e) => (
+                          <li key={e.message}>
+                            <b>{e.count}</b> {e.message}
+                          </li>
+                        ))}
+                      </ul>
+                      <small>
+                        მოხსნილი განცხადება (404/410) ნორმალურია — ჩანაწერი
+                        არქივში გადადის. სხვა შეცდომა მზარდი ინტერვალით
+                        მოწმდება.
+                      </small>
+                    </details>
+                  )}
+                  {!!s.deferred_runs && (
+                    <div className="source-repair-note">
+                      <strong>ამ ქსელიდან წყარო არ პასუხობს</strong>
+                      <p>
+                        ბოლო სამ დღეში {s.deferred_runs} გაშვება ვერ დაუკავშირდა
+                        წყაროს. ეს წყაროს შეცდომა არ არის: GitHub-ის ქსელიდან
+                        ზოგიერთი სახელმწიფო საიტი დახურულია. შემოტანა ლოკალურად
+                        გრძელდება (`npm run worker:gov`).
+                      </p>
+                    </div>
+                  )}
                   {!!s.refresh_pending && (
                     <div className="source-repair-note">
                       <strong>
@@ -693,9 +780,31 @@ export default function AdminPanel() {
                       <option value={1440}>24 საათი</option>
                     </select>
                   </div>
-                  <p className="source-last">
-                    არსებული ვაკანსიების ხელახალი შემოწმების სამიზნე ინტერვალი:{' '}
-                    {s.detail_interval_hours} საათი · რიგის მიხედვით
+                  <div className="interval-row">
+                    <span>ვაკანსიის ხელახალი შემოწმება</span>
+                    <select
+                      className="choice"
+                      aria-label={`${s.name}: დეტალის შემოწმების ინტერვალი`}
+                      value={s.detail_interval_hours}
+                      disabled={busy}
+                      onChange={(e) =>
+                        void sourceAction(s, {
+                          action: 'configure',
+                          detailIntervalHours: Number(e.target.value),
+                        })
+                      }
+                    >
+                      <option value={6}>6 საათი</option>
+                      <option value={12}>12 საათი</option>
+                      <option value={24}>24 საათი</option>
+                      <option value={48}>2 დღე</option>
+                      <option value={168}>7 დღე</option>
+                    </select>
+                  </div>
+                  <p className="admin-helper">
+                    უფრო გრძელი ინტერვალი ახალ ვაკანსიებს მეტ ადგილს უთმობს
+                    გაშვების ბიუჯეტში; სიიდან გამქრალი ჩანაწერები ისედაც პირველ
+                    რიგში მოწმდება.
                   </p>
                   {s.last_error && (
                     <div className="notice">
@@ -781,6 +890,44 @@ export default function AdminPanel() {
                   <strong>{draft.company}</strong>
                   <p>ლოგო პირველწყაროდან · გამოქვეყნებამდე გადაამოწმე</p>
                 </div>
+              </div>
+              <div
+                className={
+                  selected.automation_paused || !selected.automation_managed
+                    ? 'notice'
+                    : 'automation-state'
+                }
+              >
+                <strong>
+                  {selected.automation_paused || !selected.automation_managed
+                    ? 'ეს ჩანაწერი ხელით იმართება'
+                    : 'ეს ჩანაწერი ავტომატურად იმართება'}
+                </strong>
+                <p>
+                  {selected.automation_paused || !selected.automation_managed
+                    ? 'წყაროს ახალი ტექსტი საჯარო ვერსიას აღარ ცვლის. ავტომატურ მართვას დაბრუნებისას წყაროს ბოლო შემოწმებული ვერსია აქვეყნებს ჩანაწერს და შენი რედაქცია გადაიწერება.'
+                    : 'წყაროს ცვლილება ავტომატურად ქვეყნდება, ვადაგასული და მოხსნილი ჩანაწერი კი არქივდება. ქვემოთ ნებისმიერი შენახვა ამ ავტომატიზაციას აჩერებს.'}
+                  {selected.automation_reason
+                    ? ' მიზეზი: ' +
+                      (automationReasons[selected.automation_reason] ||
+                        selected.automation_reason) +
+                      '.'
+                    : ''}
+                </p>
+                <small>
+                  ბოლო ავტომატური შემოწმება:{' '}
+                  {time(selected.automation_checked_at)}
+                </small>
+                {(selected.automation_paused ||
+                  !selected.automation_managed) && (
+                  <button
+                    className="secondary-button"
+                    disabled={busy}
+                    onClick={() => setConfirm({ action: 'resume-automation' })}
+                  >
+                    ავტომატურ მართვას დაბრუნება
+                  </button>
+                )}
               </div>
               {!!draft.warnings?.length && (
                 <div className="notice">
@@ -1030,9 +1177,18 @@ export default function AdminPanel() {
                 {selected.items.map((i) => (
                   <div key={i.id}>
                     <p>
-                      {i.source_id} · {time(i.last_checked_at)}
+                      {sourceNames[i.source_id as keyof typeof sourceNames] ||
+                        i.source_id}{' '}
+                      · შემოწმდა {time(i.last_checked_at)} · შემდეგი{' '}
+                      {time(i.next_check_at)}
+                      {i.failures ? ` · წარუმატებელი ცდა: ${i.failures}` : ''}
                     </p>
                     {i.error && <p className="notice">{i.error}</p>}
+                    {i.quality_warning && (
+                      <p className="notice">
+                        ხარისხის შემოწმება: {i.quality_warning}
+                      </p>
+                    )}
                     {!!i.raw?.warnings?.length && (
                       <div className="notice">
                         {i.raw.warnings.map((w) => (
@@ -1181,7 +1337,9 @@ export default function AdminPanel() {
                   ? 'გამოვაქვეყნოთ ეს ვერსია?'
                   : confirm?.action === 'merge'
                     ? 'გავაერთიანოთ ვაკანსიები?'
-                    : 'დაადასტურე ცვლილება'}
+                    : confirm?.action === 'resume-automation'
+                      ? 'ავტომატურ მართვას დავუბრუნოთ?'
+                      : 'დაადასტურე ცვლილება'}
             </DialogTitle>
             <DialogDescription>
               {confirm?.action === 'bulk-publish'
@@ -1192,7 +1350,9 @@ export default function AdminPanel() {
                     ? 'წყაროს ტექსტი შენახულ რედაქციას ჩაანაცვლებს. საჯარო ვერსია უცვლელი დარჩება.'
                     : confirm?.action === 'merge'
                       ? 'არჩეული ვაკანსიის რედაქცია დარჩება, ამ ჩანაწერის წყაროები კი მას მიემატება.'
-                      : 'ჩანაწერი საჯარო სიაში აღარ გამოჩნდება. აღდგენა ადმინიდან შეგიძლია.'}
+                      : confirm?.action === 'resume-automation'
+                        ? 'წყაროს ბოლო შემოწმებული ვერსია ჩაანაცვლებს შენს რედაქციას და შემდგომ ცვლილებებსაც ავტომატურად გამოაქვეყნებს. ვადაგასული ან მოხსნილი ჩანაწერი არქივში გადავა.'
+                        : 'ჩანაწერი საჯარო სიაში აღარ გამოჩნდება. აღდგენა ადმინიდან შეგიძლია.'}
             </DialogDescription>
           </DialogHeader>
           <div className="confirm-actions">

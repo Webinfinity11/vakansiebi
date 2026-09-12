@@ -28,9 +28,8 @@
   line-height: 1.4;
   letter-spacing: 0.1px;
 }
-/* Desktop shows the deadline in the side column, icon-only paging and the full tab label. */
+/* Desktop shows the deadline in the side column and icon-only paging. */
 @media (min-width: 761px) {
-  .search-modes .mode-label-short,
   .board-shell .job-when,
   .board-pagination .page-next-label,
   .board-pagination .page-prev-label,
@@ -45,10 +44,17 @@
     padding-left: max(18px, env(safe-area-inset-left));
     padding-right: max(18px, env(safe-area-inset-right));
   }
+  .board-shell .header-inner {
+    gap: 10px;
+  }
   .board-shell .saved-nav {
     min-height: 44px;
     font-size: 12px;
-    padding: 8px 12px;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .board-shell .saved-nav > span {
+    display: none;
   }
   .board-shell .saved-nav b {
     font-size: 12px;
@@ -76,25 +82,15 @@
   .board-shell .discovery-hero .hero-search-wrap {
     padding: 0 16px 16px;
   }
-  /* Four tabs do not fit one phone row. Wrapping shows all four; scrolling sideways hid two
-     of them behind an edge that gives no sign there is more. */
-  .search-modes {
-    flex-wrap: wrap;
-    gap: 0 18px;
-    overflow: visible;
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-  .search-modes button {
-    font-size: 12.5px;
-    min-height: 42px;
-    padding: 10px 0 8px;
-  }
-  .search-modes .mode-label-full {
+  /* Four Georgian labels need 467px of a 332px row. Scrolling them sideways hid two behind an
+     edge with no cue; wrapping them took two rows out of the space above the first vacancy.
+     The same choice is a labelled select in the filter sheet — "განაკვეთი" — and an active one
+     shows as a chip over the results, so the phone loses the row and not the filter. */
+  .search-panel .search-modes {
     display: none;
   }
-  .search-modes .mode-label-short {
-    display: inline;
+  .board-shell .discovery-hero .searchbar {
+    padding-top: 14px;
   }
   .board-shell .discovery-hero .searchbar > input {
     height: 44px;
@@ -339,8 +335,25 @@
   .board-shell .job-company {
     font-size: 12px;
   }
+  /* Three facts under the title wrapped onto three lines on a 390px card, which pushed the
+     salary and the deadline a screenful apart. The first two carry the decision — where and
+     on what terms — and the third, the work mode, is on the vacancy page a tap away. */
   .board-shell .job-meta {
+    flex-wrap: nowrap;
     font-size: 12px;
+    gap: 10px;
+    min-width: 0;
+  }
+  .board-shell .job-meta > span {
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .board-shell .job-meta > span:nth-child(n + 3) {
+    display: none;
+  }
+  .board-shell .job-meta .location-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .board-shell .salary {
     font-size: 13px;
@@ -358,6 +371,14 @@
   }
   .board-shell .no-salary {
     font-size: 12px;
+  }
+  /* The date already says how fresh a vacancy is; a second badge saying so wrapped the row. */
+  .board-shell .job-new {
+    display: none;
+  }
+  .board-shell .card-bottom {
+    gap: 6px 10px;
+    margin-top: 8px;
   }
   .board-shell .job-when {
     display: inline-flex;

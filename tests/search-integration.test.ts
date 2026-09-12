@@ -6,6 +6,7 @@ import { db } from '../lib/server/db';
 import { publicJobs } from '../lib/server/jobs';
 import type { Vacancy } from '../lib/types';
 import { similarVacancies } from '../lib/server/similar-vacancies';
+import { fingerprint } from '../worker/adapters';
 void test(
   'search aliases, conditional counts, recovery and daily filters use actual public snapshots',
   { skip: process.env.RUN_DB_TESTS !== '1' },
@@ -263,9 +264,11 @@ void test(
           ...listing[i],
           description: `${listing[i].description || base.description} ${marker}`,
         };
+        // The import fingerprint, as the crawler computes it: duplicates from two boards
+        // share it, which is what lets a lookup by id find the row it was folded into.
         await db().query(
-          "INSERT INTO jobs(id,draft,published,status,fingerprint,published_at) VALUES($1::uuid,$2,$2,'published',$1::text,now()+($3||' seconds')::interval)",
-          [listingIds[i], v, i],
+          "INSERT INTO jobs(id,draft,published,status,fingerprint,published_at) VALUES($1::uuid,$2,$2,'published',$3,now()+($4||' seconds')::interval)",
+          [listingIds[i], v, fingerprint(v as Vacancy), i],
         );
         await db().query(
           'INSERT INTO source_items(id,source_id,external_id,url,job_id,raw,last_checked_at) VALUES($1::uuid,$2,$1::text,$3,$1::uuid,$4,now())',

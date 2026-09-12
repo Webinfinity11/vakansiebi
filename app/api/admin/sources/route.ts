@@ -57,7 +57,10 @@ export async function POST(req: Request) {
     const data = z
       .object({
         // Every active source, so a new board is controllable the moment it is added.
-        id: z.enum([...(Object.keys(sourceNames) as [string, ...string[]]), 'all']),
+        id: z.enum([
+          ...(Object.keys(sourceNames) as [string, ...string[]]),
+          'all',
+        ]),
         action: z.enum(['run', 'configure', 'retry']),
         enabled: z.boolean().optional(),
         autoEnabled: z.boolean().optional(),
