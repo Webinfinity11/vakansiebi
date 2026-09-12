@@ -2,7 +2,7 @@
 
 ქართული ვაკანსიების ერთიანი ძებნა, წყაროების პერიოდული პარსინგი და ავტომატური შემოწმება და გამოქვეყნება.
 
-**ამ ეტაპზე სატესტო პროდუქტია. შეტყობინებების გაგზავნა საერთოდ არ არის დაკავშირებული. შემოტანა არაფერს აქვეყნებს ავტომატურად.**
+**ამ ეტაპზე სატესტო პროდუქტია. შეტყობინებების გაგზავნა საერთოდ არ არის დაკავშირებული — არც ელფოსტა, არც Telegram. ავტომატური გამოქვეყნება ჩართულია მხოლოდ იმ წყაროებზე, რომლებზეც ადმინმა ის ცალკე დაუშვა; დანარჩენი ჩანაწერი ხელით ქვეყნდება.**
 
 ## რა მუშაობს
 
@@ -22,10 +22,18 @@
 - წყაროს ჩართვა/გამორთვა, სიისა და დეტალის შემოწმების ინტერვალი, ხელით შემოწმების რიგი და შემოტანის ისტორია. თითო წყაროსთან ჩანს რიგის სიღრმე, შეცდომიანი ჩანაწერები ყველაზე ხშირი პასუხებით, ხარისხის შემოწმებაზე შეყოვნებული ჩანაწერები და ის, უკავშირდება თუ არა ღრუბლის ქსელი ამ წყაროს.
 - პაროლით დაცული ადმინი, ხელმოწერილი HttpOnly სესია, same-origin შემოწმება და შესვლის მცდელობების ლიმიტი.
 - `/api/jobs?preview=1` და `/?preview=1` აჩვენებს გამოუქვეყნებელ ჩანაწერებს მხოლოდ ავტორიზებულ ადმინს.
+- ძებნის ველი ასრულებს პოზიციებსა და კომპანიებს (`/api/suggest`): 8 შეთავაზება რაოდენობებით, სიის იმავე ხილვადობის წესებით; მინიმუმ ორი სიმბოლო, კლავიატურით იმართება.
+- „მეტის ჩვენება" სიაში კიდევ 20 ვაკანსიას ამატებს არსებულებზე; ვაკანსიიდან დაბრუნებისას ჩატვირთული დიაპაზონი, გადახვევა და ფოკუსი აღდგება (მაქსიმუმ 10 გვერდი).
+- ბოლოს ნანახი 12 ვაკანსიის ზოლი შედეგების თავზე, როცა ფილტრი არჩეული არ არის.
+- ვაკანსიის გვერდზე მიმართულების ხელფასების შუალედი (p25–მედიანა–p75, `percentile_cont`), მხოლოდ ლარში და თვეზე; 8-ზე ნაკლებ ჩანაწერზე და „სხვა" კატეგორიაზე არ ჩანს.
+- „ჩემთან ახლოს" ქალაქს მოწყობილობის კოორდინატებით ირჩევს (haversine, 13 ქალაქი); გეოლოკაცია მხოლოდ ღილაკზე დაჭერისას იკითხება და მანძილიც ჩანს.
+- ტელეფონზე ბარათის გადასმა: მარჯვნივ — შენახვა, მარცხნივ — დამალვა (აღდგენა სიის თავშია).
+- მუქი თემა — მხოლოდ არჩევით, მასთეს ღილაკით. მოწყობილობის პარამეტრი საიტს არ ცვლის; არჩევანი `ertad-theme` გასაღებით ამ ბრაუზერში ინახება.
+- PWA: `/manifest.webmanifest` და ხატულები (192, 512, maskable 512, apple-touch 180) — „მთავარ ეკრანზე დამატება" მუშაობს.
 
 ## ლოკალურად გაშვება
 
-განახლებულ ინტერფეისში ვაკანსია ინახება ამ ბრაუზერში; გაზიარება იყენებს `/?job=UUID` ბმულს და მხოლოდ საჯარო ვაკანსიას აჩვენებს. დეტალებში ჩანს ლოგო, განაკვეთი, დამატებითი პირობები და აღწერის ბმულები. კომპანიის საერთო პროფილი (ლოგო, ოფიციალური საიტი, აღწერა) ადმინიდან ხელით იმართება და ყველა შესაბამის ვაკანსიაზე მოქმედებს.
+განახლებულ ინტერფეისში ვაკანსია ინახება ამ ბრაუზერში; გაზიარება იყენებს `/vacancies/UUID` ბმულს და მხოლოდ საჯარო ვაკანსიას აჩვენებს (ძველი `/?job=UUID` იმავე გვერდზე გადამისამართდება). ტელეფონზე გაზიარება სისტემურ ფანჯარას ხსნის, სხვაგან ბმულს ბუფერში აკოპირებს. დეტალებში ჩანს ლოგო, განაკვეთი, დამატებითი პირობები და აღწერის ბმულები. კომპანიის საერთო პროფილი (ლოგო, ოფიციალური საიტი, აღწერა) ადმინიდან ხელით იმართება და ყველა შესაბამის ვაკანსიაზე მოქმედებს.
 
 Samushao.ge ამოღებულია აქტიური წყაროებიდან. მხოლოდ მასთან დაკავშირებული ჩანაწერები არქივში ინახება. პარსერების შესაძლებლობები და შეზღუდვები: [worker/SOURCES.md](worker/SOURCES.md).
 
@@ -95,7 +103,7 @@ DATABASE_URL=postgresql://USER@localhost:5432/ertad_test npm run db:migrate
 DATABASE_URL=postgresql://USER@localhost:5432/ertad_test RUN_DB_TESTS=1 npm test
 ```
 
-ტესტები ამოწმებს პარსერებს, URL-ების შეზღუდვას, პაროლსა და სესიას, შემოტანილი/გამოქვეყნებული ტექსტების განცალკევებას, ერთდროული ცვლილებების კონფლიქტს, დუბლიკატების გაერთიანებასა და ვადაგასული ჩანაწერების გამორიცხვას. ინტეგრაციული ტესტი ნაგულისხმევად გამოტოვებულია, რათა სამუშაო ბაზა არ შეცვალოს.
+ტესტები ამოწმებს პარსერებს, URL-ების შეზღუდვას, პაროლსა და სესიას, შემოტანილი/გამოქვეყნებული ტექსტების განცალკევებას, ერთდროული ცვლილებების კონფლიქტს, დუბლიკატების გაერთიანებასა და ვადაგასული ჩანაწერების გამორიცხვას. ინტერფეისის მხრიდან: ძებნაში დაბრუნების მდგომარეობა (გვერდი, ჩატვირთული დიაპაზონი, პოზიცია), ბრაუზერის საცავი დაზიანებული ჩანაწერებით, უახლოესი ქალაქის გამოთვლა, ავტოდასრულების პრეფიქსი, წერილის ტექსტი შენახული მონაცემებით და მუქი თემის ფაილის აქტუალობა. ინტეგრაციული ტესტი ნაგულისხმევად გამოტოვებულია, რათა სამუშაო ბაზა არ შეცვალოს.
 
 ## მიმდინარე ონლაინ გარემო
 
@@ -136,8 +144,20 @@ Railway-ის secrets-ში მიუთითე `DATABASE_URL`, `APP_URL`, `
 - ავტომატურად მართვადი ჩანაწერები ქვეყნდება, ახლდება და არქივდება. ხელით შესწორება კონკრეტული ჩანაწერის ავტომატიზაციას აჩერებს.
 - robots.txt-ის გათვალისწინება არ უდრის კონტენტის ხელახალი გავრცელების უფლებას. ფართო საჯარო გაშვებამდე თითოეული წყაროს პირობები ცალკე უნდა შეთანხმდეს.
 - GitHub-ში არ იტვირთება `.env`, ადმინისტრატორის პაროლი, `.local`, ბაზები, ჩამოტვირთული HTML ან build/cache ფაილები.
+- `/api/suggest` მოთხოვნების ლიმიტის გარეშეა. კლიენტი 200 მილიწამით აყოვნებს და პასუხს წუთით ქეშავს, თავად endpoint კი ყოველ მოთხოვნაზე ბაზას ეკითხება; ტრაფიკის ზრდისას ლიმიტი დასამატებელია.
+- შენახულ ძიებაზე შეტყობინება არ იგზავნება. რაოდენობა მხოლოდ მაშინ მოწმდება, როცა „ჩემი სივრცე" იხსნება; რეალურ გაგზავნას პროვაიდერი, წვდომის მონაცემები და გამოწერაზე თანხმობის პროცესი სჭირდება.
+- CV-ს მიმაგრება `mailto`-ს არ შეუძლია, ამიტომ განაცხადი ბოლომდე მომხმარებლის საფოსტო პროგრამაში იგზავნება. საიტიდან ატვირთვა და გაგზავნა არ არსებობს.
+- ტელეფონზე ბარათი აჩვენებს ორ ფაქტს (ქალაქი და განაკვეთი); სამუშაო რეჟიმი და „ახალი" ნიშანი ვაკანსიის გვერდზეა, რომ ბარათი ერთ ეკრანს არ გასცდეს.
 
 GitHub verification (2026-09-09): HR, Jobs and SS imported 43 new pending vacancies in total. The government source timed out connecting from GitHub (`UND_ERR_CONNECT_TIMEOUT`) on two attempts, while responding locally. Its existing data is retained; scheduled retries follow the source backoff. This is an unresolved network reachability limitation, not a successful government-source cloud import. Removed HTTP 404/410 detail pages are rechecked after seven days and linked pending/published jobs are flagged for manual review.
+
+## ტელეფონის განლაგება და თემა
+
+ტელეფონის ყველა წესი ერთ ფენაშია — `app/phone.css`, რომელიც `globals.css`-ისა და `board.css`-ის შემდეგ იტვირთება; ადრე იგივე სელექტორები სამ ფაილში, ცხრა media-ბლოკში იმეორებდა ერთმანეთს. ზღვრები: ტექსტი არსად არ არის 12px-ზე პატარა, შეხების სამიზნე — 44px-ზე დაბალი, ხოლო ფორმის ველები 16px-ზე რჩება, რომ iOS Safari-მ ფოკუსისას გვერდი არ გაადიდოს. ჰორიზონტალური გადაქაჩვა არსად არის: განაკვეთის ჩანართები ტელეფონზე მოხსნილია (იგივე ფილტრი ფურცელშია), სწრაფი არჩევანი 2×2 ბადეა, მიმართულებები კი აბებად სიის ქვემოთ დგას. ფილტრები ქვედა ფურცლად იხსნება და ღილაკზე შედეგების რაოდენობას აჩვენებს; შედეგების ხელსაწყოების რიგი სიის თავზე რჩება.
+
+მუქი თემა ხელით არ დაწერილა. საჯარო სტილებში 765 ფერის ლიტერალია და ტოკენების ფენა არ არსებობს, ამიტომ `scripts/build-dark-theme.ts` კითხულობს ღია სტილებს, ფერის შემცველ დეკლარაციებს ატარებს ერთ გარდაქმნაში (ტექსტი 62–94 სიკაშკაშეში, ფონი 10–30-ში, გაჯერებული აქცენტი ტონს ინარჩუნებს) და ხელახლა წერს `:root[data-theme='dark']`-ის ქვეშ, `app/theme-dark.css`-ში. ფერის შეცვლის შემდეგ სკრიპტი ხელახლა უნდა გაეშვას — `tests/theme.test.ts` ფაილს თავიდან აგენერირებს და ჩავარდება, თუ ჩაკომიტებული ვერსია ჩამორჩა. დამსაქმებლის ლოგოს ფონი და ლურჯი მასთედი ორივე თემაში ერთნაირია.
+
+გაზომვები 390×664-ზე: ჰორიზონტალური გადავსება ნულია 390, 360 და 320px სიგანეზე, პირველი ვაკანსია 655px-ზე იწყება, ორივე თემაში მთავარი და ვაკანსიის გვერდის ტექსტი WCAG AA-ს აკმაყოფილებს. ყველა გაზომვა Chrome-ის მოწყობილობის ემულაციაშია; ნამდვილ ტელეფონზე შემოწმებული არ არის. სრული ჩანაწერი: [docs/qa-phone-ui-2026-09-12.md](docs/qa-phone-ui-2026-09-12.md).
 
 ## Vacancy discovery and trust logic
 
@@ -151,11 +171,15 @@ New imports from different sources can share a pending draft only when exactly o
 
 The results toolbar saves the current filters; the header's personal workspace opens saved searches and manual application history. Job details offer planned/applied/interview/closed stages. Stage changes do not submit a CV or contact an employer. Application snapshots remain in the personal list when public listings disappear. Searches restore all filters and return to the first results page.
 
+Opening the saved-searches tab counts each saved search against the live catalogue: how many vacancies match now, and how many of those arrived since the search was saved. The window is the widest of 1, 3, 7 or 30 days that is not wider than the elapsed time, so the number is never inflated, and a button opens the search filtered to those. Nothing is sent and no subscription exists; the counts are computed when the panel is opened and not before.
+
+A third tab keeps a name, a phone number and an email address under `ertad-personal:v1:applicant`. They are dropped into the letter a mailto opens — signing it where the placeholder was and appending only the ways to reach the person back — and nowhere else. With nothing stored the letter is byte for byte what it was.
+
 Records live only in this browser and origin, with limits of 20 searches and 200 applications. Clearing site data removes them; another device/domain has a separate collection. Individual versioned storage keys, validation, cross-tab refresh, visible save failures and delete undo protect everyday use. Existing bookmarks remain separate and unchanged. No public account, login, notification subscription or personal-data API is added. Research and tradeoffs: [docs/personal-space-research.md](docs/personal-space-research.md).
 
 ## Application contact shortcuts
 
-Vacancy details extract and display email addresses from the approved description, with a draft-email link and copy action. Recruitment context is distinguished from generic contact addresses. Mailto links inside source descriptions retain their recipient when converted to plain text; hidden cc/bcc/subject parameters from the source are not imported. The generated draft uses the position title and an editable Georgian body. It opens the visitor's email client, which is where the visitor attaches the CV and sends it. No mail provider is configured and there is no direct site upload/send flow.
+Vacancy details extract and display email addresses from the approved description, with a draft-email link and copy action. Recruitment context is distinguished from generic contact addresses. Mailto links inside source descriptions retain their recipient when converted to plain text; hidden cc/bcc/subject parameters from the source are not imported. The generated draft uses the position title and an editable Georgian body, with the applicant details saved in the personal workspace filled in when there are any. It opens the visitor's email client, which is where the visitor attaches the CV and sends it. No mail provider is configured and there is no direct site upload/send flow.
 
 English-dominant descriptions offer an explicitly labelled external Google Translate website link. Original text remains available; this is not an in-site or human-verified Georgian translation. No private CV data is sent to translation services.
 
