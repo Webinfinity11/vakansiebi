@@ -8,7 +8,9 @@ import type { ActiveSourceId } from '../lib/types';
 import { configs } from './adapters';
 import { runSourceCycle } from './cycle';
 import { reconcileSource } from './automation';
+import { purgeEnded } from './purge';
 let stopped = false;
+let lastPurge = 0;
 process.on('SIGTERM', () => {
   stopped = true;
 });
@@ -105,6 +107,23 @@ try {
         },
       });
     }
+    // Ended vacancies past their window are deleted at most hourly: the continuous worker loops
+    // every few seconds, and parallel scraper jobs skip on the lock.
+    const purgeDue = Date.now() - lastPurge >= 3600000;
+    if (purgeDue) lastPurge = Date.now();
+    const purged = !purgeDue
+      ? null
+      : await purgeEnded({ apply: true }).catch((error) => {
+          console.warn(
+            'Purge skipped:',
+            error instanceof Error ? error.message : error,
+          );
+          return null;
+        });
+    if (purged?.applied && purged.expired + purged.removed > 0)
+      console.log(
+        `Purged ended vacancies: ${purged.expired} expired, ${purged.removed} removed`,
+      );
     if (once || arg) break;
     await delay(5000);
   } while (!stopped);
