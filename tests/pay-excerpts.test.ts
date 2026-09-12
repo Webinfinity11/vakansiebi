@@ -78,3 +78,17 @@ void test('additive enrichment is idempotent and preserves source identity and k
   };
   assert.equal(enrichVacancy(known).salary, known.salary);
 });
+
+void test('a pay line from a numbered list loses its number, and an amount keeps its digits', async () => {
+  const { payExcerpts } = await import('../lib/pay-excerpts');
+  // Mirrors cleanText, which writes "4. " before each item of an <ol>.
+  assert.deepEqual(
+    payExcerpts('პირობები:\n4. ფიქსირებული ანაზღაურება 1000-1400 ლარი'),
+    ['ფიქსირებული ანაზღაურება 1000-1400 ლარი'],
+  );
+  const kept = payExcerpts('ანაზღაურება: 1.500 ლარი');
+  assert.ok(
+    kept.some((line) => line.includes('1.500')),
+    JSON.stringify(kept),
+  );
+});

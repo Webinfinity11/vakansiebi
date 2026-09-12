@@ -5,7 +5,10 @@ const label =
 export function payExcerpts(text: string) {
   const lines = text
     .split('\n')
-    .map((line) => line.trim().replace(/^[•*–—-]+\s*/, ''))
+    /* cleanText marks list items two ways: "• " for a bulleted list and "4. " for a numbered one.
+       Both are layout, not pay, so both go. The number needs the space after it, exactly as
+       cleanText writes it, so an amount such as "1.500 ლარი" is never mistaken for a marker. */
+    .map((line) => line.trim().replace(/^(?:[•*–—-]+\s*|\d{1,3}[.)]\s+)/, ''))
     .filter(Boolean);
   const result: string[] = [];
   let payBlock = 0;
