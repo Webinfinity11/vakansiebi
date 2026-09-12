@@ -672,7 +672,9 @@ export default function JobBoard() {
   const trackedSearches = useRef(new Set<string>());
   useEffect(() => {
     const settled = query.trim();
-    if (demo || resultsPending || settled.length < 2) return;
+    // A search inside the saved list is not a search of the catalogue, and finding nothing
+    // there says nothing about what the site is missing.
+    if (demo || savedOnly || resultsPending || settled.length < 2) return;
     const timer = setTimeout(() => {
       const key = settled.toLowerCase();
       if (trackedSearches.current.has(key)) return;
@@ -681,7 +683,7 @@ export default function JobBoard() {
       if (total === 0) track('search_empty', settled);
     }, 1500);
     return () => clearTimeout(timer);
-  }, [query, total, resultsPending, demo]);
+  }, [query, total, resultsPending, demo, savedOnly]);
   const initialPageRestored = useRef(false);
   useEffect(() => {
     if (!storageReady || !activity.ready || initialPageRestored.current) return;
