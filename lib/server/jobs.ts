@@ -1,5 +1,6 @@
 import { employerlessSources, privateListingLabel } from '../types';
 import { z } from 'zod';
+import type { QueryResultRow } from 'pg';
 import { db, transaction } from './db';
 import { ApiError } from './auth';
 import { audit } from '../../worker/importer';
@@ -27,12 +28,32 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
   const limit = 20;
   // The public listing shows one row per identical posting; a lookup by id
   // (detail page, saved list) keeps every row reachable, sources folded either way.
-  const { where, args, ordering, metrics, filters, cte } = searchPlan(
+  const { where, args, ordering, metrics, filters } = searchPlan(
     params,
     preview,
     { grouped: true },
   );
-  const measured = (await db().query(metrics, args)).rows[0];
+  const summary = params.get('summary') === '1';
+  const snapshot = preview ? 'j.draft' : 'j.published';
+  const projection = summary
+    ? `(${snapshot} - ARRAY['description','facts','applicationLinks','warnings','fullTextUrl'])`
+    : snapshot;
+  const countsOnly = params.get('countsOnly') === '1';
+  const cut = metrics.indexOf(
+    '\n    SELECT (SELECT count(*)::int FROM matches',
+  );
+  const statement = countsOnly
+    ? metrics
+    : metrics.slice(0, cut) +
+      `, ranked AS (SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error) ORDER BY (m.id=j.id) DESC,m.posted_at DESC,s.name,si.url) FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired),'[]'::jsonb) AS sources, row_number() OVER (ORDER BY ${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT * FROM ranked WHERE ord > $${args.length + 2} AND ord <= $${args.length + 2} + $${args.length + 1})` +
+      metrics.slice(cut) +
+      `, (SELECT COALESCE(jsonb_agg(to_jsonb(pg) - 'ord' ORDER BY pg.ord),'[]'::jsonb) FROM page pg) AS page_rows`;
+  const measured = (
+    await db().query(
+      statement,
+      countsOnly ? args : [...args, limit, (page - 1) * limit],
+    )
+  ).rows[0];
   const count = measured.total;
   const search: SearchMeta = {
     categories: measured.categories,
@@ -66,17 +87,15 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
       page: 1,
       pages: Math.ceil(count / limit),
     };
-  const summary = params.get('summary') === '1';
-  const snapshot = preview ? 'j.draft' : 'j.published';
-  const projection = summary
-    ? `(${snapshot} - ARRAY['description','facts','applicationLinks','warnings','fullTextUrl'])`
-    : snapshot;
-  const rows = (
-    await db().query(
-      `${cte} SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error) ORDER BY (m.id=j.id) DESC,m.posted_at DESC,s.name,si.url) FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired),'[]'::jsonb) AS sources FROM searchable j WHERE ${where} ORDER BY ${ordering},j.id LIMIT $${args.length + 1} OFFSET $${args.length + 2}`,
-      [...args, limit, (page - 1) * limit],
-    )
-  ).rows;
+  /* One statement, not two. `searchable` is the expensive part (about 700ms warm) and a CTE
+     does not outlive its statement, so running the counts and the page separately built it
+     twice. Measured on the remote filter: 1546ms as two queries, 740ms as one, same ids and
+     total. The page is numbered by the same ordering it is limited by, so the aggregate keeps
+     the order without relying on the planner. */
+  // Rows arrive as JSON; the timestamp is restored so the response shape is unchanged.
+  const pageRows: QueryResultRow[] = measured.page_rows || [];
+  for (const r of pageRows) r.created_at = new Date(r.created_at);
+  const rows = pageRows;
   const companyKeys = [
     ...new Set(rows.map((r) => companyKey(r.published.company || ''))),
   ];
