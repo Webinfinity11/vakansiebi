@@ -6,6 +6,11 @@ export const sortKeys: Record<string, string> = {
   'მაღალი ხელფასი': 'salary',
   'ვადა იწურება': 'deadline',
 };
+/* Control characters are never part of a typed search, and PostgreSQL refuses a NUL byte in
+   text outright: ?city=%00 turned the whole list request into a 500. The two free-text filters
+   are cleaned here, where every other filter is already whitelisted. */
+const typed = (value: string | null) =>
+  (value || '').replace(/[\u0000-\u001f\u007f]/g, '');
 export function readSearch(params: URLSearchParams): SearchFilters {
   const amount = (key: string) => {
     const value = params.get(key);
@@ -14,9 +19,11 @@ export function readSearch(params: URLSearchParams): SearchFilters {
       : null;
   };
   return {
-    query: (params.get('q') || '').slice(0, 200),
-    city: (params.get('city') || 'ყველა').slice(0, 300),
-    category: (categories as readonly string[]).includes(params.get('category') || '')
+    query: typed(params.get('q')).slice(0, 200),
+    city: (typed(params.get('city')) || 'ყველა').slice(0, 300),
+    category: (categories as readonly string[]).includes(
+      params.get('category') || '',
+    )
       ? params.get('category')!
       : 'ყველა',
     source: Object.values(sourceNames).includes(params.get('source') || '')

@@ -56,3 +56,13 @@ void test('every board category is a valid filter and the shared city list keeps
   assert.equal(cityStem('მცხეთა'), 'მცხეთა');
   assert.equal(cityStem('ფოთი'), 'ფოთ');
 });
+
+void test('control characters never reach the database from a typed filter', () => {
+  const read = readSearch(new URLSearchParams('q=მოლ%00არე%0A&city=%00'));
+  assert.equal(read.query, 'მოლარე');
+  assert.equal(
+    read.city,
+    'ყველა',
+    'a city made only of control characters means no city',
+  );
+});
