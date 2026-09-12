@@ -131,6 +131,18 @@ export async function reconcileJob(c: PoolClient, id: string) {
       status = 'archived';
       reason = allExpired ? 'expired' : allRemoved ? 'removed' : 'unverified';
       published = null;
+    } else if (
+      fresh.length &&
+      job.status === 'published' &&
+      job.published &&
+      publishable(job.published, items[0].source_id, job.draft.url)
+    ) {
+      /* A read that arrived but parsed short — a partial page, an interstitial — is the same
+         kind of transient failure as a network error, and gets the same treatment: the last
+         verified public version stays up. Unpublishing on the first such read made live
+         vacancies vanish for a median of 13 minutes and come back on the next run (132 times
+         in three days). Removal, expiry and the 7-day unverified rule above still apply. */
+      return 'unchanged';
     } else if (fresh.length) {
       status = 'pending';
       reason = 'invalid_source_data';
