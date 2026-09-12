@@ -3,9 +3,14 @@ import { setTimeout as delay } from 'node:timers/promises';
 import type { SourceId } from '../lib/types';
 import { getSourceConfig, maxResponseBytes } from './adapters';
 /** Government hosts are unreachable from some networks (GitHub runners); that is a network fact, not a source failure. */
-/** The request never got an answer: a timeout or an abort, not an answer the parser disliked. */
+/**
+ * The request never got an answer: it timed out, the connection was refused or reset, or a
+ * name lookup failed for now. gancxadebebi answered at 15:07 and 18:46 and refused the
+ * connection at 20:58, which is the network, not a changed site. A name that does not exist
+ * at all (ENOTFOUND) is not on this list, and neither is any answer the site did give.
+ */
 export function transientNetworkFailure(error: string) {
-  return /^Source request failed: (UND_ERR_CONNECT_TIMEOUT|AbortError|TimeoutError)$/.test(
+  return /^Source request failed: (UND_ERR_CONNECT_TIMEOUT|UND_ERR_SOCKET|AbortError|TimeoutError|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN)$/.test(
     error,
   );
 }

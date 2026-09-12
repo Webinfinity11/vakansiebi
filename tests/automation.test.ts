@@ -165,3 +165,18 @@ void test('a private advertisement publishes without an employer; other sources 
     null,
   );
 });
+
+void test('a refused or reset connection is the network; a missing name is not', () => {
+  const refused = 'Source request failed: ECONNREFUSED';
+  assert.equal(failureNeedsPerson(refused, false, 1), false);
+  assert.equal(failureNeedsPerson(refused, false, 3), true);
+  assert.equal(
+    failureNeedsPerson('Source request failed: ECONNRESET', false, 2),
+    false,
+  );
+  assert.equal(
+    failureNeedsPerson('Source request failed: ENOTFOUND', false, 1),
+    true,
+    'a name that does not exist is not waited out',
+  );
+});
