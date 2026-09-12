@@ -504,6 +504,11 @@ export default function JobBoard() {
               setAppendError('');
               setTotal(d.total);
               setPages(d.pages);
+              /* A shared or remembered link can name a page the list no longer has, once vacancies
+                 have expired. Asking for page 500 of 441 answered "no vacancies found" over 8,806
+                 of them; the board moves to the last page that exists instead. */
+              if (d.pages > 0 && page > d.pages)
+                setPageState({ key: filterKey, page: d.pages });
             }
           })
           .catch((e) => {
