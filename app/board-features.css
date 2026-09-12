@@ -1,0 +1,187 @@
+/* Board features added 2026-09-12: load more, recently viewed strip, near-me button,
+   swipe actions on cards. Phone rules stay inside the 760px query. */
+
+/* ---------- Load more ---------- */
+.board-shell .load-more-row {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding-top: 18px;
+}
+.board-shell .load-more {
+  min-height: 44px;
+  padding: 10px 22px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.board-shell .load-more:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.board-shell .load-more-error {
+  font-size: 12px;
+  color: #9a332f;
+}
+
+/* ---------- Recently viewed ---------- */
+.board-shell .recent-strip {
+  margin: 0 0 18px;
+}
+.board-shell .recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.board-shell .recent-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #57708e;
+  margin: 0;
+}
+.board-shell .recent-head button {
+  font-size: 12px;
+  color: #5d6067;
+  min-height: 36px;
+  padding: 0 8px;
+}
+.board-shell .recent-track {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.board-shell .recent-track::-webkit-scrollbar {
+  display: none;
+}
+.board-shell .recent-card {
+  flex: 0 0 200px;
+  display: grid;
+  gap: 3px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #e2e2e3;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+}
+.board-shell .recent-card:hover {
+  border-color: #a4b9eb;
+}
+.board-shell .recent-card strong {
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.board-shell .recent-card span {
+  font-size: 12px;
+  color: #64676c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Near me ---------- */
+.board-shell .search-city .near-me {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: #4c5d7b;
+  background: #f1f4fa;
+}
+.board-shell .search-city .near-me:hover {
+  color: #2457e6;
+  background: #e5edfc;
+}
+.board-shell .search-city .near-me:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.board-shell .search-city .near-me:focus-visible {
+  outline: 3px solid #a3a7af;
+  outline-offset: 2px;
+}
+
+/* ---------- Swipe (touch only; the reveal layers exist only on phones) ---------- */
+.board-shell .swipe-shell {
+  position: relative;
+}
+.board-shell .swipe-reveal {
+  display: none;
+}
+.board-shell .swipe-card {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 760px) {
+  .board-shell .load-more {
+    width: 100%;
+    min-height: 48px;
+    font-size: 14px;
+  }
+  .board-shell .recent-head button {
+    min-height: 44px;
+  }
+  .board-shell .recent-card {
+    flex-basis: 180px;
+  }
+  .board-shell .search-city .near-me {
+    width: 44px;
+    height: 44px;
+  }
+  .board-shell .swipe-shell {
+    overflow: hidden;
+    border-radius: 11px;
+  }
+  .board-shell .swipe-card {
+    touch-action: pan-y;
+    transition: transform 160ms ease-out;
+  }
+  .board-shell .swipe-card[data-swiping] {
+    transition: none;
+  }
+  .board-shell .swipe-reveal {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    opacity: 0;
+    border-radius: 11px;
+  }
+  .board-shell .swipe-reveal-right {
+    justify-content: flex-start;
+    background: #2457e6;
+  }
+  .board-shell .swipe-reveal-left {
+    justify-content: flex-end;
+    background: #5b6679;
+  }
+  .board-shell .swipe-shell[data-dir='right'] .swipe-reveal-right,
+  .board-shell .swipe-shell[data-dir='left'] .swipe-reveal-left {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-shell .swipe-card {
+    transition: none;
+  }
+}

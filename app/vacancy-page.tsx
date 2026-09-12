@@ -36,6 +36,24 @@ import { explicitWorkCity } from '@/lib/work-location';
 import { vacancyLinks } from '@/lib/vacancy-links';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { SimilarVacancies } from './similar-vacancies';
+import type { SalaryContext } from '@/lib/server/salary-context';
+import './search-features.css';
+
+/* Thousands separated by a narrow no-break space, the way Georgian salaries are written. */
+const gel = (n: number) =>
+  String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
+/* The context is monthly GEL figures; only a monthly GEL vacancy can be compared with it
+   (same rule as the salary filter: an empty period is monthly unless the text says otherwise). */
+function monthlyGel(job: PublicJob) {
+  return (
+    job.currency === 'GEL' &&
+    typeof job.salaryMin === 'number' &&
+    job.salaryMin > 0 &&
+    (job.salaryPeriod === 'თვე' ||
+      (!job.salaryPeriod &&
+        !/(დღ|საათ|კვირ|hour|dail|day|week)/i.test(job.salary || '')))
+  );
+}
 
 /* Whole days from today's local midnight to the deadline's; negative once it has passed. */
 function daysUntil(date: string) {
@@ -121,10 +139,12 @@ export default function VacancyPage({
   job,
   preview,
   returnTo,
+  salaryContext = null,
 }: {
   job: PublicJob;
   preview: boolean;
   returnTo: string;
+  salaryContext?: SalaryContext | null;
 }) {
   const personal = usePersonalSpace();
   const activity = useVacancyActivity();
@@ -356,6 +376,28 @@ export default function VacancyPage({
                 ))}
               </dl>
             )}
+            {salaryContext && (
+              <aside className="salary-context" aria-label="ხელფასის კონტექსტი">
+                <strong>ამ მიმართულებაში მითითებული ხელფასები</strong>
+                <span className="salary-context-range">
+                  <b>{gel(salaryContext.p25)}</b> –{' '}
+                  <b>{gel(salaryContext.p75)}</b> ₾ / თვე
+                </span>
+                <small>
+                  {salaryContext.count} ვაკანსია „{salaryContext.category}“
+                  კატეგორიაში; შუალედი {gel(salaryContext.median)} ₾. მხოლოდ
+                  განცხადებაში მითითებული საწყისი თანხებით.
+                </small>
+                {monthlyGel(job) && job.salaryMin ? (
+                  <span className="salary-context-you">
+                    ეს ვაკანსია: {gel(job.salaryMin)} ₾{' '}
+                    {job.salaryMin >= salaryContext.median
+                      ? '· შუალედზე მაღალი ან ტოლი'
+                      : '· შუალედზე დაბალი'}
+                  </span>
+                ) : null}
+              </aside>
+            )}
             {summary.length > 0 && (
               <section
                 className="vacancy-summary"
@@ -363,9 +405,9 @@ export default function VacancyPage({
               >
                 <h2 id="summary-title">პირობები მოკლედ</h2>
                 <dl>
-                  {summary.map((item) => (
+                  {summary.map((item, index) => (
                     <div
-                      key={item.label}
+                      key={`${item.label}-${index}`}
                       className={
                         item.label.includes('დასაზუსტებელია')
                           ? 'summary-conflict'
@@ -461,8 +503,10 @@ export default function VacancyPage({
                 <section className="extra-facts">
                   <h3>დამატებითი პირობები და მოთხოვნები</h3>
                   <dl>
-                    {extraFacts.map((f) => (
-                      <div key={f.label}>
+                    {/* A source can repeat a label (two contact phones, say), so the index
+                        keeps the rows distinct; React drops rows that share a key. */}
+                    {extraFacts.map((f, index) => (
+                      <div key={`${f.label}-${index}`}>
                         <dt>{f.label}</dt>
                         <dd>{f.value}</dd>
                       </div>

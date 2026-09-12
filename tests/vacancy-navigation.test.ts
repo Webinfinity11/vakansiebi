@@ -4,6 +4,7 @@ import {
   vacancyPath,
   safeReturnPath,
   searchReturnPath,
+  readSearchPosition,
 } from '../lib/vacancy-navigation';
 import { readSearch } from '../lib/search-state';
 import { getVacancyPage } from '../lib/server/vacancy-page';
@@ -44,4 +45,29 @@ void test('return navigation never accepts another origin, path, or a recursive 
 });
 void test('malformed vacancy identifiers never issue a database lookup', async () => {
   assert.equal(await getVacancyPage('invalid'), null);
+});
+void test('a remembered list position keeps the pages appended with "load more"', () => {
+  const id = 'a7f16c4c-5d47-4a08-8fa5-9e7b5a46664c';
+  const url = '/?q=developer&page=2';
+  const at = 1_000_000;
+  const stored = (extra: object) =>
+    JSON.stringify({ url, id, page: 2, top: 640, at, ...extra });
+  assert.deepEqual(readSearchPosition(stored({ loadedThrough: 4 }), url, at), {
+    id,
+    page: 2,
+    loadedThrough: 4,
+    top: 640,
+  });
+  // Records written before the field existed restore a single page.
+  assert.equal(readSearchPosition(stored({}), url, at)?.loadedThrough, 2);
+  // A range below the first page or unreasonably long is refused rather than fetched.
+  assert.equal(readSearchPosition(stored({ loadedThrough: 1 }), url, at), null);
+  assert.equal(
+    readSearchPosition(stored({ loadedThrough: 12 }), url, at),
+    null,
+  );
+  assert.equal(
+    readSearchPosition(stored({ loadedThrough: 3 }), '/?q=other', at),
+    null,
+  );
 });

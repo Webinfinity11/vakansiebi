@@ -12,6 +12,10 @@ export const metadata: Metadata = {
   title: 'ერთად — ვაკანსიები ერთ სივრცეში',
   description:
     'მოძებნე ვაკანსიები სხვადასხვა წყაროდან. შეადარე პირობები და გადადი პირველწყაროზე.',
+  applicationName: 'ერთად',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title: 'ერთად', statusBarStyle: 'default' },
+  icons: { apple: '/icons/apple-touch-icon.png' },
 };
 export default function RootLayout({
   children,

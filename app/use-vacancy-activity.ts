@@ -1,8 +1,13 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { readActivity, type VacancyActivity } from '@/lib/vacancy-activity';
+import {
+  readActivity,
+  recentLimit,
+  type VacancyActivity,
+} from '@/lib/vacancy-activity';
 const key = 'ertad-vacancy-activity';
 const changed = 'ertad-vacancy-activity-changed';
+const empty: VacancyActivity = { seen: [], hidden: [], recent: [] };
 function update(change: (state: VacancyActivity) => VacancyActivity) {
   try {
     localStorage.setItem(
@@ -16,7 +21,7 @@ function update(change: (state: VacancyActivity) => VacancyActivity) {
   }
 }
 export function useVacancyActivity() {
-  const [state, setState] = useState<VacancyActivity>({ seen: [], hidden: [] });
+  const [state, setState] = useState<VacancyActivity>(empty);
   const [ready, setReady] = useState(false);
   useEffect(() => {
     const read = () => {
@@ -34,12 +39,28 @@ export function useVacancyActivity() {
       window.removeEventListener(changed, read);
     };
   }, []);
+  /* Marks a vacancy as seen; with `meta` it also becomes the newest "recently viewed" entry. */
   const markSeen = useCallback(
-    (id: string) =>
+    (id: string, meta?: { title: string; company: string }) =>
       update((s) => ({
         ...s,
         seen: [...s.seen.filter((v) => v !== id), id].slice(-500),
+        recent: meta
+          ? [
+              {
+                id,
+                title: meta.title.slice(0, 180),
+                company: (meta.company || '').slice(0, 120),
+                at: Date.now(),
+              },
+              ...s.recent.filter((v) => v.id !== id),
+            ].slice(0, recentLimit)
+          : s.recent,
       })),
+    [],
+  );
+  const clearRecent = useCallback(
+    () => update((s) => ({ ...s, recent: [] })),
     [],
   );
   const hide = useCallback(
@@ -61,5 +82,5 @@ export function useVacancyActivity() {
       })),
     [],
   );
-  return { ...state, ready, markSeen, hide, restore };
+  return { ...state, ready, markSeen, clearRecent, hide, restore };
 }

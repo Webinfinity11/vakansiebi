@@ -1,0 +1,109 @@
+/* Search autocomplete panel and the salary context panel on a vacancy page. */
+.board-shell .searchbar {
+  position: relative;
+}
+.search-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 30;
+  margin-top: 6px;
+  background: #fff;
+  border: 1px solid #d9e0ec;
+  border-radius: 12px;
+  box-shadow: 0 14px 34px #18243b1f;
+  overflow: hidden;
+  text-align: left;
+}
+.search-suggest [role='listbox'] {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+}
+.search-suggest [role='option'] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  color: #18243b;
+  text-align: left;
+  background: transparent;
+}
+.search-suggest [role='option']:hover,
+.search-suggest [role='option'][aria-selected='true'] {
+  background: #edf2ff;
+}
+.search-suggest .suggest-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-suggest mark {
+  background: transparent;
+  color: #2457e6;
+  font-weight: 700;
+}
+.search-suggest .suggest-meta {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #6b7688;
+}
+@media (max-width: 760px) {
+  .search-suggest {
+    margin-top: 4px;
+    border-radius: 10px;
+  }
+  .search-suggest [role='option'] {
+    min-height: 44px;
+    font-size: 15px;
+  }
+}
+
+.salary-context {
+  display: grid;
+  gap: 6px;
+  margin: 16px 0 0;
+  padding: 16px 18px;
+  background: #eef3ff;
+  border: 1px solid #d6e1fb;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #2b3a57;
+}
+.salary-context > strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: #42618a;
+}
+.salary-context-range {
+  font-size: 18px;
+  font-weight: 700;
+  color: #18243b;
+  font-variant-numeric: tabular-nums;
+}
+.salary-context-range b {
+  font-weight: 800;
+}
+.salary-context small {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #5b6b85;
+}
+.salary-context-you {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e4bbf;
+}
+@media (max-width: 760px) {
+  .salary-context {
+    padding: 14px;
+  }
+}

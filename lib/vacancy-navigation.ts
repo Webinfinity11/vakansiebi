@@ -47,7 +47,14 @@ export function safeReturnPath(value?: string) {
   }
 }
 const key = 'ertad-search-return';
-export function rememberSearch(url: string, id: string, page: number) {
+/* `loadedThrough` is the last page appended with "load more"; the URL keeps the first page,
+   so returning to the list has to know how many pages to fetch again before scrolling. */
+export function rememberSearch(
+  url: string,
+  id: string,
+  page: number,
+  loadedThrough = page,
+) {
   try {
     sessionStorage.setItem(
       key,
@@ -55,17 +62,26 @@ export function rememberSearch(url: string, id: string, page: number) {
         url: safeReturnPath(url),
         id,
         page,
+        loadedThrough: Math.max(page, loadedThrough),
         top: window.scrollY,
         at: Date.now(),
       }),
     );
   } catch {}
 }
-export function restoreSearch(
+export type SearchPosition = {
+  id: string;
+  page: number;
+  loadedThrough: number;
+  top: number;
+};
+export function readSearchPosition(
+  raw: string | null,
   url: string,
-): { id: string; page: number; top: number } | null {
+  now = Date.now(),
+): SearchPosition | null {
   try {
-    const state = JSON.parse(sessionStorage.getItem(key) || 'null');
+    const state = JSON.parse(raw || 'null');
     if (
       state?.url !== safeReturnPath(url) ||
       !uuid.test(state.id) ||
@@ -73,10 +89,25 @@ export function restoreSearch(
       state.top < 0 ||
       !Number.isInteger(state.page) ||
       state.page < 1 ||
-      Date.now() - state.at > 7200000
+      now - state.at > 7200000
     )
       return null;
-    return state;
+    const loadedThrough =
+      state.loadedThrough === undefined ? state.page : state.loadedThrough;
+    if (
+      !Number.isInteger(loadedThrough) ||
+      loadedThrough < state.page ||
+      loadedThrough > state.page + 9
+    )
+      return null;
+    return { id: state.id, page: state.page, loadedThrough, top: state.top };
+  } catch {
+    return null;
+  }
+}
+export function restoreSearch(url: string): SearchPosition | null {
+  try {
+    return readSearchPosition(sessionStorage.getItem(key), url);
   } catch {
     return null;
   }

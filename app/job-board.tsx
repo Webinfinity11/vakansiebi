@@ -1,5 +1,10 @@
 'use client';
+import './board-features.css';
 import { VacancyStatus } from './vacancy-status';
+import { useSwipe } from './use-swipe';
+import { RecentVacancies } from './recent-vacancies';
+import { SearchSuggest } from './search-suggest';
+import { nearestCity } from '@/lib/nearest-city';
 import type { Application } from '@/lib/personal-space';
 import { compactSalary } from '@/lib/vacancy-presentation';
 import Link from 'next/link';
@@ -10,7 +15,7 @@ import AdvancedFilterControls, {
 } from './advanced-filters';
 import type { SearchMeta, FilterKey } from '@/lib/server/search-plan';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Brand } from './brand';
 export { Brand } from './brand';
 import { formatDate } from './vacancy-text';
@@ -46,6 +51,8 @@ import {
   Calculator,
   Headphones,
   Stethoscope,
+  LocateFixed,
+  EyeOff,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -68,6 +75,7 @@ import { PersonalSpace, usePersonalSpace } from './personal-space';
 import type { SearchFilters } from '@/lib/personal-space';
 import type { PublicJob as Job } from '@/lib/types';
 import { categories, sourceNames } from '@/lib/types';
+import { cityOptions } from '@/lib/cities';
 
 export function Choice({
   label,
@@ -97,22 +105,8 @@ export function Choice({
     </Select>
   );
 }
-const cities = [
-  'თბილისი',
-  'ბათუმი',
-  'ქუთაისი',
-  'რუსთავი',
-  'გორი',
-  'ზუგდიდი',
-  'ფოთი',
-  'თელავი',
-  'კასპი',
-  'მცხეთა',
-  'ახალციხე',
-  'ბორჯომი',
-  'ოზურგეთი',
-  'სხვა',
-];
+// Shared with the search plan, so "სხვა" means a city outside this very list.
+const cities: string[] = [...cityOptions];
 const dayMs = 86400000;
 function daysUntil(date: string) {
   const at = Date.parse(date);
@@ -124,6 +118,156 @@ function isNew(datePosted?: string) {
   if (!Number.isFinite(at)) return false;
   const age = Date.now() - at;
   return age >= 0 && age <= 2 * dayMs;
+}
+
+/* One vacancy in the list. On a touch screen the card slides: right saves, left hides; the
+   reveal layers behind it name the action before the finger lifts. */
+function JobCard({
+  job: j,
+  demo,
+  saved,
+  seen,
+  status,
+  resultsPending,
+  returnPath,
+  onToggleSave,
+  onOpen,
+  onHide,
+}: {
+  job: Job;
+  demo: boolean;
+  saved: boolean;
+  seen: boolean;
+  status?: Application['status'];
+  resultsPending: boolean;
+  returnPath: string;
+  onToggleSave: () => void;
+  onOpen: () => void;
+  onHide: () => void;
+}) {
+  const swipe = useSwipe({
+    onRight: onToggleSave,
+    onLeft: demo ? undefined : onHide,
+  });
+  const left = j.deadline ? daysUntil(j.deadline) : NaN;
+  const urgent = left >= 0 && left <= 3;
+  const when = j.deadline
+    ? `${urgent ? 'იწურება' : 'ვადა:'} ${formatDate(j.deadline)}`
+    : j.datePosted
+      ? formatDate(j.datePosted)
+      : '';
+  const style: CSSProperties | undefined = swipe.dx
+    ? { transform: `translateX(${swipe.dx}px)` }
+    : undefined;
+  return (
+    <div
+      className="swipe-shell"
+      data-dir={swipe.dx > 0 ? 'right' : swipe.dx < 0 ? 'left' : undefined}
+    >
+      <div className="swipe-reveal swipe-reveal-right" aria-hidden="true">
+        <Bookmark size={18} /> {saved ? 'მოხსნა' : 'შენახვა'}
+      </div>
+      {!demo && (
+        <div className="swipe-reveal swipe-reveal-left" aria-hidden="true">
+          <EyeOff size={18} /> დამალვა
+        </div>
+      )}
+      <article
+        className="job-card swipe-card"
+        style={style}
+        data-swiping={swipe.dragging || undefined}
+        {...swipe.handlers}
+      >
+        <CompanyLogo company={j.company} url={j.logoUrl} />
+        <div className="job-info">
+          <div className="job-company">
+            <span>{j.company || 'კომპანია'}</span>
+            {!demo && <VacancyStatus seen={seen} status={status} />}
+          </div>
+          <Link
+            className="job-title"
+            data-vacancy-id={j.id}
+            href={
+              resultsPending
+                ? '#'
+                : vacancyPath(j.id, { preview: demo, from: returnPath })
+            }
+            prefetch={false}
+            aria-disabled={resultsPending}
+            tabIndex={resultsPending ? -1 : undefined}
+            onClick={(event) => {
+              if (resultsPending || swipe.dragging) event.preventDefault();
+            }}
+            onNavigate={(event) => {
+              if (resultsPending || swipe.dragging) event.preventDefault();
+              else onOpen();
+            }}
+          >
+            {j.title}
+          </Link>
+          <div className="job-meta">
+            {j.city && (
+              <span>
+                <MapPin size={13} />
+                <span className="location-text" title={j.city}>
+                  {j.city}
+                </span>
+              </span>
+            )}
+            {j.employmentType && (
+              <span>
+                <BriefcaseBusiness size={13} />
+                {j.employmentType}
+              </span>
+            )}
+            {j.mode && (
+              <span>
+                <Laptop size={13} />
+                {j.mode}
+              </span>
+            )}
+          </div>
+          <div className="card-bottom">
+            {j.salary && (
+              <span className="salary">{compactSalary(j.salary)}</span>
+            )}
+            {j.category !== 'სხვა' && (
+              <span className="category-tag">{j.category}</span>
+            )}
+            {isNew(j.datePosted) && <span className="job-new">ახალი</span>}
+            {when && (
+              <span className={`job-when${urgent ? ' is-urgent' : ''}`}>
+                {when}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="job-side">
+          <button
+            className={`save-button ${saved ? 'is-saved' : ''}`}
+            aria-label={
+              saved ? `${j.title} — შენახულიდან წაშლა` : `${j.title} — შენახვა`
+            }
+            aria-pressed={saved}
+            onClick={onToggleSave}
+          >
+            <Bookmark size={19} />
+          </button>
+          <span className="job-date">
+            {j.deadline
+              ? `ვადა: ${formatDate(j.deadline)}`
+              : j.datePosted
+                ? `გამოქვეყნდა ${formatDate(j.datePosted)}`
+                : ''}
+          </span>
+          <span className="card-open" aria-hidden="true">
+            <span>ნახვა</span>
+            <ArrowUpRight size={16} />
+          </span>
+        </div>
+      </article>
+    </div>
+  );
 }
 export default function JobBoard() {
   const params = useSearchParams();
@@ -244,6 +388,13 @@ export default function JobBoard() {
     })),
     [total, setTotal] = useState(0),
     [pages, setPages] = useState(0);
+  /* "მეტის ჩვენება" appends pages after the one in the URL; `through` is the last one shown. */
+  const [loadedState, setLoadedState] = useState({ key: '', through: 0 });
+  const [appendPage, setAppendPage] = useState<{
+    key: string;
+    page: number;
+  } | null>(null);
+  const [appendError, setAppendError] = useState('');
   const filterKey = JSON.stringify([
     query,
     city,
@@ -258,6 +409,9 @@ export default function JobBoard() {
     excluded,
   ]);
   const page = pageState.key === filterKey ? pageState.page : 1;
+  const loadedThrough =
+    loadedState.key === filterKey ? Math.max(page, loadedState.through) : page;
+  const appending = appendPage?.key === filterKey;
   const resultsPending =
     !error &&
     (loading || loadedResult.key !== filterKey || loadedResult.page !== page);
@@ -343,6 +497,9 @@ export default function JobBoard() {
               setJobs(d.jobs);
               setSearchMeta(d.search);
               setLoadedResult({ key: filterKey, page });
+              setLoadedState({ key: filterKey, through: page });
+              setAppendPage(null);
+              setAppendError('');
               setTotal(d.total);
               setPages(d.pages);
             }
@@ -380,6 +537,69 @@ export default function JobBoard() {
     excluded,
     activity.ready,
   ]);
+  useEffect(() => {
+    if (!appendPage || appendPage.key !== filterKey || resultsPending) return;
+    const controller = new AbortController();
+    const p = searchParams({
+      query,
+      city,
+      category,
+      source,
+      paid,
+      remote,
+      sort,
+      ...advanced,
+    });
+    p.set('page', String(appendPage.page));
+    p.set('summary', '1');
+    p.set('preview', demo ? '1' : '0');
+    if (savedOnly) p.set('ids', savedFilter);
+    if (excluded) p.set('exclude', excluded);
+    void fetch('/api/jobs?' + p, { signal: controller.signal })
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw Error(d.error || 'ვაკანსიები ვერ ჩაიტვირთა');
+        return d;
+      })
+      .then((d) => {
+        if (controller.signal.aborted) return;
+        setJobs((prev) => [
+          ...prev,
+          ...(d.jobs as Job[]).filter((j) => !prev.some((x) => x.id === j.id)),
+        ]);
+        setTotal(d.total);
+        setPages(d.pages);
+        setLoadedState({ key: filterKey, through: appendPage.page });
+        setAppendPage(null);
+      })
+      .catch((e) => {
+        if (e.name === 'AbortError') return;
+        setAppendError(e.message);
+        setAppendPage(null);
+      });
+    return () => controller.abort();
+  }, [
+    appendPage,
+    filterKey,
+    resultsPending,
+    query,
+    city,
+    category,
+    source,
+    paid,
+    remote,
+    sort,
+    advanced,
+    demo,
+    savedOnly,
+    savedFilter,
+    excluded,
+  ]);
+  const loadMore = () => {
+    if (appending || resultsPending || loadedThrough >= pages) return;
+    setAppendError('');
+    setAppendPage({ key: filterKey, page: loadedThrough + 1 });
+  };
   const applySearch = (filters: SearchFilters) => {
     setPageState({ key: '', page: 1 });
     setQuery(filters.query);
@@ -464,6 +684,17 @@ export default function JobBoard() {
     const position = restoreSearch(returnPath);
     if (!position) return;
     if (position.page !== page) return;
+    // Pages appended with "load more" before leaving are fetched again, one at a time, first.
+    if (position.loadedThrough > loadedThrough && !appendError) {
+      if (appending) return;
+      const next = loadedThrough + 1;
+      const timer = setTimeout(
+        () => setAppendPage({ key: filterKey, page: next }),
+        0,
+      );
+      return () => clearTimeout(timer);
+    }
+    if (appending) return;
     searchRestored.current = true;
     const frame = requestAnimationFrame(() => {
       window.scrollTo(0, position.top);
@@ -472,7 +703,49 @@ export default function JobBoard() {
         ?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [resultsPending, storageReady, returnPath, page, filterKey]);
+  }, [
+    resultsPending,
+    storageReady,
+    returnPath,
+    page,
+    filterKey,
+    loadedThrough,
+    appending,
+    appendError,
+  ]);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [canLocate, setCanLocate] = useState(false);
+  const [locating, setLocating] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setCanLocate('geolocation' in navigator), 0);
+    return () => clearTimeout(timer);
+  }, []);
+  /* Only ever runs from a tap on the button; the permission prompt is never shown on load. */
+  const locate = () => {
+    if (locating || !('geolocation' in navigator)) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nearest = nearestCity(
+          position.coords.latitude,
+          position.coords.longitude,
+        );
+        const km = Math.round(nearest.km);
+        setCity(nearest.city);
+        setFeedback(
+          km > 80
+            ? `უახლოესი ქალაქი სიაში: ${nearest.city} (${km} კმ)`
+            : `ქალაქი: ${nearest.city} · ${km} კმ`,
+        );
+        setLocating(false);
+      },
+      () => {
+        setFeedback('მდებარეობა მიუწვდომელია. აირჩიე ქალაქი ხელით.');
+        setLocating(false);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
+    );
+  };
   const renderFilters = (prefix: string) => {
     const draft =
       prefix === 'mobile' && mobileDraft ? mobileDraft : currentSearch;
@@ -711,7 +984,26 @@ export default function JobBoard() {
                     maxLength={200}
                     placeholder="პოზიცია, კომპანია ან საკვანძო სიტყვა"
                     value={query}
+                    ref={searchInputRef}
+                    aria-autocomplete="list"
+                    aria-controls="search-suggest"
                     onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <SearchSuggest
+                    query={query}
+                    inputRef={searchInputRef}
+                    listId="search-suggest"
+                    onPick={(value) => {
+                      setQuery(value);
+                      searchInputRef.current?.blur();
+                      document.getElementById('results')?.scrollIntoView({
+                        behavior: window.matchMedia(
+                          '(prefers-reduced-motion: reduce)',
+                        ).matches
+                          ? 'auto'
+                          : 'smooth',
+                      });
+                    }}
                   />
                   <div className="search-city">
                     <MapPin size={18} />
@@ -721,6 +1013,19 @@ export default function JobBoard() {
                       onChange={setCity}
                       options={cities}
                     />
+                    {canLocate && (
+                      <button
+                        type="button"
+                        className="near-me"
+                        aria-label="ჩემთან ახლოს მდებარე ქალაქის არჩევა"
+                        title="ჩემთან ახლოს"
+                        aria-busy={locating}
+                        disabled={locating}
+                        onClick={locate}
+                      >
+                        <LocateFixed size={16} />
+                      </button>
+                    )}
                   </div>
                   <button
                     className="primary"
@@ -872,6 +1177,19 @@ export default function JobBoard() {
               className="results"
               aria-busy={resultsPending}
             >
+              {!demo &&
+                !savedOnly &&
+                !activeCount &&
+                activity.recent.length > 0 && (
+                  <RecentVacancies
+                    items={activity.recent}
+                    returnPath={returnPath}
+                    onClear={() => {
+                      if (!activity.clearRecent())
+                        setFeedback('ბრაუზერმა გასუფთავება ვერ შეძლო.');
+                    }}
+                  />
+                )}
               <div className="results-head">
                 <div>
                   <h2>
@@ -1083,127 +1401,36 @@ export default function JobBoard() {
                         </div>
                       ))
                     : jobs.map((j) => (
-                        <article className="job-card" key={j.id}>
-                          <CompanyLogo company={j.company} url={j.logoUrl} />
-                          <div className="job-info">
-                            <div className="job-company">
-                              <span>{j.company || 'კომპანია'}</span>
-                              {!demo && (
-                                <VacancyStatus
-                                  seen={activity.seen.includes(j.id)}
-                                  status={applicationsById.get(j.id)}
-                                />
-                              )}
-                            </div>
-                            <Link
-                              className="job-title"
-                              data-vacancy-id={j.id}
-                              href={
-                                resultsPending
-                                  ? '#'
-                                  : vacancyPath(j.id, {
-                                      preview: demo,
-                                      from: returnPath,
-                                    })
-                              }
-                              prefetch={false}
-                              aria-disabled={resultsPending}
-                              tabIndex={resultsPending ? -1 : undefined}
-                              onClick={(event) => {
-                                if (resultsPending) event.preventDefault();
-                              }}
-                              onNavigate={(event) => {
-                                if (resultsPending) event.preventDefault();
-                                else rememberSearch(returnPath, j.id, page);
-                              }}
-                            >
-                              {j.title}
-                            </Link>
-                            <div className="job-meta">
-                              {j.city && (
-                                <span>
-                                  <MapPin size={13} />
-                                  <span
-                                    className="location-text"
-                                    title={j.city}
-                                  >
-                                    {j.city}
-                                  </span>
-                                </span>
-                              )}
-                              {j.employmentType && (
-                                <span>
-                                  <BriefcaseBusiness size={13} />
-                                  {j.employmentType}
-                                </span>
-                              )}
-                              {j.mode && (
-                                <span>
-                                  <Laptop size={13} />
-                                  {j.mode}
-                                </span>
-                              )}
-                            </div>
-                            <div className="card-bottom">
-                              {j.salary && (
-                                <span className="salary">
-                                  {compactSalary(j.salary)}
-                                </span>
-                              )}
-                              {j.category !== 'სხვა' && (
-                                <span className="category-tag">
-                                  {j.category}
-                                </span>
-                              )}
-                              {isNew(j.datePosted) && (
-                                <span className="job-new">ახალი</span>
-                              )}
-                              {(() => {
-                                const left = j.deadline
-                                  ? daysUntil(j.deadline)
-                                  : NaN;
-                                const urgent = left >= 0 && left <= 3;
-                                const text = j.deadline
-                                  ? `${urgent ? 'იწურება' : 'ვადა:'} ${formatDate(j.deadline)}`
-                                  : j.datePosted
-                                    ? formatDate(j.datePosted)
-                                    : '';
-                                return text ? (
-                                  <span
-                                    className={`job-when${urgent ? ' is-urgent' : ''}`}
-                                  >
-                                    {text}
-                                  </span>
-                                ) : null;
-                              })()}
-                            </div>
-                          </div>
-                          <div className="job-side">
-                            <button
-                              className={`save-button ${saved.includes(j.id) ? 'is-saved' : ''}`}
-                              aria-label={
-                                saved.includes(j.id)
-                                  ? `${j.title} — შენახულიდან წაშლა`
-                                  : `${j.title} — შენახვა`
-                              }
-                              aria-pressed={saved.includes(j.id)}
-                              onClick={() => toggleSave(j.id)}
-                            >
-                              <Bookmark size={19} />
-                            </button>
-                            <span className="job-date">
-                              {j.deadline
-                                ? `ვადა: ${formatDate(j.deadline)}`
-                                : j.datePosted
-                                  ? `გამოქვეყნდა ${formatDate(j.datePosted)}`
-                                  : ''}
-                            </span>
-                            <span className="card-open" aria-hidden="true">
-                              <span>ნახვა</span>
-                              <ArrowUpRight size={16} />
-                            </span>
-                          </div>
-                        </article>
+                        <JobCard
+                          key={j.id}
+                          job={j}
+                          demo={demo}
+                          saved={saved.includes(j.id)}
+                          seen={activity.seen.includes(j.id)}
+                          status={applicationsById.get(j.id)}
+                          resultsPending={resultsPending}
+                          returnPath={returnPath}
+                          onToggleSave={() => toggleSave(j.id)}
+                          onOpen={() => {
+                            rememberSearch(
+                              returnPath,
+                              j.id,
+                              page,
+                              loadedThrough,
+                            );
+                            activity.markSeen(j.id, {
+                              title: j.title,
+                              company: j.company,
+                            });
+                          }}
+                          onHide={() => {
+                            setFeedback(
+                              activity.hide(j.id, j.title)
+                                ? 'ვაკანსია დამალულია · აღდგენა სიის თავში'
+                                : 'ბრაუზერმა დამალვა ვერ შეძლო.',
+                            );
+                          }}
+                        />
                       ))}
                 </div>
               )}
@@ -1256,10 +1483,30 @@ export default function JobBoard() {
                   </button>
                 </div>
               )}
+              {!error && !resultsPending && loadedThrough < pages && (
+                <div className="load-more-row">
+                  <button
+                    type="button"
+                    className="load-more secondary-button"
+                    disabled={appending}
+                    onClick={loadMore}
+                  >
+                    {appending
+                      ? 'იტვირთება…'
+                      : `მეტის ჩვენება · კიდევ ${Math.min(20, Math.max(0, total - jobs.length))}`}
+                  </button>
+                  {appendError && (
+                    <p className="load-more-error" role="alert">
+                      {appendError}
+                    </p>
+                  )}
+                </div>
+              )}
               {pages > 1 && (
                 <div className="board-pagination">
                   <span>
-                    {page} / {pages} გვერდი
+                    {loadedThrough > page ? `${page}–${loadedThrough}` : page} /{' '}
+                    {pages} გვერდი
                   </span>
                   <button
                     aria-label="წინა გვერდი"
@@ -1271,8 +1518,8 @@ export default function JobBoard() {
                   </button>
                   <button
                     aria-label="შემდეგი გვერდი"
-                    disabled={page === pages || resultsPending}
-                    onClick={() => paginate(page + 1)}
+                    disabled={loadedThrough >= pages || resultsPending}
+                    onClick={() => paginate(loadedThrough + 1)}
                   >
                     <span className="page-next-label">შემდეგი</span>
                     <ChevronRight size={18} />

@@ -54,7 +54,7 @@ void test('summary preserves qualifications and negations, stops at unrelated se
 });
 void test('browser activity tolerates corrupted storage and bounds valid unique records', () => {
   const id = 'b672744c-ff4f-4d4a-989b-969cf2ae6736';
-  assert.deepEqual(readActivity('{'), { seen: [], hidden: [] });
+  assert.deepEqual(readActivity('{'), { seen: [], hidden: [], recent: [] });
   assert.deepEqual(
     readActivity(
       JSON.stringify({
@@ -67,7 +67,22 @@ void test('browser activity tolerates corrupted storage and bounds valid unique 
         ],
       }),
     ),
-    { seen: [id], hidden: [{ id, title: 'Title' }] },
+    { seen: [id], hidden: [{ id, title: 'Title' }], recent: [] },
+  );
+  // Records written before the recently-viewed strip existed carry no `recent` key.
+  const other = 'c3c0a9de-2b3f-4a4e-9a4d-3f1a2b4c5d6e';
+  assert.deepEqual(
+    readActivity(
+      JSON.stringify({
+        recent: [
+          { id, title: 'Title', company: 'Company', at: 3 },
+          { id, title: 'Duplicate', company: 'Company', at: 2 },
+          { id: 'bad', title: 'Bad', company: 'Company', at: 1 },
+          { id: other, title: 'Other', company: 'Employer', at: 'soon' },
+        ],
+      }),
+    ).recent,
+    [{ id, title: 'Title', company: 'Company', at: 3 }],
   );
 });
 void test('similarity requires a role overlap or meaningful category and city, and explains only actual matches', () => {

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { isAdmin } from '@/lib/server/auth';
 import { getVacancyPage } from '@/lib/server/vacancy-page';
+import { salaryContext } from '@/lib/server/salary-context';
 import { safeReturnPath } from '@/lib/vacancy-navigation';
 import VacancyPage from '../../vacancy-page';
 type Props = {
@@ -14,9 +15,15 @@ async function load({ params, searchParams }: Props) {
   if (preview && !(await isAdmin())) notFound();
   const job = await getVacancyPage(id, preview);
   if (!job) notFound();
+  // Salary context is an extra; a failure there must never take the page down.
+  const context =
+    job.category !== 'სხვა'
+      ? await salaryContext(job.category).catch(() => null)
+      : null;
   return {
     job,
     preview,
+    salaryContext: context,
     from: safeReturnPath(
       typeof query.from === 'string' ? query.from : undefined,
     ),
@@ -45,6 +52,13 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 export default async function Page(props: Props) {
-  const { job, preview, from } = await load(props);
-  return <VacancyPage job={job} preview={preview} returnTo={from} />;
+  const { job, preview, from, salaryContext } = await load(props);
+  return (
+    <VacancyPage
+      job={job}
+      preview={preview}
+      returnTo={from}
+      salaryContext={salaryContext}
+    />
+  );
 }
