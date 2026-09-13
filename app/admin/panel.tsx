@@ -35,6 +35,7 @@ import { CompanyEditor } from './company-editor';
 import type { AdminJob, Source, Vacancy, SourceRun } from '@/lib/types';
 import { categories, sourceNames } from '@/lib/types';
 import { sourceHealth } from '@/lib/scraper-status';
+import { EmployersPanel } from './employers';
 import { AnalyticsPanel } from './analytics';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
 const names: Record<string, string> = {
@@ -344,6 +345,7 @@ export default function AdminPanel() {
             <TabsTrigger value="sources">წყაროები და განახლება</TabsTrigger>
             <TabsTrigger value="runs">შემოტანის ისტორია</TabsTrigger>
             <TabsTrigger value="analytics">ანალიტიკა</TabsTrigger>
+            <TabsTrigger value="employers">კომპანიების სახელები</TabsTrigger>
           </TabsList>
           <TabsContent value="vacancies">
             <div className="admin-toolbar">
@@ -844,6 +846,9 @@ export default function AdminPanel() {
           </TabsContent>
           <TabsContent value="analytics">
             {tab === 'analytics' && <AnalyticsPanel />}
+          </TabsContent>
+          <TabsContent value="employers">
+            {tab === 'employers' && <EmployersPanel />}
           </TabsContent>
           <TabsContent value="runs">
             <div className="run-list">

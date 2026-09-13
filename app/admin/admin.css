@@ -334,3 +334,54 @@
   padding: 0;
   min-width: 0;
 }
+.admin-employer-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.admin-employer-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e4e4e5;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #fff;
+}
+.admin-employer-names {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.admin-employer-names b {
+  color: #71717a;
+  font-weight: 500;
+}
+.admin-employer-vs {
+  color: #a1a1aa;
+}
+.admin-employer-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.admin-employer-actions button {
+  border: 1px solid #e4e4e5;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  .admin-employer-list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-employer-vs {
+    display: none;
+  }
+}
