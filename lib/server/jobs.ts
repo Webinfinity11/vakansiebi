@@ -20,7 +20,11 @@ import {
 import { suggestSearch } from '../search-language';
 import { logoCompanyKey } from '../company-logo-identity';
 import { resolveCompanyLogos } from './company-logos';
-export async function publicJobs(params: URLSearchParams, preview = false) {
+export async function publicJobs(
+  params: URLSearchParams,
+  preview = false,
+  options: { jobIds?: readonly string[] } = {},
+) {
   const page = Math.max(
     1,
     Math.min(10000, Math.floor(Number(params.get('page'))) || 1),
@@ -31,7 +35,7 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
   const { where, args, ordering, metrics, filters } = searchPlan(
     params,
     preview,
-    { grouped: true },
+    { grouped: true, jobIds: options.jobIds },
   );
   const summary = params.get('summary') === '1';
   const snapshot = preview ? 'j.draft' : 'j.published';

@@ -156,3 +156,16 @@ export function mergedIdentities(
   }
   return (id: string) => find(id);
 }
+
+/* The address of an employer's page, readable in either script: the most used spelling in lower
+   case, legal form dropped, words joined by hyphens — "ლიბერთი-ბანკი", "jibe-cash-carry". */
+export function employerSlug(name: string) {
+  return name
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(legalForm, '$1 ')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80)
+    .replace(/-+$/, '');
+}

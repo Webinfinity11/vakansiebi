@@ -40,6 +40,8 @@ export type SearchPlanOptions = {
    * spread, has to ask for them or it sees NULL in every row.
    */
   pricing?: boolean;
+  /** Only these vacancies: one employer's page, where the ids come from its identity. */
+  jobIds?: readonly string[];
 };
 const normalized = (sql: string) =>
   `lower(CASE WHEN COALESCE(${sql},'') IS NFKC NORMALIZED THEN COALESCE(${sql},'') ELSE normalize(COALESCE(${sql},''),NFKC) END)`;
@@ -209,6 +211,8 @@ export function searchPlan(
         .filter((id) => z.uuid().safeParse(id).success)
         .slice(0, 100),
     )}::text[])`;
+  if (options.jobIds)
+    base += ` AND j.id=ANY(${bind([...options.jobIds])}::uuid[])`;
   if (params.has('exclude'))
     base += ` AND NOT (j.id::text=ANY(${bind(
       (params.get('exclude') || '')

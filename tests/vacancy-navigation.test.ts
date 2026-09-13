@@ -71,3 +71,30 @@ void test('a remembered list position keeps the pages appended with "load more"'
     null,
   );
 });
+
+void test('an employer page is a safe place to return to, and nothing shaped like one leaves the site', async () => {
+  const { safeReturnPath } = await import('../lib/vacancy-navigation');
+  const slug = encodeURIComponent('ლიბერთი-ბანკი');
+  assert.equal(safeReturnPath(`/companies/${slug}`), `/companies/${slug}`);
+  assert.equal(
+    safeReturnPath(`/companies/${slug}?page=3&x=1`),
+    `/companies/${slug}?page=3`,
+  );
+  assert.equal(
+    safeReturnPath(`/companies/${slug}?page=-2`),
+    `/companies/${slug}`,
+  );
+  for (const bad of [
+    '//evil.test/companies/x',
+    '/companies/x/../../admin',
+    '/companies/',
+    '/companies/a/b',
+    'https://evil.test/companies/x',
+    '/\\evil.test/companies/x',
+  ])
+    assert.ok(
+      !safeReturnPath(bad).includes('evil') &&
+        !safeReturnPath(bad).includes('admin'),
+      bad,
+    );
+});

@@ -4,6 +4,7 @@ import { ApiError } from './auth';
 import {
   candidatePairs,
   employerIdentity,
+  employerSlug,
   mergedIdentities,
 } from '../employer-identity';
 
@@ -101,4 +102,114 @@ export async function decideEmployers(input: unknown) {
     );
   });
   return { a, b, decision: data.decision };
+}
+
+/* An employer gets a page once it has this many current vacancies; below it a page would be a
+   thin list that tells a reader less than the search does. */
+export const employerPageMinimum = 10;
+export type EmployerPage = {
+  slug: string;
+  name: string;
+  logoUrl: string;
+  names: string[];
+  jobIds: string[];
+  cities: { name: string; count: number }[];
+};
+
+async function buildEmployerPages() {
+  const [{ rows }, decisions] = await Promise.all([
+    db().query(
+      `SELECT j.id::text AS id, btrim(j.published->>'company') AS name,
+              COALESCE(j.published->>'logoUrl','') AS logo, btrim(COALESCE(j.published->>'city','')) AS city,
+              array_agg(DISTINCT si.source_id) AS sources
+         FROM jobs j JOIN source_items si ON si.job_id=j.id JOIN sources s ON s.id=si.source_id AND NOT s.retired
+        WHERE j.status='published' AND COALESCE(j.published->>'company','')<>''
+          AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline' >= to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))
+        GROUP BY j.id`,
+    ),
+    db().query("SELECT a,b FROM employer_decisions WHERE decision='merge'"),
+  ]);
+  const root = mergedIdentities(decisions.rows.map((d) => [d.a, d.b] as const));
+  type Group = {
+    ids: string[];
+    names: Map<string, number>;
+    cities: Map<string, number>;
+    logo: string;
+  };
+  const groups = new Map<string, Group>();
+  for (const r of rows) {
+    const identity = employerIdentity(r.name, r.sources, Boolean(r.logo));
+    if (!identity) continue;
+    const key = root(identity);
+    const g: Group = groups.get(key) || {
+      ids: [],
+      names: new Map(),
+      cities: new Map(),
+      logo: '',
+    };
+    g.ids.push(r.id);
+    g.names.set(r.name, (g.names.get(r.name) || 0) + 1);
+    // Sources put a street address after the town ("რუსთავი, შარტავას #3"); the town is what counts.
+    const city = String(r.city).split(',')[0].trim();
+    if (city) g.cities.set(city, (g.cities.get(city) || 0) + 1);
+    g.logo ||= r.logo;
+    groups.set(key, g);
+  }
+  const ranked = (m: Map<string, number>) =>
+    [...m]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  const bySlug = new Map<string, EmployerPage>();
+  const byJob = new Map<string, string>();
+  // Largest first, so when two employers would share an address the larger keeps the plain one.
+  for (const [identity, g] of [...groups]
+    .filter(([, g]) => g.ids.length >= employerPageMinimum)
+    .sort(
+      (a, b) => b[1].ids.length - a[1].ids.length || a[0].localeCompare(b[0]),
+    )) {
+    const names = ranked(g.names);
+    const base = employerSlug(names[0].name) || identity;
+    let slug = base;
+    for (let n = 2; bySlug.has(slug); n++) slug = `${base}-${n}`;
+    bySlug.set(slug, {
+      slug,
+      name: names[0].name,
+      logoUrl: g.logo,
+      names: names.map((x) => x.name),
+      jobIds: g.ids,
+      cities: ranked(g.cities).slice(0, 8),
+    });
+    for (const id of g.ids) byJob.set(id, slug);
+  }
+  return { bySlug, byJob };
+}
+
+let pages: { at: number; value: ReturnType<typeof buildEmployerPages> } | null =
+  null;
+/* Rebuilt at most every ten minutes per server instance: new vacancies arrive on a cycle of that
+   order, and a failed build is forgotten at once so the next request tries again. */
+export function employerPages() {
+  if (!pages || Date.now() - pages.at > 600000) {
+    const value = buildEmployerPages().catch((error) => {
+      pages = null;
+      throw error;
+    });
+    pages = { at: Date.now(), value };
+  }
+  return pages.value;
+}
+
+/* For a page that only links to an employer: never waits for a cold directory. The first caller
+   starts the build and renders without the link; later ones get it. */
+export async function employerPagesIfReady() {
+  const fresh = pages && Date.now() - pages.at <= 600000 ? pages.value : null;
+  if (!fresh) {
+    employerPages().catch(() => {});
+    return null;
+  }
+  const settled = await Promise.race([
+    fresh.then((v) => v).catch(() => null),
+    new Promise<undefined>((r) => setTimeout(r, 0)),
+  ]);
+  return settled || null;
 }

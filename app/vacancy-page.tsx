@@ -170,11 +170,14 @@ export default function VacancyPage({
   preview,
   returnTo,
   salaryContext = null,
+  companyPath = null,
 }: {
   job: PublicJob;
   preview: boolean;
   returnTo: string;
   salaryContext?: SalaryContext | null;
+  /** The employer's own page, when it has one. */
+  companyPath?: string | null;
 }) {
   const personal = usePersonalSpace();
   const activity = useVacancyActivity();
@@ -358,7 +361,15 @@ export default function VacancyPage({
               <CompanyLogo large company={job.company} url={job.logoUrl} />
               <div>
                 <span>დამსაქმებელი</span>
-                <strong>{job.company}</strong>
+                <strong>
+                  {companyPath ? (
+                    <Link href={companyPath} prefetch={false}>
+                      {job.company}
+                    </Link>
+                  ) : (
+                    job.company
+                  )}
+                </strong>
               </div>
             </div>
             {job.category !== 'სხვა' && (

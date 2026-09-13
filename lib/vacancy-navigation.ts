@@ -25,7 +25,28 @@ export function searchReturnPath(
   if (preview) params.set('preview', '1');
   return '/' + (params.size ? '?' + params : '');
 }
+/* An employer's page is the other place a vacancy is opened from. Only its own shape is accepted —
+   one slug segment and a page number — so the value can never lead off the site. */
+function companyReturnPath(value: string) {
+  try {
+    const url = new URL(value, 'https://vacancy.local');
+    const slug = /^\/companies\/([^/]{1,240})$/.exec(url.pathname)?.[1];
+    if (
+      url.origin !== 'https://vacancy.local' ||
+      !slug ||
+      !value.startsWith('/companies/')
+    )
+      return null;
+    const page = Math.floor(Number(url.searchParams.get('page')));
+    return `/companies/${slug}${page > 1 && page <= 10000 ? `?page=${page}` : ''}`;
+  } catch {
+    return null;
+  }
+}
 export function safeReturnPath(value?: string) {
+  const company =
+    value && value.length <= 4000 ? companyReturnPath(value) : null;
+  if (company) return company;
   if (
     !value ||
     (value !== '/' && !value.startsWith('/?')) ||
