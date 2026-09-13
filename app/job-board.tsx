@@ -504,6 +504,18 @@ export default function JobBoard() {
               setAppendError('');
               setTotal(d.total);
               setPages(d.pages);
+              if (Array.isArray(d.available))
+                setSaved((current) => {
+                  const asked = savedFilter.split(',');
+                  const kept = current.filter(
+                    (id) => !asked.includes(id) || d.available.includes(id),
+                  );
+                  if (kept.length === current.length) return current;
+                  try {
+                    localStorage.setItem('ertad-saved', JSON.stringify(kept));
+                  } catch {}
+                  return kept;
+                });
               /* A shared or remembered link can name a page the list no longer has, once vacancies
                  have expired. Asking for page 500 of 441 answered "no vacancies found" over 8,806
                  of them; the board moves to the last page that exists instead. */

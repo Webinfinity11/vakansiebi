@@ -175,10 +175,24 @@ export async function publicJobs(params: URLSearchParams, preview = false) {
     })),
     preview,
     search,
+    ...(params.has('ids') && !preview
+      ? { available: await visibleIds(params.get('ids') || '') }
+      : {}),
     total: count,
     page,
     pages: Math.ceil(count / limit),
   };
+}
+/* Which saved ids are still on the public list, whatever else the reader filtered by. A saved
+   vacancy that has expired or been deleted never comes back, so the board drops it; otherwise the
+   saved count keeps promising vacancies the saved list cannot show. */
+async function visibleIds(ids: string) {
+  const plan = searchPlan(new URLSearchParams({ ids }), false);
+  const { rows } = await db().query(
+    `${plan.cte} SELECT j.id::text AS id FROM searchable j WHERE ${plan.where}`,
+    plan.args,
+  );
+  return rows.map((r: { id: string }) => r.id);
 }
 export async function adminJobs(
   status: string,
