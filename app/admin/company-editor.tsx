@@ -1,6 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { CompanyLogo } from '../company-logo';
+import { safeExternalUrl } from '../../lib/vacancy-media';
+
+// The server rejects the same shapes (companySchema in lib/server/companies.ts); catching them
+// here saves a round trip for the common mistake of a bare domain or an http:// link.
+const urlProblem = (value: string) => {
+  if (!value.trim()) return '';
+  if (!value.trim().startsWith('https://'))
+    return 'ბმული https://-ით უნდა იწყებოდეს';
+  return safeExternalUrl(value) ? '' : 'ეს ბმული არ გამოდგება';
+};
 type Profile = {
   name: string;
   logoUrl: string;
@@ -64,64 +74,82 @@ export function CompanyEditor({
         აქ შენახული ლოგო და ინფორმაცია ამავე კომპანიის ყველა ვაკანსიაზე
         გამოჩნდება, მათ შორის უკვე გამოქვეყნებულზე.
       </p>
-      {profile && (
-        <>
-          <div className="editor-logo-row">
-            <CompanyLogo company={name} url={profile.logoUrl || sourceLogo} />
-            <strong>{name}</strong>
-          </div>
-          <div className="edit-form">
-            <label className="full-width">
-              ლოგოს ბმული
-              <input
-                value={profile.logoUrl}
-                onChange={(e) => {
-                  setSaved(false);
-                  setProfile({ ...profile, logoUrl: e.target.value });
-                }}
-                placeholder="https://კომპანიის-საიტი/logo.png"
-              />
-            </label>
-            {sourceLogo && (
+      {profile &&
+        (() => {
+          const logoProblem = urlProblem(profile.logoUrl);
+          const websiteProblem = urlProblem(profile.website);
+          return (
+            <>
+              <div className="editor-logo-row">
+                <CompanyLogo
+                  company={name}
+                  url={profile.logoUrl || sourceLogo}
+                />
+                <strong>{name}</strong>
+              </div>
+              <div className="edit-form">
+                <label className="full-width">
+                  ლოგოს ბმული
+                  <input
+                    value={profile.logoUrl}
+                    aria-invalid={Boolean(logoProblem)}
+                    onChange={(e) => {
+                      setSaved(false);
+                      setProfile({ ...profile, logoUrl: e.target.value });
+                    }}
+                    placeholder="https://კომპანიის-საიტი/logo.png"
+                  />
+                  {logoProblem && (
+                    <span className="field-problem">{logoProblem}</span>
+                  )}
+                </label>
+                {sourceLogo && (
+                  <button
+                    className="secondary-button full-width"
+                    onClick={() =>
+                      setProfile({ ...profile, logoUrl: sourceLogo })
+                    }
+                  >
+                    ამ ვაკანსიის ლოგოს გამოყენება
+                  </button>
+                )}
+                <label className="full-width">
+                  ოფიციალური ვებსაიტი
+                  <input
+                    value={profile.website}
+                    aria-invalid={Boolean(websiteProblem)}
+                    onChange={(e) => {
+                      setSaved(false);
+                      setProfile({ ...profile, website: e.target.value });
+                    }}
+                    placeholder="https://…"
+                  />
+                  {websiteProblem && (
+                    <span className="field-problem">{websiteProblem}</span>
+                  )}
+                </label>
+                <label className="full-width">
+                  კომპანიის შესახებ
+                  <textarea
+                    rows={3}
+                    value={profile.description}
+                    onChange={(e) => {
+                      setSaved(false);
+                      setProfile({ ...profile, description: e.target.value });
+                    }}
+                  />
+                </label>
+              </div>
               <button
-                className="secondary-button full-width"
-                onClick={() => setProfile({ ...profile, logoUrl: sourceLogo })}
+                className="secondary-button"
+                disabled={busy || Boolean(logoProblem || websiteProblem)}
+                onClick={() => void save()}
               >
-                ამ ვაკანსიის ლოგოს გამოყენება
+                {busy ? 'ინახება…' : 'კომპანიის პროფილის შენახვა'}
               </button>
-            )}
-            <label className="full-width">
-              ოფიციალური ვებსაიტი
-              <input
-                value={profile.website}
-                onChange={(e) => {
-                  setSaved(false);
-                  setProfile({ ...profile, website: e.target.value });
-                }}
-                placeholder="https://…"
-              />
-            </label>
-            <label className="full-width">
-              კომპანიის შესახებ
-              <textarea
-                rows={3}
-                value={profile.description}
-                onChange={(e) => {
-                  setSaved(false);
-                  setProfile({ ...profile, description: e.target.value });
-                }}
-              />
-            </label>
-          </div>
-          <button
-            className="secondary-button"
-            disabled={busy}
-            onClick={() => void save()}
-          >
-            {busy ? 'ინახება…' : 'კომპანიის პროფილის შენახვა'}
-          </button>
-        </>
-      )}
+            </>
+          );
+        })()}
       {!profile && !error && <p className="admin-helper">იტვირთება…</p>}
       {error && (
         <p className="notice" role="alert">

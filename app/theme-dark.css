@@ -308,6 +308,12 @@
   background: #131b2c;
   color: #acc0d7;
 }
+:root[data-theme='dark'] .edit-form input[aria-invalid='true'] {
+  border-color: #d49491;
+}
+:root[data-theme='dark'] .field-problem {
+  color: #d49491;
+}
 :root[data-theme='dark'] .raw-details summary {
   color: #93add2;
 }

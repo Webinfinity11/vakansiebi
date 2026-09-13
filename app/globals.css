@@ -1291,6 +1291,13 @@ footer > span:last-child {
 .edit-form .choice {
   width: 100%;
 }
+.edit-form input[aria-invalid='true'] {
+  border-color: #ad4440;
+}
+.field-problem {
+  color: #ad4440;
+  font-size: 12px;
+}
 .full-width {
   grid-column: 1/-1;
 }
