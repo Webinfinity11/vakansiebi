@@ -64,17 +64,26 @@
 :root[data-theme='dark'] .searchbar > svg {
   color: #909bac;
 }
+:root[data-theme='dark'] .searchbar input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
 :root[data-theme='dark'] .searchbar input::placeholder {
   color: #969ca6;
 }
 :root[data-theme='dark'] .primary {
   color: #131b2c;
+  border: 0;
 }
 :root[data-theme='dark'] .primary:hover {
   background: #285bdf;
 }
 :root[data-theme='dark'] .search-city {
   color: #919cab;
+}
+:root[data-theme='dark'] .search-city .choice {
+  border: 0 !important;
 }
 :root[data-theme='dark'] .choice {
   background: #131b2c !important;
@@ -181,6 +190,16 @@
   background: #45371c;
   color: #e1cba2;
 }
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .search-city {
+    border: 0;
+  }
+}
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .filters {
+    border: 0;
+  }
+}
 :root[data-theme='dark'] .login-box {
   background: #131b2c;
 }
@@ -223,6 +242,11 @@
 :root[data-theme='dark'] .admin-search {
   background: #131b2c;
   color: #909cad;
+}
+:root[data-theme='dark'] .admin-search input {
+  border: 0;
+  outline: 0;
+  background: none;
 }
 :root[data-theme='dark'] .icon-button {
   color: #8899b4;
@@ -497,6 +521,9 @@
   background: #131b2c;
   border-color: #5a6272;
 }
+:root[data-theme='dark'] .board-shell .filters {
+  border-right: 0;
+}
 :root[data-theme='dark'] .board-shell .filter-head h2 {
   color: #c2c5cb;
 }
@@ -554,6 +581,7 @@
   color: #969ca6;
 }
 :root[data-theme='dark'] .board-shell .source-pill {
+  border: 0;
   background: #21252e;
   color: #969ca6;
 }
@@ -584,6 +612,7 @@
 }
 :root[data-theme='dark'] .board-shell .job-side .save-button,
 :root[data-theme='dark'] .save-button {
+  background: none;
   color: #969ca6;
 }
 :root[data-theme='dark'] .save-button:hover {
@@ -840,6 +869,11 @@
 :root[data-theme='dark'] .detail-source p {
   color: #969ca6;
 }
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .board-shell .searchbar > .search-city {
+    border: 0;
+  }
+}
 :root[data-theme='dark'] .metadata-editor label {
   color: #a4a9b2;
 }
@@ -970,6 +1004,7 @@
   color: #99a3b5;
 }
 :root[data-theme='dark'] .catalogue-summary {
+  border-left: 0;
   background: #1a1d23b8;
   border: 1px solid #242b3d;
 }
@@ -1048,6 +1083,7 @@
 :root[data-theme='dark'] .board-shell .source-note {
   background: #22262f;
   color: #aaaeb6;
+  border: 0;
 }
 :root[data-theme='dark'] .board-shell .source-note p {
   color: #acb0b8;
@@ -1093,6 +1129,7 @@
   color: #9aa2af;
 }
 :root[data-theme='dark'] .board-shell .source-pill {
+  background: transparent;
   color: #939ba9;
 }
 :root[data-theme='dark'] .board-shell .job-title {
@@ -1169,6 +1206,7 @@
 }
 @media (max-width: 760px) {
   :root[data-theme='dark'] .board-shell .search-city {
+    border: 0;
     border-top: 1px solid #2e3440;
   }
 }
@@ -1195,6 +1233,7 @@
   accent-color: #586274;
 }
 :root[data-theme='dark'] .advanced-filters fieldset {
+  border: 0;
   border-top: 1px solid #2e343f;
 }
 :root[data-theme='dark'] .salary-range label {
@@ -1265,6 +1304,14 @@
 :root[data-theme='dark'] .board-shell .job-card:focus-within {
   border-color: #6f93ff;
 }
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .board-shell .searchbar > .search-city {
+    border: 0;
+  }
+}
+:root[data-theme='dark'] .board-shell .job-title:focus-visible {
+  outline: none;
+}
 :root[data-theme='dark'] .board-shell .job-title:focus-visible::after {
   outline: 3px solid #6f93ff;
 }
@@ -1277,6 +1324,9 @@
 }
 :root[data-theme='dark'] .detail-sheet > [data-slot='sheet-close'] {
   background: #282e39;
+}
+:root[data-theme='dark'] .detail-sheet .detail-title:focus {
+  outline: none;
 }
 :root[data-theme='dark'] .detail-sheet .schedule-fact {
   border-top: 1px solid #283244;
@@ -1294,6 +1344,7 @@
 }
 :root[data-theme='dark'] .detail-sheet .application-email {
   background: #262d3b;
+  border: 0;
 }
 :root[data-theme='dark'] .detail-sheet .quick-apply-note {
   color: #949daa;
@@ -1370,6 +1421,10 @@
 :root[data-theme='dark'] .vacancy-page .quick-apply h3 {
   color: #acbcd8;
 }
+:root[data-theme='dark'] .vacancy-page .application-email {
+  border: 0;
+  background: transparent;
+}
 :root[data-theme='dark'] .vacancy-page .quick-apply-note {
   color: #969ca6;
 }
@@ -1379,6 +1434,9 @@
 :root[data-theme='dark'] .vacancy-related-links {
   border-top: 1px solid #27303f;
   color: #9aa3b1;
+}
+:root[data-theme='dark'] .vacancy-related-links .application-links {
+  border: 0;
 }
 :root[data-theme='dark'] .vacancy-related-links .application-links .vacancy-apply-link {
   background: #6f93ff;
@@ -1538,18 +1596,32 @@
 :root[data-theme='dark'] .vacancy-description a {
   color: #abbcd8;
 }
+:root[data-theme='dark'] .board-shell .job-card {
+  box-shadow: none;
+}
 :root[data-theme='dark'] .board-shell .salary {
   background: #1e3728;
   color: #a7ddc7;
 }
+:root[data-theme='dark'] .board-shell .job-side .card-open {
+  background: transparent;
+}
 :root[data-theme='dark'] .board-shell .job-card:hover .card-open {
+  background: transparent;
   color: #6f93ff;
 }
 :root[data-theme='dark'] .catalogue-breakdown {
   color: #919bab;
 }
 :root[data-theme='dark'] .vacancy-page .detail-facts {
+  border: 0;
   border-top: 1px solid #262e38;
+  background: transparent;
+}
+:root[data-theme='dark'] .vacancy-page .detail-facts .salary-fact,
+:root[data-theme='dark'] .vacancy-page .detail-facts .schedule-fact {
+  border: 0;
+  background: transparent;
 }
 :root[data-theme='dark'] .vacancy-page .detail-facts .salary-fact dd {
   color: #a7ddc7;
@@ -1559,6 +1631,7 @@
 }
 :root[data-theme='dark'] .vacancy-page .quick-apply {
   border: 1px solid #273040;
+  box-shadow: none;
 }
 :root[data-theme='dark'] .vacancy-page .quick-apply h3 {
   color: #c1cddd;
@@ -1621,7 +1694,9 @@
   --status-border: #4f5d6f;
 }
 :root[data-theme='dark'] .vacancy-page .application-control {
+  border: 0;
   border-top: 1px solid #272f3a;
+  background: transparent;
 }
 :root[data-theme='dark'] .vacancy-page .application-control p {
   color: #929baa;
@@ -1640,6 +1715,9 @@
   color: #7f97e6;
   background: #1c2e45;
   border: 1px solid #afc7f3;
+}
+:root[data-theme='dark'] .board-shell .discovery-hero {
+  border: 0;
 }
 :root[data-theme='dark'] .search-panel {
   border: 1px solid #272f3a;
@@ -1660,10 +1738,27 @@
   color: #6f93ff;
 }
 :root[data-theme='dark'] .board-shell .discovery-hero .searchbar {
+  border: 0;
+  box-shadow: none;
   background: #131b2c;
+}
+:root[data-theme='dark'] .board-shell .discovery-hero .searchbar:focus-within {
+  box-shadow: none;
 }
 :root[data-theme='dark'] .search-panel:focus-within {
   outline: 2px solid #a8c5fa;
+}
+:root[data-theme='dark'] .board-shell .discovery-hero .searchbar > svg {
+  color: #8a9bb2;
+}
+:root[data-theme='dark'] .board-shell .discovery-hero .searchbar input {
+  color: #afbfd4;
+}
+:root[data-theme='dark'] .board-shell .discovery-hero .searchbar input::placeholder {
+  color: #8f9cad;
+}
+:root[data-theme='dark'] .board-shell .discovery-hero .searchbar .primary {
+  background: #6f93ff;
 }
 :root[data-theme='dark'] .discovery-shortcut {
   background: #262f3b;
@@ -1735,6 +1830,12 @@
 :root[data-theme='dark'] .discovery-shortcut[aria-pressed='true'] {
     border-color: #b3c9ef;
     background: #1f2b42;
+  }
+}
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .category-gallery {
+    border: 0;
+    background: transparent;
   }
 }
 @media (max-width: 760px) {
@@ -1812,6 +1913,7 @@
 :root[data-theme='dark'] .board-shell .recent-card {
   border: 1px solid #2f3541;
   background: #131b2c;
+  color: inherit;
 }
 :root[data-theme='dark'] .board-shell .recent-card:hover {
   border-color: #b5c6ed;
@@ -1848,12 +1950,14 @@
 }
 :root[data-theme='dark'] .search-suggest [role='option'] {
   color: #aebcd5;
+  background: transparent;
 }
 :root[data-theme='dark'] .search-suggest [role='option']:hover,
 :root[data-theme='dark'] .search-suggest [role='option'][aria-selected='true'] {
   background: #1c2745;
 }
 :root[data-theme='dark'] .search-suggest mark {
+  background: transparent;
   color: #6f93ff;
 }
 :root[data-theme='dark'] .search-suggest .suggest-meta {

@@ -274,7 +274,18 @@ function build() {
     const chunks: string[] = [];
     for (const block of blocks) {
       if (keepAsIs.some((skip) => block.selector.includes(skip))) continue;
-      const masthead = mastheadOwn.some((own) => block.selector.includes(own));
+      /* The hero element itself only when the selector ends on it: `.discovery-hero .searchbar`
+         contains the name too, and matching that kept the search button's light blue while its
+         white text was mapped to navy (2.9:1). */
+      const masthead = block.selector
+        .split(',')
+        .every((part) =>
+          mastheadOwn.some((own) =>
+            own === '.discovery-hero'
+              ? /\.discovery-hero\s*$/.test(part)
+              : part.includes(own),
+          ),
+        );
       const kept: string[] = [];
       for (const declaration of block.declarations) {
         const colon = declaration.indexOf(':');
@@ -282,6 +293,19 @@ function build() {
         const property = declaration.slice(0, colon).trim().toLowerCase();
         const value = declaration.slice(colon + 1);
         if (!colourProperties.test(property)) continue;
+        /* A later light rule that takes a colour away — `border: 0` on the hero's search field —
+           has no colour to map, but it has to be restated all the same. Left out, the earlier
+           coloured rule it overrode comes back in the dark file with the theme's extra
+           specificity, and the dark page draws a border the light one removed. Restating a reset
+           only repeats what the light page already applies, so it holds in the masthead too. */
+        if (
+          /^\s*(0|none|transparent|inherit|currentcolor|unset|initial)\s*(!important)?\s*$/i.test(
+            value,
+          )
+        ) {
+          kept.push(`  ${property}:${value};`);
+          continue;
+        }
         // Inside the masthead only a surface that is white in the light theme has to move.
         if (masthead && !/^(background|background-color)$/.test(property))
           continue;
