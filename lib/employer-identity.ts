@@ -47,11 +47,17 @@ const latin: Record<string, string> = {
   z: 'ზ',
 };
 /* Georgian adds ი to a borrowed name that ends in a consonant — გრუპ and გრუპი, ვენდის and
-   ვენდისი — so that closing ი after a consonant is not part of the name. */
+   ვენდისი — so that closing ი after a consonant is not part of the name. Latin letters cannot tell
+   Georgian's paired consonants apart (t is თ or ტ, p is ფ or პ, k is ქ or კ, ts is ც or წ, ch is ჩ
+   or ჭ), so each pair counts as one letter: "Bene Comfort" and "ბენე კომფორტი" meet. */
 export function scriptKey(key: string) {
   return key
     .replace(/sh|ch|ts|kh|gh|zh|[a-z]/g, (m) => latin[m])
-    .replace(/კ/g, 'ქ')
+    .replace(/[კყ]/g, 'ქ')
+    .replace(/ტ/g, 'თ')
+    .replace(/ფ/g, 'პ')
+    .replace(/წ/g, 'ც')
+    .replace(/ჭ/g, 'ჩ')
     .replace(/(?<=[^აეიოუ])ი$/u, '');
 }
 

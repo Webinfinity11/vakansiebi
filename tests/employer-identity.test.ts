@@ -15,6 +15,9 @@ void test('spellings of one employer share an identity', () => {
   same('ჯი თი გრუპი', 'ჯი-თი გრუპ');
   same('ნიუ ჰოსპიტალსი', 'შპს ნიუ ჰოსპიტალს');
   same('Panex', 'პანექსი');
+  same('Bene Comfort', 'ბენე კომფორტი');
+  same('Patio', 'ფატიო');
+  same('Tsitsinatela', 'წიწინატელა');
   same('Brunch by Gastronome', 'Brunch By Gastronome');
 });
 
