@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowUpRight, ExternalLink } from 'lucide-react';
 import { Brand } from '../../brand';
 import { ThemeToggle } from '../../theme-toggle';
 import { CompanyLogo } from '../../company-logo';
+import { formatDate } from '../../vacancy-text';
 import { db } from '@/lib/server/db';
 import { publicJobs } from '@/lib/server/jobs';
 import { employerPages } from '@/lib/server/employers';
@@ -156,7 +157,10 @@ export default async function CompanyPage(props: Props) {
                   </span>
                 )}
                 <p>
-                  {[job.city, job.deadline && `ვადა ${job.deadline}`]
+                  {[
+                    job.city,
+                    job.deadline && `ვადა: ${formatDate(job.deadline)}`,
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                 </p>

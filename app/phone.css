@@ -701,6 +701,15 @@
   .board-shell .hidden-vacancies summary {
     font-size: 13px;
   }
+  /* The masthead's back link already goes where the breadcrumb does. */
+  .vacancy-page .vacancy-breadcrumb {
+    display: none;
+  }
+  .contact-phone small,
+  .vacancy-page .contact-call,
+  .similar-open {
+    font-size: 12px;
+  }
 }
 
 /* The narrowest phones still in use: two tiles across leaves 138px each, which the longest

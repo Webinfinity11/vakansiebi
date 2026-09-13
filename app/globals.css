@@ -2736,7 +2736,8 @@ button:disabled {
     width: 27px;
     height: 27px;
   }
-  .board-shell nav {
+  /* Only the masthead menu: a bare `nav` also hid page navigation such as an employer's pages. */
+  .board-shell .topbar nav {
     display: none;
   }
   .saved-nav {

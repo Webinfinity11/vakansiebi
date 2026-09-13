@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './board.css';
 import './phone.css';
+/* Here and not only in the board: the theme switch it styles is in every page's masthead. */
+import './board-features.css';
 /* Last, so its `:root[data-theme='dark']` rules restate the light ones above. */
 import './theme-dark.css';
 import { themeScript } from '@/lib/theme';

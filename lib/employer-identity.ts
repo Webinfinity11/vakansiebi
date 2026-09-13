@@ -84,6 +84,17 @@ export function personalName(
   );
 }
 
+/* Posters on classified boards type their e-mail, phone number or a single letter into the employer
+   field. None of these names an employer, and an address or number in a public list is personal. */
+export function contactAsCompany(name: string) {
+  const value = name.normalize('NFKC').trim();
+  return (
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ||
+    (/^[\d\s+()-]+$/.test(value) && value.replace(/\D/g, '').length >= 5) ||
+    value.replace(/[^\p{L}\p{N}]/gu, '').length === 1
+  );
+}
+
 export function employerIdentity(
   name: string,
   sources: readonly string[],

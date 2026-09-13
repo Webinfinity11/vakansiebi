@@ -10,6 +10,7 @@ import type { Vacancy } from '../types';
 import { vacancySchema } from '../vacancy-schema';
 export { vacancySchema } from '../vacancy-schema';
 import { companyKey } from '../company-key';
+import { contactAsCompany } from '../employer-identity';
 import { sourceHealth } from '../job-intelligence';
 import {
   searchPlan,
@@ -142,8 +143,9 @@ export async function publicJobs(
         : {}),
       // A classified board carries no employer; name the listing honestly instead of
       // leaving the employer line blank or inventing a company.
-      ...(!String(r.published.company || '').trim() &&
-      employerlessSources.includes(String(r.published.source || ''))
+      ...((!String(r.published.company || '').trim() &&
+        employerlessSources.includes(String(r.published.source || ''))) ||
+      contactAsCompany(String(r.published.company || ''))
         ? { company: privateListingLabel }
         : {}),
       id: r.id,

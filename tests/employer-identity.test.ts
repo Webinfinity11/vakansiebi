@@ -1,6 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { employerIdentity as id } from '../lib/employer-identity';
+import {
+  contactAsCompany,
+  employerIdentity as id,
+} from '../lib/employer-identity';
+
+void test('a poster contact typed as the employer is not a company name', () => {
+  for (const v of [
+    'nanade2727@gmail.com',
+    '599115397',
+    '+995 599 11 53 97',
+    'S',
+  ])
+    assert.equal(contactAsCompany(v), true, v);
+  for (const v of ['3M', 'GPI', 'ნინო', 'Room 77', '1+1', 'კერძო განცხადება'])
+    assert.equal(contactAsCompany(v), false, v);
+});
 
 void test('spellings of one employer share an identity', () => {
   const same = (a: string, b: string) =>
