@@ -103,7 +103,9 @@ export function employerIdentity(
    ("ჯიბე ქეშ & ქერი" and "Jibe Cash & Carry" as ჯბქშქრ), or one letter apart in a longer name.
    These are only offered to a person; nothing here joins two employers by itself. */
 export function skeleton(identity: string) {
-  return identity.replace(/[აეიოუ]/g, '').replace(/(.)\1+/gu, '$1');
+  // A doubled letter is folded before vowels go, so "Litten" meets "ლითენ" while პეპსიქო's two
+  // პ, kept apart by a vowel, do not collapse into ფსიქეა's one.
+  return identity.replace(/(.)\1+/gu, '$1').replace(/[აეიოუ]/g, '');
 }
 function oneEditApart(a: string, b: string) {
   if (Math.abs(a.length - b.length) > 1) return false;

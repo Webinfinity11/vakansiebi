@@ -60,6 +60,20 @@ void test('near spellings are offered as candidates, never joined', async () => 
   assert.ok(pairs.some((p) => p.includes(jibeGe) && p.includes(jibeEn)));
   assert.ok(pairs.every((p) => !p.includes(id('ლიბერთი ბანკი', ['jobs'])!)));
   assert.notEqual(jibeGe, jibeEn);
+  const pepsi = candidatePairs([
+    id('PepsiCo', ['jobs'])!,
+    id('ფსიქეა', ['jobs'])!,
+  ]);
+  assert.equal(
+    pepsi.length,
+    0,
+    'letters a vowel kept apart are not one doubled letter',
+  );
+  assert.equal(
+    candidatePairs([id('Litten Tree', ['jobs'])!, id('ლითენ თრი', ['jobs'])!])
+      .length,
+    1,
+  );
   const root = mergedIdentities([
     ['ბ', 'გ'],
     ['ა', 'გ'],
