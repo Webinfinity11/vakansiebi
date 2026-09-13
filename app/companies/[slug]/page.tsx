@@ -10,7 +10,9 @@ import { formatDate } from '../../vacancy-text';
 import { db } from '@/lib/server/db';
 import { publicJobs } from '@/lib/server/jobs';
 import { employerPages } from '@/lib/server/employers';
+import { resolveCompanyLogos } from '@/lib/server/company-logos';
 import { companyKey } from '@/lib/company-key';
+import { logoCompanyKey } from '@/lib/company-logo-identity';
 import { compactSalary } from '@/lib/vacancy-presentation';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import { safeExternalUrl } from '@/lib/vacancy-media';
@@ -39,18 +41,34 @@ const load = cache(async (rawSlug: string, rawPage: string) => {
     ),
     db()
       .query(
-        `SELECT website, description FROM company_profiles
-          WHERE company_key=ANY($1) AND (website<>'' OR description<>'') ORDER BY updated_at DESC LIMIT 1`,
+        `SELECT logo_url, website, description FROM company_profiles
+          WHERE company_key=ANY($1) AND (website<>'' OR description<>'' OR logo_url<>'') ORDER BY updated_at DESC LIMIT 1`,
         [employer.names.map(companyKey)],
       )
       .then(
         (r) =>
-          r.rows[0] as { website: string; description: string } | undefined,
+          r.rows[0] as
+            | { logo_url: string; website: string; description: string }
+            | undefined,
       ),
   ]);
   // Vacancies can end between directory rebuilds; an employer with nothing left has no page.
   if (!result.total || page > result.pages) notFound();
-  return { employer, result, page, profile };
+  // Same priority as a vacancy card: an admin's own logo first, then one a source embedded on a
+  // current vacancy, then one shared from another spelling of this employer. Only the last of
+  // these needs its own query, and only when the first two found nothing.
+  let logoUrl = profile?.logo_url || employer.logoUrl;
+  if (!logoUrl) {
+    const shared = await resolveCompanyLogos(employer.names);
+    for (const name of employer.names) {
+      const match = shared.get(logoCompanyKey(name));
+      if (match) {
+        logoUrl = match.logoUrl;
+        break;
+      }
+    }
+  }
+  return { employer, result, page, profile, logoUrl: logoUrl || '' };
 });
 
 async function read(props: Props) {
@@ -91,7 +109,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 
 export default async function CompanyPage(props: Props) {
-  const { employer, result, page, profile } = await read(props);
+  const { employer, result, page, profile, logoUrl } = await read(props);
   const path = `/companies/${encodeURIComponent(employer.slug)}`;
   const here = page > 1 ? `${path}?page=${page}` : path;
   const website = profile?.website ? safeExternalUrl(profile.website) : '';
@@ -118,7 +136,7 @@ export default async function CompanyPage(props: Props) {
         </nav>
         <section className="company-page-head" aria-labelledby="company-title">
           <div className="detail-company">
-            <CompanyLogo large company={employer.name} url={employer.logoUrl} />
+            <CompanyLogo large company={employer.name} url={logoUrl} />
             <div>
               <span>{result.total} აქტიური ვაკანსია</span>
               <h1 id="company-title">{employer.name}</h1>

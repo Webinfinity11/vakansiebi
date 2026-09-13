@@ -104,7 +104,8 @@ export function employerIdentity(
   if (
     key.length < 2 ||
     genericCompanyKeys.has(key) ||
-    personalName(name, sources, hasLogo)
+    personalName(name, sources, hasLogo) ||
+    contactAsCompany(name)
   )
     return null;
   return scriptKey(key);

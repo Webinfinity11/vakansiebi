@@ -17,6 +17,14 @@ void test('a poster contact typed as the employer is not a company name', () => 
     assert.equal(contactAsCompany(v), false, v);
 });
 
+void test('a contact typed as the employer gets no identity from any source', () => {
+  // ss.ge single words were already left out; an address or number from any other source is too,
+  // so ten of them cannot add up to a public employer page.
+  for (const source of ['hr', 'jobs', 'myjobs'])
+    for (const v of ['recruit.team@gmail.com', '599 11 53 97'])
+      assert.equal(id(v, [source]), null, `${v} from ${source}`);
+});
+
 void test('spellings of one employer share an identity', () => {
   const same = (a: string, b: string) =>
     assert.equal(id(a, ['jobs']), id(b, ['hr']), `${a} = ${b}`);
