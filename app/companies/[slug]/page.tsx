@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { ArrowLeft, ArrowUpRight, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Brand } from '../../brand';
 import { ThemeToggle } from '../../theme-toggle';
 import { CompanyLogo } from '../../company-logo';
@@ -182,9 +182,6 @@ export default async function CompanyPage(props: Props) {
                     .filter(Boolean)
                     .join(' · ')}
                 </p>
-                <span className="similar-open">
-                  ვაკანსიის ნახვა <ArrowUpRight size={15} />
-                </span>
               </Link>
             ))}
           </div>

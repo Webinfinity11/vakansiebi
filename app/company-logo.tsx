@@ -19,7 +19,7 @@ export function CompanyLogo({
   const showLogo = Boolean(src && failed !== src);
   return (
     <span
-      className={`company-avatar ${showLogo && loaded === src ? '' : 'company-placeholder'} ${large ? 'avatar-large' : ''}`}
+      className={`company-avatar ${showLogo && loaded === src ? '' : 'company-placeholder'} ${showLogo ? '' : 'company-none'} ${large ? 'avatar-large' : ''}`}
     >
       {showLogo && (
         <Image
