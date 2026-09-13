@@ -164,8 +164,12 @@
   .board-shell main > .discovery-shortcuts {
     order: 2;
   }
+  /* Held to the screen width. As a column flex item it could size to its content, and twelve
+     "recently viewed" cards made it 1280px wide, so the phone zoomed the whole page out. */
   .board-shell main > .board-page {
     order: 3;
+    width: 100%;
+    min-width: 0;
   }
   .board-shell main > .discovery-categories {
     order: 4;
@@ -203,6 +207,39 @@
   }
   .category-gallery button > span {
     font-size: 12.5px;
+  }
+
+  /* ---------- Recently viewed ----------
+     On a phone the strip scrolled sideways, the one kind of scrolling this layer removes
+     everywhere else. It becomes a short list of the last three, one line each; the vacancies
+     further back are one search away and in the saved list if they mattered. board-features.css loads after this file, so these
+     selectors carry one class more than its own. */
+  .board-shell .recent-strip .recent-track {
+    flex-direction: column;
+    gap: 6px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+  .board-shell .recent-track .recent-card {
+    flex: none;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 10px;
+    padding: 8px 12px;
+  }
+  .board-shell .recent-track .recent-card:nth-child(n + 4) {
+    display: none;
+  }
+  .board-shell .recent-track .recent-card strong {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .board-shell .recent-track .recent-card span {
+    max-width: 120px;
+  }
+  .board-shell .recent-strip .recent-head button {
+    min-height: 44px;
   }
 
   /* ---------- Results head ---------- */
@@ -717,6 +754,10 @@
   }
   .board-shell .hidden-vacancies,
   .board-shell .hidden-vacancies summary {
+    font-size: 13px;
+  }
+  .board-shell .hidden-vacancies .secondary-button {
+    min-height: 44px;
     font-size: 13px;
   }
   /* The masthead's back link already goes where the breadcrumb does. */
