@@ -385,3 +385,27 @@
     display: none;
   }
 }
+.admin-employer-pages {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.admin-employer-pages li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+.admin-employer-pages a {
+  overflow-wrap: anywhere;
+}
+.admin-employer-pages b {
+  color: #71717a;
+  font-weight: 500;
+  flex: none;
+}

@@ -1,6 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
 import type { EmployerCandidate, EmployerName } from '@/lib/server/employers';
+
+type EmployerPageSummary = { slug: string; name: string; count: number };
 
 /* Near spellings the automatic identity cannot prove are one employer. A person answers once;
    a merge then applies to every spelling of both sides, and "separate" stops the question. */
@@ -9,7 +12,9 @@ export function EmployersPanel() {
     rows?: EmployerCandidate[];
     error?: string;
   } | null>(null);
+  const [pages, setPages] = useState<EmployerPageSummary[]>([]);
   const [busy, setBusy] = useState('');
+  const [query, setQuery] = useState('');
   useEffect(() => {
     const controller = new AbortController();
     void fetch('/api/admin/employers', { signal: controller.signal })
@@ -17,6 +22,7 @@ export function EmployersPanel() {
         const body = await r.json();
         if (!r.ok) throw Error(body.error || 'სია ვერ ჩაიტვირთა');
         setState({ rows: body.candidates });
+        setPages(body.pages || []);
       })
       .catch((e) => {
         if (e.name !== 'AbortError')
@@ -61,6 +67,27 @@ export function EmployersPanel() {
           {state.error}
         </p>
       )}
+      {!!pages.length && (
+        <details className="raw-details">
+          <summary>
+            საკუთარი გვერდის მქონე დამსაქმებლები ({pages.length})
+          </summary>
+          <ol className="admin-employer-pages">
+            {pages.map((p) => (
+              <li key={p.slug}>
+                <a
+                  href={`/companies/${encodeURIComponent(p.slug)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {p.name}
+                </a>
+                <b>{p.count}</b>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
       {!state ? (
         <p>იტვირთება…</p>
       ) : !state.rows ? null : !state.rows.length ? (
@@ -68,38 +95,81 @@ export function EmployersPanel() {
           ახლა შესამოწმებელი არაფერი არის.
         </p>
       ) : (
-        <ol className="admin-employer-list">
-          {state.rows.map((row) => {
-            const key = `${row.a}\n${row.b}`;
-            return (
-              <li key={key}>
-                <Names names={row.left} />
-                <span className="admin-employer-vs" aria-hidden="true">
-                  ≈
-                </span>
-                <Names names={row.right} />
-                <span className="admin-employer-actions">
-                  <button
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => void decide(row, 'merge')}
-                  >
-                    ერთი კომპანიაა
-                  </button>
-                  <button
-                    type="button"
-                    disabled={Boolean(busy)}
-                    onClick={() => void decide(row, 'separate')}
-                  >
-                    სხვადასხვაა
-                  </button>
-                </span>
-              </li>
-            );
-          })}
-        </ol>
+        <>
+          <div className="admin-search">
+            <Search size={18} />
+            <input
+              aria-label="დამსაქმებლის სახელით გაფილტვრა"
+              placeholder="სახელით გაფილტვრა"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <FilteredEmployerList
+            rows={state.rows}
+            query={query}
+            busy={busy}
+            decide={decide}
+          />
+        </>
       )}
     </section>
+  );
+}
+
+function FilteredEmployerList({
+  rows,
+  query,
+  busy,
+  decide,
+}: {
+  rows: EmployerCandidate[];
+  query: string;
+  busy: string;
+  decide: (
+    row: EmployerCandidate,
+    decision: 'merge' | 'separate',
+  ) => Promise<void>;
+}) {
+  const needle = query.trim().toLowerCase();
+  const matches = (names: EmployerName[]) =>
+    names.some((n) => n.name.toLowerCase().includes(needle));
+  const visible = needle
+    ? rows.filter((row) => matches(row.left) || matches(row.right))
+    : rows;
+  return !visible.length ? (
+    <p className="admin-analytics-empty">ვერაფერი მოიძებნა.</p>
+  ) : (
+    <ol className="admin-employer-list">
+      {visible.map((row) => {
+        const key = `${row.a}\n${row.b}`;
+        return (
+          <li key={key}>
+            <Names names={row.left} />
+            <span className="admin-employer-vs" aria-hidden="true">
+              ≈
+            </span>
+            <Names names={row.right} />
+            <span className="admin-employer-actions">
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => void decide(row, 'merge')}
+              >
+                ერთი კომპანიაა
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => void decide(row, 'separate')}
+              >
+                სხვადასხვაა
+              </button>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
