@@ -106,8 +106,9 @@ DATABASE_URL=postgresql://USER@localhost:5432/ertad_test RUN_DB_TESTS=1 npm test
 
 ## მიმდინარე ონლაინ გარემო
 
-საიტი: https://vakansiebi-gules.vercel.app — Vercel-ის `kapana22s-projects/vakansiebi` პროექტი.
-ადმინი: https://vakansiebi-gules.vercel.app/admin.
+საიტი: https://jobx.ge — Vercel-ის `infinity-solutions/vakansiebi` პროექტი, ანგარიში `webinfinity11-5453`.
+ადმინი: https://jobx.ge/admin.
+ძველი სატესტო მისამართი `vakansiebi-gules.vercel.app` ცალკე `kapana22s-projects/vakansiebi` პროექტს ეკუთვნის; იქ განთავსება `jobx.ge`-ს არ აახლებს.
 
 PostgreSQL განთავსებულია Neon-ის პროექტში `plain-sky-34116949`, `production` ბრენჩზე. არსებული ლოკალური მონაცემები გადატანილია; ამ სამუშაო კომპიუტერის საიტი და პარსერი იმავე ბაზას იყენებს. ამიტომ ლოკალურ ადმინში გამოქვეყნებაც ონლაინ საიტზე აისახება. დამოუკიდებელი ექსპერიმენტებისთვის გამოიყენე ცალკე სატესტო ბაზა.
 
@@ -121,7 +122,7 @@ The two government hosts are not in the matrix: `vacancy.hr.gov.ge` and `worknet
 
 GitHub schedules may be delayed. In public repositories, schedules disable after 60 days without repository activity and must be re-enabled. Standard GitHub-hosted runners are free for this public repository; Neon usage is separate.
 
-ამ Vercel პროექტში GitHub-ის ავტომატური განთავსების კავშირი ჯერ არ არის გამართული. განახლება CLI-ით ხდება: `vercel deploy --prod --scope kapana22s-projects`.
+`Webinfinity11/vakansiebi` რეპოზიტორიის `main` ბრენჩზე ატვირთვა ავტომატურად აახლებს `infinity-solutions/vakansiebi`-ის Production გარემოს და `jobx.ge`-ს. განთავსების შემდეგ გადაამოწმე Vercel-ის `Ready` სტატუსი და `https://jobx.ge/api/health`-ის `{"status":"ok"}` პასუხი. `APP_URL` უნდა იყოს `https://jobx.ge`; გარემოს პარამეტრების ცვლილება ახალი განთავსების შემდეგ მოქმედებს. CLI-ის გამოყენებამდე გადაამოწმე ანგარიში და პროექტი — ლოკალური `.vercel/project.json` შეიძლება ძველ სატესტო პროექტზე იყოს მიბმული.
 
 ## Railway-ისთვის მომზადებული სტრუქტურა
 
