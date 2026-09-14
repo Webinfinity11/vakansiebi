@@ -15,6 +15,8 @@ jobs:
     timeout-minutes: 35
     strategy:
       fail-fast: false
+      # Limit simultaneous database pools while preserving timely source checks.
+      max-parallel: 2
       # The two government hosts time out from every GitHub-hosted runner: vacancy.hr.gov.ge
       # (verified 2026-09-09) and worknet.moh.gov.ge (verified 2026-09-12, run 34701274010).
       # They are collected from a reachable network instead; see README. Keeping them here
@@ -34,7 +36,7 @@ jobs:
         run: npm run worker -- --source=${{ matrix.source }} --due --once
         env:
           DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
-          # Bound transfer and historical discovery on the free database plan.
+          # Bound transfer and historical discovery on the database plan.
           # The first listing page still gets priority; robots.txt spacing is unchanged.
           CRAWL_BATCH_SIZE: '200'
           SCRAPE_BUDGET_MINUTES: '8'
