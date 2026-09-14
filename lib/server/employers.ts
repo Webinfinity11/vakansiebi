@@ -115,17 +115,20 @@ export type EmployerPage = {
   cities: { name: string; count: number }[];
 };
 
-async function buildEmployerPages() {
-  const [{ rows }, decisions] = await Promise.all([
-    db().query(
-      `SELECT j.id::text AS id, btrim(j.published->>'company') AS name,
+// Aggregate repeated employer attributes in PostgreSQL; only job IDs repeat on the wire.
+export const employerRowsSql = `SELECT name,logo,city,sources,array_agg(id ORDER BY id) AS ids
+         FROM (SELECT j.id::text AS id, btrim(j.published->>'company') AS name,
               COALESCE(j.published->>'logoUrl','') AS logo, btrim(COALESCE(j.published->>'city','')) AS city,
               array_agg(DISTINCT si.source_id) AS sources
          FROM jobs j JOIN source_items si ON si.job_id=j.id JOIN sources s ON s.id=si.source_id AND NOT s.retired
         WHERE j.status='published' AND COALESCE(j.published->>'company','')<>''
           AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline' >= to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))
-        GROUP BY j.id`,
-    ),
+        GROUP BY j.id) visible_employers
+        GROUP BY name,logo,city,sources ORDER BY min(id)`;
+
+async function buildEmployerPages() {
+  const [{ rows }, decisions] = await Promise.all([
+    db().query(employerRowsSql),
     db().query("SELECT a,b FROM employer_decisions WHERE decision='merge'"),
   ]);
   const root = mergedIdentities(decisions.rows.map((d) => [d.a, d.b] as const));
@@ -146,11 +149,11 @@ async function buildEmployerPages() {
       cities: new Map(),
       logo: '',
     };
-    g.ids.push(r.id);
-    g.names.set(r.name, (g.names.get(r.name) || 0) + 1);
+    g.ids.push(...r.ids);
+    g.names.set(r.name, (g.names.get(r.name) || 0) + r.ids.length);
     // Sources put a street address after the town ("რუსთავი, შარტავას #3"); the town is what counts.
     const city = String(r.city).split(',')[0].trim();
-    if (city) g.cities.set(city, (g.cities.get(city) || 0) + 1);
+    if (city) g.cities.set(city, (g.cities.get(city) || 0) + r.ids.length);
     g.logo ||= r.logo;
     groups.set(key, g);
   }

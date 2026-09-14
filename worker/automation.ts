@@ -47,9 +47,20 @@ export function publishable(
   return v;
 }
 
+// Most automated snapshots have identical draft and published text. Transfer it once;
+// PostgreSQL's jsonb equality preserves the same draft even when key order differs.
+export const reconciliationJobProjection = `id,status,automation_paused,automation_managed,
+  draft IS NOT DISTINCT FROM published AS draft_is_published,
+  CASE WHEN draft IS NOT DISTINCT FROM published THEN NULL ELSE draft END AS draft,published`;
+
 export async function reconcileJob(c: PoolClient, id: string) {
-  const job = (await c.query('SELECT * FROM jobs WHERE id=$1 FOR UPDATE', [id]))
-    .rows[0];
+  const job = (
+    await c.query(
+      `SELECT ${reconciliationJobProjection} FROM jobs WHERE id=$1 FOR UPDATE`,
+      [id],
+    )
+  ).rows[0];
+  if (job?.draft_is_published) job.draft = job.published;
   if (
     !job ||
     job.automation_paused ||
@@ -58,7 +69,7 @@ export async function reconcileJob(c: PoolClient, id: string) {
     return 'skipped';
   const items = (
     await c.query(
-      `SELECT i.*,s.auto_publish FROM source_items i JOIN sources s ON s.id=i.source_id
+      `SELECT i.id,i.source_id,i.url,i.raw,i.last_verified_at,i.quality_warning,i.error,s.auto_publish FROM source_items i JOIN sources s ON s.id=i.source_id
     WHERE i.job_id=$1 AND s.enabled AND NOT s.retired ORDER BY (i.url=$2) DESC,i.last_verified_at DESC NULLS LAST,i.id`,
       [id, job.draft.url],
     )

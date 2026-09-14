@@ -17,9 +17,10 @@ export function hashVacancy(v: Vacancy) {
 export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
   return transaction(async (c) => {
     const item = (
-      await c.query('SELECT * FROM source_items WHERE id=$1 FOR UPDATE', [
-        itemId,
-      ])
+      await c.query(
+        `SELECT id,source_id,job_id,url,raw,content_hash,quality_signature,quality_first_seen,quality_last_seen,quality_observations,quality_warning,refresh_requested_at,refresh_completed_at FROM source_items WHERE id=$1 FOR UPDATE`,
+        [itemId],
+      )
     ).rows[0];
     if (!item) throw Error('Item missing');
     const quality = assessVacancy(item.raw, v, {

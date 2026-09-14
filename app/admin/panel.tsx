@@ -157,9 +157,11 @@ export default function AdminPanel() {
     return () => clearTimeout(t);
   }, [load]);
   useEffect(() => {
+    // Full editorial snapshots are expensive; hidden tabs must not poll them.
     const t = setInterval(() => {
-      if (!selected && !busy) void load();
-    }, 10000);
+      if (document.visibilityState === 'visible' && !selected && !busy)
+        void load();
+    }, 60000);
     return () => clearInterval(t);
   }, [load, selected, busy]);
   const act = async (action: string, extras: Record<string, unknown> = {}) => {
