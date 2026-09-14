@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Collects the sources a GitHub-hosted runner cannot reach. vacancy.hr.gov.ge times out from
 # every runner (verified 2026-09-09); the state employment agency is on the same government
-# network, so it is retried here too even though it is also in the cloud matrix.
+# network, so both government sources are collected here.
 #
 #   zsh scripts/local-gov-sources.sh          one pass over the due government sources
 #   zsh scripts/local-gov-sources.sh --loop   keep passing every 30 minutes (Ctrl+C to stop)
@@ -16,8 +16,9 @@ mkdir -p .local
 pass() {
   for source in hrgov worknet; do
     echo "$(date '+%Y-%m-%d %H:%M:%S') start $source"
-    CRAWL_BATCH_SIZE="${CRAWL_BATCH_SIZE:-300}" \
-      SCRAPE_BUDGET_MINUTES="${SCRAPE_BUDGET_MINUTES:-12}" \
+    CRAWL_BATCH_SIZE="${CRAWL_BATCH_SIZE:-100}" \
+      SCRAPE_BUDGET_MINUTES="${SCRAPE_BUDGET_MINUTES:-5}" \
+      DISCOVERY_PAGE_BUDGET="${DISCOVERY_PAGE_BUDGET:-3}" \
       npx tsx worker/main.ts --source="$source" --once
     echo "$(date '+%Y-%m-%d %H:%M:%S') end $source exit=$?"
   done

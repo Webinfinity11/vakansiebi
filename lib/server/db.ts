@@ -1,10 +1,11 @@
 import { Pool, type PoolClient } from 'pg';
+import { databaseConnection } from './database-connection';
 const globalDb = globalThis as unknown as { ertadPool?: Pool };
 export function db() {
   if (!process.env.DATABASE_URL)
     throw new Error('DATABASE_URL is not configured');
   return (globalDb.ertadPool ??= new Pool({
-    connectionString: process.env.DATABASE_URL,
+    ...databaseConnection(),
     max: 5,
     connectionTimeoutMillis: 10000,
     idleTimeoutMillis: 30000,

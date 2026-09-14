@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:http';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Pool } from 'pg';
+import { databaseConnection } from '../lib/server/database-connection';
 import { configs } from './adapters';
 import { SourceScheduler, dueSourcesSql } from './scheduler';
 
@@ -11,7 +12,7 @@ let lastPoll = 0;
 if (!process.env.DATABASE_URL)
   throw new Error('DATABASE_URL is not configured');
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  ...databaseConnection(),
   max: 1,
   connectionTimeoutMillis: 10_000,
   query_timeout: 15_000,
