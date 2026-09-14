@@ -2,7 +2,7 @@ import { compactSalary } from './vacancy-presentation';
 
 const government = (source: string) => source === 'vacancy.hr.gov.ge';
 export const cardTitleLimit = 95;
-export const cardSalaryLimit = 64;
+export const cardSalaryLimit = 48;
 function ellipsis(value: string, limit: number) {
   const clean = value.replace(/\s+/g, ' ').trim();
   const chars = Array.from(clean);
@@ -64,6 +64,19 @@ export function vacancyCardSalary(
     /შეთანხმებით|ინდივიდუალურ|კვალიფიკაცი|გამოცდილებ/.test(salary)
   )
     return 'შეთანხმებით';
+  // Match the whole condition: never drop a trailing bonus, tax or schedule clause.
+  const range = salary
+    .trim()
+    .match(
+      /^(საშუალოდ\s+)?(\d+(?:[ \u00a0\u202f]\d{3})*)\s*ლარიდან\s+(\d+(?:[ \u00a0\u202f]\d{3})*)\s*ლარამდე(\s+და\s+მეტი)?[.!]?$/,
+    );
+  if (range) {
+    const amount = compactSalary(`${range[2]}–${range[3]} ₾`, period).replace(
+      ' ₾',
+      `${range[4] ? '+' : ''} ₾`,
+    );
+    return `${range[1] ? 'საშ. ' : ''}${amount}`;
+  }
   const label = compactSalary(salary, period).replace(
     /^(?:შრომის ანაზღაურება|ანაზღაურება|ხელფასი)\s*:\s*/,
     '',

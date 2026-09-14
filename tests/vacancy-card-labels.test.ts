@@ -93,9 +93,45 @@ void test('bureaucratic hierarchy does not hide a territorial profession', () =>
 });
 
 void test('company and location labels omit boilerplate without changing full input', () => {
-  assert.equal(vacancyCardCompany('სსიპ - საქართველოს ეროვნული არქივი'), 'საქართველოს ეროვნული არქივი');
+  assert.equal(
+    vacancyCardCompany('სსიპ - საქართველოს ეროვნული არქივი'),
+    'საქართველოს ეროვნული არქივი',
+  );
   assert.equal(vacancyCardCompany('შპს მაგალითი'), 'მაგალითი');
-  assert.equal(vacancyCardLocation('ქ. თბილისი, უნივერსიტეტის ქუჩა №46 https://maps.google.com/example'), 'ქ. თბილისი, უნივერსიტეტის ქუჩა №46');
-  assert.equal(vacancyCardLocation('სოფელი მარტყოფი. ტრანსპორტირებას უზრუნველყოფს კომპანია'), 'სოფელი მარტყოფი.');
+  assert.equal(
+    vacancyCardLocation(
+      'ქ. თბილისი, უნივერსიტეტის ქუჩა №46 https://maps.google.com/example',
+    ),
+    'ქ. თბილისი, უნივერსიტეტის ქუჩა №46',
+  );
+  assert.equal(
+    vacancyCardLocation(
+      'სოფელი მარტყოფი. ტრანსპორტირებას უზრუნველყოფს კომპანია',
+    ),
+    'სოფელი მარტყოფი.',
+  );
   assert.equal(vacancyCardLocation('თბილისი, ბათუმი'), 'თბილისი, ბათუმი');
+});
+
+void test('worded ranges stay compact without losing average, open upper bound or period', () => {
+  assert.equal(
+    vacancyCardSalary(
+      'საშუალოდ 1200 ლარიდან 3000 ლარამდე და მეტი',
+      '',
+      'jobs.ge',
+    ),
+    'საშ. 1 200–3 000+ ₾',
+  );
+  assert.equal(
+    vacancyCardSalary('1200 ლარიდან 3000 ლარამდე', 'month', 'hr.ge'),
+    '1 200–3 000 ₾ · თვეში',
+  );
+  assert.equal(
+    vacancyCardSalary(
+      'საშუალოდ 1200 ლარიდან 3000 ლარამდე და მეტი, ბონუსი მხოლოდ გეგმის შესრულებისას',
+      '',
+      'jobs.ge',
+    ),
+    'ანაზღაურება — იხ. დეტალები',
+  );
 });
