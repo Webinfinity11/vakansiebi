@@ -172,14 +172,20 @@ export async function reconcileJob(c: PoolClient, id: string) {
   return status;
 }
 
+export const reconciliationCandidatesSql = `SELECT j.id FROM jobs j
+  WHERE NOT j.automation_paused AND j.status IN ('pending','published','archived')
+  AND EXISTS(SELECT 1 FROM source_items i JOIN sources s ON s.id=i.source_id
+    WHERE i.job_id=j.id AND i.source_id=$1 AND s.auto_publish AND s.enabled AND NOT s.retired)
+  AND (
+    j.automation_checked_at IS NULL OR j.updated_at>j.automation_checked_at
+    OR EXISTS(SELECT 1 FROM source_items i WHERE i.job_id=j.id AND i.last_checked_at>j.automation_checked_at)
+    OR (j.status IN ('pending','published') AND j.automation_checked_at<now()-interval '24 hours')
+    OR (j.status='published' AND NULLIF(j.draft->>'deadline','') < $2)
+  ) ORDER BY j.automation_checked_at NULLS FIRST,j.id LIMIT 500`;
+
 export async function reconcileSource(source: string) {
   const ids = (
-    await db().query(
-      `SELECT j.id FROM jobs j WHERE NOT j.automation_paused AND j.status IN ('pending','published','archived')
-    AND EXISTS(SELECT 1 FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.job_id=j.id AND i.source_id=$1 AND s.auto_publish AND s.enabled AND NOT s.retired)
-    ORDER BY j.automation_checked_at NULLS FIRST,j.id LIMIT 500`,
-      [source],
-    )
+    await db().query(reconciliationCandidatesSql, [source, tbilisiDate()])
   ).rows;
   const results: Record<string, number> = {};
   for (let offset = 0; offset < ids.length; offset += 4) {
