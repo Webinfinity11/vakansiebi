@@ -2,7 +2,7 @@
 import { VacancyStatus } from './vacancy-status';
 import { usePersonalSpace } from './personal-space';
 import type { Application } from '@/lib/personal-space';
-import { compactSalary } from '@/lib/vacancy-presentation';
+import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
@@ -107,14 +107,14 @@ export function SimilarVacancies({
                 <CompanyLogo company={job.company} url={job.logoUrl} />
                 <span>{job.company}</span>
               </div>
-              <h3>{job.title}</h3>
+              <h3 title={job.title}>{vacancyCardTitle(job.title, job.source)}</h3>
               <VacancyStatus
                 seen={activity.seen.includes(job.id)}
                 status={applicationsById.get(job.id)}
               />
               {job.salary && (
                 <span className="similar-salary">
-                  {compactSalary(job.salary, job.salaryPeriod)}
+                  {vacancyCardSalary(job.salary, job.salaryPeriod, job.source)}
                 </span>
               )}
               <p>{reasons.join(' · ')}</p>

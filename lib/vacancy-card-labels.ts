@@ -1,29 +1,68 @@
 import { compactSalary } from './vacancy-presentation';
 
 const government = (source: string) => source === 'vacancy.hr.gov.ge';
-
-/** Display labels only: the original title and conditions stay in the vacancy details. */
-export function vacancyCardTitle(title: string, source: string) {
-  if (!government(source)) return title;
-  const program = title.match(/პროფესიული საგანმანათლებლო პროგრამის\s*[„"“](.+?)[”"“]\s*პროფესიული განათლების მასწავლებელი/);
-  if (program) return `მასწავლებელი — ${program[1]}`;
-  if (title.length > 110 && /საარქივო ფონდის დოკუმენტების გამოყენების/.test(title) && title.endsWith('განყოფილების სპეციალისტი'))
-    return 'სპეციალისტი — საარქივო დოკუმენტების გამოყენება';
-  // Unknown long titles are visibly abbreviated, never assigned an invented profession.
-  if (title.length > 110) {
-    const role = title.match(/((?:მთავარი |უფროსი |წამყვანი )?(?:სპეციალისტი|კონსულტანტი|ინსპექტორი|იურისტი|მასწავლებელი))$/);
-    if (role) {
-      const context = title.slice(0, -role[0].length).trim();
-      return `${role[0]} — ${context.slice(0, 65).replace(/\s+\S*$/, '')}…`;
-    }
-  }
-  return title;
+export const cardTitleLimit = 95;
+export const cardSalaryLimit = 64;
+function ellipsis(value: string, limit: number) {
+  const clean = value.replace(/\s+/g, ' ').trim();
+  const chars = Array.from(clean);
+  if (chars.length <= limit) return clean;
+  const prefix = chars.slice(0, limit - 1).join('');
+  const boundary = prefix.lastIndexOf(' ');
+  return (boundary >= limit / 2 ? prefix.slice(0, boundary) : prefix) + '…';
 }
 
-export function vacancyCardSalary(salary: string, period: string, source: string) {
-  if (government(source)) {
-    const contactHour = salary.match(/1\s+საკონტაქტო\s+ს[თტ]\.?\s*[-–—:]\s*(\d+(?:[.,]\d+)?)\s*(?:₾|ლ(?:არი)?\.?)\s*$/);
-    if (contactHour) return `${contactHour[1].replace(',', '.')} ₾ / საკონტაქტო სთ`;
+/** Display labels only: the original title and conditions stay in the vacancy details. */
+export function vacancyCardTitle(title: string, source = '') {
+  title = title.replace(/\s+/g, ' ').trim();
+  const program = title.match(
+    /პროფესიული საგანმანათლებლო პროგრამის\s*[„"“](.+?)[”"“]\s*პროფესიული განათლების მასწავლებელი/,
+  );
+  if (program) return ellipsis(`მასწავლებელი — ${program[1]}`, cardTitleLimit);
+  if (
+    government(source) &&
+    title.length > 110 &&
+    /საარქივო ფონდის დოკუმენტების გამოყენების/.test(title) &&
+    title.endsWith('განყოფილების სპეციალისტი')
+  )
+    return 'სპეციალისტი — საარქივო დოკუმენტების გამოყენება';
+  // Unknown long titles are visibly abbreviated, never assigned an invented profession.
+  if (Array.from(title).length > cardTitleLimit) {
+    const role = title.match(
+      /((?:მთავარი |უფროსი |წამყვანი )?(?:სპეციალისტი|კონსულტანტი|ინსპექტორი|იურისტი|მასწავლებელი))$/,
+    );
+    if (role) {
+      const context = title.slice(0, -role[0].length).trim();
+      return ellipsis(`${role[0]} — ${context}`, cardTitleLimit);
+    }
   }
-  return compactSalary(salary, period);
+  return ellipsis(title, cardTitleLimit);
+}
+
+export function vacancyCardSalary(
+  salary: string,
+  period: string,
+  source: string,
+) {
+  if (government(source)) {
+    const contactHour = salary.match(
+      /1\s+საკონტაქტო\s+ს[თტ]\.?\s*[-–—:]\s*(\d+(?:[.,]\d+)?)\s*(?:₾|ლ(?:არი)?\.?)\s*$/,
+    );
+    if (contactHour)
+      return `${contactHour[1].replace(',', '.')} ₾ / საკონტაქტო სთ`;
+  }
+  if (
+    !/\d/.test(salary) &&
+    /შეთანხმებით|ინდივიდუალურ|კვალიფიკაცი|გამოცდილებ/.test(salary)
+  )
+    return 'შეთანხმებით';
+  const label = compactSalary(salary, period).replace(
+    /^(?:შრომის ანაზღაურება|ანაზღაურება|ხელფასი)\s*:\s*/,
+    '',
+  );
+  // Do not extract a single amount from complex pay: that could hide a range,
+  // bonus condition, different periods, or a gross/net qualification.
+  return Array.from(label).length <= cardSalaryLimit
+    ? label
+    : 'ანაზღაურება — იხ. დეტალები';
 }

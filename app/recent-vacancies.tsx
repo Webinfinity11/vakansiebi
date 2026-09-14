@@ -1,4 +1,5 @@
 'use client';
+import { vacancyCardTitle } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
 import { History } from 'lucide-react';
 import { vacancyPath } from '@/lib/vacancy-navigation';
@@ -30,7 +31,7 @@ export function RecentVacancies({
             href={vacancyPath(item.id, { from: returnPath })}
             prefetch={false}
           >
-            <strong>{item.title}</strong>
+            <strong title={item.title}>{vacancyCardTitle(item.title)}</strong>
             <span>{item.company || 'კერძო განცხადება'}</span>
           </Link>
         ))}

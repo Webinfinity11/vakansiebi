@@ -225,7 +225,7 @@ function JobCard({
         <div className="job-info">
           <Link
             className="job-title"
-              title={vacancyCardTitle(j.title, j.source)}
+              title={j.title}
             data-vacancy-id={j.id}
             href={
               resultsPending
@@ -258,7 +258,7 @@ function JobCard({
           </div>
           <div className="card-bottom">
             {vacancyCardSalary(j.salary, j.salaryPeriod, j.source) && (
-              <span className="salary">
+              <span className="salary" title={j.salary}>
                 {vacancyCardSalary(j.salary, j.salaryPeriod, j.source)}
               </span>
             )}

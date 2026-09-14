@@ -13,7 +13,7 @@ import { employerPages } from '@/lib/server/employers';
 import { resolveCompanyLogos } from '@/lib/server/company-logos';
 import { companyKey } from '@/lib/company-key';
 import { logoCompanyKey } from '@/lib/company-logo-identity';
-import { compactSalary } from '@/lib/vacancy-presentation';
+import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import { safeExternalUrl } from '@/lib/vacancy-media';
 
@@ -177,10 +177,10 @@ export default async function CompanyPage(props: Props) {
                 prefetch={false}
                 className="similar-card"
               >
-                <h3>{job.title}</h3>
-                {compactSalary(job.salary, job.salaryPeriod) && (
+                <h3 title={job.title}>{vacancyCardTitle(job.title, job.source)}</h3>
+                {vacancyCardSalary(job.salary, job.salaryPeriod, job.source) && (
                   <span className="similar-salary">
-                    {compactSalary(job.salary, job.salaryPeriod)}
+                    {vacancyCardSalary(job.salary, job.salaryPeriod, job.source)}
                   </span>
                 )}
                 <div className="company-job-meta">
