@@ -77,6 +77,9 @@ export function rememberSearch(
   loadedThrough = page,
 ) {
   try {
+    // The board restores its anchor after all previously loaded pages return.
+    // Native history restoration would otherwise race this asynchronous layout.
+    window.history.scrollRestoration = 'manual';
     sessionStorage.setItem(
       key,
       JSON.stringify({
@@ -85,6 +88,9 @@ export function rememberSearch(
         page,
         loadedThrough: Math.max(page, loadedThrough),
         top: window.scrollY,
+        anchorOffset: document
+          .querySelector(`[data-vacancy-id="${id}"]`)
+          ?.getBoundingClientRect().top,
         at: Date.now(),
       }),
     );
@@ -95,6 +101,7 @@ export type SearchPosition = {
   page: number;
   loadedThrough: number;
   top: number;
+  anchorOffset?: number;
 };
 export function readSearchPosition(
   raw: string | null,
@@ -121,7 +128,15 @@ export function readSearchPosition(
       loadedThrough > state.page + 9
     )
       return null;
-    return { id: state.id, page: state.page, loadedThrough, top: state.top };
+    return {
+      id: state.id,
+      page: state.page,
+      loadedThrough,
+      top: state.top,
+      ...(Number.isFinite(state.anchorOffset)
+        ? { anchorOffset: state.anchorOffset }
+        : {}),
+    };
   } catch {
     return null;
   }
@@ -132,4 +147,10 @@ export function restoreSearch(url: string): SearchPosition | null {
   } catch {
     return null;
   }
+}
+
+export function clearSearchPosition() {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {}
 }

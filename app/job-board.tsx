@@ -6,7 +6,11 @@ import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
 import { nearestCity } from '@/lib/nearest-city';
 import type { Application } from '@/lib/personal-space';
-import { vacancyCardTitle, vacancyCardSalary, vacancyCardLocation } from '@/lib/vacancy-card-labels';
+import {
+  vacancyCardTitle,
+  vacancyCardSalary,
+  vacancyCardLocation,
+} from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
 import AdvancedFilterControls, {
   advancedDefaults,
@@ -15,9 +19,16 @@ import AdvancedFilterControls, {
 } from './advanced-filters';
 import type { SearchMeta, FilterKey } from '@/lib/server/search-plan';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { Brand } from './brand';
-import { ThemeToggle } from './theme-toggle';
+import { PublicHeader } from './public-header';
 export { Brand } from './brand';
 import { formatDate } from './vacancy-text';
 import {
@@ -30,13 +41,13 @@ import { readSearch, searchParams } from '@/lib/search-state';
 import { shareLink } from '@/lib/share';
 import { track } from '@/lib/analytics-client';
 import {
-  FolderHeart,
   ArrowUpRight,
   ArrowRight,
   Search,
   SlidersHorizontal,
   MapPin,
   BriefcaseBusiness,
+  ClipboardList,
   Bookmark,
   Check,
   X,
@@ -45,20 +56,20 @@ import {
   Laptop,
   ShieldCheck,
   LocateFixed,
-  Wallet,
+  Calculator,
   GraduationCap,
   CircleHelp,
   EyeOff,
   LayoutGrid,
-  ShoppingBag,
+  Handshake,
   Megaphone,
   Truck,
-  Headphones,
-  HeartPulse,
+  HandPlatter,
+  Stethoscope,
   HardHat,
   Factory,
   Scale,
-  Sparkles,
+  Scissors,
   Ellipsis,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -79,7 +90,7 @@ import {
 import { CompanyIdentity } from './company-identity';
 import { ShortcutMark } from './shortcut-mark';
 import { useVacancyActivity } from './use-vacancy-activity';
-import { PersonalSpace, usePersonalSpace } from './personal-space';
+import { usePersonalSpace } from './personal-space';
 import type { SearchFilters } from '@/lib/personal-space';
 import type { PublicJob as Job } from '@/lib/types';
 import { categories, sourceNames } from '@/lib/types';
@@ -88,19 +99,19 @@ import { cityOptions } from '@/lib/cities';
 const categoryIcons = {
   ყველა: LayoutGrid,
   ტექნოლოგიები: Laptop,
-  გაყიდვები: ShoppingBag,
+  გაყიდვები: Handshake,
   მარკეტინგი: Megaphone,
-  ადმინისტრაცია: BriefcaseBusiness,
-  ფინანსები: Wallet,
+  ადმინისტრაცია: ClipboardList,
+  ფინანსები: Calculator,
   ლოჯისტიკა: Truck,
-  მომსახურება: Headphones,
-  სამედიცინო: HeartPulse,
+  მომსახურება: HandPlatter,
+  სამედიცინო: Stethoscope,
   განათლება: GraduationCap,
   მშენებლობა: HardHat,
   დაცვა: ShieldCheck,
   წარმოება: Factory,
   იურიდიული: Scale,
-  სილამაზე: Sparkles,
+  სილამაზე: Scissors,
   სხვა: Ellipsis,
 };
 
@@ -166,13 +177,12 @@ function isNew(datePosted?: string) {
 
 /* One vacancy in the list. On a touch screen the card slides: right saves, left hides; the
    reveal layers behind it name the action before the finger lifts. */
-function JobCard({
+const JobCard = memo(function JobCard({
   job: j,
   demo,
   saved,
   seen,
   status,
-  resultsPending,
   returnPath,
   onToggleSave,
   onOpen,
@@ -183,16 +193,17 @@ function JobCard({
   saved: boolean;
   seen: boolean;
   status?: Application['status'];
-  resultsPending: boolean;
   returnPath: string;
-  onToggleSave: () => void;
-  onOpen: () => void;
-  onHide: () => void;
+  onToggleSave: (id: string) => void;
+  onOpen: (job: Job) => void;
+  onHide: (job: Job) => void;
 }) {
   const swipe = useSwipe({
-    onRight: onToggleSave,
-    onLeft: demo ? undefined : onHide,
+    onRight: () => onToggleSave(j.id),
+    onLeft: demo ? undefined : () => onHide(j),
   });
+  const salary = vacancyCardSalary(j.salary, j.salaryPeriod, j.source);
+  const cardTitle = vacancyCardTitle(j.title, j.source);
   const left = j.deadline ? daysUntil(j.deadline) : NaN;
   const urgent = left >= 0 && left <= 3;
   const when = j.deadline
@@ -218,61 +229,47 @@ function JobCard({
       )}
       <article
         className="job-card swipe-card"
+        data-long-pay={salary.length > 80 || undefined}
+        data-has-pay={Boolean(salary) || undefined}
         style={style}
         data-swiping={swipe.dragging || undefined}
         {...swipe.handlers}
       >
         <div className="job-info">
-          <Link
-            className="job-title"
+          <div className="job-title-row">
+            <Link
+              className="job-title"
               title={j.title}
-            data-vacancy-id={j.id}
-            href={
-              resultsPending
-                ? '#'
-                : vacancyPath(j.id, { preview: demo, from: returnPath })
-            }
-            prefetch={false}
-            aria-disabled={resultsPending}
-            tabIndex={resultsPending ? -1 : undefined}
-            onClick={(event) => {
-              if (resultsPending || swipe.dragging) event.preventDefault();
-            }}
-            onNavigate={(event) => {
-              if (resultsPending || swipe.dragging) event.preventDefault();
-              else onOpen();
-            }}
-          >
-            {vacancyCardTitle(j.title, j.source)}
-          </Link>
+              data-vacancy-id={j.id}
+              href={vacancyPath(j.id, { preview: demo, from: returnPath })}
+              prefetch={false}
+              onClick={(event) => {
+                if (swipe.suppressClick()) event.preventDefault();
+              }}
+              onNavigate={(event) => {
+                if (swipe.suppressClick()) event.preventDefault();
+                else onOpen(j);
+              }}
+            >
+              {cardTitle}
+            </Link>
+            {isNew(j.datePosted) && <span className="job-new">ახალი</span>}
+          </div>
           <div className="job-company">
             <CompanyIdentity
               company={j.company}
               logoUrl={j.logoUrl}
               category={j.category}
               href={j.companyPath}
-              onOpen={onOpen}
-              disabled={resultsPending || swipe.dragging}
+              onOpen={() => onOpen(j)}
+              disabled={swipe.dragging}
             />
             {!demo && <VacancyStatus seen={seen} status={status} />}
           </div>
-          <div className="card-bottom">
-            {vacancyCardSalary(j.salary, j.salaryPeriod, j.source) && (
-              <span className="salary" title={j.salary}>
-                {vacancyCardSalary(j.salary, j.salaryPeriod, j.source)}
-              </span>
-            )}
+          <div className="job-meta">
             {j.category !== 'სხვა' && (
               <span className="category-tag">{j.category}</span>
             )}
-            {isNew(j.datePosted) && <span className="job-new">ახალი</span>}
-            {when && (
-              <span className={`job-when${urgent ? ' is-urgent' : ''}`}>
-                {when}
-              </span>
-            )}
-          </div>
-          <div className="job-meta">
             {j.city && (
               <span>
                 <MapPin size={13} />
@@ -295,37 +292,38 @@ function JobCard({
             )}
           </div>
         </div>
+        <div className="job-conditions">
+          {salary && (
+            <span className="salary" title={j.salary}>
+              {salary}
+            </span>
+          )}
+          {when && (
+            <span className={`job-when${urgent ? ' is-urgent' : ''}`}>
+              {when}
+            </span>
+          )}
+        </div>
         <div className="job-side">
           <div className="job-actions">
             <button
               className={`save-button ${saved ? 'is-saved' : ''}`}
               aria-label={
                 saved
-                  ? `${vacancyCardTitle(j.title, j.source)} — შენახულიდან წაშლა`
-                  : `${vacancyCardTitle(j.title, j.source)} — შენახვა`
+                  ? `${j.title} — შენახულიდან წაშლა`
+                  : `${j.title} — შენახვა`
               }
               aria-pressed={saved}
-              onClick={onToggleSave}
+              onClick={() => onToggleSave(j.id)}
             >
               <Bookmark size={19} />
             </button>
           </div>
-          <span className="job-date">
-            {j.deadline
-              ? `ვადა: ${formatDate(j.deadline)}`
-              : j.datePosted
-                ? `გამოქვეყნდა ${formatDate(j.datePosted)}`
-                : ''}
-          </span>
-          <span className="card-open" aria-hidden="true">
-            <span>ნახვა</span>
-            <ArrowUpRight size={16} />
-          </span>
         </div>
       </article>
     </div>
   );
-}
+});
 export default function JobBoard() {
   const [allCategoriesVisible, setAllCategoriesVisible] = useState(false);
   const params = useSearchParams();
@@ -333,14 +331,17 @@ export default function JobBoard() {
   const activity = useVacancyActivity();
   const excluded = demo ? '' : activity.hidden.map((item) => item.id).join(',');
   const personal = usePersonalSpace();
-  const [personalOpen, setPersonalOpen] = useState(false);
   const searchBeforeSaved = useRef<SearchFilters | null>(null);
   const applicationsById = new Map(
     personal.records
       .filter((r): r is Application => r.kind === 'application')
       .map((r) => [r.id, r.status]),
   );
-  const [loadedResult, setLoadedResult] = useState({ key: '', page: 0 });
+  const [loadedResult, setLoadedResult] = useState({
+    key: '',
+    page: 0,
+    path: '',
+  });
   const [jobs, setJobs] = useState<Job[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState('');
@@ -375,12 +376,6 @@ export default function JobBoard() {
     ...advanced,
   };
   const [searchMeta, setSearchMeta] = useState<SearchMeta | null>(null);
-  const [mobileMeta, setMobileMeta] = useState<{
-    key: string;
-    data: SearchMeta;
-    total: number;
-  } | null>(null);
-
   const [filtersOpen, setFiltersOpen] = useState(false),
     [savedOnly, setSavedOnly] = useState(params.get('saved') === '1'),
     [saved, setSaved] = useState<string[]>([]),
@@ -389,28 +384,6 @@ export default function JobBoard() {
     [retry, setRetry] = useState(0);
   const [mobileDraft, setMobileDraft] = useState<SearchFilters | null>(null);
   const mobileKey = mobileDraft ? searchParams(mobileDraft).toString() : '';
-  useEffect(() => {
-    if (!filtersOpen) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      const p = new URLSearchParams(mobileKey);
-      p.set('countsOnly', '1');
-      if (demo) p.set('preview', '1');
-      if (savedOnly) p.set('ids', saved.join(','));
-      if (excluded) p.set('exclude', excluded);
-      void fetch('/api/jobs?' + p, { signal: controller.signal })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => {
-          if (d && !controller.signal.aborted)
-            setMobileMeta({ key: mobileKey, data: d.search, total: d.total });
-        })
-        .catch(() => {});
-    }, 350);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [filtersOpen, mobileKey, demo, savedOnly, saved, excluded]);
   const [pageState, setPageState] = useState(() => ({
       key: JSON.stringify([
         initialSearch.query,
@@ -490,7 +463,7 @@ export default function JobBoard() {
     return () => clearTimeout(timer);
   }, []);
   useEffect(() => {
-    if (filtersOpen || !activity.ready || (savedOnly && !storageReady)) return;
+    if (!activity.ready || (savedOnly && !storageReady)) return;
     const controller = new AbortController();
     const timer = setTimeout(
       () => {
@@ -540,7 +513,25 @@ export default function JobBoard() {
             if (!controller.signal.aborted) {
               setJobs(d.jobs);
               setSearchMeta(d.search);
-              setLoadedResult({ key: filterKey, page });
+              setLoadedResult({
+                key: filterKey,
+                page,
+                path: searchReturnPath(
+                  {
+                    query,
+                    city,
+                    category,
+                    source,
+                    paid,
+                    remote,
+                    sort,
+                    ...advanced,
+                  },
+                  page,
+                  savedOnly,
+                  demo,
+                ),
+              });
               setLoadedState({ key: filterKey, through: page });
               setAppendPage(null);
               setAppendError('');
@@ -592,7 +583,6 @@ export default function JobBoard() {
     savedOnly,
     savedFilter,
     storageReady,
-    filtersOpen,
     filterKey,
     retry,
     excluded,
@@ -656,11 +646,46 @@ export default function JobBoard() {
     savedFilter,
     excluded,
   ]);
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     if (appending || resultsPending || loadedThrough >= pages) return;
     setAppendError('');
     setAppendPage({ key: filterKey, page: loadedThrough + 1 });
-  };
+  }, [appending, resultsPending, loadedThrough, pages, filterKey]);
+  const nextPageTarget = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Start one page before the reader reaches the end. Errors require an explicit retry;
+    // opening a filter sheet must not trigger background pagination.
+    if (
+      appending ||
+      resultsPending ||
+      error ||
+      appendError ||
+      filtersOpen ||
+      loadedThrough >= pages
+    )
+      return;
+    const target = nextPageTarget.current;
+    if (!target || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        loadMore();
+      },
+      { rootMargin: '0px 0px 600px 0px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [
+    appending,
+    resultsPending,
+    error,
+    appendError,
+    filtersOpen,
+    loadedThrough,
+    pages,
+    loadMore,
+  ]);
   const applySearch = (filters: SearchFilters) => {
     setPageState({ key: '', page: 1 });
     setQuery(filters.query);
@@ -729,17 +754,49 @@ export default function JobBoard() {
     if (key === 'entryLevel') setAdvanced({ ...advanced, entryLevel: false });
     if (key === 'postedWithin') setAdvanced({ ...advanced, postedWithin: 0 });
   };
-  function toggleSave(id: string) {
-    const next = saved.includes(id)
-      ? saved.filter((v) => v !== id)
-      : [...saved, id].slice(-100);
+  const [saveNotice, setSaveNotice] = useState<{
+    id: string;
+    wasSaved: boolean;
+    evicted?: string;
+  } | null>(null);
+  const toggleSave = useCallback(
+    (id: string) => {
+      const wasSaved = saved.includes(id);
+      const next = wasSaved
+        ? saved.filter((v) => v !== id)
+        : [...saved, id].slice(-100);
+      try {
+        localStorage.setItem('ertad-saved', JSON.stringify(next));
+        setSaved(next);
+        setFeedback('');
+        setSaveNotice({
+          id,
+          wasSaved,
+          evicted: !wasSaved && saved.length >= 100 ? saved[0] : undefined,
+        });
+      } catch {
+        setSaveNotice(null);
+        setFeedback('ბრაუზერმა შენახვა ვერ შეძლო.');
+      }
+    },
+    [saved],
+  );
+  const undoSave = () => {
+    if (!saveNotice) return;
+    const { id, wasSaved, evicted } = saveNotice;
+    const next = saved.filter((value) => value !== id);
+    if (wasSaved) next.push(id);
+    if (evicted && !next.includes(evicted) && next.length < 100)
+      next.unshift(evicted);
     try {
-      localStorage.setItem('ertad-saved', JSON.stringify(next));
-      setSaved(next);
+      localStorage.setItem('ertad-saved', JSON.stringify(next.slice(-100)));
+      setSaved(next.slice(-100));
+      setSaveNotice(null);
+      setFeedback('ცვლილება გაუქმებულია');
     } catch {
-      setFeedback('ბრაუზერმა შენახვა ვერ შეძლო.');
+      setFeedback('ბრაუზერმა ცვლილება ვერ გააუქმა. სცადე ხელახლა.');
     }
-  }
+  };
   function paginate(next: number) {
     setPageState({ key: filterKey, page: next });
     document
@@ -778,9 +835,34 @@ export default function JobBoard() {
     return () => clearTimeout(timer);
   }, [storageReady, activity.ready, filterKey, params]);
   const returnPath = searchReturnPath(currentSearch, page, savedOnly, demo);
+  const markSeen = activity.markSeen;
+  const hideVacancy = activity.hide;
+  const openJob = useCallback(
+    (job: Job) => {
+      rememberSearch(
+        loadedResult.path,
+        job.id,
+        loadedResult.page,
+        loadedState.through,
+      );
+      markSeen(job.id, { title: job.title, company: job.company });
+    },
+    [loadedResult.path, loadedResult.page, loadedState.through, markSeen],
+  );
+  const hideJob = useCallback(
+    (job: Job) => {
+      setFeedback(
+        hideVacancy(job.id, job.title)
+          ? 'ვაკანსია დამალულია · აღდგენა სიის თავში'
+          : 'ბრაუზერმა დამალვა ვერ შეძლო.',
+      );
+    },
+    [hideVacancy],
+  );
   const searchRestored = useRef(false);
   useEffect(() => {
-    if (resultsPending || !storageReady || searchRestored.current) return;
+    if (resultsPending || error || !storageReady || searchRestored.current)
+      return;
     const position = restoreSearch(returnPath);
     if (!position) return;
     if (position.page !== page) return;
@@ -797,14 +879,22 @@ export default function JobBoard() {
     if (appending) return;
     searchRestored.current = true;
     const frame = requestAnimationFrame(() => {
-      window.scrollTo(0, position.top);
-      document
-        .querySelector<HTMLAnchorElement>(`[data-vacancy-id="${position.id}"]`)
-        ?.focus({ preventScroll: true });
+      const anchor = document.querySelector<HTMLAnchorElement>(
+        `[data-vacancy-id="${position.id}"]`,
+      );
+      const top =
+        anchor && position.anchorOffset !== undefined
+          ? window.scrollY +
+            anchor.getBoundingClientRect().top -
+            position.anchorOffset
+          : position.top;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+      anchor?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
   }, [
     resultsPending,
+    error,
     storageReady,
     returnPath,
     page,
@@ -849,14 +939,7 @@ export default function JobBoard() {
   const renderFilters = (prefix: string) => {
     const draft =
       prefix === 'mobile' && mobileDraft ? mobileDraft : currentSearch;
-    const facets =
-      prefix === 'mobile'
-        ? mobileMeta?.key === mobileKey
-          ? mobileMeta.data
-          : null
-        : !resultsPending
-          ? searchMeta
-          : null;
+    const facets = prefix === 'desktop' && !resultsPending ? searchMeta : null;
     const changeCategory = (value: string) => {
       if (prefix === 'mobile') setMobileDraft({ ...draft, category: value });
       else setCategory(value);
@@ -894,54 +977,81 @@ export default function JobBoard() {
             გასუფთავება
           </button>
         </div>
-        <h3>
-          მიმართულება <small>· არჩეული პირობებით</small>
-        </h3>
-        <div className="category-options">
-          {(['ყველა', ...categories] as const)
-            .filter(
-              (c, index) =>
-                allCategoriesVisible || index < 8 || c === draft.category,
-            )
-            .map((c) => {
-              const CategoryIcon = categoryIcons[c];
-              return (
-                <label className="check-row" key={c} htmlFor={`${prefix}-${c}`}>
-                  <input
-                    type="radio"
-                    name={`${prefix}-category`}
-                    value={c}
-                    id={`${prefix}-${c}`}
-                    checked={draft.category === c}
-                    onChange={() => changeCategory(c)}
-                  />
-                  <CategoryIcon
-                    className="category-icon"
-                    size={17}
-                    aria-hidden="true"
-                  />
-                  <span>{c === 'ყველა' ? 'ყველა მიმართულება' : c}</span>
-                  {facets && (
-                    <small className="facet-count">
-                      {c === 'ყველა'
-                        ? facets.categoryTotal
-                        : facets.categories.find((item) => item.name === c)
-                            ?.count || 0}
-                    </small>
-                  )}
-                </label>
-              );
-            })}
+        <div className="filter-primary-city">
+          <h3>ქალაქი</h3>
+          <Choice
+            label="ყველა ქალაქი"
+            value={draft.city}
+            onChange={changeCity}
+            options={cities}
+          />
         </div>
-        <button
-          className="category-expand"
-          type="button"
-          aria-expanded={allCategoriesVisible}
-          onClick={() => setAllCategoriesVisible((value) => !value)}
-        >
-          {allCategoriesVisible ? 'ნაკლების ჩვენება' : 'ყველა მიმართულება'}
-          <span aria-hidden="true">{allCategoriesVisible ? '−' : '+'}</span>
-        </button>
+        {prefix === 'mobile' ? (
+          <div className="filter-primary-category">
+            <h3>მიმართულება</h3>
+            <Choice
+              label="ყველა მიმართულება"
+              value={draft.category}
+              onChange={changeCategory}
+              options={[...categories]}
+            />
+          </div>
+        ) : (
+          <>
+            <h3>
+              მიმართულება <small>· არჩეული პირობებით</small>
+            </h3>
+            <div className="category-options">
+              {(['ყველა', ...categories] as const)
+                .filter(
+                  (c, index) =>
+                    allCategoriesVisible || index < 8 || c === draft.category,
+                )
+                .map((c) => {
+                  const CategoryIcon = categoryIcons[c];
+                  return (
+                    <label
+                      className="check-row"
+                      key={c}
+                      htmlFor={`${prefix}-${c}`}
+                    >
+                      <input
+                        type="radio"
+                        name={`${prefix}-category`}
+                        value={c}
+                        id={`${prefix}-${c}`}
+                        checked={draft.category === c}
+                        onChange={() => changeCategory(c)}
+                      />
+                      <CategoryIcon
+                        className="category-icon"
+                        size={17}
+                        aria-hidden="true"
+                      />
+                      <span>{c === 'ყველა' ? 'ყველა მიმართულება' : c}</span>
+                      {facets && (
+                        <small className="facet-count">
+                          {c === 'ყველა'
+                            ? facets.categoryTotal
+                            : facets.categories.find((item) => item.name === c)
+                                ?.count || 0}
+                        </small>
+                      )}
+                    </label>
+                  );
+                })}
+            </div>
+            <button
+              className="category-expand"
+              type="button"
+              aria-expanded={allCategoriesVisible}
+              onClick={() => setAllCategoriesVisible((value) => !value)}
+            >
+              {allCategoriesVisible ? 'ნაკლების ჩვენება' : 'ყველა მიმართულება'}
+              <span aria-hidden="true">{allCategoriesVisible ? '−' : '+'}</span>
+            </button>
+          </>
+        )}
         <div className="filter-divider" />
         <h3>სამუშაო პირობები</h3>
         <label className="check-row" htmlFor={`${prefix}-remote`}>
@@ -960,31 +1070,59 @@ export default function JobBoard() {
           />
           ხელფასი მითითებულია
         </label>
-        <AdvancedFilterControls
-          prefix={prefix}
-          value={draft}
-          onChange={(next) =>
-            prefix === 'mobile'
-              ? setMobileDraft({ ...draft, ...next })
-              : setAdvanced(next)
-          }
-        />
-        <div className="filter-divider" />
-        <h3>ქალაქი</h3>
-        <Choice
-          label="ყველა ქალაქი"
-          value={draft.city}
-          onChange={changeCity}
-          options={cities}
-        />
-        <div className="filter-divider" />
-        <h3>პირველწყარო</h3>
-        <Choice
-          label="ყველა წყარო"
-          value={draft.source}
-          onChange={changeSource}
-          options={Object.values(sourceNames)}
-        />
+        <label
+          className="filter-employment-label"
+          htmlFor={`${prefix}-employment`}
+        >
+          განაკვეთი
+        </label>
+        <select
+          className="filter-employment"
+          id={`${prefix}-employment`}
+          value={draft.employment}
+          onChange={(event) => {
+            const employment = event.target
+              .value as AdvancedFilters['employment'];
+            if (prefix === 'mobile') setMobileDraft({ ...draft, employment });
+            else setAdvanced({ ...advanced, employment });
+          }}
+        >
+          {Object.entries(employmentLabels).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <details className="filter-extra">
+          <summary>
+            დამატებითი პირობები
+            {draft.entryLevel ||
+            draft.postedWithin ||
+            draft.salaryFrom !== null ||
+            draft.salaryTo !== null ||
+            draft.salaryPeriod === 'day' ||
+            draft.source !== 'ყველა'
+              ? ' · არჩეულია'
+              : ''}
+          </summary>
+          <AdvancedFilterControls
+            prefix={prefix}
+            showEmployment={false}
+            value={draft}
+            onChange={(next) =>
+              prefix === 'mobile'
+                ? setMobileDraft({ ...draft, ...next })
+                : setAdvanced(next)
+            }
+          />
+          <h3>პირველწყარო</h3>
+          <Choice
+            label="ყველა წყარო"
+            value={draft.source}
+            onChange={changeSource}
+            options={Object.values(sourceNames)}
+          />
+        </details>
         <div className="source-note">
           <ShieldCheck size={21} />
           <p>იპოვე აქ. დეტალები გადაამოწმე პირველწყაროზე.</p>
@@ -993,57 +1131,28 @@ export default function JobBoard() {
     );
   };
   return (
-    <div className="board-shell editorial-board crafted-board">
+    <div className="board-shell editorial-board crafted-board refined-board">
       <a className="skip-link" href="#results">
         ვაკანსიებზე გადასვლა
       </a>
-      <header className="topbar">
-        <div className="header-inner">
-          <Brand />
-          <nav aria-label="მთავარი ნავიგაცია">
-            <button
-              className={!savedOnly ? 'nav-active' : ''}
-              aria-current={!savedOnly ? 'page' : undefined}
-              onClick={openVacancies}
-            >
-              ვაკანსიები
-            </button>
-          </nav>
-          <button
-            className="header-search"
-            aria-label="ძიებაზე დაბრუნება"
-            onClick={() => {
-              if (savedOnly) openVacancies();
-              searchInputRef.current?.focus({ preventScroll: true });
-              document
-                .getElementById('search-heading')
-                ?.scrollIntoView({ behavior: 'smooth' });
-            }}
-          >
-            <Search size={18} aria-hidden="true" />
-            <span>ძებნა</span>
-          </button>
-          <button
-            className="personal-nav secondary-button"
-            aria-label="ჩემი სივრცე — შენახული ძიებები და განაცხადები"
-            onClick={() => setPersonalOpen(true)}
-          >
-            <FolderHeart size={18} />
-            <span>ჩემი სივრცე</span>
-          </button>
-          <ThemeToggle />
-          <button
-            className={`saved-nav ${savedOnly ? 'is-active' : ''}`}
-            aria-label="შენახული ვაკანსიები"
-            aria-current={savedOnly ? 'page' : undefined}
-            onClick={openSaved}
-          >
-            <Bookmark size={17} />
-            <span>შენახული</span>
-            <b>{saved.length}</b>
-          </button>
-        </div>
-      </header>
+      <PublicHeader
+        savedCount={saved.length}
+        savedOnly={savedOnly}
+        onVacancies={() => {
+          reset();
+          setSavedOnly(false);
+          searchBeforeSaved.current = null;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onSaved={openSaved}
+        onSearch={() => {
+          if (savedOnly) openVacancies();
+          searchInputRef.current?.focus({ preventScroll: true });
+          document
+            .getElementById('search-heading')
+            ?.scrollIntoView({ behavior: 'smooth' });
+        }}
+      />
       {demo && (
         <div className="preview-banner">
           <ShieldCheck size={16} />
@@ -1060,6 +1169,10 @@ export default function JobBoard() {
           className="hero discovery-hero"
           aria-labelledby="search-heading"
         >
+          <div className="hero-brand-clip" aria-hidden="true">
+            <div className="hero-brand-art" />
+          </div>
+          <div className="hero-brand-trail" aria-hidden="true" />
           <div className="hero-inner">
             <div className="hero-copy">
               <h1 id="search-heading">
@@ -1294,16 +1407,6 @@ export default function JobBoard() {
                       <span className="share-label">ძიების გაზიარება</span>
                     </button>
                   )}
-                  <PersonalSpace
-                    space={personal}
-                    filters={currentSearch}
-                    onApply={applySearch}
-                    active={activeCount > 0}
-                    disabled={demo || savedOnly}
-                    open={personalOpen}
-                    setOpen={setPersonalOpen}
-                    showTrigger={false}
-                  />
                 </div>
               </div>
               {!!activeCount && (
@@ -1429,6 +1532,22 @@ export default function JobBoard() {
                 </div>
               ) : (
                 <div className="job-list">
+                  {resultsPending && jobs.length === 0 && (
+                    <output className="brand-loading">
+                      <span className="brand-loading-mark" aria-hidden="true" />
+                      <span>შენს შემდეგ შესაძლებლობას ვეძებთ…</span>
+                      <span
+                        className="brand-loading-track"
+                        aria-hidden="true"
+                      />
+                    </output>
+                  )}
+                  {resultsPending && jobs.length > 0 && (
+                    <output className="results-updating">
+                      შედეგები ახლდება — მანამდე წინა ვაკანსიების ნახვა
+                      შეგიძლია.
+                    </output>
+                  )}
                   {resultsPending && jobs.length === 0
                     ? Array.from({ length: 4 }, (_, i) => (
                         <div
@@ -1452,28 +1571,10 @@ export default function JobBoard() {
                           saved={saved.includes(j.id)}
                           seen={activity.seen.includes(j.id)}
                           status={applicationsById.get(j.id)}
-                          resultsPending={resultsPending}
-                          returnPath={returnPath}
-                          onToggleSave={() => toggleSave(j.id)}
-                          onOpen={() => {
-                            rememberSearch(
-                              returnPath,
-                              j.id,
-                              page,
-                              loadedThrough,
-                            );
-                            activity.markSeen(j.id, {
-                              title: j.title,
-                              company: j.company,
-                            });
-                          }}
-                          onHide={() => {
-                            setFeedback(
-                              activity.hide(j.id, j.title)
-                                ? 'ვაკანსია დამალულია · აღდგენა სიის თავში'
-                                : 'ბრაუზერმა დამალვა ვერ შეძლო.',
-                            );
-                          }}
+                          returnPath={loadedResult.path}
+                          onToggleSave={toggleSave}
+                          onOpen={openJob}
+                          onHide={hideJob}
                         />
                       ))}
                 </div>
@@ -1528,7 +1629,7 @@ export default function JobBoard() {
                 </div>
               )}
               {!error && !resultsPending && loadedThrough < pages && (
-                <div className="load-more-row">
+                <div className="load-more-row" ref={nextPageTarget}>
                   <button
                     type="button"
                     className="load-more secondary-button"
@@ -1536,8 +1637,10 @@ export default function JobBoard() {
                     onClick={loadMore}
                   >
                     {appending
-                      ? 'იტვირთება…'
-                      : `მეტის ჩვენება · კიდევ ${Math.min(20, Math.max(0, total - (page - 1) * 20 - jobs.length))}`}
+                      ? 'შემდეგი ვაკანსიები იტვირთება…'
+                      : appendError
+                        ? 'ხელახლა ცდა'
+                        : `მეტის ჩვენება · კიდევ ${Math.min(20, Math.max(0, total - (page - 1) * 20 - jobs.length))}`}
                   </button>
                   {appendError && (
                     <p className="load-more-error" role="alert">
@@ -1598,6 +1701,25 @@ export default function JobBoard() {
           <span>© {new Date().getFullYear()} JOBX</span>
         </div>
       </footer>
+      {saveNotice && !feedback && (
+        <div className="feedback-toast save-confirmation">
+          <output>
+            <Check size={17} />
+            {saveNotice.wasSaved
+              ? 'შენახულებიდან ამოღებულია'
+              : 'ვაკანსია შენახულია'}
+          </output>
+          <button className="undo-save" onClick={undoSave}>
+            გაუქმება
+          </button>
+          <button
+            aria-label="შეტყობინების დახურვა"
+            onClick={() => setSaveNotice(null)}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {feedback && (
         <output className="feedback-toast">
           <Check size={17} />
@@ -1621,7 +1743,7 @@ export default function JobBoard() {
           <SheetHeader>
             <SheetTitle>ფილტრები</SheetTitle>
             <SheetDescription>
-              აირჩიე მიმართულება და სამუშაო პირობები.
+              მონიშნე პირობები — სია განახლდება „შედეგების ჩვენებაზე“ დაჭერისას.
             </SheetDescription>
           </SheetHeader>
           <div className="filters">{renderFilters('mobile')}</div>
@@ -1633,17 +1755,7 @@ export default function JobBoard() {
               setMobileDraft(null);
             }}
           >
-            {mobileMeta?.key === mobileKey ? (
-              mobileMeta.total === 0 ? (
-                'ვაკანსია ვერ მოიძებნა'
-              ) : (
-                `ნახე ${mobileMeta.total} ვაკანსია`
-              )
-            ) : (
-              <>
-                ფილტრების გამოყენება <ArrowRight size={16} />
-              </>
-            )}
+            შედეგების ჩვენება <ArrowRight size={16} />
           </button>
         </SheetContent>
       </Sheet>

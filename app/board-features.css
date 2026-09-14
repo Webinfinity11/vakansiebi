@@ -471,3 +471,30 @@
     display: none;
   }
 }
+@media (min-width: 761px) and (max-width: 1100px) {
+  .board-shell .topbar .header-inner {
+    gap: 12px;
+    padding-inline: 24px;
+  }
+  .board-shell .header-search {
+    margin-left: auto;
+    flex: 0 0 44px;
+    width: 44px;
+    padding: 0;
+  }
+  .board-shell .personal-nav {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .board-shell .header-search span,
+  .board-shell .personal-nav span,
+  .board-shell .saved-nav > span {
+    display: none;
+  }
+  .board-shell .header-inner .theme-toggle,
+  .board-shell .header-inner .saved-nav {
+    margin-left: 0;
+  }
+}

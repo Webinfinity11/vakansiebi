@@ -28,10 +28,12 @@ export default function AdvancedFilterControls({
   value,
   onChange,
   prefix,
+  showEmployment = true,
 }: {
   value: AdvancedFilters;
   onChange: (value: AdvancedFilters) => void;
   prefix: string;
+  showEmployment?: boolean;
 }) {
   const change = <K extends keyof AdvancedFilters>(
     key: K,
@@ -43,20 +45,27 @@ export default function AdvancedFilterControls({
     value.salaryFrom > value.salaryTo;
   return (
     <div className="advanced-filters">
-      <label htmlFor={`${prefix}-employment`}>განაკვეთი</label>
-      <select
-        id={`${prefix}-employment`}
-        value={value.employment}
-        onChange={(e) =>
-          change('employment', e.target.value as AdvancedFilters['employment'])
-        }
-      >
-        {Object.entries(employmentLabels).map(([key, label]) => (
-          <option key={key} value={key}>
-            {label}
-          </option>
-        ))}
-      </select>
+      {showEmployment && (
+        <>
+          <label htmlFor={`${prefix}-employment`}>განაკვეთი</label>
+          <select
+            id={`${prefix}-employment`}
+            value={value.employment}
+            onChange={(e) =>
+              change(
+                'employment',
+                e.target.value as AdvancedFilters['employment'],
+              )
+            }
+          >
+            {Object.entries(employmentLabels).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </>
+      )}
       <label className="check-row" htmlFor={`${prefix}-entry-level`}>
         <input
           type="checkbox"

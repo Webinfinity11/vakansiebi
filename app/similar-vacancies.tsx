@@ -4,7 +4,7 @@ import { usePersonalSpace } from './personal-space';
 import type { Application } from '@/lib/personal-space';
 import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { CompanyLogo } from './company-logo';
 import { useVacancyActivity } from './use-vacancy-activity';
@@ -17,8 +17,6 @@ export function SimilarVacancies({
   id: string;
   returnTo: string;
 }) {
-  const target = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
   const [result, setResult] = useState<{
     key: string;
     jobs: SimilarVacancy[];
@@ -35,20 +33,7 @@ export function SimilarVacancies({
   const excluded = activity.hidden.map((item) => item.id).join(',');
   const key = id + ':' + excluded;
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '400px' },
-    );
-    if (target.current) observer.observe(target.current);
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
-    if (!visible || !activity.ready) return;
+    if (!activity.ready) return;
     const controller = new AbortController();
     const query = new URLSearchParams();
     if (excluded) query.set('exclude', excluded);
@@ -68,18 +53,28 @@ export function SimilarVacancies({
           setResult({ key, jobs: [], error: true });
       });
     return () => controller.abort();
-  }, [visible, activity.ready, id, excluded, key, retry]);
+  }, [activity.ready, id, excluded, key, retry]);
   const current = result?.key === key ? result : null;
   return (
     <section
       className="similar-vacancies"
-      ref={target}
       aria-labelledby="similar-title"
       aria-busy={!current}
     >
       <h2 id="similar-title">მსგავსი ვაკანსიები</h2>
       {!current ? (
-        <p className="filter-help">მსგავს ვაკანსიებს ვეძებთ…</p>
+        <>
+          <p className="filter-help">მსგავსი ვაკანსიები იტვირთება…</p>
+          <div className="similar-grid" aria-hidden="true">
+            {[0, 1, 2].map((index) => (
+              <div className="similar-placeholder" key={index}>
+                <span />
+                <i />
+                <i />
+              </div>
+            ))}
+          </div>
+        </>
       ) : current.error ? (
         <button
           className="secondary-button"
@@ -107,7 +102,9 @@ export function SimilarVacancies({
                 <CompanyLogo company={job.company} url={job.logoUrl} />
                 <span>{job.company}</span>
               </div>
-              <h3 title={job.title}>{vacancyCardTitle(job.title, job.source)}</h3>
+              <h3 title={job.title}>
+                {vacancyCardTitle(job.title, job.source)}
+              </h3>
               <VacancyStatus
                 seen={activity.seen.includes(job.id)}
                 status={applicationsById.get(job.id)}

@@ -16,6 +16,11 @@ export function useSwipe({
   const [dragging, setDragging] = useState(false);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const locked = useRef<'horizontal' | 'vertical' | null>(null);
+  const suppressUntil = useRef(0);
+  const suppressClick = useCallback(
+    () => Date.now() < suppressUntil.current,
+    [],
+  );
   const reset = useCallback(() => {
     start.current = null;
     locked.current = null;
@@ -23,6 +28,7 @@ export function useSwipe({
     setDx(0);
   }, []);
   const onPointerDown = useCallback((event: PointerEvent<HTMLElement>) => {
+    suppressUntil.current = 0;
     if (event.pointerType !== 'touch') return;
     start.current = { x: event.clientX, y: event.clientY, id: event.pointerId };
     locked.current = null;
@@ -52,6 +58,7 @@ export function useSwipe({
       if (!origin || event.pointerId !== origin.id) return;
       const moveX = event.clientX - origin.x;
       const horizontal = locked.current === 'horizontal';
+      if (horizontal) suppressUntil.current = Date.now() + 500;
       reset();
       if (!horizontal) return;
       if (moveX >= threshold) onRight?.();
@@ -63,6 +70,7 @@ export function useSwipe({
   return {
     dx,
     dragging,
+    suppressClick,
     handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel },
   };
 }

@@ -2,9 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { ArrowLeft, ArrowUpRight, MapPin, ExternalLink } from 'lucide-react';
-import { Brand } from '../../brand';
-import { ThemeToggle } from '../../theme-toggle';
+import { ArrowUpRight, MapPin, ExternalLink } from 'lucide-react';
+import { PublicHeader } from '../../public-header';
 import { CompanyLogo } from '../../company-logo';
 import { formatDate } from '../../vacancy-text';
 import { db } from '@/lib/server/db';
@@ -115,17 +114,7 @@ export default async function CompanyPage(props: Props) {
   const website = profile?.website ? safeExternalUrl(profile.website) : '';
   return (
     <div className="board-shell vacancy-page company-page">
-      <header className="topbar">
-        <div className="header-inner">
-          <Brand />
-          <ThemeToggle />
-          <Link className="vacancy-header-link" href="/" prefetch={false}>
-            <ArrowLeft size={16} />
-            <span className="back-label-full">ყველა ვაკანსია</span>
-            <span className="back-label-short">ყველა</span>
-          </Link>
-        </div>
-      </header>
+      <PublicHeader />
       <main className="vacancy-page-main">
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
           <Link href="/" prefetch={false}>
@@ -177,10 +166,20 @@ export default async function CompanyPage(props: Props) {
                 prefetch={false}
                 className="similar-card"
               >
-                <h3 title={job.title}>{vacancyCardTitle(job.title, job.source)}</h3>
-                {vacancyCardSalary(job.salary, job.salaryPeriod, job.source) && (
+                <h3 title={job.title}>
+                  {vacancyCardTitle(job.title, job.source)}
+                </h3>
+                {vacancyCardSalary(
+                  job.salary,
+                  job.salaryPeriod,
+                  job.source,
+                ) && (
                   <span className="similar-salary">
-                    {vacancyCardSalary(job.salary, job.salaryPeriod, job.source)}
+                    {vacancyCardSalary(
+                      job.salary,
+                      job.salaryPeriod,
+                      job.source,
+                    )}
                   </span>
                 )}
                 <div className="company-job-meta">

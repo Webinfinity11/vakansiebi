@@ -17,6 +17,8 @@ const sources = [
   'app/phone.css',
   'app/board-features.css',
   'app/search-features.css',
+  'app/refined-board.css',
+  'app/public-header.css',
 ];
 const output = 'app/theme-dark.css';
 

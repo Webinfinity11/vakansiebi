@@ -98,3 +98,30 @@ void test('an employer page is a safe place to return to, and nothing shaped lik
       bad,
     );
 });
+
+void test('return position preserves the clicked card offset and ignores invalid offsets', () => {
+  const state = {
+    url: '/',
+    id: 'a7f16c4c-5d47-4a08-8fa5-9e7b5a46664c',
+    page: 1,
+    loadedThrough: 3,
+    top: 1200,
+    at: 1000,
+  };
+  assert.equal(
+    readSearchPosition(
+      JSON.stringify({ ...state, anchorOffset: 180 }),
+      '/',
+      1000,
+    )?.anchorOffset,
+    180,
+  );
+  assert.equal(
+    readSearchPosition(
+      JSON.stringify({ ...state, anchorOffset: 'bad' }),
+      '/',
+      1000,
+    )?.anchorOffset,
+    undefined,
+  );
+});

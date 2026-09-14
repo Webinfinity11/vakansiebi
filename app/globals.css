@@ -1457,13 +1457,7 @@ footer > span:last-child {
   font-weight: 400;
   font-display: swap;
 }
-@font-face {
-  font-family: 'FiraGO';
-  src: url('/fonts/FiraGO-Medium.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-}
+
 @font-face {
   font-family: 'FiraGO';
   src: url('/fonts/FiraGO-SemiBold.woff2') format('woff2');
@@ -1478,13 +1472,7 @@ footer > span:last-child {
   font-weight: 700;
   font-display: swap;
 }
-@font-face {
-  font-family: 'FiraGO';
-  src: url('/fonts/FiraGO-ExtraBold.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-}
+
 :root {
   --primary: #2457e6;
   --primary-foreground: #fff;

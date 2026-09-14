@@ -2296,3 +2296,200 @@
   box-shadow: none;
 }
 
+/* ── from app/refined-board.css ── */
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board {
+  background: #1e222b;
+}
+:root[data-theme='dark'] .refined-board .topbar {
+  box-shadow: none;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .refined-board .topbar .saved-nav {
+  border: 0;
+  background: #1e2431;
+}
+:root[data-theme='dark'] .refined-board .topbar .saved-nav b {
+  background: transparent;
+  color: inherit;
+}
+:root[data-theme='dark'] .refined-board .topbar .personal-nav {
+  border: 0;
+  background: transparent;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .discovery-hero,
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .results-tools,
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .jobx-footer {
+  background: #1e222b;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .discovery-shortcut {
+  background: #131b2c;
+  border: 1px solid #2a313f;
+  box-shadow: none;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-shortcut[aria-pressed='true'] {
+  background: #1c2745;
+  border-color: #b5c6ed;
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-card {
+  border: 1px solid #2a313f;
+  background: #131b2c;
+  box-shadow: none;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-card:hover {
+  border-color: #b5c6ed;
+  box-shadow: none;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-new {
+  background: transparent;
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-meta {
+  color: #999ea8;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .category-tag {
+  background: none;
+  color: #999ea8;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .salary {
+  background: none;
+  color: #aebcd5;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-when {
+  color: #999ea8;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-when.is-urgent {
+  color: #e4b6a0;
+}
+:root[data-theme='dark'] .results-updating {
+  background: #1c2745;
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .filter-extra {
+  border-top: 1px solid #2a313f;
+}
+:root[data-theme='dark'] .filter-employment-label {
+  color: #999ea8;
+}
+:root[data-theme='dark'] .filter-employment {
+  border: 1px solid #2a313f;
+  color: #aebcd5;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-shortcut[aria-pressed='true']
+  strong,
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-shortcut[aria-pressed='true']
+  > svg {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .refined-board .jobx-footer .footer-meta {
+  border: 0;
+  color: #999ea8;
+}
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .refined-board .jobx-footer .footer-meta {
+    border-top: 1px solid #2a313f;
+  }
+}
+:root[data-theme='dark'] .vacancy-page .vacancy-layout > .vacancy-source.compact-source {
+  border: 0;
+  border-top: 1px solid #2a313f;
+  background: transparent;
+  color: #999ea8;
+}
+:root[data-theme='dark'] .vacancy-page .compact-source a {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .vacancy-page .compact-source .job-evidence {
+  color: inherit;
+}
+:root[data-theme='dark'] .similar-placeholder {
+  border: 1px solid #2a313f;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .similar-placeholder span,
+:root[data-theme='dark'] .similar-placeholder i {
+  background: #212935;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
+  .save-button.is-saved
+  svg {
+  fill: currentColor;
+}
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .results-tools {
+    background: #1e222b;
+    border-bottom: 1px solid #2a313f;
+  }
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board {
+  background-image: none;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .search-panel {
+  border: 1px solid #22272fa6;
+  box-shadow: 0 8px 24px #080a0f3d;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .discovery-shortcut {
+  border-bottom: 3px solid #1c2845;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-shortcut[aria-pressed='true'] {
+  border-bottom-color: #6f93ff;
+}
+:root[data-theme='dark'] .brand-loading {
+  color: #6f93ff;
+  background: #1c2a45;
+}
+:root[data-theme='dark'] .brand-loading-track {
+  background: #1c2845;
+}
+:root[data-theme='dark'] .brand-loading-track::after {
+  background: linear-gradient(90deg, #6f93ff, #47ccea);
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-skeleton {
+  border-color: #232c3e;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-skeleton > span {
+  background: url('/brand/jobx-mark.png') center / 34px no-repeat #1c2a45;
+}
+:root[data-theme='dark'] .similar-placeholder > span {
+  background: url('/brand/jobx-mark.png') center / 30px no-repeat #1c2a45;
+}
+:root[data-theme='dark'] .refined-board .hero-brand-trail {
+  background: linear-gradient(to bottom, #5da1f466, #1c2c4522 75%, transparent);
+}
+
+/* ── from app/public-header.css ── */
+:root[data-theme='dark'] .board-shell .topbar.public-header {
+  background: #131b2c;
+  border-bottom: 1px solid #2a313f;
+  box-shadow: none;
+}
+:root[data-theme='dark'] .board-shell .topbar.public-header .all-vacancies-link {
+  color: #6f93ff;
+  border: 0;
+  background: transparent;
+}
+:root[data-theme='dark'] .board-shell .topbar.public-header .header-search,
+:root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav,
+:root[data-theme='dark'] .board-shell .topbar.public-header .personal-nav {
+  color: #9ca5b5;
+  border: 0;
+  background: transparent;
+}
+:root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav {
+  background: #1e2431;
+}
+:root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav.is-active {
+  color: #6f93ff;
+  background: #1c2745;
+}
+:root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav b {
+  color: inherit;
+  background: transparent;
+}
+

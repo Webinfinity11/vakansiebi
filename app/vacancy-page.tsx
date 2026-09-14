@@ -2,7 +2,6 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import {
-  ArrowLeft,
   ArrowUpRight,
   Bookmark,
   Share2,
@@ -11,8 +10,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
-import { Brand } from './brand';
-import { ThemeToggle } from './theme-toggle';
+import { PublicHeader } from './public-header';
 import { CompanyIdentity } from './company-identity';
 import { Description, SourceStatus, formatDate } from './vacancy-text';
 import { QuickApply, TranslationHelp } from './quick-apply';
@@ -218,8 +216,9 @@ export default function VacancyPage({
     const outcome = await shareLink(
       window.location.origin + vacancyPath(job.id),
       `${job.title} — ${job.company}`,
-      [job.city, compactSalary(job.salary, job.salaryPeriod)].filter(Boolean).join(' · ') ||
-        undefined,
+      [job.city, compactSalary(job.salary, job.salaryPeriod)]
+        .filter(Boolean)
+        .join(' · ') || undefined,
     );
     setFeedback(
       outcome === 'shared'
@@ -264,6 +263,13 @@ export default function VacancyPage({
         ...summary.map((s) => s.value),
       ]),
   );
+  if (
+    extraFacts.length === 1 &&
+    /კატეგორია|category/i.test(extraFacts[0].label)
+  ) {
+    facts.push([extraFacts[0].label, extraFacts[0].value]);
+    extraFacts.length = 0;
+  }
   const contacts = vacancyContacts(job);
   const hasContact = Boolean(contacts.emails.length || contacts.phones.length);
   const hasAction = hasContact || Boolean(applicationDestination(job));
@@ -321,22 +327,7 @@ export default function VacancyPage({
       }}
       className={`board-shell vacancy-page has-personal-progress ${hasAction ? 'has-contact' : ''}`}
     >
-      <header className="topbar">
-        <div className="header-inner">
-          <Brand />
-          <ThemeToggle />
-          <Link
-            className="vacancy-header-link"
-            href={returnTo}
-            prefetch={false}
-            aria-label={returnLabel}
-          >
-            <ArrowLeft size={16} />
-            <span className="back-label-full">{returnLabel}</span>
-            <span className="back-label-short">უკან</span>
-          </Link>
-        </div>
-      </header>
+      <PublicHeader savedCount={saved.length} />
       <main className="vacancy-page-main">
         {preview && (
           <p className="vacancy-preview">
@@ -596,43 +587,46 @@ export default function VacancyPage({
               </details>
             </section>
           )}
-          {!preview && <SimilarVacancies id={job.id} returnTo={returnTo} />}
-          <footer className="vacancy-source" id="vacancy-source">
-            <h2>ორიგინალი განცხადება</h2>
-            {job.sourceChanged && (
-              <p className="source-update-note">
-                წყაროზე ცვლილებაა დაფიქსირებული. განაცხადის გაგზავნამდე
-                გადაამოწმე განახლებული პირობები.
-              </p>
-            )}
+          <footer
+            className="vacancy-source compact-source"
+            id="vacancy-source"
+            aria-label="განცხადების წყარო"
+          >
+            <span>ორიგინალი: </span>
+            {(job.sources.length
+              ? job.sources
+              : [{ source: job.source, url: job.url }]
+            ).map((source, index) => (
+              <span key={source.url}>
+                {index > 0 && ', '}
+                <a href={source.url} target="_blank" rel="noopener noreferrer">
+                  {source.source}
+                </a>
+              </span>
+            ))}
+            <span> · </span>
+            <SourceStatus job={job} />
             {job.fullTextUrl && (
-              <a
-                className="vacancy-fulltext-source"
-                href={job.fullTextUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                სრული ტექსტი დამსაქმებლის გვერდზე <ArrowUpRight size={14} />
-              </a>
-            )}
-            <div className="vacancy-source-links">
-              {(job.sources.length
-                ? job.sources
-                : [{ source: job.source, url: job.url }]
-              ).map((source) => (
+              <>
+                {' '}
+                ·{' '}
                 <a
-                  key={source.url}
-                  href={source.url}
+                  href={job.fullTextUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  ორიგინალის ნახვა · {source.source}
-                  <ArrowUpRight size={14} />
+                  სრული ტექსტი დამსაქმებელთან
                 </a>
-              ))}
-            </div>
-            <SourceStatus job={job} />
+              </>
+            )}
+            {job.sourceChanged && (
+              <span>
+                {' '}
+                · წყაროზე პირობები შეიცვალა — გადაამოწმე განაცხადის გაგზავნამდე.
+              </span>
+            )}
           </footer>
+          {!preview && <SimilarVacancies id={job.id} returnTo={returnTo} />}
         </article>
       </main>
       {hasAction && (
