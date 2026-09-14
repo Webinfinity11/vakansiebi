@@ -17,12 +17,12 @@ export const viewport: Viewport = {
   ],
 };
 export const metadata: Metadata = {
-  title: 'ერთად — ვაკანსიები ერთ სივრცეში',
+  title: 'JOBX — ვაკანსიები ერთ სივრცეში',
   description:
     'მოძებნე ვაკანსიები სხვადასხვა წყაროდან. შეადარე პირობები და გადადი პირველწყაროზე.',
-  applicationName: 'ერთად',
+  applicationName: 'JOBX',
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, title: 'ერთად', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'JOBX', statusBarStyle: 'default' },
 };
 export default function RootLayout({
   children,

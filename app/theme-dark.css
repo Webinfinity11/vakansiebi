@@ -1745,9 +1745,6 @@
 :root[data-theme='dark'] .board-shell .discovery-hero .searchbar:focus-within {
   box-shadow: none;
 }
-:root[data-theme='dark'] .search-panel:focus-within {
-  outline: 2px solid #a8c5fa;
-}
 :root[data-theme='dark'] .board-shell .discovery-hero .searchbar > svg {
   color: #8a9bb2;
 }
@@ -1811,6 +1808,285 @@
 :root[data-theme='dark'] .category-gallery button:focus-visible,
 :root[data-theme='dark'] .search-modes button:focus-visible,
 :root[data-theme='dark'] .discovery-section-heading > button:focus-visible {
+  outline: 2px solid #6f93ff;
+}
+:root[data-theme='dark'] .board-shell.editorial-board {
+  background: #0e1523;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .discovery-hero {
+  border-bottom: 0;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .search-panel {
+  border: 0;
+  box-shadow: 0 8px 24px #04050752;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .discovery-shortcut {
+  border: 1px solid #2f3748;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .discovery-shortcut strong {
+  color: #b8c0d1;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .discovery-shortcut > svg {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .discovery-shortcut:hover {
+  border-color: #6f93ff;
+  background: #1c2745;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .discovery-shortcut[aria-pressed='true'] {
+  background: #6f93ff;
+  border-color: #6f93ff;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .discovery-shortcut[aria-pressed='true'] strong,
+:root[data-theme='dark'] .board-shell.editorial-board .discovery-shortcut[aria-pressed='true'] > svg {
+  color: #131b2c;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .desktop-filters {
+  border: 0;
+  border-right: 1px solid #2f3748;
+  background: transparent;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .job-card {
+  box-shadow: none;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .job-card:hover {
+  border-color: #b6c5ec;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .status-seen {
+  color: #9a9fa9;
+  background: transparent;
+  border-color: transparent;
+}
+:root[data-theme='dark'] .board-shell.editorial-board .results-tools {
+  background: #0e1523;
+}
+:root[data-theme='dark'] .board-shell .jobx-footer {
+  border-top: 1px solid #2f3748;
+  color: #9ea7b6;
+}
+:root[data-theme='dark'] .board-shell .jobx-footer nav a,
+:root[data-theme='dark'] .board-shell .jobx-footer nav button {
+  color: #b8c0d1;
+  background: transparent;
+  border: 0;
+}
+:root[data-theme='dark'] .board-shell .jobx-footer nav a:hover,
+:root[data-theme='dark'] .board-shell .jobx-footer nav button:hover {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .board-shell .jobx-footer .footer-help summary {
+  color: #b8c0d1;
+}
+:root[data-theme='dark'] .board-shell .jobx-footer .footer-meta {
+  border-top: 1px solid #272f3d;
+}
+:root[data-theme='dark'] .board-shell .header-search {
+  border: 0;
+  background: transparent;
+  color: #b8c0d1;
+}
+:root[data-theme='dark'] .board-shell .header-search:hover {
+  background: #1c2745;
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .optional-application-progress {
+  border-top: 1px solid #272f3d;
+}
+:root[data-theme='dark'] .optional-application-progress summary {
+  color: #9ea7b6;
+}
+:root[data-theme='dark'] .category-options .category-icon {
+  color: #909bac;
+}
+:root[data-theme='dark'] .category-options .check-row:has(input:checked) .category-icon {
+  color: #8aa7ff;
+}
+:root[data-theme='dark'] .category-options .check-row:has(input:focus-visible) {
+  outline: 2px solid #6f93ff;
+}
+:root[data-theme='dark'] .category-options .check-row:hover {
+  background: #1c2745;
+}
+:root[data-theme='dark'] .category-options .check-row:has(input:checked) {
+  box-shadow: inset 3px 0 #6f93ff;
+}
+:root[data-theme='dark'] .category-expand {
+  border: 0;
+  background: transparent;
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .category-expand:hover {
+  background: #1c2745;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board {
+  background: #0e1523;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .search-panel {
+  border: 1px solid #2d3543;
+  box-shadow:
+    0 6px 0 #121721,
+    0 14px 28px #05070a0a;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .search-panel:focus-within {
+  border-color: #aec2f4;
+  box-shadow:
+    0 6px 0 #121721,
+    0 0 0 3px #11161f15;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .discovery-shortcut {
+  background: #212a40;
+  border: 1px solid #242c3d;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .discovery-shortcut:nth-child(2) {
+  background: #213a37;
+  border-color: #2d4744;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .discovery-shortcut:nth-child(3) {
+  background: #30263b;
+  border-color: #322544;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .discovery-shortcut:nth-child(4) {
+  background: #3d3324;
+  border-color: #e6d6bd;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board
+  .discovery-shortcut
+  > .category-mark {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board
+  .discovery-shortcut[aria-pressed='true'] {
+  background: #6f93ff;
+  border-color: #6f93ff;
+  box-shadow: 0 3px 0 #0c1017;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board
+  .discovery-shortcut[aria-pressed='true']
+  > .category-mark,
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board
+  .discovery-shortcut[aria-pressed='true']
+  strong {
+  color: #131b2c;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .job-card {
+  border: 1px solid #2e343f;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .salary {
+  background: transparent;
+  color: #aebcd6;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .results-tools {
+  background: #0e1523;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .jobx-footer {
+  background: #0e1523;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :root[data-theme='dark'] .board-shell.editorial-board.crafted-board .discovery-shortcut:hover {
+    box-shadow: 0 5px 10px #05070a0e;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  :root[data-theme='dark'] .board-shell.editorial-board.crafted-board .job-card:hover {
+    border-color: #aec2f4;
+    box-shadow: 0 4px 16px #05070a0d;
+  }
+}
+:root[data-theme='dark'][data-theme='dark']
+  .board-shell.editorial-board.crafted-board
+  .header-search {
+  color: #bccbe6;
+}
+:root[data-theme='dark'] .board-shell .company-page-link {
+  color: #6f93ff;
+  text-decoration-color: #afc2f3;
+}
+:root[data-theme='dark'] .board-shell .company-page-link:hover {
+  text-decoration-color: currentColor;
+}
+:root[data-theme='dark'] .board-shell .company-identity {
+  color: #9ba6b6;
+}
+:root[data-theme='dark'] .company-navigation-hint {
+  color: #8e9bae;
+}
+:root[data-theme='dark'] .board-shell a.company-identity:hover,
+:root[data-theme='dark'] .board-shell a.company-identity:focus-visible {
+  background: #212b40;
+  color: #8aa7ff;
+}
+:root[data-theme='dark'] .board-shell a.company-identity:focus-visible {
+  outline: 2px solid #6f93ff;
+}
+:root[data-theme='dark'] .board-shell a.company-identity:active {
+  background: #1c2945;
+}
+:root[data-theme='dark'] .board-shell .company-identity:has([data-pending]) {
+  background: #212b40;
+  color: #8aa7ff;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .discovery-shortcut {
+  background: #1c2a45;
+  border-color: #222c3f;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .discovery-shortcut:nth-child(even) {
+  background: #22363f;
+  border-color: #25353c;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board
+  .discovery-shortcut[aria-pressed='true'] {
+  background: #6f93ff;
+  border-color: #6f93ff;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .discovery-shortcut:nth-child(n) {
+  background: #1c2c45;
+  border-color: #1f2d42;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board
+  .discovery-shortcut:nth-child(n)[aria-pressed='true'] {
+  background: #6f93ff;
+  border-color: #6f93ff;
+}
+:root[data-theme='dark'] .board-shell.company-page {
+  background: #0e1523;
+}
+:root[data-theme='dark'] .company-page .company-page-head {
+  border: 1px solid #1f2d42;
+  background: #1c2c45;
+}
+:root[data-theme='dark'] .company-page .company-page-cities {
+  color: #97a4b5;
+}
+:root[data-theme='dark'] .company-page .company-about {
+  border-top: 1px solid #1f2d42;
+}
+:root[data-theme='dark'] .company-page .similar-vacancies {
+  border: 0;
+}
+:root[data-theme='dark'] .company-job-count {
+  background: #222b3f;
+  color: #94a5c1;
+}
+:root[data-theme='dark'] .company-page .similar-card {
+  border: 1px solid #2c3340;
+  box-shadow: none;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .company-page .similar-salary {
+  background: transparent;
+  color: #aebcd6;
+}
+:root[data-theme='dark'] .company-job-meta {
+  color: #929baa;
+}
+:root[data-theme='dark'] .company-job-arrow {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .company-page .similar-card:hover {
+  border-color: #afc4f3;
+}
+:root[data-theme='dark'] .company-page .similar-card:focus-visible {
   outline: 2px solid #6f93ff;
 }
 
@@ -1899,6 +2175,10 @@
       0 -34px 24px -10px #121721bf;
   }
 }
+:root[data-theme='dark'] .board-shell .discovery-hero .searchbar input[type='search']:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
 
 /* ── from app/board-features.css ── */
 :root[data-theme='dark'] .board-shell .load-more-error {
@@ -1941,6 +2221,31 @@
   color: #6f93ff;
   border-color: #b5c6ed;
 }
+:root[data-theme='dark'] .board-shell .hide-button {
+  color: #999ea8;
+}
+:root[data-theme='dark'] .board-shell .hide-button:hover {
+  background: #262f3b;
+}
+:root[data-theme='dark'] .board-shell .hide-button:focus-visible,
+:root[data-theme='dark'] .board-shell .recent-summary:focus-visible {
+  outline: 2px solid #6f93ff;
+}
+:root[data-theme='dark'] .board-shell .recent-summary {
+  color: #a3afc5;
+}
+:root[data-theme='dark'] .board-shell .active-filters .clear-all-filters {
+  background: transparent;
+  color: #a3afc5;
+}
+:root[data-theme='dark'] .board-shell .results-progress {
+  color: #999ea8;
+}
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .board-shell.editorial-board.crafted-board .results-tools {
+    box-shadow: none;
+  }
+}
 
 /* ── from app/search-features.css ── */
 :root[data-theme='dark'] .search-suggest {
@@ -1963,21 +2268,31 @@
 :root[data-theme='dark'] .search-suggest .suggest-meta {
   color: #969ca6;
 }
-:root[data-theme='dark'] .salary-context {
-  background: #1c2845;
-  border: 1px solid #1f2942;
-  color: #bbc5d8;
+:root[data-theme='dark'] .board-shell .search-query-field {
+  border: 1px solid #282f39;
+  background: #0e1523;
 }
-:root[data-theme='dark'] .salary-context > strong {
-  color: #90a5c1;
+:root[data-theme='dark'] .board-shell .search-query-field > svg {
+  color: #8f9cad;
 }
-:root[data-theme='dark'] .salary-context-range {
-  color: #aebcd5;
+:root[data-theme='dark'] .board-shell .search-query-field:has(input:focus) {
+  outline: 2px solid #6f93ff;
 }
-:root[data-theme='dark'] .salary-context small {
-  color: #919cae;
+:root[data-theme='dark'] .board-shell .discovery-hero .search-query-field input {
+  border: 0;
+  background: transparent;
 }
-:root[data-theme='dark'] .salary-context-you {
-  color: #7e9be7;
+:root[data-theme='dark'] .board-shell .clear-search {
+  background: transparent;
+  color: #8f9cad;
+}
+:root[data-theme='dark'] .board-shell .discovery-hero .searchbar .search-city {
+  border: 1px solid #282f39;
+  background: #0e1523;
+}
+:root[data-theme='dark'] .board-shell .discovery-hero .searchbar .search-city .choice {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 

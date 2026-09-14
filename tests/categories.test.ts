@@ -9,9 +9,23 @@ import {
 import { categories } from '../lib/types';
 
 const titles: Record<(typeof categories)[number], string[]> = {
-  ტექნოლოგიები: ['Java Developer', 'პროგრამისტი', 'Frontend Developer', 'Data Analyst'],
-  გაყიდვები: ['გაყიდვების მენეჯერი', 'Sales Manager', 'მოლარე', 'გაყიდვების კონსულტანტი'],
-  მარკეტინგი: ['SMM სპეციალისტი', 'Marketing Specialist', 'მარკეტინგის მენეჯერი'],
+  ტექნოლოგიები: [
+    'Java Developer',
+    'პროგრამისტი',
+    'Frontend Developer',
+    'Data Analyst',
+  ],
+  გაყიდვები: [
+    'გაყიდვების მენეჯერი',
+    'Sales Manager',
+    'მოლარე',
+    'გაყიდვების კონსულტანტი',
+  ],
+  მარკეტინგი: [
+    'SMM სპეციალისტი',
+    'Marketing Specialist',
+    'მარკეტინგის მენეჯერი',
+  ],
   ადმინისტრაცია: ['ოფის მენეჯერი', 'Office Manager', 'ასისტენტი'],
   ფინანსები: ['ბუღალტერი', 'Accountant', 'ბუღალტერიის მენეჯერი'],
   ლოჯისტიკა: ['მძღოლი', 'Driver', 'კურიერი', 'ლოჯისტიკის მენეჯერი'],
@@ -31,7 +45,11 @@ void test('every catalogue category has representative Georgian and English titl
   assert.deepEqual(Object.keys(titles).sort(), [...categories].sort());
   const wrong = Object.entries(titles).flatMap(([category, list]) =>
     list
-      .map((title) => ({ title, expected: category, actual: titleCategory(title) }))
+      .map((title) => ({
+        title,
+        expected: category,
+        actual: titleCategory(title),
+      }))
       .filter((r) => r.actual !== r.expected),
   );
   assert.deepEqual(wrong, []);
@@ -69,7 +87,8 @@ void test('jobs.ge category labels or ids map onto the taxonomy; "other" says no
   assert.equal(sourceCategory('jobs', 'სხვა'), '');
   assert.equal(sourceCategory('jobs', 9), '');
   assert.equal(sourceCategory('jobs', 'არარსებული'), '');
-  for (const empty of [null, undefined, '']) assert.equal(sourceCategory('jobs', empty), '');
+  for (const empty of [null, undefined, ''])
+    assert.equal(sourceCategory('jobs', empty), '');
 });
 
 void test('the jobs.ge category table is complete and only uses catalogue categories', () => {
@@ -77,18 +96,38 @@ void test('the jobs.ge category table is complete and only uses catalogue catego
   assert.equal(new Set(jobsCategories.map((c) => c.cid)).size, 17);
   assert.equal(new Set(jobsCategories.map((c) => c.label)).size, 17);
   for (const entry of jobsCategories) {
-    assert.ok(categories.includes(entry.category as (typeof categories)[number]), entry.label);
+    assert.ok(
+      categories.includes(entry.category as (typeof categories)[number]),
+      entry.label,
+    );
     assert.ok(Number.isInteger(entry.cid) && entry.cid > 0);
     assert.ok(entry.label.trim().length > 0);
   }
-  assert.ok(jobsCategories.some((c) => c.label === 'სხვა' && c.category === 'სხვა'));
+  assert.ok(
+    jobsCategories.some((c) => c.label === 'სხვა' && c.category === 'სხვა'),
+  );
 });
 
-void test('a source category is preferred over the title, and the title is the fallback', () => {
-  assert.equal(classify('Java Developer', 'გაყიდვები'), 'გაყიდვები');
+void test('explicit professions take precedence while ambiguous titles retain the source category', () => {
+  assert.equal(classify('Java Developer', 'გაყიდვები'), 'ტექნოლოგიები');
   assert.equal(classify('Java Developer', ''), 'ტექნოლოგიები');
   assert.equal(classify('Java Developer'), 'ტექნოლოგიები');
   assert.equal(classify('რაღაც უცნობი', sourceCategory('ss', 52)), 'სხვა');
-  assert.equal(classify('ბუღალტერი', sourceCategory('jobs', 'სხვა')), 'ფინანსები');
+  assert.equal(
+    classify('ბუღალტერი', sourceCategory('jobs', 'სხვა')),
+    'ფინანსები',
+  );
   assert.equal(classify('დიზაინერი', sourceCategory('ss', 68)), 'ტექნოლოგიები');
+});
+
+void test('profession and employer industry are not confused', () => {
+  assert.equal(classify('HR მენეჯერი', 'ლოჯისტიკა'), 'ადმინისტრაცია');
+  assert.equal(
+    classify('ადამიანური რესურსების სპეციალისტი', 'წარმოება'),
+    'ადმინისტრაცია',
+  );
+  assert.equal(classify('მთავარი ბუღალტერი', 'სამედიცინო'), 'ფინანსები');
+  assert.equal(classify('მენეჯერი', 'ლოჯისტიკა'), 'ლოჯისტიკა');
+  assert.equal(classify('ოპერატორი', 'ფინანსები'), 'ფინანსები');
+  assert.equal(classify('HR / ბუღალტერი', 'ფინანსები'), 'ფინანსები');
 });

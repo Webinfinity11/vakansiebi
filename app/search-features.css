@@ -1,4 +1,4 @@
-/* Search autocomplete panel and the salary context panel on a vacancy page. */
+/* Search input and autocomplete. */
 .board-shell .searchbar {
   position: relative;
 }
@@ -67,43 +67,96 @@
   }
 }
 
-.salary-context {
+/* Each field has its own boundary and focus; suggestions belong directly to the text field. */
+.board-shell .discovery-hero .search-panel {
+  padding: 12px;
+}
+.board-shell .discovery-hero .searchbar {
   display: grid;
-  gap: 6px;
-  margin: 16px 0 0;
-  padding: 16px 18px;
-  background: #eef3ff;
-  border: 1px solid #d6e1fb;
-  border-radius: 12px;
-  font-size: 14px;
-  color: #2b3a57;
+  grid-template-columns: minmax(0, 1fr) 210px auto;
+  align-items: center;
+  padding: 0;
+  gap: 10px;
 }
-.salary-context > strong {
-  font-size: 13px;
-  font-weight: 600;
-  color: #42618a;
+.board-shell .search-query-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid #d7e0ee;
+  border-radius: 10px;
+  background: #f7f9fc;
 }
-.salary-context-range {
-  font-size: 18px;
-  font-weight: 700;
-  color: #18243b;
-  font-variant-numeric: tabular-nums;
+.board-shell .search-query-field > svg {
+  flex-shrink: 0;
+  color: #60748f;
 }
-.salary-context-range b {
-  font-weight: 800;
+.board-shell .search-query-field:has(input:focus) {
+  outline: 2px solid #2457e6;
+  outline-offset: 2px;
 }
-.salary-context small {
-  font-size: 12px;
-  line-height: 1.6;
-  color: #5b6b85;
+.board-shell .discovery-hero .search-query-field input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
 }
-.salary-context-you {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e4bbf;
+.board-shell .search-query-field input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
 }
-@media (max-width: 760px) {
-  .salary-context {
-    padding: 14px;
-  }
+.board-shell .clear-search {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin-right: -8px;
+  border-radius: 8px;
+  background: transparent;
+  color: #60748f;
+}
+.board-shell .discovery-hero .searchbar .search-city {
+  min-width: 0;
+  min-height: 52px;
+  margin: 0;
+  padding: 0 10px;
+  border: 1px solid #d7e0ee;
+  border-radius: 10px;
+  background: #f7f9fc;
+}
+.board-shell .discovery-hero .searchbar .search-city .choice {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+}
+.board-shell .discovery-hero .searchbar > .primary {
+  min-height: 54px;
+}
+.board-shell .search-query-field .search-suggest {
+  max-height: min(320px, 40dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* Let the suggestion list extend below the masthead. Decorative layers stay inside it. */
+.board-shell .discovery-hero {
+  overflow: visible;
+  z-index: 21;
+}
+.board-shell .discovery-hero::before {
+  transform: none;
+}
+.board-shell .discovery-hero::after {
+  display: none;
+}
+.board-shell .discovery-hero .searchbar .search-city .choice {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }

@@ -114,7 +114,7 @@ export function SimilarVacancies({
               />
               {job.salary && (
                 <span className="similar-salary">
-                  {compactSalary(job.salary)}
+                  {compactSalary(job.salary, job.salaryPeriod)}
                 </span>
               )}
               <p>{reasons.join(' · ')}</p>

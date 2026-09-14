@@ -13,11 +13,11 @@ export function RecentVacancies({
   onClear: () => void;
 }) {
   return (
-    <section className="recent-strip" aria-label="ბოლოს ნანახი">
+    <details className="recent-strip">
+      <summary className="recent-summary">
+        <History size={15} aria-hidden="true" /> ბოლოს ნანახი ({items.length})
+      </summary>
       <div className="recent-head">
-        <h2>
-          <History size={15} aria-hidden="true" /> ბოლოს ნანახი
-        </h2>
         <button type="button" onClick={onClear}>
           გასუფთავება
         </button>
@@ -35,6 +35,6 @@ export function RecentVacancies({
           </Link>
         ))}
       </div>
-    </section>
+    </details>
   );
 }

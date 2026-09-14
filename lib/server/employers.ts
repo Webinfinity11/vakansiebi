@@ -104,9 +104,8 @@ export async function decideEmployers(input: unknown) {
   return { a, b, decision: data.decision };
 }
 
-/* An employer gets a page once it has this many current vacancies; below it a page would be a
-   thin list that tells a reader less than the search does. */
-export const employerPageMinimum = 10;
+/* Keep existing company URLs available, but link from cards only when useful to browse. */
+export const employerPageMinimum = 1;
 export type EmployerPage = {
   slug: string;
   name: string;
@@ -179,7 +178,9 @@ async function buildEmployerPages() {
       jobIds: g.ids,
       cities: ranked(g.cities).slice(0, 8),
     });
-    for (const id of g.ids) byJob.set(id, slug);
+    if (g.ids.length >= 3) {
+      for (const id of g.ids) byJob.set(id, slug);
+    }
   }
   return { bySlug, byJob };
 }

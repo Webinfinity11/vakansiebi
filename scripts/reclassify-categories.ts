@@ -8,10 +8,16 @@
 //   npx tsx scripts/reclassify-categories.ts --apply    write it, in batches of 200
 import 'dotenv/config';
 import { db, transaction } from '../lib/server/db';
-import { classify, sourceCategory } from '../worker/categories';
+import {
+  classify,
+  sourceCategory,
+  explicitRoleCategory,
+} from '../worker/categories';
 import { hashVacancy, auditChange } from '../worker/importer';
 import type { Vacancy } from '../lib/types';
 const apply = process.argv.includes('--apply');
+// A conservative repair for profession/industry conflicts; other records are untouched.
+const rolesOnly = process.argv.includes('--roles-only');
 const argument = (name: string) =>
   Number(
     process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=')[1] || '',
@@ -39,13 +45,15 @@ try {
   ).rows;
   const counts: Record<string, number> = {};
   const pending = rows.flatMap((row) => {
-    const category = classify(
-      String(row.raw.title || ''),
-      row.source_id === 'jobs'
-        ? sourceCategory('jobs', row.listing_hints?.categoryLabel || '')
-        : '',
-    );
-    if (category === row.raw.category) return [];
+    const category = rolesOnly
+      ? explicitRoleCategory(String(row.raw.title || ''))
+      : classify(
+          String(row.raw.title || ''),
+          row.source_id === 'jobs'
+            ? sourceCategory('jobs', row.listing_hints?.categoryLabel || '')
+            : '',
+        );
+    if (!category || category === row.raw.category) return [];
     counts[row.raw.category + ' → ' + category] =
       (counts[row.raw.category + ' → ' + category] || 0) + 1;
     return [{ ...row, category }];
@@ -130,6 +138,7 @@ try {
     JSON.stringify(
       {
         apply,
+        rolesOnly,
         checked: rows.length,
         changing: pending.length,
         updated,

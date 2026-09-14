@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { isAdmin } from '@/lib/server/auth';
 import { getVacancyPage } from '@/lib/server/vacancy-page';
-import { salaryContext } from '@/lib/server/salary-context';
-import { employerPagesIfReady } from '@/lib/server/employers';
+import { employerPages } from '@/lib/server/employers';
 import { safeReturnPath } from '@/lib/vacancy-navigation';
 import VacancyPage from '../../vacancy-page';
 type Props = {
@@ -16,21 +15,13 @@ async function load({ params, searchParams }: Props) {
   if (preview && !(await isAdmin())) notFound();
   const job = await getVacancyPage(id, preview);
   if (!job) notFound();
-  // Salary context is an extra; a failure there must never take the page down.
-  const context =
-    job.category !== 'სხვა'
-      ? await salaryContext(job.category).catch(() => null)
-      : null;
-  // Only a link: it never waits for the employer directory, and a failure leaves plain text.
-  const employers = preview
-    ? null
-    : await employerPagesIfReady().catch(() => null);
+  // Resolve the cached directory so the employer link is present on a first visit.
+  const employers = preview ? null : await employerPages().catch(() => null);
   const slug = employers?.byJob.get(job.id);
   return {
     job,
     preview,
     companyPath: slug ? `/companies/${encodeURIComponent(slug)}` : null,
-    salaryContext: context,
     from: safeReturnPath(
       typeof query.from === 'string' ? query.from : undefined,
     ),
@@ -38,7 +29,7 @@ async function load({ params, searchParams }: Props) {
 }
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { job, preview } = await load(props);
-  const title = `${job.title} — ${job.company} | ერთად`;
+  const title = `${job.title} — ${job.company} | JOBX`;
   const description = [job.company, job.city, job.salary, job.employmentType]
     .filter(Boolean)
     .join(' · ')
@@ -59,13 +50,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 export default async function Page(props: Props) {
-  const { job, preview, from, salaryContext, companyPath } = await load(props);
+  const { job, preview, from, companyPath } = await load(props);
   return (
     <VacancyPage
       job={job}
       preview={preview}
       returnTo={from}
-      salaryContext={salaryContext}
       companyPath={companyPath}
     />
   );

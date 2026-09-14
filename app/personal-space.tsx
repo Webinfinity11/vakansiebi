@@ -295,6 +295,7 @@ export function PersonalSpace({
   disabled,
   open,
   setOpen,
+  showTrigger = true,
 }: {
   space: PersonalController;
   filters: SearchFilters;
@@ -303,6 +304,7 @@ export function PersonalSpace({
   disabled: boolean;
   open: boolean;
   setOpen: (open: boolean) => void;
+  showTrigger?: boolean;
 }) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
@@ -422,10 +424,12 @@ export function PersonalSpace({
         <Search size={16} />
         ძიების შენახვა
       </button>
-      <button className="secondary-button" onClick={() => setOpen(true)}>
-        <FolderHeart size={17} />
-        ჩემი სივრცე <span>{searches.length + applications.length}</span>
-      </button>
+      {showTrigger && (
+        <button className="secondary-button" onClick={() => setOpen(true)}>
+          <FolderHeart size={17} />
+          ჩემი სივრცე <span>{searches.length + applications.length}</span>
+        </button>
+      )}
       {!open && !saving && (space.error || space.message) && (
         <Feedback space={space} />
       )}

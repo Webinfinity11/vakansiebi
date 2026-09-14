@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, MapPin, ExternalLink } from 'lucide-react';
 import { Brand } from '../../brand';
 import { ThemeToggle } from '../../theme-toggle';
 import { CompanyLogo } from '../../company-logo';
@@ -81,7 +81,7 @@ async function read(props: Props) {
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { employer, result, page } = await read(props);
-  const title = `${employer.name} — ${result.total} ვაკანსია | ერთად`;
+  const title = `${employer.name} — ${result.total} ვაკანსია | JOBX`;
   const description = [
     `${employer.name}-ის აქტიური ვაკანსიები`,
     employer.cities
@@ -138,18 +138,24 @@ export default async function CompanyPage(props: Props) {
           <div className="detail-company">
             <CompanyLogo large company={employer.name} url={logoUrl} />
             <div>
-              <span>{result.total} აქტიური ვაკანსია</span>
+              <span>კომპანია</span>
               <h1 id="company-title">{employer.name}</h1>
             </div>
           </div>
           {employer.cities.length > 0 && (
             <p className="company-page-cities">
+              <MapPin size={15} aria-hidden="true" />{' '}
               {employer.cities.map((c) => c.name).join(' · ')}
             </p>
           )}
           {(profile?.description || website) && (
             <div className="company-about">
-              {profile?.description && <p>{profile.description}</p>}
+              {profile?.description && (
+                <details className="company-description">
+                  <summary>კომპანიის შესახებ</summary>
+                  <p>{profile.description}</p>
+                </details>
+              )}
               {website && (
                 <a href={website} target="_blank" rel="noopener noreferrer">
                   ვებსაიტი <ExternalLink size={14} />
@@ -159,7 +165,10 @@ export default async function CompanyPage(props: Props) {
           )}
         </section>
         <section className="similar-vacancies" aria-labelledby="company-jobs">
-          <h2 id="company-jobs">ვაკანსიები</h2>
+          <h2 id="company-jobs">
+            აქტიური ვაკანსიები{' '}
+            <span className="company-job-count">{result.total}</span>
+          </h2>
           <div className="similar-grid">
             {result.jobs.map((job) => (
               <Link
@@ -169,19 +178,29 @@ export default async function CompanyPage(props: Props) {
                 className="similar-card"
               >
                 <h3>{job.title}</h3>
-                {job.salary && (
+                {compactSalary(job.salary, job.salaryPeriod) && (
                   <span className="similar-salary">
-                    {compactSalary(job.salary)}
+                    {compactSalary(job.salary, job.salaryPeriod)}
                   </span>
                 )}
-                <p>
-                  {[
-                    job.city,
-                    job.deadline && `ვადა: ${formatDate(job.deadline)}`,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
+                <div className="company-job-meta">
+                  {job.city && (
+                    <span>
+                      <MapPin size={14} aria-hidden="true" />
+                      {job.city}
+                    </span>
+                  )}
+                  {job.deadline && (
+                    <time dateTime={job.deadline}>
+                      ვადა: {formatDate(job.deadline)}
+                    </time>
+                  )}
+                </div>
+                <ArrowUpRight
+                  className="company-job-arrow"
+                  size={18}
+                  aria-hidden="true"
+                />
               </Link>
             ))}
           </div>

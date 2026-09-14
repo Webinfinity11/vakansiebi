@@ -1,7 +1,6 @@
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
-import { Building2 } from 'lucide-react';
 import { safeExternalUrl } from '@/lib/vacancy-media';
 
 export function CompanyLogo({
@@ -12,6 +11,7 @@ export function CompanyLogo({
   company: string;
   url?: string;
   large?: boolean;
+  category?: string;
 }) {
   const [failed, setFailed] = useState('');
   const [loaded, setLoaded] = useState('');
@@ -35,10 +35,13 @@ export function CompanyLogo({
         />
       )}
       {(!showLogo || loaded !== src) && (
-        <Building2
-          aria-hidden="true"
-          size={large ? 30 : 24}
-          strokeWidth={1.4}
+        <Image
+          src="/images/jobx-company-3d-v1.png"
+          alt=""
+          width={80}
+          height={80}
+          sizes={large ? '80px' : '48px'}
+          className="company-fallback-3d"
         />
       )}
     </span>

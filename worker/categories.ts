@@ -148,5 +148,30 @@ export function classify(
   title: string,
   fromSource: Category | '' = '',
 ): Category {
-  return fromSource || titleCategory(title);
+  return explicitRoleCategory(title) || fromSource || titleCategory(title);
+}
+
+/** Only unambiguous professions outrank a source's often industry-based category.
+ * Generic manager, operator, designer and specialist titles still use the source. */
+export function explicitRoleCategory(title: string): Category | '' {
+  const t = title.normalize('NFKC').toLowerCase();
+  const roles: [RegExp, Category][] = [
+    [
+      /(?<!\p{L})(?:hr|human resources)(?!\p{L})|ადამიანური რესურს|რეკრუტერ|recruiter/u,
+      'ადმინისტრაცია',
+    ],
+    [/ბუღალტერ|(?<!\p{L})accountant(?!\p{L})/u, 'ფინანსები'],
+    [
+      /პროგრამისტ|პროგრამული უზრუნველყოფის (?:ინჟინერ|დეველოპერ)|(?:software|frontend|backend|full[ -]?stack|java|python|react|web) (?:developer|engineer)/u,
+      'ტექნოლოგიები',
+    ],
+  ];
+  const matches = [
+    ...new Set(
+      roles
+        .filter(([pattern]) => pattern.test(t))
+        .map(([, category]) => category),
+    ),
+  ];
+  return matches.length === 1 ? matches[0] : '';
 }

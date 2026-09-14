@@ -210,10 +210,8 @@
   }
 
   /* ---------- Recently viewed ----------
-     On a phone the strip scrolled sideways, the one kind of scrolling this layer removes
-     everywhere else. It becomes a short list of the last three, one line each; the vacancies
-     further back are one search away and in the saved list if they mattered. board-features.css loads after this file, so these
-     selectors carry one class more than its own. */
+     All twelve records are available inside the collapsed disclosure. On a phone they stack
+     vertically; board-features.css loads later, so these selectors carry one extra class. */
   .board-shell .recent-strip .recent-track {
     flex-direction: column;
     gap: 6px;
@@ -226,9 +224,6 @@
     align-items: center;
     column-gap: 10px;
     padding: 8px 12px;
-  }
-  .board-shell .recent-track .recent-card:nth-child(n + 4) {
-    display: none;
   }
   .board-shell .recent-track .recent-card strong {
     display: block;
@@ -779,5 +774,172 @@
   }
   .category-gallery button > span {
     font-size: 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Both save and hide have a 44px tap target; the title still spans the full card. */
+  .board-shell .job-side {
+    width: 90px;
+    max-width: 90px;
+  }
+  .board-shell .job-card {
+    grid-template-columns: 32px minmax(0, 1fr) 90px;
+  }
+  .board-shell .recent-strip[open] .recent-track {
+    max-height: 300px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* The enclosing search panel supplies the input's focus indicator. Other controls retain
+   their own focus rings so keyboard users can tell which action is selected. */
+.board-shell .discovery-hero .searchbar input[type='search']:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+@media (max-width: 760px) {
+  .board-shell .discovery-hero .search-city {
+    min-width: 0;
+    gap: 6px;
+  }
+  .board-shell .discovery-hero .search-city .choice {
+    min-width: 0;
+    width: 100%;
+  }
+  .board-shell .discovery-shortcut {
+    min-height: 52px;
+    height: 100%;
+    padding: 8px 10px;
+    align-items: center;
+  }
+}
+
+@media (max-width: 760px) {
+  .board-shell .discovery-hero .search-panel .searchbar {
+    grid-template-columns: minmax(0, 1fr) 96px;
+    gap: 10px;
+  }
+  .board-shell .discovery-hero .searchbar .search-query-field {
+    grid-column: 1 / -1;
+  }
+  .board-shell .discovery-hero .searchbar .search-city {
+    grid-column: 1;
+  }
+}
+@media (max-width: 760px) {
+  .board-shell .discovery-hero .search-panel .searchbar > .primary {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .board-shell.editorial-board .hero-inner {
+    padding: 26px 16px 24px;
+  }
+  .board-shell.editorial-board .discovery-hero h1 {
+    font-size: clamp(30px, 8.2vw, 44px);
+    letter-spacing: -0.8px;
+    line-height: 1.18;
+    max-width: 540px;
+  }
+  .board-shell.editorial-board .hero-photo img {
+    object-fit: cover;
+    object-position: 62% center;
+    opacity: 0.4;
+  }
+  .board-shell.editorial-board .hero-photo::after {
+    background: linear-gradient(90deg, #102238cc, #10223855);
+  }
+  .board-shell.editorial-board .hero-search-wrap {
+    padding: 0 16px 28px;
+  }
+  .board-shell.editorial-board .discovery-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin: 18px 16px 0;
+  }
+  .board-shell.editorial-board .discovery-shortcut {
+    min-height: 48px;
+    padding: 10px;
+    gap: 6px;
+    border-radius: 10px;
+    justify-content: space-between;
+  }
+  .board-shell.editorial-board .discovery-shortcut strong {
+    font-size: 11px;
+    line-height: 1.5;
+    text-align: left;
+  }
+}
+
+@media (max-width: 760px) {
+  .board-shell {
+    --header-height: 64px;
+  }
+  .board-shell .header-inner {
+    gap: 12px;
+    padding: 0 16px;
+  }
+  .board-shell .results-tools,
+  .board-shell .results-tools:has(.share-search) {
+    top: var(--header-height);
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .board-shell .results-tools .mobile-filter-toggle {
+    grid-column: 1;
+    grid-row: 1;
+    order: 0;
+  }
+  .board-shell .results-tools .share-search {
+    grid-column: 2;
+    grid-row: 1;
+    order: 1;
+  }
+  .board-shell .jobx-footer {
+    margin: 28px 16px 0;
+    padding: 20px 0;
+  }
+  .board-shell .jobx-footer .footer-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .board-shell .jobx-footer nav {
+    flex-wrap: wrap;
+    gap: 8px 20px;
+  }
+  .board-shell .jobx-footer .footer-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .board-shell.editorial-board .discovery-shortcut {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+  .board-shell.editorial-board .discovery-shortcut > svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 760px) {
+  .board-shell .header-inner {
+    gap: 8px;
+    padding: 0 12px;
+  }
+  .board-shell .header-search {
+    width: 44px;
+    padding: 0;
+    flex: 0 0 44px;
+  }
+  .board-shell .header-search span {
+    display: none;
+  }
+  .board-shell .theme-toggle + .saved-nav {
+    margin-left: 0;
   }
 }

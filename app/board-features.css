@@ -25,7 +25,7 @@
 
 /* ---------- Recently viewed ---------- */
 .board-shell .recent-strip {
-  margin: 0 0 18px;
+  margin: 0 0 8px;
 }
 .board-shell .recent-head {
   display: flex;
@@ -221,5 +221,253 @@
     width: 44px;
     height: 44px;
     border-radius: 10px;
+  }
+}
+
+/* Research and scope: docs/homepage-ux-research-2026-09-14.md. */
+.board-shell .job-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.board-shell .job-actions .save-button,
+.board-shell .job-actions .hide-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  border-radius: 8px;
+}
+.board-shell .hide-button {
+  color: #606b7d;
+}
+.board-shell .hide-button:hover {
+  background: #edf2f9;
+}
+.board-shell .hide-button:focus-visible,
+.board-shell .recent-summary:focus-visible {
+  outline: 2px solid #2457e6;
+  outline-offset: 2px;
+}
+.board-shell .hide-button:disabled {
+  opacity: 0.5;
+}
+.board-shell .recent-summary {
+  min-height: 44px;
+  padding: 12px 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #405272;
+}
+.board-shell .recent-summary svg {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+.board-shell .recent-head {
+  justify-content: flex-end;
+}
+.board-shell .active-filters .clear-all-filters {
+  min-height: 44px;
+  background: transparent;
+  color: #405272;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.board-shell .results-progress {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: #606b7d;
+}
+.board-shell .results-progress button {
+  min-height: 44px;
+}
+
+/* Keep search and its controls compact enough to reach a complete vacancy on phones. */
+.board-shell.editorial-board.crafted-board .discovery-hero {
+  margin-top: 24px;
+}
+.board-shell.editorial-board.crafted-board .hero-inner {
+  min-height: 0;
+  padding: 14px 0 18px;
+}
+.board-shell.editorial-board.crafted-board .discovery-hero h1 {
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1.3;
+  letter-spacing: -0.8px;
+  max-width: none;
+}
+.board-shell.editorial-board.crafted-board .hero-copy {
+  max-width: none;
+  width: 100%;
+}
+.board-shell.editorial-board.crafted-board .discovery-hero h1 em {
+  display: inline;
+  font-style: normal;
+}
+@media (min-width: 761px) {
+  .board-shell.editorial-board.crafted-board .discovery-hero h1 {
+    white-space: nowrap;
+  }
+}
+.board-shell.editorial-board.crafted-board .hero-search-wrap {
+  padding: 8px 0 16px;
+}
+.board-shell.editorial-board.crafted-board .discovery-shortcuts {
+  gap: 8px;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+.board-shell.editorial-board.crafted-board .discovery-shortcut {
+  min-height: 48px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  gap: 8px;
+}
+.board-shell.editorial-board.crafted-board .discovery-shortcut > .shortcut-3d {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+}
+.board-shell.editorial-board.crafted-board .discovery-shortcut strong {
+  font-size: 13px;
+  line-height: 1.4;
+}
+.board-shell .results-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+.board-shell .results-toolbar .results-head {
+  margin: 0;
+}
+.board-shell.editorial-board.crafted-board .results-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.board-shell .results-sort {
+  min-width: 0;
+}
+.board-shell .personal-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.board-shell .results-tools .personal-tools > button:first-child:disabled {
+  display: none;
+}
+.board-shell .results-sort .choice {
+  min-height: 44px;
+  font-size: 13px;
+}
+.board-shell.editorial-board.crafted-board .job-company {
+  margin: 6px 0;
+}
+.board-shell.editorial-board.crafted-board .card-bottom {
+  margin: 6px 0 8px;
+}
+@media (max-width: 760px) {
+  .board-shell.editorial-board.crafted-board .discovery-hero {
+    margin-top: 0;
+    padding-top: 16px;
+  }
+  .board-shell.editorial-board.crafted-board .hero-inner {
+    min-height: 0;
+    padding: 0;
+  }
+  .board-shell.editorial-board.crafted-board .discovery-hero h1 {
+    font-size: 26px;
+    line-height: 1.25;
+  }
+  .board-shell.editorial-board.crafted-board .hero-search-wrap {
+    padding: 12px 0 16px;
+  }
+  .board-shell.editorial-board.crafted-board .discovery-shortcuts {
+    margin-bottom: 8px;
+  }
+  .board-shell.editorial-board.crafted-board .discovery-shortcut {
+    min-height: 48px;
+    padding: 6px 8px;
+    flex-direction: row;
+    align-items: center;
+  }
+  .board-shell.editorial-board.crafted-board .discovery-shortcut strong {
+    font-size: 12px;
+  }
+  .board-shell.editorial-board.crafted-board
+    .discovery-shortcut
+    > .shortcut-3d {
+    width: 24px;
+    height: 24px;
+    flex-basis: 24px;
+  }
+  .board-shell .results-toolbar {
+    display: block;
+  }
+  .board-shell .results-toolbar .results-head {
+    margin-bottom: 8px;
+  }
+  .board-shell.editorial-board.crafted-board .results-tools {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    box-shadow: none;
+  }
+  .board-shell .results-tools .mobile-filter-toggle {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .board-shell .results-sort {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .board-shell .results-sort .choice {
+    width: 100%;
+    min-width: 0;
+  }
+  .board-shell .results-tools .share-search {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
+  .board-shell .personal-nav {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .board-shell .personal-nav span,
+  .board-shell .header-search {
+    display: none;
+  }
+  .board-shell .results-tools .personal-tools > button:first-child {
+    grid-column: 1;
+    grid-row: 2;
+    padding: 6px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 360px) {
+  .board-shell.editorial-board.crafted-board .discovery-shortcut > .shortcut-3d {
+    display: none;
   }
 }

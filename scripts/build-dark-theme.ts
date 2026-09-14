@@ -32,7 +32,9 @@ const keepAsIs = [
   '.dark', // shadcn ships its own dark palette; inverting it would undo the theme
   '.company-avatar', // a light chip: most employer marks are dark ink on transparency
   '.hero-art',
+  '.hero-photo',
   '.brand-icon',
+  '.jobx-brand',
   '.swipe-reveal',
 ];
 /* The masthead is a dark blue gradient in both themes, so its own background layers and the
@@ -51,6 +53,7 @@ const mastheadOwn = [
 
 /* Literals whose mapping is a decision rather than a calculation. */
 const fixed: Record<string, string> = {
+  '#f8f7f3': '#0e1523',
   '#fff': '#131b2c',
   '#ffffff': '#131b2c',
   '#2457e6': '#6f93ff', // the brand blue, lightened until it carries text on a dark ground
@@ -59,6 +62,8 @@ const fixed: Record<string, string> = {
   '#f6f7fa': '#0e1523', // the page behind the cards
   '#f9f9f9': '#0e1523',
   '#f7f9fc': '#0e1523',
+  '#f7f5f0': '#0e1523', // warm editorial page surface
+  '#d9d7d0': '#273141', // editorial dividers
 };
 
 type Rgb = { r: number; g: number; b: number; a: number | null };

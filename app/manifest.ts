@@ -3,8 +3,8 @@ import type { MetadataRoute } from 'next';
    ("მთავარ ეკრანზე დამატება") and opens it without browser chrome afterwards. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'ერთად — ვაკანსიები',
-    short_name: 'ერთად',
+    name: 'JOBX — ვაკანსიები',
+    short_name: 'JOBX',
     description:
       'მოძებნე ვაკანსიები სხვადასხვა წყაროდან. შეადარე პირობები და გადადი პირველწყაროზე.',
     start_url: '/',

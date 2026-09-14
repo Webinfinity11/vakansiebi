@@ -1,5 +1,6 @@
 'use client';
 import type { SearchFilters } from '../lib/personal-space';
+import { advancedValues } from '@/lib/advanced-filter-values';
 export type AdvancedFilters = Pick<
   SearchFilters,
   | 'salaryPeriod'
@@ -35,7 +36,7 @@ export default function AdvancedFilterControls({
   const change = <K extends keyof AdvancedFilters>(
     key: K,
     next: AdvancedFilters[K],
-  ) => onChange({ ...value, [key]: next });
+  ) => onChange({ ...advancedValues(value), [key]: next });
   const invalid =
     value.salaryFrom !== null &&
     value.salaryTo !== null &&

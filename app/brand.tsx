@@ -1,26 +1,19 @@
+import Image from 'next/image';
 import Link from 'next/link';
 export function Brand() {
   return (
-    <Link className="brand" href="/" aria-label="ერთად — მთავარი გვერდი">
-      <span className="brand-icon">
-        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <path
-            d="M6 23V13a7 7 0 0 1 14 0v10M12 23V13a7 7 0 0 1 14 0v10"
-            stroke="currentColor"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M6 23h20"
-            stroke="currentColor"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      </span>
-      <span>
-        ერთად<span className="brand-dot">.</span>
-      </span>
+    <Link
+      className="brand jobx-brand"
+      href="/"
+      aria-label="JOBX — მთავარი გვერდი"
+    >
+      <Image
+        src="/brand/jobx.png"
+        alt="JOBX"
+        width={180}
+        height={60}
+        sizes="(max-width: 360px) 132px, (max-width: 760px) 144px, 180px"
+      />
     </Link>
   );
 }

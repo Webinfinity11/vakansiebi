@@ -25,7 +25,6 @@
 - ძებნის ველი ასრულებს პოზიციებსა და კომპანიებს (`/api/suggest`): 8 შეთავაზება რაოდენობებით, სიის იმავე ხილვადობის წესებით; მინიმუმ ორი სიმბოლო, კლავიატურით იმართება.
 - „მეტის ჩვენება" სიაში კიდევ 20 ვაკანსიას ამატებს არსებულებზე; ვაკანსიიდან დაბრუნებისას ჩატვირთული დიაპაზონი, გადახვევა და ფოკუსი აღდგება (მაქსიმუმ 10 გვერდი).
 - ბოლოს ნანახი 12 ვაკანსიის ზოლი შედეგების თავზე, როცა ფილტრი არჩეული არ არის.
-- ვაკანსიის გვერდზე მიმართულების ხელფასების შუალედი (p25–მედიანა–p75, `percentile_cont`), მხოლოდ ლარში და თვეზე; 8-ზე ნაკლებ ჩანაწერზე და „სხვა" კატეგორიაზე არ ჩანს.
 - „ჩემთან ახლოს" ქალაქს მოწყობილობის კოორდინატებით ირჩევს (haversine, 13 ქალაქი); გეოლოკაცია მხოლოდ ღილაკზე დაჭერისას იკითხება და მანძილიც ჩანს.
 - ტელეფონზე ბარათის გადასმა: მარჯვნივ — შენახვა, მარცხნივ — დამალვა (აღდგენა სიის თავშია).
 - მუქი თემა — მხოლოდ არჩევით, მასთეს ღილაკით. მოწყობილობის პარამეტრი საიტს არ ცვლის; არჩევანი `ertad-theme` გასაღებით ამ ბრაუზერში ინახება.
@@ -207,3 +206,5 @@ In **ადმინი → წყაროები და განახლ�
 Description repair gets at most 20 items / a 3-minute budget before due discovery runs. Failed repairs remain queued and emit warnings; they cannot starve discovery. Hard infrastructure errors still fail the worker. Discovery quality warnings remain visible in Actions and the admin history.
 
 For immediate admin-to-GitHub dispatch, set server-only `GITHUB_ACTIONS_TOKEN` in Vercel Production: a fine-grained token restricted to `Webinfinity11/vakansiebi`, **Actions: read and write**, with an explicit expiry/rotation plan. No client environment variable. The endpoint is fixed to `scrape.yml` on `main`, requires an admin session and same-origin POST, and coalesces dispatches for 60 seconds using a database lock. If the token is missing or GitHub rejects a request, the durable queue remains and the UI explicitly says it is awaiting a scheduled run. Never copy a token into this README, a screenshot or a chat message.
+
+ვაკანსიის გვერდზე კატეგორიის ხელფასებთან შედარება მოხსნილია: ფართო კატეგორია თანაბარ პოზიციებს არ ნიშნავს. ვაკანსიის საკუთარი ანაზღაურება რჩება. ერთი მოკლე ამონარიდი (მაგალითად, მისამართი) ძირითად პირობებს უერთდება; ცალკე „პირობები მოკლედ“ მხოლოდ რამდენიმე ამონარიდისთვის ჩანს.

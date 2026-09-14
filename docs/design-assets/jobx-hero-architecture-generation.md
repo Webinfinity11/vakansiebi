@@ -1,0 +1,7 @@
+# JOBX architectural hero
+
+Generated using the built-in image_gen tool. Fictional architectural scene; no reference images. Original copied unchanged to `public/images/jobx-architecture-hero-v3.png`. Replaces the sculptural X hero at the user's request.
+
+## Final prompt
+
+Use case: photorealistic-natural. Asset type: panoramic 3:1 website hero background, architectural editorial photography. A beautiful quiet contemporary architectural passage opens onto a sunlit terrace and pale blue sky. Broad low limestone steps gently rise toward the open space on the RIGHT third, tactile pale stone walls, refined human-scale architecture with physically believable construction, blue reflected daylight and rich deep navy shadows. Strong photographic perspective, understated premium art direction, natural surface imperfections, soft morning light, inviting sense of possibility and movement forward. Asymmetric composition: architectural interest and lit opening concentrated in rightmost 40%; left 55% is a calm continuous deeply shaded navy wall with very subtle texture and ample negative space for separately overlaid white heading. Bottom quarter quiet dark foreground for search form. Landscape panoramic 3:1. Real camera photograph of a fictional architectural place, no sci-fi, no floating objects, no glossy abstract blobs. Absolutely NO people, NO logos, NO letterforms, NO X-shaped objects or intersecting ribbons, NO branding, NO signs, NO typography, NO watermark, NO UI, NO furniture. Do not reproduce any previously generated image or brand symbol.

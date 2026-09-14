@@ -1451,20 +1451,37 @@ footer > span:last-child {
 
 /* Together: Georgian type, quiet surfaces, forest-green identity. */
 @font-face {
-  font-family: 'Noto Georgian';
-  src: url('/fonts/georgian-400.ttf') format('truetype');
+  font-family: 'FiraGO';
+  src: url('/fonts/FiraGO-Regular.woff2') format('woff2');
+  font-style: normal;
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Noto Georgian';
-  src: url('/fonts/georgian-600.ttf') format('truetype');
+  font-family: 'FiraGO';
+  src: url('/fonts/FiraGO-Medium.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'FiraGO';
+  src: url('/fonts/FiraGO-SemiBold.woff2') format('woff2');
+  font-style: normal;
   font-weight: 600;
   font-display: swap;
 }
 @font-face {
-  font-family: 'Noto Georgian';
-  src: url('/fonts/georgian-800.ttf') format('truetype');
+  font-family: 'FiraGO';
+  src: url('/fonts/FiraGO-Bold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'FiraGO';
+  src: url('/fonts/FiraGO-ExtraBold.woff2') format('woff2');
+  font-style: normal;
   font-weight: 800;
   font-display: swap;
 }
@@ -1475,11 +1492,11 @@ footer > span:last-child {
   --border: #e4e4e5;
   --background: #f9f9f9;
   --foreground: #27292c;
-  --font-geist-sans: 'Noto Georgian';
+  --font-geist-sans: 'FiraGO';
   --font-geist-mono: monospace;
 }
 body {
-  font-family: 'Noto Georgian', Arial, sans-serif;
+  font-family: 'FiraGO', Arial, sans-serif;
   color: #2c2e33;
   background: #f9f9f9;
 }
@@ -3582,5 +3599,43 @@ button:disabled {
   .metadata-editor input,
   .metadata-editor textarea {
     font-size: 16px;
+  }
+}
+
+/* FiraGO's case feature supplies Georgian title capitals (TT). */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+button,
+[role='button'],
+.job-title,
+.primary-button,
+.secondary-button,
+.masthead nav a,
+.saved-nav {
+  font-family: 'FiraGO', Arial, sans-serif;
+  font-feature-settings: 'case' on;
+}
+
+/* Keep the supplied dark wordmark on a light backing in either theme. */
+.jobx-brand {
+  background: #fff;
+  border-radius: 8px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+.jobx-brand img {
+  display: block;
+  width: 144px;
+  height: 48px;
+  object-fit: contain;
+}
+@media (max-width: 760px) {
+  .jobx-brand img {
+    width: 120px;
+    height: 40px;
   }
 }

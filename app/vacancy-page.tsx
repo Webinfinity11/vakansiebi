@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Brand } from './brand';
 import { ThemeToggle } from './theme-toggle';
-import { CompanyLogo } from './company-logo';
+import { CompanyIdentity } from './company-identity';
 import { Description, SourceStatus, formatDate } from './vacancy-text';
 import { QuickApply, TranslationHelp } from './quick-apply';
 import { ApplicationControl, usePersonalSpace } from './personal-space';
@@ -39,24 +39,7 @@ import { explicitWorkCity } from '@/lib/work-location';
 import { vacancyLinks } from '@/lib/vacancy-links';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { SimilarVacancies } from './similar-vacancies';
-import type { SalaryContext } from '@/lib/server/salary-context';
 import './search-features.css';
-
-/* Thousands separated by a narrow no-break space, the way Georgian salaries are written. */
-const gel = (n: number) =>
-  String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
-/* The context is monthly GEL figures; only a monthly GEL vacancy can be compared with it
-   (same rule as the salary filter: an empty period is monthly unless the text says otherwise). */
-function monthlyGel(job: PublicJob) {
-  return (
-    job.currency === 'GEL' &&
-    typeof job.salaryMin === 'number' &&
-    job.salaryMin > 0 &&
-    (job.salaryPeriod === 'თვე' ||
-      (!job.salaryPeriod &&
-        !/(დღ|საათ|კვირ|hour|dail|day|week)/i.test(job.salary || '')))
-  );
-}
 
 /* Whole days from today's local midnight to the deadline's; negative once it has passed. */
 function daysUntil(date: string) {
@@ -169,13 +152,11 @@ export default function VacancyPage({
   job,
   preview,
   returnTo,
-  salaryContext = null,
   companyPath = null,
 }: {
   job: PublicJob;
   preview: boolean;
   returnTo: string;
-  salaryContext?: SalaryContext | null;
   /** The employer's own page, when it has one. */
   companyPath?: string | null;
 }) {
@@ -237,7 +218,7 @@ export default function VacancyPage({
     const outcome = await shareLink(
       window.location.origin + vacancyPath(job.id),
       `${job.title} — ${job.company}`,
-      [job.city, compactSalary(job.salary)].filter(Boolean).join(' · ') ||
+      [job.city, compactSalary(job.salary, job.salaryPeriod)].filter(Boolean).join(' · ') ||
         undefined,
     );
     setFeedback(
@@ -250,13 +231,23 @@ export default function VacancyPage({
   }
   const schedule = workSchedule(job);
   const facts = [
-    ['ანაზღაურება', compactSalary(job.salary)],
+    ['ანაზღაურება', compactSalary(job.salary, job.salaryPeriod)],
     ['ქალაქი', job.city || explicitWorkCity(job)],
     ['განაკვეთი', job.employmentType],
     ['სამუშაო რეჟიმი', job.mode],
     ['სამუშაო გრაფიკი', schedule.map(compactSchedule).join(' · ')],
   ].filter(([, value]) => value?.trim());
   const summary = vacancySummary(job);
+  // One extracted detail belongs with the existing facts, not in its own summary panel.
+  if (summary.length === 1) {
+    const item = summary[0];
+    const existing = facts.find(([, value]) =>
+      factAlreadyVisible(item.value, '', [value || '']),
+    );
+    if (!existing) facts.push([item.label, item.value]);
+    else if (existing[0] === 'ქალაქი' && item.label === 'მისამართი')
+      existing[0] = 'მისამართი';
+  }
   const links = vacancyLinks(job);
   const marker = 'სრული ინფორმაცია დამსაქმებლისგან:';
   const split = job.fullTextUrl ? job.description.indexOf(marker) : -1;
@@ -306,13 +297,21 @@ export default function VacancyPage({
     )
       personal.begin(job);
   }
+  const returnLabel = returnTo.startsWith('/companies/')
+    ? 'კომპანიაზე დაბრუნება'
+    : new URLSearchParams(returnTo.split('?')[1] || '').get('saved') === '1'
+      ? 'შენახულებში დაბრუნება'
+      : 'შედეგებზე დაბრუნება';
   const progress = (
-    <ApplicationControl
-      job={job}
-      space={personal}
-      disabled={preview}
-      seen={activity.seen.includes(job.id)}
-    />
+    <details className="optional-application-progress">
+      <summary>განაცხადის პირადი აღრიცხვა</summary>
+      <ApplicationControl
+        job={job}
+        space={personal}
+        disabled={preview}
+        seen={activity.seen.includes(job.id)}
+      />
+    </details>
   );
   return (
     <div
@@ -330,10 +329,10 @@ export default function VacancyPage({
             className="vacancy-header-link"
             href={returnTo}
             prefetch={false}
-            aria-label="ვაკანსიებზე დაბრუნება"
+            aria-label={returnLabel}
           >
             <ArrowLeft size={16} />
-            <span className="back-label-full">ვაკანსიებზე დაბრუნება</span>
+            <span className="back-label-full">{returnLabel}</span>
             <span className="back-label-short">უკან</span>
           </Link>
         </div>
@@ -346,7 +345,7 @@ export default function VacancyPage({
         )}
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
           <Link href={returnTo} prefetch={false}>
-            ვაკანსიები
+            {returnLabel}
           </Link>
           {job.category !== 'სხვა' && (
             <>
@@ -358,19 +357,13 @@ export default function VacancyPage({
         <article className="vacancy-layout">
           <section className="vacancy-overview" aria-labelledby="vacancy-title">
             <div className="detail-company">
-              <CompanyLogo large company={job.company} url={job.logoUrl} />
-              <div>
-                <span>დამსაქმებელი</span>
-                <strong>
-                  {companyPath ? (
-                    <Link href={companyPath} prefetch={false}>
-                      {job.company}
-                    </Link>
-                  ) : (
-                    job.company
-                  )}
-                </strong>
-              </div>
+              <CompanyIdentity
+                company={job.company}
+                logoUrl={job.logoUrl}
+                category={job.category}
+                href={companyPath}
+                large
+              />
             </div>
             {job.category !== 'სხვა' && (
               <span className="category-tag">{job.category}</span>
@@ -425,7 +418,7 @@ export default function VacancyPage({
                   <div
                     key={label}
                     className={
-                      label === 'სამუშაო გრაფიკი'
+                      label === 'სამუშაო გრაფიკი' || label === 'მისამართი'
                         ? 'schedule-fact'
                         : label === 'ანაზღაურება' && job.salary
                           ? 'salary-fact'
@@ -438,29 +431,7 @@ export default function VacancyPage({
                 ))}
               </dl>
             )}
-            {salaryContext && (
-              <aside className="salary-context" aria-label="ხელფასის კონტექსტი">
-                <strong>ამ მიმართულებაში მითითებული ხელფასები</strong>
-                <span className="salary-context-range">
-                  <b>{gel(salaryContext.p25)}</b> –{' '}
-                  <b>{gel(salaryContext.p75)}</b> ₾ / თვე
-                </span>
-                <small>
-                  {salaryContext.count} ვაკანსია „{salaryContext.category}“
-                  კატეგორიაში; შუალედი {gel(salaryContext.median)} ₾. მხოლოდ
-                  განცხადებაში მითითებული საწყისი თანხებით.
-                </small>
-                {monthlyGel(job) && job.salaryMin ? (
-                  <span className="salary-context-you">
-                    ეს ვაკანსია: {gel(job.salaryMin)} ₾{' '}
-                    {job.salaryMin >= salaryContext.median
-                      ? '· შუალედზე მაღალი ან ტოლი'
-                      : '· შუალედზე დაბალი'}
-                  </span>
-                ) : null}
-              </aside>
-            )}
-            {summary.length > 0 && (
+            {summary.length > 1 && (
               <section
                 className="vacancy-summary"
                 aria-labelledby="summary-title"

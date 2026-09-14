@@ -21,6 +21,7 @@ import {
 import { suggestSearch } from '../search-language';
 import { logoCompanyKey } from '../company-logo-identity';
 import { resolveCompanyLogos } from './company-logos';
+import { employerPages } from './employers';
 export async function publicJobs(
   params: URLSearchParams,
   preview = false,
@@ -104,7 +105,7 @@ export async function publicJobs(
   const companyKeys = [
     ...new Set(rows.map((r) => companyKey(r.published.company || ''))),
   ];
-  const [profilesResult, sharedLogos] = await Promise.all([
+  const [profilesResult, sharedLogos, employers] = await Promise.all([
     companyKeys.length
       ? db().query(
           'SELECT * FROM company_profiles WHERE company_key=ANY($1::text[])',
@@ -116,6 +117,7 @@ export async function publicJobs(
         .filter((r) => !r.published.logoUrl)
         .map((r) => r.published.company || ''),
     ),
+    preview ? Promise.resolve(null) : employerPages().catch(() => null),
   ]);
   const companyProfiles = new Map(
     profilesResult.rows.map((p) => [p.company_key, p]),
@@ -149,6 +151,9 @@ export async function publicJobs(
         ? { company: privateListingLabel }
         : {}),
       id: r.id,
+      companyPath: employers?.byJob.has(r.id)
+        ? `/companies/${encodeURIComponent(employers.byJob.get(r.id)!)}`
+        : undefined,
       sourceChanged: !preview && r.source_changed,
       createdAt: r.created_at.toISOString(),
       sources: r.sources.map(
