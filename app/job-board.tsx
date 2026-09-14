@@ -12,6 +12,7 @@ import {
   vacancyCardLocation,
 } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
+import { SalaryFilter } from './salary-filter';
 import AdvancedFilterControls, {
   advancedDefaults,
   employmentLabels,
@@ -977,6 +978,15 @@ export default function JobBoard() {
             გასუფთავება
           </button>
         </div>
+        <SalaryFilter
+          prefix={prefix}
+          value={draft}
+          onChange={(next) =>
+            prefix === 'mobile'
+              ? setMobileDraft({ ...draft, ...next })
+              : setAdvanced(next)
+          }
+        />
         <div className="filter-primary-city">
           <h3>ქალაქი</h3>
           <Choice
@@ -1108,6 +1118,7 @@ export default function JobBoard() {
           <AdvancedFilterControls
             prefix={prefix}
             showEmployment={false}
+            showSalary={false}
             value={draft}
             onChange={(next) =>
               prefix === 'mobile'
@@ -1746,6 +1757,12 @@ export default function JobBoard() {
           <div className="filters">{renderFilters('mobile')}</div>
           <button
             className="primary filters-apply"
+            disabled={
+              !!mobileDraft &&
+              mobileDraft.salaryFrom !== null &&
+              mobileDraft.salaryTo !== null &&
+              mobileDraft.salaryFrom > mobileDraft.salaryTo
+            }
             onClick={() => {
               if (mobileDraft) applySearch(mobileDraft);
               setFiltersOpen(false);

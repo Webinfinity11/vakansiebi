@@ -1854,9 +1854,9 @@
   border-color: #b6c5ec;
 }
 :root[data-theme='dark'] .board-shell.editorial-board .status-seen {
-  color: #9a9fa9;
-  background: transparent;
-  border-color: transparent;
+  color: #7f97e6;
+  background: #1c2845;
+  border-color: #adc4f5;
 }
 :root[data-theme='dark'] .board-shell.editorial-board .results-tools {
   background: #0e1523;
@@ -2461,6 +2461,51 @@
 }
 :root[data-theme='dark'] .refined-board .hero-brand-trail {
   background: linear-gradient(to bottom, #5da1f466, #1c2c4522 75%, transparent);
+}
+:root[data-theme='dark'] .salary-filter {
+  border: 0;
+  border-bottom: 1px solid #2a313d;
+}
+:root[data-theme='dark'] .salary-filter > label {
+  color: #929aaa;
+}
+:root[data-theme='dark'] .salary-filter > select {
+  border: 1px solid #2d3543;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .salary-presets {
+  border: 0;
+}
+:root[data-theme='dark'] .salary-presets button {
+  border: 1px solid #2d3543;
+  background: #131b2c;
+  color: #a8b0c1;
+}
+:root[data-theme='dark'] .salary-presets button[aria-pressed='true'] {
+  background: #1c2845;
+  border-color: #6f93ff;
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .salary-presets button:focus-visible {
+  outline: 2px solid #6f93ff;
+}
+:root[data-theme='dark'] .salary-filter .filter-help {
+  color: #929aaa;
+}
+:root[data-theme='dark'] .salary-filter .filter-error {
+  color: #ea837b;
+}
+:root[data-theme='dark'] .salary-filter .salary-range input {
+  border: 1px solid #2d3543;
+  background: #131b2c;
+  color: #aebcd5;
+}
+:root[data-theme='dark'] .salary-filter .salary-range input[aria-invalid='true'] {
+  border-color: #ea837b;
+}
+:root[data-theme='dark'] .salary-filter :is(input,
+:root[data-theme='dark'] select):focus-visible {
+  outline: 2px solid #6f93ff;
 }
 
 /* ── from app/public-header.css ── */

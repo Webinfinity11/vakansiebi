@@ -1054,3 +1054,107 @@
   position: relative;
   z-index: 1;
 }
+
+.salary-filter {
+  border: 0;
+  padding: 0 0 18px;
+  margin: 0 0 18px;
+  border-bottom: 1px solid #e2e6ed;
+  min-width: 0;
+}
+.salary-filter legend {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.salary-filter > label {
+  display: block;
+  font-size: 12px;
+  color: #647089;
+  margin-bottom: 6px;
+}
+.salary-filter > select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #dce1ea;
+  border-radius: 8px;
+  background: #fff;
+}
+.salary-presets {
+  border: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 10px 0;
+}
+.salary-presets button {
+  min-height: 40px;
+  border: 1px solid #dce1ea;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12px;
+  color: #46526b;
+  padding: 6px;
+}
+.salary-presets button[aria-pressed='true'] {
+  background: #eaf0ff;
+  border-color: #2457e6;
+  color: #2457e6;
+  font-weight: 700;
+}
+.salary-presets button:focus-visible {
+  outline: 2px solid #2457e6;
+  outline-offset: 2px;
+}
+.salary-custom summary {
+  cursor: pointer;
+  font-size: 12px;
+  padding: 8px 0;
+}
+.salary-filter .filter-help,
+.salary-filter .filter-error {
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+.salary-filter .filter-help {
+  color: #647089;
+}
+.salary-filter .filter-error {
+  color: #b42318;
+}
+
+.salary-filter .salary-range input {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid #dce1ea;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+  color: #18243b;
+}
+.salary-filter .salary-range input[aria-invalid='true'] {
+  border-color: #b42318;
+}
+.salary-filter :is(input, select):focus-visible {
+  outline: 2px solid #2457e6;
+  outline-offset: 2px;
+}
+.mobile-filters-sheet .filters-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (max-width: 760px) {
+  .salary-presets button,
+  .salary-filter > select,
+  .salary-filter .salary-range input {
+    min-height: 44px;
+  }
+  .salary-filter > select,
+  .salary-filter .salary-range input {
+    font-size: 16px;
+  }
+}

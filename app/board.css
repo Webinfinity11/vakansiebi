@@ -3118,10 +3118,18 @@
   border-color: #9aafe7;
 }
 .board-shell.editorial-board .status-seen {
-  color: #646b77;
-  background: transparent;
-  border-color: transparent;
-  font-weight: 400;
+  color: #1e40af;
+  background: #e8efff;
+  border-color: #b9cdf8;
+  font-weight: 700;
+  padding: 4px 9px;
+  white-space: nowrap;
+}
+.board-shell.editorial-board .status-seen svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.25;
+  flex-shrink: 0;
 }
 .board-shell.editorial-board .results-tools {
   background: #f6f7fa;
