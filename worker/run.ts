@@ -110,7 +110,8 @@ export async function runSource(
     const guard = new DiscoveryPageGuard();
     guard.accept(links);
     const rememberPage = async (url: string, pageLinks: ListedLink[]) => {
-      await discoverItems(source, pageLinks);
+      // Store hints for parsing, without rewriting historical snapshots before new imports.
+      await discoverItems(source, pageLinks, { updateStoredHints: false });
       await db().query(
         `INSERT INTO source_discovery_pages(source_id,url,signature,item_count) VALUES($1,$2,$3,$4)
         ON CONFLICT(source_id,url) DO UPDATE SET signature=excluded.signature,item_count=excluded.item_count,observed_at=now()`,
@@ -187,9 +188,11 @@ export async function runSource(
       const plan = planJobsCategoryPages(config.discovery_cursor, pageBudget);
       let used = 0;
       categories: for (const category of plan.order) {
+        if (Date.now() - startedAt >= budgetMs * 0.2) break;
         if (used >= plan.budget) break;
         let pages = 1;
         for (let page = 1; page <= pages && used < plan.budget; page++) {
+          if (Date.now() - startedAt >= budgetMs * 0.2) break categories;
           const url = jobsCategoryListingUrl(category.cid, page);
           try {
             const pageHtml = await sourceFetch(source, url);
@@ -225,6 +228,7 @@ export async function runSource(
       }
     }
     for (const extra of extraPages) {
+      if (Date.now() - startedAt >= budgetMs * 0.2) break;
       try {
         const pageLinks = listLinks(
           source,
@@ -256,7 +260,7 @@ export async function runSource(
         break;
       }
     }
-    if (sitemap) {
+    if (sitemap && Date.now() - startedAt < budgetMs * 0.2) {
       try {
         const xml = await sourceFetch(source, sitemap);
         const $ = load(xml, { xml: true });
@@ -292,7 +296,7 @@ export async function runSource(
       }
     }
     const unique = [...new Map(links.map((a) => [a.externalId, a])).values()];
-    if (sitemap) await discoverItems(source, unique);
+    if (sitemap) await discoverItems(source, unique, { updateStoredHints: false });
     discovered = unique.length;
     // Split the budget between backlog and rechecks so neither can starve the other.
     const quota = Math.max(1, Math.ceil(limit * 0.9));

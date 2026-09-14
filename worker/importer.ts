@@ -162,6 +162,7 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
 export async function discoverItems(
   source: SourceId,
   links: { externalId: string; url: string; hints?: ListingHints }[],
+  { updateStoredHints = true }: { updateStoredHints?: boolean } = {},
 ) {
   for (let i = 0; i < links.length; i += 100) {
     const chunk = links.slice(i, i + 100);
@@ -184,7 +185,7 @@ export async function discoverItems(
         listing_hints=CASE WHEN excluded.listing_hints IS NULL THEN source_items.listing_hints ELSE COALESCE(source_items.listing_hints,'{}'::jsonb)||excluded.listing_hints END`,
         values,
       );
-    if (chunk.length)
+    if (chunk.length && updateStoredHints)
       await applyStoredHints(
         source,
         chunk.map((a) => a.externalId),
