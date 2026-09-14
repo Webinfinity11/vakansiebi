@@ -1,3 +1,4 @@
+import { subcategoryFor } from '../subcategories';
 import { z } from 'zod';
 import { genericCompanyKeys } from '../company-logo-identity';
 import { readSearch } from '../search-state';
@@ -10,6 +11,7 @@ export const filterLabels = {
   query: 'საძიებო სიტყვა',
   city: 'ქალაქი',
   category: 'მიმართულება',
+  subcategory: 'ქვემიმართულება',
   source: 'პირველწყარო',
   paid: 'ხელფასი მითითებულია',
   remote: 'დისტანციური',
@@ -168,6 +170,9 @@ export function searchPlan(
       filters.category === 'ყველა'
         ? 'true'
         : `${p('category')}=${bind(filters.category)}`,
+    subcategory: filters.subcategory
+      ? `${normalized(p('title'))} ~ ${bind(subcategoryFor(filters.category, filters.subcategory)!.pattern)}`
+      : 'true',
     source:
       filters.source === 'ყველა'
         ? 'true'
@@ -239,7 +244,10 @@ export function searchPlan(
   );
   const all = (except?: FilterKey) =>
     keys
-      .filter((key) => key !== except)
+      .filter(
+        (key) =>
+          key !== except && !(except === 'category' && key === 'subcategory'),
+      )
       .map((key) => `"${key}"`)
       .join(' AND ');
   const metrics = `${cte}, matches AS MATERIALIZED (SELECT ${p('category')} AS category_name,${keys.map((key) => `COALESCE((${conditions[key]}),false) AS "${key}"`).join(',')} FROM searchable j WHERE ${kept})

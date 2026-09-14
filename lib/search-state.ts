@@ -1,3 +1,4 @@
+import { subcategoryFor } from './subcategories';
 import type { SearchFilters } from './personal-space';
 import { categories, sourceNames } from './types';
 export const sortKeys: Record<string, string> = {
@@ -9,8 +10,7 @@ export const sortKeys: Record<string, string> = {
 /* Control characters are never part of a typed search, and PostgreSQL refuses a NUL byte in
    text outright: ?city=%00 turned the whole list request into a 500. The two free-text filters
    are cleaned here, where every other filter is already whitelisted. */
-const typed = (value: string | null) =>
-  (value || '').replace(/\p{Cc}/gu, '');
+const typed = (value: string | null) => (value || '').replace(/\p{Cc}/gu, '');
 export function readSearch(params: URLSearchParams): SearchFilters {
   const amount = (key: string) => {
     const value = params.get(key);
@@ -18,7 +18,12 @@ export function readSearch(params: URLSearchParams): SearchFilters {
       ? Number(value)
       : null;
   };
+  const subcategory = subcategoryFor(
+    params.get('category') || '',
+    params.get('subcategory'),
+  );
   return {
+    ...(subcategory ? { subcategory: subcategory.id } : {}),
     query: typed(params.get('q')).slice(0, 200),
     city: (typed(params.get('city')) || 'ყველა').slice(0, 300),
     category: (categories as readonly string[]).includes(
@@ -57,6 +62,8 @@ export function searchParams(filters: SearchFilters) {
   if (filters.query.trim()) result.set('q', filters.query.trim());
   for (const field of ['city', 'category', 'source'] as const)
     if (filters[field] !== 'ყველა') result.set(field, filters[field]);
+  const subcategory = subcategoryFor(filters.category, filters.subcategory);
+  if (subcategory) result.set('subcategory', subcategory.id);
   if (filters.paid) result.set('paid', 'true');
   if (filters.remote) result.set('remote', 'true');
   if (filters.salaryPeriod === 'day') result.set('salaryPeriod', 'day');

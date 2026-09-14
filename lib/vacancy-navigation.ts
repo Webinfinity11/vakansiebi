@@ -1,3 +1,4 @@
+import { clearBoard } from './board-return-cache';
 import { searchParams, readSearch } from './search-state';
 import type { SearchFilters } from './personal-space';
 const uuid = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i;
@@ -117,6 +118,8 @@ export function readSearchPosition(
       state.top < 0 ||
       !Number.isInteger(state.page) ||
       state.page < 1 ||
+      !Number.isFinite(state.at) ||
+      state.at > now ||
       now - state.at > 7200000
     )
       return null;
@@ -125,7 +128,7 @@ export function readSearchPosition(
     if (
       !Number.isInteger(loadedThrough) ||
       loadedThrough < state.page ||
-      loadedThrough > state.page + 9
+      loadedThrough > state.page + 49
     )
       return null;
     return {
@@ -150,6 +153,7 @@ export function restoreSearch(url: string): SearchPosition | null {
 }
 
 export function clearSearchPosition() {
+  clearBoard();
   try {
     sessionStorage.removeItem(key);
   } catch {}

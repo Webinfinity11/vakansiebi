@@ -1550,7 +1550,7 @@ button:disabled {
   height: 54px;
   flex-shrink: 0;
   border: 1px solid #e9eaeb;
-  border-radius: 13px;
+  border-radius: 50%;
   background: #f0f0f1;
   color: #53565b;
   font-weight: 800;
@@ -1562,7 +1562,7 @@ button:disabled {
   height: 100%;
   object-fit: contain;
   background: white;
-  padding: 6px;
+  padding: 15%;
 }
 .avatar-1 {
   background: #f3edf8;
@@ -2895,7 +2895,7 @@ button:disabled {
   .company-avatar {
     width: 42px;
     height: 42px;
-    border-radius: 10px;
+    border-radius: 50%;
     font-size: 14px;
   }
   .board-shell .job-info {

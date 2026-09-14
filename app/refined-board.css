@@ -207,8 +207,9 @@
   display: flex;
   width: 38px;
   height: 38px;
+  flex: 0 0 38px;
   border: 1px solid #e1e5ed;
-  border-radius: 8px;
+  border-radius: 50%;
   background: #f2f4f8;
 }
 .refined-board .job-company .company-avatar img {
@@ -424,7 +425,8 @@
     position: static;
     width: 24px;
     height: 24px;
-    border-radius: 5px;
+    flex-basis: 24px;
+    border-radius: 50%;
   }
   .refined-board .job-company .company-identity {
     gap: 7px;
@@ -526,8 +528,8 @@
 .board-shell.editorial-board.crafted-board.refined-board
   .job-company
   .company-avatar.company-placeholder {
-  background: transparent;
-  border: 0;
+  background: #f2f4f8;
+  border: 1px solid #e1e5ed;
 }
 @media (max-width: 760px) {
   .board-shell.editorial-board.crafted-board.refined-board
@@ -1007,6 +1009,89 @@
   height: 22px;
   flex: 0 0 22px;
   background: url('/brand/jobx-mark.png') center / contain no-repeat;
+}
+
+.refined-board .append-loading {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.filter-subcategory {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.filter-subcategory select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid #dce2ec;
+  border-radius: 8px;
+  color: #34435b;
+  background: #fff;
+  font: inherit;
+}
+.unavailable-saved {
+  border: 1px solid #dce2ec;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  color: #526179;
+  font-size: 13px;
+}
+.unavailable-saved summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.unavailable-saved p {
+  margin: 10px 0;
+  line-height: 1.7;
+}
+.unavailable-saved ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.unavailable-saved li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid #dce2ec;
+}
+.unavailable-saved li > div {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  overflow-wrap: anywhere;
+}
+.unavailable-saved small {
+  font-weight: 700;
+}
+.unavailable-saved button {
+  flex-shrink: 0;
+  min-height: 44px;
+}
+@media (max-width: 760px) {
+  .filter-subcategory select {
+    font-size: 16px;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board .save-button {
+    width: 44px;
+    height: 44px;
+    top: 8px;
+    right: 8px;
+  }
+}
+
+/* A single progress track moves; placeholder rows stay still on long lists. */
+.refined-board .job-skeleton i {
+  animation: none;
 }
 
 /* Keep the mobile hero still; only the active loading indicator moves. */

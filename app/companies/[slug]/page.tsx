@@ -20,7 +20,7 @@ type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-const site = 'https://vakansiebi-gules.vercel.app';
+import { siteUrl as site } from '@/lib/seo';
 
 const load = cache(async (rawSlug: string, rawPage: string) => {
   let slug = rawSlug;

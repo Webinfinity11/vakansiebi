@@ -2459,6 +2459,18 @@
 :root[data-theme='dark'] .similar-placeholder > span {
   background: url('/brand/jobx-mark.png') center / 30px no-repeat #1c2a45;
 }
+:root[data-theme='dark'] .filter-subcategory select {
+  border: 1px solid #2a3444;
+  color: #b7c1d1;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .unavailable-saved {
+  border: 1px solid #2a3444;
+  color: #9ba6b6;
+}
+:root[data-theme='dark'] .unavailable-saved li {
+  border-top: 1px solid #2a3444;
+}
 :root[data-theme='dark'] .refined-board .hero-brand-trail {
   background: linear-gradient(to bottom, #5da1f466, #1c2c4522 75%, transparent);
 }

@@ -12,6 +12,8 @@ import {
   vacancyCardLocation,
 } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
+import { rememberBoard, takeBoard } from '@/lib/board-return-cache';
+import { subcategories, subcategoryFor } from '@/lib/subcategories';
 import { SalaryFilter } from './salary-filter';
 import AdvancedFilterControls, {
   advancedDefaults,
@@ -23,6 +25,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   memo,
   useCallback,
+  useMemo,
   useEffect,
   useRef,
   useState,
@@ -325,6 +328,19 @@ const JobCard = memo(function JobCard({
     </div>
   );
 });
+function VacancySkeletons({ count }: { count: number }) {
+  return Array.from({ length: count }, (_, i) => (
+    <div className="job-skeleton" key={i} aria-hidden="true">
+      <span />
+      <div>
+        <i />
+        <i />
+        <i />
+      </div>
+    </div>
+  ));
+}
+
 export default function JobBoard() {
   const [allCategoriesVisible, setAllCategoriesVisible] = useState(false);
   const params = useSearchParams();
@@ -333,10 +349,14 @@ export default function JobBoard() {
   const excluded = demo ? '' : activity.hidden.map((item) => item.id).join(',');
   const personal = usePersonalSpace();
   const searchBeforeSaved = useRef<SearchFilters | null>(null);
-  const applicationsById = new Map(
-    personal.records
-      .filter((r): r is Application => r.kind === 'application')
-      .map((r) => [r.id, r.status]),
+  const applicationsById = useMemo(
+    () =>
+      new Map(
+        personal.records
+          .filter((r): r is Application => r.kind === 'application')
+          .map((r) => [r.id, r.status]),
+      ),
+    [personal.records],
   );
   const [loadedResult, setLoadedResult] = useState({
     key: '',
@@ -352,11 +372,18 @@ export default function JobBoard() {
   const lastRequestedQuery = useRef(initialSearch.query);
   const [query, setQuery] = useState(initialSearch.query),
     [city, setCity] = useState(initialSearch.city),
-    [category, setCategory] = useState(initialSearch.category),
+    [category, setCategoryValue] = useState(initialSearch.category),
     [source, setSource] = useState(initialSearch.source),
     [paid, setPaid] = useState(initialSearch.paid),
     [remote, setRemote] = useState(initialSearch.remote),
     [sort, setSort] = useState(initialSearch.sort);
+  const [subcategory, setSubcategory] = useState(
+    initialSearch.subcategory || '',
+  );
+  const setCategory = (value: string) => {
+    setCategoryValue(value);
+    setSubcategory('');
+  };
   const [advanced, setAdvanced] = useState<AdvancedFilters>(
     () =>
       Object.fromEntries(
@@ -370,6 +397,7 @@ export default function JobBoard() {
     query,
     city,
     category,
+    subcategory,
     source,
     paid,
     remote,
@@ -383,6 +411,9 @@ export default function JobBoard() {
     [storageReady, setStorageReady] = useState(false),
     [feedback, setFeedback] = useState(''),
     [retry, setRetry] = useState(0);
+  const [unavailable, setUnavailable] = useState<
+    { id: string; title: string; company: string; expired: boolean }[]
+  >([]);
   const [mobileDraft, setMobileDraft] = useState<SearchFilters | null>(null);
   const mobileKey = mobileDraft ? searchParams(mobileDraft).toString() : '';
   const [pageState, setPageState] = useState(() => ({
@@ -390,6 +421,7 @@ export default function JobBoard() {
         initialSearch.query,
         initialSearch.city,
         initialSearch.category,
+        initialSearch.subcategory || '',
         initialSearch.source,
         initialSearch.paid,
         initialSearch.remote,
@@ -417,6 +449,7 @@ export default function JobBoard() {
     query,
     city,
     category,
+    subcategory,
     source,
     paid,
     remote,
@@ -433,11 +466,14 @@ export default function JobBoard() {
   const resultsPending =
     !error &&
     (loading || loadedResult.key !== filterKey || loadedResult.page !== page);
+  const savedSet = useMemo(() => new Set(saved), [saved]);
+  const seenSet = useMemo(() => new Set(activity.seen), [activity.seen]);
   const savedFilter = savedOnly ? saved.join(',') : '';
   const activeCount = [
     query,
     city === 'ყველა' ? '' : city,
     category === 'ყველა' ? '' : category,
+    subcategory,
     source === 'ყველა' ? '' : source,
     paid,
     remote,
@@ -475,6 +511,7 @@ export default function JobBoard() {
           query,
           city,
           category,
+          subcategory,
           source,
           paid,
           remote,
@@ -490,6 +527,7 @@ export default function JobBoard() {
           query,
           city,
           category,
+          subcategory,
           source,
           paid,
           remote,
@@ -504,6 +542,20 @@ export default function JobBoard() {
           '',
           '/' + (address.size ? '?' + address.toString() : ''),
         );
+        const cached =
+          retry === 0 && !savedOnly ? takeBoard(filterKey, page) : null;
+        if (cached) {
+          setJobs(cached.jobs);
+          setTotal(cached.total);
+          setPages(cached.pages);
+          setSearchMeta(cached.search);
+          setLoadedResult({ key: filterKey, page, path: cached.path });
+          setLoadedState({ key: filterKey, through: cached.through });
+          setAppendPage(null);
+          setAppendError('');
+          setLoading(false);
+          return;
+        }
         void fetch('/api/jobs?' + p, { signal: controller.signal })
           .then(async (r) => {
             const d = await r.json();
@@ -522,6 +574,7 @@ export default function JobBoard() {
                     query,
                     city,
                     category,
+                    subcategory,
                     source,
                     paid,
                     remote,
@@ -538,18 +591,7 @@ export default function JobBoard() {
               setAppendError('');
               setTotal(d.total);
               setPages(d.pages);
-              if (Array.isArray(d.available))
-                setSaved((current) => {
-                  const asked = savedFilter.split(',');
-                  const kept = current.filter(
-                    (id) => !asked.includes(id) || d.available.includes(id),
-                  );
-                  if (kept.length === current.length) return current;
-                  try {
-                    localStorage.setItem('ertad-saved', JSON.stringify(kept));
-                  } catch {}
-                  return kept;
-                });
+              setUnavailable(Array.isArray(d.unavailable) ? d.unavailable : []);
               /* A shared or remembered link can name a page the list no longer has, once vacancies
                  have expired. Asking for page 500 of 441 answered "no vacancies found" over 8,806
                  of them; the board moves to the last page that exists instead. */
@@ -574,6 +616,7 @@ export default function JobBoard() {
     query,
     city,
     category,
+    subcategory,
     source,
     paid,
     remote,
@@ -596,6 +639,7 @@ export default function JobBoard() {
       query,
       city,
       category,
+      subcategory,
       source,
       paid,
       remote,
@@ -615,10 +659,17 @@ export default function JobBoard() {
       })
       .then((d) => {
         if (controller.signal.aborted) return;
-        setJobs((prev) => [
-          ...prev,
-          ...(d.jobs as Job[]).filter((j) => !prev.some((x) => x.id === j.id)),
-        ]);
+        setJobs((prev) => {
+          const ids = new Set(prev.map((job) => job.id));
+          return [
+            ...prev,
+            ...(d.jobs as Job[]).filter((job) => {
+              if (ids.has(job.id)) return false;
+              ids.add(job.id);
+              return true;
+            }),
+          ];
+        });
         setTotal(d.total);
         setPages(d.pages);
         setLoadedState({ key: filterKey, through: appendPage.page });
@@ -637,6 +688,7 @@ export default function JobBoard() {
     query,
     city,
     category,
+    subcategory,
     source,
     paid,
     remote,
@@ -649,9 +701,16 @@ export default function JobBoard() {
   ]);
   const loadMore = useCallback(() => {
     if (appending || resultsPending || loadedThrough >= pages) return;
+    if (loadedThrough - page >= 49) {
+      setPageState({ key: filterKey, page: loadedThrough + 1 });
+      document
+        .getElementById('results')
+        ?.scrollIntoView({ behavior: 'instant' });
+      return;
+    }
     setAppendError('');
     setAppendPage({ key: filterKey, page: loadedThrough + 1 });
-  }, [appending, resultsPending, loadedThrough, pages, filterKey]);
+  }, [appending, resultsPending, loadedThrough, pages, filterKey, page]);
   const nextPageTarget = useRef<HTMLDivElement>(null);
   useEffect(() => {
     // Start one page before the reader reaches the end. Errors require an explicit retry;
@@ -662,6 +721,7 @@ export default function JobBoard() {
       error ||
       appendError ||
       filtersOpen ||
+      loadedThrough - page >= 49 ||
       loadedThrough >= pages
     )
       return;
@@ -683,6 +743,7 @@ export default function JobBoard() {
     error,
     appendError,
     filtersOpen,
+    page,
     loadedThrough,
     pages,
     loadMore,
@@ -692,6 +753,7 @@ export default function JobBoard() {
     setQuery(filters.query);
     setCity(filters.city);
     setCategory(filters.category);
+    setSubcategory(filters.subcategory || '');
     setSource(filters.source);
     setPaid(filters.paid);
     setRemote(filters.remote);
@@ -741,6 +803,7 @@ export default function JobBoard() {
     if (key === 'query') setQuery('');
     if (key === 'city') setCity('ყველა');
     if (key === 'category') setCategory('ყველა');
+    if (key === 'subcategory') setSubcategory('');
     if (key === 'source') setSource('ყველა');
     if (key === 'paid') setPaid(false);
     if (key === 'remote') setRemote(false);
@@ -838,17 +901,46 @@ export default function JobBoard() {
   const returnPath = searchReturnPath(currentSearch, page, savedOnly, demo);
   const markSeen = activity.markSeen;
   const hideVacancy = activity.hide;
+  const openContext = useRef({
+    loadedResult,
+    loadedState,
+    jobs,
+    total,
+    pages,
+    searchMeta,
+  });
+  useEffect(() => {
+    openContext.current = {
+      loadedResult,
+      loadedState,
+      jobs,
+      total,
+      pages,
+      searchMeta,
+    };
+  }, [loadedResult, loadedState, jobs, total, pages, searchMeta]);
   const openJob = useCallback(
     (job: Job) => {
+      const context = openContext.current;
+      rememberBoard({
+        key: context.loadedResult.key,
+        page: context.loadedResult.page,
+        through: context.loadedState.through,
+        path: context.loadedResult.path,
+        jobs: context.jobs,
+        total: context.total,
+        pages: context.pages,
+        search: context.searchMeta,
+      });
       rememberSearch(
-        loadedResult.path,
+        context.loadedResult.path,
         job.id,
-        loadedResult.page,
-        loadedState.through,
+        context.loadedResult.page,
+        context.loadedState.through,
       );
       markSeen(job.id, { title: job.title, company: job.company });
     },
-    [loadedResult.path, loadedResult.page, loadedState.through, markSeen],
+    [markSeen],
   );
   const hideJob = useCallback(
     (job: Job) => {
@@ -868,7 +960,10 @@ export default function JobBoard() {
     if (!position) return;
     if (position.page !== page) return;
     // Pages appended with "load more" before leaving are fetched again, one at a time, first.
-    if (position.loadedThrough > loadedThrough && !appendError) {
+    if (
+      Math.min(position.loadedThrough, pages) > loadedThrough &&
+      !appendError
+    ) {
       if (appending) return;
       const next = loadedThrough + 1;
       const timer = setTimeout(
@@ -898,6 +993,7 @@ export default function JobBoard() {
     error,
     storageReady,
     returnPath,
+    pages,
     page,
     filterKey,
     loadedThrough,
@@ -942,7 +1038,8 @@ export default function JobBoard() {
       prefix === 'mobile' && mobileDraft ? mobileDraft : currentSearch;
     const facets = prefix === 'desktop' && !resultsPending ? searchMeta : null;
     const changeCategory = (value: string) => {
-      if (prefix === 'mobile') setMobileDraft({ ...draft, category: value });
+      if (prefix === 'mobile')
+        setMobileDraft({ ...draft, category: value, subcategory: undefined });
       else setCategory(value);
     };
     const changeCity = (value: string) =>
@@ -1063,6 +1160,31 @@ export default function JobBoard() {
           </>
         )}
         <div className="filter-divider" />
+        {subcategories.some((item) => item.category === draft.category) && (
+          <label className="filter-subcategory">
+            <span>ქვემიმართულება</span>
+            <select
+              value={draft.subcategory || ''}
+              onChange={(event) => {
+                if (prefix === 'mobile')
+                  setMobileDraft({
+                    ...draft,
+                    subcategory: event.target.value || undefined,
+                  });
+                else setSubcategory(event.target.value);
+              }}
+            >
+              <option value="">ყველა — {draft.category}</option>
+              {subcategories
+                .filter((item) => item.category === draft.category)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+            </select>
+          </label>
+        )}
         <h3>სამუშაო პირობები</h3>
         <label className="check-row" htmlFor={`${prefix}-remote`}>
           <Checkbox
@@ -1106,12 +1228,7 @@ export default function JobBoard() {
         <details className="filter-extra">
           <summary>
             დამატებითი პირობები
-            {draft.entryLevel ||
-            draft.postedWithin ||
-            draft.salaryFrom !== null ||
-            draft.salaryTo !== null ||
-            draft.salaryPeriod === 'day' ||
-            draft.source !== 'ყველა'
+            {draft.entryLevel || draft.postedWithin || draft.source !== 'ყველა'
               ? ' · არჩეულია'
               : ''}
           </summary>
@@ -1437,6 +1554,12 @@ export default function JobBoard() {
                       <X size={12} />
                     </button>
                   )}
+                  {subcategory && (
+                    <button onClick={() => setSubcategory('')}>
+                      {subcategoryFor(category, subcategory)?.label}
+                      <X size={12} />
+                    </button>
+                  )}
                   {source !== 'ყველა' && (
                     <button onClick={() => setSource('ყველა')}>
                       {source}
@@ -1489,6 +1612,43 @@ export default function JobBoard() {
                   </button>
                 </div>
               )}
+              {savedOnly &&
+                !resultsPending &&
+                !error &&
+                unavailable.length > 0 && (
+                  <details className="unavailable-saved" open>
+                    <summary>
+                      დასრულებული ან მიუწვდომელი ({unavailable.length})
+                    </summary>
+                    <p>
+                      ეს განცხადებები აქტიურ შედეგებში აღარ ჩანს. შენახულიდან
+                      მხოლოდ შენი სურვილით წაიშლება.
+                    </p>
+                    <ul>
+                      {unavailable.map((item) => (
+                        <li key={item.id}>
+                          <div>
+                            <strong>{vacancyCardTitle(item.title)}</strong>
+                            <span>{item.company}</span>
+                            <small>
+                              {item.expired
+                                ? 'ვადა გასულია'
+                                : 'აღარ არის ხელმისაწვდომი'}
+                            </small>
+                          </div>
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={() => toggleSave(item.id)}
+                            aria-label={`${item.title} — შენახულიდან წაშლა`}
+                          >
+                            წაშლა
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               {!demo && activity.hidden.length > 0 && (
                 <details className="hidden-vacancies">
                   <summary>
@@ -1556,35 +1716,24 @@ export default function JobBoard() {
                       შეგიძლია.
                     </output>
                   )}
-                  {resultsPending && jobs.length === 0
-                    ? Array.from({ length: 4 }, (_, i) => (
-                        <div
-                          className="job-skeleton"
-                          key={i}
-                          aria-hidden="true"
-                        >
-                          <span />
-                          <div>
-                            <i />
-                            <i />
-                            <i />
-                          </div>
-                        </div>
-                      ))
-                    : jobs.map((j) => (
-                        <JobCard
-                          key={j.id}
-                          job={j}
-                          demo={demo}
-                          saved={saved.includes(j.id)}
-                          seen={activity.seen.includes(j.id)}
-                          status={applicationsById.get(j.id)}
-                          returnPath={loadedResult.path}
-                          onToggleSave={toggleSave}
-                          onOpen={openJob}
-                          onHide={hideJob}
-                        />
-                      ))}
+                  {resultsPending && jobs.length === 0 ? (
+                    <VacancySkeletons count={4} />
+                  ) : (
+                    jobs.map((j) => (
+                      <JobCard
+                        key={j.id}
+                        job={j}
+                        demo={demo}
+                        saved={savedSet.has(j.id)}
+                        seen={seenSet.has(j.id)}
+                        status={applicationsById.get(j.id)}
+                        returnPath={loadedResult.path}
+                        onToggleSave={toggleSave}
+                        onOpen={openJob}
+                        onHide={hideJob}
+                      />
+                    ))
+                  )}
                 </div>
               )}
               {!resultsPending && !error && !jobs.length && (
@@ -1593,14 +1742,22 @@ export default function JobBoard() {
                     {savedOnly ? <Bookmark size={28} /> : <Search size={28} />}
                   </div>
                   <h3>
-                    {savedOnly && !saved.length
-                      ? 'საინტერესო ვაკანსია შეინახე'
-                      : 'ამ პირობებით ვაკანსია ვერ მოიძებნა'}
+                    {savedOnly &&
+                    unavailable.length === saved.length &&
+                    saved.length > 0
+                      ? 'აქტიური შენახული ვაკანსია აღარ გაქვს'
+                      : savedOnly && !saved.length
+                        ? 'საინტერესო ვაკანსია შეინახე'
+                        : 'ამ პირობებით ვაკანსია ვერ მოიძებნა'}
                   </h3>
                   <p>
-                    {savedOnly && !saved.length
-                      ? 'დააჭირე ბარათზე შენახვის ნიშანს და მოგვიანებით აქ დაბრუნდი.'
-                      : 'შეცვალე საძიებო სიტყვა ან შეამცირე ფილტრების რაოდენობა.'}
+                    {savedOnly &&
+                    unavailable.length === saved.length &&
+                    saved.length > 0
+                      ? 'ძველი განცხადებები ზემოთ დარჩა. ახალი შესაძლებლობები ყველა ვაკანსიაში მოძებნე.'
+                      : savedOnly && !saved.length
+                        ? 'დააჭირე ბარათზე შენახვის ნიშანს და მოგვიანებით აქ დაბრუნდი.'
+                        : 'შეცვალე საძიებო სიტყვა ან შეამცირე ფილტრების რაოდენობა.'}
                   </p>
                   {searchMeta?.suggestion && (
                     <button
@@ -1638,6 +1795,18 @@ export default function JobBoard() {
               )}
               {!error && !resultsPending && loadedThrough < pages && (
                 <div className="load-more-row" ref={nextPageTarget}>
+                  {appending && (
+                    <div className="append-loading">
+                      <output className="brand-loading">
+                        შემდეგი ვაკანსიები იტვირთება…
+                        <span
+                          className="brand-loading-track"
+                          aria-hidden="true"
+                        />
+                      </output>
+                      <VacancySkeletons count={2} />
+                    </div>
+                  )}
                   <button
                     type="button"
                     className="load-more secondary-button"
@@ -1648,7 +1817,9 @@ export default function JobBoard() {
                       ? 'შემდეგი ვაკანსიები იტვირთება…'
                       : appendError
                         ? 'ხელახლა ცდა'
-                        : `მეტის ჩვენება · კიდევ ${Math.min(20, Math.max(0, total - (page - 1) * 20 - jobs.length))}`}
+                        : loadedThrough - page >= 49
+                          ? 'შემდეგი ვაკანსიების ნახვა'
+                          : `მეტის ჩვენება · კიდევ ${Math.min(20, Math.max(0, total - (page - 1) * 20 - jobs.length))}`}
                   </button>
                   {appendError && (
                     <p className="load-more-error" role="alert">
@@ -1709,7 +1880,7 @@ export default function JobBoard() {
           <span>© {new Date().getFullYear()} JOBX</span>
         </div>
       </footer>
-      {saveNotice && !feedback && (
+      {saveNotice && !feedback && !filtersOpen && (
         <div className="feedback-toast save-confirmation">
           <output>
             <Check size={17} />
@@ -1728,7 +1899,7 @@ export default function JobBoard() {
           </button>
         </div>
       )}
-      {feedback && (
+      {feedback && !filtersOpen && (
         <output className="feedback-toast">
           <Check size={17} />
           {feedback}

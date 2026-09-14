@@ -1,3 +1,4 @@
+import { siteUrl } from '@/lib/seo';
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './board.css';
@@ -19,6 +20,14 @@ export const viewport: Viewport = {
   ],
 };
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  openGraph: {
+    siteName: 'JOBX',
+    locale: 'ka_GE',
+    type: 'website',
+    images: [{ url: '/brand/jobx.png', alt: 'JOBX' }],
+  },
+  twitter: { card: 'summary', images: ['/brand/jobx.png'] },
   title: 'JOBX — ვაკანსიები ერთ სივრცეში',
   description:
     'მოძებნე ვაკანსიები სხვადასხვა წყაროდან. შეადარე პირობები და გადადი პირველწყაროზე.',

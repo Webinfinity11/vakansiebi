@@ -63,7 +63,7 @@ void test('a remembered list position keeps the pages appended with "load more"'
   // A range below the first page or unreasonably long is refused rather than fetched.
   assert.equal(readSearchPosition(stored({ loadedThrough: 1 }), url, at), null);
   assert.equal(
-    readSearchPosition(stored({ loadedThrough: 12 }), url, at),
+    readSearchPosition(stored({ loadedThrough: 52 }), url, at),
     null,
   );
   assert.equal(

@@ -51,7 +51,7 @@ export async function publicJobs(
   const statement = countsOnly
     ? metrics
     : metrics.slice(0, cut) +
-      `, ranked AS (SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error) ORDER BY (m.id=j.id) DESC,m.posted_at DESC,s.name,si.url) FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired),'[]'::jsonb) AS sources, row_number() OVER (ORDER BY ${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT * FROM ranked WHERE ord > $${args.length + 2} AND ord <= $${args.length + 2} + $${args.length + 1})` +
+      `, ranked AS (SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error) ORDER BY (m.id=j.id) DESC,m.posted_at DESC,s.name,si.url) FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired),'[]'::jsonb) AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id, row_number() OVER (ORDER BY ${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT * FROM ranked WHERE ord > $${args.length + 2} AND ord <= $${args.length + 2} + $${args.length + 1})` +
       metrics.slice(cut) +
       `, (SELECT COALESCE(jsonb_agg(to_jsonb(pg) - 'ord' ORDER BY pg.ord),'[]'::jsonb) FROM page pg) AS page_rows`;
   const measured = (
@@ -108,7 +108,7 @@ export async function publicJobs(
   const [profilesResult, sharedLogos, employers] = await Promise.all([
     companyKeys.length
       ? db().query(
-          'SELECT * FROM company_profiles WHERE company_key=ANY($1::text[])',
+          `SELECT company_key,logo_url${summary ? '' : ',website,description'} FROM company_profiles WHERE company_key=ANY($1::text[])`,
           [companyKeys],
         )
       : Promise.resolve({ rows: [] }),
@@ -151,6 +151,7 @@ export async function publicJobs(
         ? { company: privateListingLabel }
         : {}),
       id: r.id,
+      ...(!summary ? { canonicalId: r.canonical_id || r.id } : {}),
       companyPath: employers?.byJob.has(r.id)
         ? `/companies/${encodeURIComponent(employers.byJob.get(r.id)!)}`
         : undefined,
@@ -175,35 +176,66 @@ export async function publicJobs(
               .logo_url,
           }
         : {}),
-      companyProfile: {
-        website:
-          companyProfiles.get(companyKey(r.published.company || ''))?.website ||
-          '',
-        description:
-          companyProfiles.get(companyKey(r.published.company || ''))
-            ?.description || '',
-      },
+      ...(!summary
+        ? {
+            companyProfile: {
+              website:
+                companyProfiles.get(companyKey(r.published.company || ''))
+                  ?.website || '',
+              description:
+                companyProfiles.get(companyKey(r.published.company || ''))
+                  ?.description || '',
+            },
+          }
+        : {}),
     })),
     preview,
     search,
     ...(params.has('ids') && !preview
-      ? { available: await visibleIds(params.get('ids') || '') }
+      ? await savedAvailability(params.get('ids') || '')
       : {}),
     total: count,
     page,
     pages: Math.ceil(count / limit),
   };
 }
-/* Which saved ids are still on the public list, whatever else the reader filtered by. A saved
-   vacancy that has expired or been deleted never comes back, so the board drops it; otherwise the
-   saved count keeps promising vacancies the saved list cannot show. */
-async function visibleIds(ids: string) {
-  const plan = searchPlan(new URLSearchParams({ ids }), false);
+/* Unavailable saved items remain under the reader's control. Never expose a draft,
+   rejected record, or removed source snapshot through this status lookup. */
+async function savedAvailability(raw: string) {
+  const ids = [
+    ...new Set(raw.split(',').filter((id) => z.uuid().safeParse(id).success)),
+  ].slice(0, 100);
+  const plan = searchPlan(new URLSearchParams({ ids: ids.join(',') }), false);
   const { rows } = await db().query(
     `${plan.cte} SELECT j.id::text AS id FROM searchable j WHERE ${plan.where}`,
     plan.args,
   );
-  return rows.map((r: { id: string }) => r.id);
+  const available = rows.map((r: { id: string }) => r.id);
+  const live = new Set(available);
+  const missing = ids.filter((id) => !live.has(id));
+  const ended = missing.length
+    ? (
+        await db().query(
+          `SELECT id::text, published->>'title' AS title, published->>'company' AS company,
+      COALESCE(published->>'deadline','')<>'' AND published->>'deadline'<to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD') AS expired
+      FROM jobs WHERE id=ANY($1::uuid[]) AND status IN ('published','archived') AND published IS NOT NULL`,
+          [missing],
+        )
+      ).rows
+    : [];
+  const known = new Map(ended.map((row) => [row.id, row]));
+  return {
+    available,
+    unavailable: missing.map((id) => {
+      const row = known.get(id);
+      return {
+        id,
+        title: row?.title || 'შენახული ვაკანსია',
+        company: row?.company || '',
+        expired: row?.expired === true,
+      };
+    }),
+  };
 }
 export async function adminJobs(
   status: string,

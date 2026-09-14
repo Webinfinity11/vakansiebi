@@ -74,6 +74,7 @@ export const filtersSchema = z.object({
   query: z.string().max(200),
   city: z.string().max(300),
   category: z.string().max(100),
+  subcategory: z.string().max(60).optional(),
   source: z.string().max(100),
   paid: z.boolean(),
   remote: z.boolean(),

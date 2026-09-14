@@ -1,3 +1,4 @@
+import { vacancyUrl, jobPosting, jsonLd } from '@/lib/seo';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { isAdmin } from '@/lib/server/auth';
@@ -34,7 +35,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     .filter(Boolean)
     .join(' · ')
     .slice(0, 180);
-  const canonical = `https://vakansiebi-gules.vercel.app/vacancies/${job.id}`;
+  const canonical = vacancyUrl(job);
   return {
     title,
     description,
@@ -51,12 +52,21 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 export default async function Page(props: Props) {
   const { job, preview, from, companyPath } = await load(props);
+  const structured = preview ? null : jobPosting(job);
   return (
-    <VacancyPage
-      job={job}
-      preview={preview}
-      returnTo={from}
-      companyPath={companyPath}
-    />
+    <>
+      {structured && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLd(structured) }}
+        />
+      )}
+      <VacancyPage
+        job={job}
+        preview={preview}
+        returnTo={from}
+        companyPath={companyPath}
+      />
+    </>
   );
 }

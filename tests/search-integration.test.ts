@@ -167,6 +167,37 @@ void test(
         'expired postings excluded from results and counts',
       );
       assert.equal((await search({ q: 'ბუღალტერია' })).total, 2);
+      assert.equal(
+        (
+          await search({
+            category: 'ფინანსები',
+            subcategory: 'finance-accounting',
+          })
+        ).total,
+        2,
+      );
+      assert.equal(
+        (
+          await search({
+            category: 'ფინანსები',
+            subcategory: 'service-cleaning',
+          })
+        ).total,
+        2,
+        'invalid child is ignored',
+      );
+      const savedState = await search();
+      assert.ok(
+        savedState.unavailable?.some(
+          (item) => item.id === ids[7] && item.expired,
+        ),
+      );
+      const summary = await search({ summary: '1' });
+      assert.ok(
+        summary.jobs.every(
+          (job) => !('companyProfile' in job) && job.description === '',
+        ),
+      );
       assert.equal((await search({ q: 'დეველოპერი' })).total, 3);
       assert.equal(
         (await search({ q: 'develoepr' })).search.suggestion?.query,
@@ -300,6 +331,7 @@ void test(
         new URLSearchParams({ ids: listingIds[0] }),
       );
       assert.equal(folded.total, 1, 'a folded id still opens on its own');
+      assert.equal(folded.jobs[0].canonicalId, listingIds[1], 'duplicate detail points at the representative shown in the catalogue');
       assert.equal(folded.jobs[0].sources.length, 2);
       assert.equal(
         (await list({ salaryFrom: '2000' })).total,

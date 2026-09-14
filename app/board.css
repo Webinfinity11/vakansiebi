@@ -369,7 +369,7 @@
 .board-shell .company-avatar {
   width: 52px;
   height: 52px;
-  border-radius: 12px;
+  border-radius: 50%;
   border: 1px solid #e4e4e5;
   flex-shrink: 0;
 }
@@ -716,7 +716,7 @@
   .board-shell .company-avatar {
     width: 40px;
     height: 40px;
-    border-radius: 9px;
+    border-radius: 50%;
     font-size: 14px;
   }
   .board-shell .job-company {
@@ -2170,7 +2170,7 @@
   color: #2457e6;
 }
 .board-shell .company-avatar img {
-  padding: 2px;
+  padding: 15%;
 }
 .board-shell .company-avatar.company-placeholder {
   background: #f4f6f8;
@@ -3517,7 +3517,7 @@
   border: 0;
   background: #edf2fc;
   color: #2457e6;
-  border-radius: 5px 15px 5px 5px;
+  border-radius: 50%;
 }
 .board-shell.editorial-board.crafted-board .job-card {
   border: 1px solid #e1e3e8;
@@ -3811,7 +3811,7 @@
   display: inline-flex;
   width: 32px;
   height: 32px;
-  border-radius: 7px;
+  border-radius: 50%;
 }
 .board-shell .company-identity .company-avatar img {
   width: 100%;
@@ -3855,6 +3855,7 @@
 .board-shell .company-identity.identity-large .company-avatar {
   width: 64px;
   height: 64px;
+  flex: 0 0 64px;
 }
 .board-shell .company-identity.identity-large .category-mark {
   width: 46px;
@@ -4033,8 +4034,8 @@
 }
 .board-shell .company-avatar.company-placeholder,
 .board-shell.editorial-board.crafted-board .company-avatar.company-placeholder {
-  background: transparent;
-  border: 0;
+  background: #f2f4f8;
+  border: 1px solid #e1e5ed;
   box-shadow: none;
 }
 .company-avatar .company-fallback-3d {
