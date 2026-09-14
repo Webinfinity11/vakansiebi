@@ -7,7 +7,7 @@ export function vacancyCardTitle(title: string, source: string) {
   if (!government(source)) return title;
   const program = title.match(/პროფესიული საგანმანათლებლო პროგრამის\s*[„"“](.+?)[”"“]\s*პროფესიული განათლების მასწავლებელი/);
   if (program) return `მასწავლებელი — ${program[1]}`;
-  if (title.length > 110 && /საარქივო ფონდის დოკუმენტების გამოყენების/.test(title) && /განყოფილების სპეციალისტი$/.test(title))
+  if (title.length > 110 && /საარქივო ფონდის დოკუმენტების გამოყენების/.test(title) && title.endsWith('განყოფილების სპეციალისტი'))
     return 'სპეციალისტი — საარქივო დოკუმენტების გამოყენება';
   // Unknown long titles are visibly abbreviated, never assigned an invented profession.
   if (title.length > 110) {

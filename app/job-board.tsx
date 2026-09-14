@@ -225,7 +225,7 @@ function JobCard({
         <div className="job-info">
           <Link
             className="job-title"
-              title={j.title}
+              title={vacancyCardTitle(j.title, j.source)}
             data-vacancy-id={j.id}
             href={
               resultsPending
@@ -243,7 +243,7 @@ function JobCard({
               else onOpen();
             }}
           >
-            {j.title}
+            {vacancyCardTitle(j.title, j.source)}
           </Link>
           <div className="job-company">
             <CompanyIdentity
@@ -257,9 +257,9 @@ function JobCard({
             {!demo && <VacancyStatus seen={seen} status={status} />}
           </div>
           <div className="card-bottom">
-            {compactSalary(j.salary, j.salaryPeriod) && (
+            {vacancyCardSalary(j.salary, j.salaryPeriod, j.source) && (
               <span className="salary">
-                {compactSalary(j.salary, j.salaryPeriod)}
+                {vacancyCardSalary(j.salary, j.salaryPeriod, j.source)}
               </span>
             )}
             {j.category !== 'სხვა' && (
@@ -301,8 +301,8 @@ function JobCard({
               className={`save-button ${saved ? 'is-saved' : ''}`}
               aria-label={
                 saved
-                  ? `${j.title} — შენახულიდან წაშლა`
-                  : `${j.title} — შენახვა`
+                  ? `${vacancyCardTitle(j.title, j.source)} — შენახულიდან წაშლა`
+                  : `${vacancyCardTitle(j.title, j.source)} — შენახვა`
               }
               aria-pressed={saved}
               onClick={onToggleSave}
