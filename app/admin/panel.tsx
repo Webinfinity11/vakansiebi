@@ -255,6 +255,10 @@ export default function AdminPanel() {
   };
   const change = <K extends keyof Vacancy>(key: K, value: Vacancy[K]) =>
     setDraft((d) => (d ? { ...d, [key]: value } : d));
+  const commonInterval =
+    sources.length && new Set(sources.map((s) => s.interval_minutes)).size === 1
+      ? sources[0].interval_minutes
+      : null;
   return (
     <>
       <header className="topbar admin-topbar">
@@ -499,7 +503,12 @@ export default function AdminPanel() {
                 <h2>ვაკანსიების შემოტანა</h2>
                 <p>ახალი ვაკანსიები მოწმდება და ქვეყნდება ავტომატურად.</p>
                 <p className="scraper-schedule">
-                  განრიგი: ყოველ 3 საათში. დაგეგმილი გაშვება ზოგჯერ იგვიანებს.
+                  {commonInterval
+                    ? `განრიგი: ყოველ ${commonInterval / 60} საათში.`
+                    : sources.length
+                      ? 'წყაროებს განსხვავებული ინტერვალი აქვს.'
+                      : 'განრიგი იტვირთება…'}{' '}
+                  დაგეგმილი გაშვება ზოგჯერ იგვიანებს.
                 </p>
               </div>
               <div className="scraper-controls">
@@ -580,7 +589,7 @@ export default function AdminPanel() {
               <div className="scraper-results-heading">
                 <h3>ბოლო 24 საათი</h3>
                 <span>
-                  დასრულებული გაშვებები ·{' '}
+                  განახლდა:{' '}
                   {observedAt
                     ? time(new Date(observedAt).toISOString())
                     : 'იტვირთება…'}
@@ -588,7 +597,7 @@ export default function AdminPanel() {
               </div>
               <dl className="scraper-metrics">
                 <div>
-                  <dt>ახალი ვაკანსია</dt>
+                  <dt>შემოტანილი</dt>
                   <dd>{summary?.imported ?? '—'}</dd>
                 </div>
                 <div>
@@ -611,11 +620,7 @@ export default function AdminPanel() {
                     className="choice"
                     aria-label="ყველა წყაროს ინტერვალი"
                     disabled={busy || !sources.length}
-                    value={
-                      new Set(sources.map((s) => s.interval_minutes)).size === 1
-                        ? sources[0]?.interval_minutes
-                        : ''
-                    }
+                    value={commonInterval ?? ''}
                     onChange={(e) =>
                       void sourceAction(
                         { id: 'all' },
