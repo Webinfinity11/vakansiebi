@@ -21,7 +21,7 @@ import {
 import { suggestSearch } from '../search-language';
 import { logoCompanyKey } from '../company-logo-identity';
 import { resolveCompanyLogos } from './company-logos';
-import { employerPages } from './employers';
+import { employerPages, employerPagesIfReady } from './employers';
 export async function publicJobs(
   params: URLSearchParams,
   preview = false,
@@ -117,7 +117,9 @@ export async function publicJobs(
         .filter((r) => !r.published.logoUrl)
         .map((r) => r.published.company || ''),
     ),
-    preview ? Promise.resolve(null) : employerPages().catch(() => null),
+    preview
+      ? Promise.resolve(null)
+      : (summary ? employerPagesIfReady() : employerPages()).catch(() => null),
   ]);
   const companyProfiles = new Map(
     profilesResult.rows.map((p) => [p.company_key, p]),
@@ -190,6 +192,7 @@ export async function publicJobs(
         : {}),
     })),
     preview,
+    companyLinksPending: !preview && summary && !employers,
     search,
     ...(params.has('ids') && !preview
       ? await savedAvailability(params.get('ids') || '')

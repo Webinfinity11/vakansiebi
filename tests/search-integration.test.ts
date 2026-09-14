@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db } from '../lib/server/db';
+import { GET as companyLinks } from '../app/api/company-links/route';
 import { publicJobs } from '../lib/server/jobs';
 import type { Vacancy } from '../lib/types';
 import { similarVacancies } from '../lib/server/similar-vacancies';
@@ -188,9 +189,22 @@ void test(
       );
       const savedState = await search();
       assert.ok(
-        savedState.unavailable?.some(
-          (item) => item.id === ids[7] && item.expired,
+        'unavailable' in savedState &&
+          savedState.unavailable?.some(
+            (item) => item.id === ids[7] && item.expired,
+          ),
+      );
+      const linksResponse = await companyLinks(
+        new Request(
+          'https://example.com/api/company-links?ids=' + ids[0] + ',' + ids[7],
         ),
+      );
+      const links = (await linksResponse.json()).links;
+      assert.ok(links[ids[0]]?.startsWith('/companies/'));
+      assert.equal(
+        links[ids[7]],
+        null,
+        'expired IDs never receive employer links',
       );
       const summary = await search({ summary: '1' });
       assert.ok(
@@ -331,7 +345,11 @@ void test(
         new URLSearchParams({ ids: listingIds[0] }),
       );
       assert.equal(folded.total, 1, 'a folded id still opens on its own');
-      assert.equal(folded.jobs[0].canonicalId, listingIds[1], 'duplicate detail points at the representative shown in the catalogue');
+      assert.equal(
+        folded.jobs[0].canonicalId,
+        listingIds[1],
+        'duplicate detail points at the representative shown in the catalogue',
+      );
       assert.equal(folded.jobs[0].sources.length, 2);
       assert.equal(
         (await list({ salaryFrom: '2000' })).total,

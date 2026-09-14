@@ -405,6 +405,7 @@ export default function JobBoard() {
     ...advanced,
   };
   const [searchMeta, setSearchMeta] = useState<SearchMeta | null>(null);
+  const [companyLinksPending, setCompanyLinksPending] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false),
     [savedOnly, setSavedOnly] = useState(params.get('saved') === '1'),
     [saved, setSaved] = useState<string[]>([]),
@@ -550,6 +551,7 @@ export default function JobBoard() {
             : null;
         if (cached) {
           setJobs(cached.jobs);
+          setCompanyLinksPending(cached.jobs.some((job) => !job.companyPath));
           setTotal(cached.total);
           setPages(cached.pages);
           setSearchMeta(cached.search);
@@ -569,6 +571,7 @@ export default function JobBoard() {
           .then((d) => {
             if (!controller.signal.aborted) {
               setJobs(d.jobs);
+              setCompanyLinksPending(d.companyLinksPending === true);
               setSearchMeta(d.search);
               setLoadedResult({
                 key: filterKey,
@@ -674,6 +677,9 @@ export default function JobBoard() {
             }),
           ];
         });
+        setCompanyLinksPending(
+          (previous) => previous || d.companyLinksPending === true,
+        );
         setTotal(d.total);
         setPages(d.pages);
         setLoadedState({ key: filterKey, through: appendPage.page });
@@ -703,6 +709,42 @@ export default function JobBoard() {
     savedFilter,
     excluded,
   ]);
+  useEffect(() => {
+    if (!companyLinksPending || resultsPending || demo || !jobs.length) return;
+    const missing = jobs.filter((job) => !job.companyPath).map((job) => job.id);
+    if (!missing.length) return;
+    const controller = new AbortController();
+    const batches: string[][] = [];
+    for (let i = 0; i < missing.length; i += 100)
+      batches.push(missing.slice(i, i + 100));
+    void Promise.all(
+      batches.map(async (ids) => {
+        const response = await fetch(
+          '/api/company-links?ids=' + ids.join(','),
+          { signal: controller.signal },
+        );
+        if (!response.ok) throw Error('company-links');
+        return (await response.json()).links as Record<string, string | null>;
+      }),
+    )
+      .then((results) => {
+        if (controller.signal.aborted) return;
+        const links = Object.assign({}, ...results) as Record<
+          string,
+          string | null
+        >;
+        setJobs((current) =>
+          current.map((job) =>
+            links[job.id] ? { ...job, companyPath: links[job.id]! } : job,
+          ),
+        );
+        setCompanyLinksPending(false);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCompanyLinksPending(false);
+      });
+    return () => controller.abort();
+  }, [companyLinksPending, resultsPending, demo, jobs]);
   const loadMore = useCallback(() => {
     if (appending || resultsPending || loadedThrough >= pages) return;
     if (loadedThrough - page >= 49) {
