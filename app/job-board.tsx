@@ -430,6 +430,7 @@ export default function JobBoard() {
         false,
         [],
         '',
+        demo,
       ]),
       page: Math.max(
         1,
@@ -458,6 +459,7 @@ export default function JobBoard() {
     savedOnly,
     savedOnly ? saved : [],
     excluded,
+    demo,
   ]);
   const page = pageState.key === filterKey ? pageState.page : 1;
   const loadedThrough =
@@ -543,7 +545,9 @@ export default function JobBoard() {
           '/' + (address.size ? '?' + address.toString() : ''),
         );
         const cached =
-          retry === 0 && !savedOnly ? takeBoard(filterKey, page) : null;
+          retry === 0 && !savedOnly && !demo
+            ? takeBoard(filterKey, page)
+            : null;
         if (cached) {
           setJobs(cached.jobs);
           setTotal(cached.total);
