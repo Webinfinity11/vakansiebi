@@ -6,7 +6,7 @@ import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
 import { nearestCity } from '@/lib/nearest-city';
 import type { Application } from '@/lib/personal-space';
-import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
+import { vacancyCardTitle, vacancyCardSalary, vacancyCardLocation } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
 import AdvancedFilterControls, {
   advancedDefaults,
@@ -277,7 +277,7 @@ function JobCard({
               <span>
                 <MapPin size={13} />
                 <span className="location-text" title={j.city}>
-                  {j.city}
+                  {vacancyCardLocation(j.city)}
                 </span>
               </span>
             )}

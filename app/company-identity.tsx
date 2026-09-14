@@ -1,6 +1,7 @@
 'use client';
 import Link, { useLinkStatus } from 'next/link';
 import { ArrowRight, LoaderCircle } from 'lucide-react';
+import { vacancyCardCompany } from '@/lib/vacancy-card-labels';
 import { CompanyLogo } from './company-logo';
 
 function NavigationHint() {
@@ -44,7 +45,9 @@ export function CompanyIdentity({
         category={category}
         large={large}
       />
-      <span className="company-identity-name">{company || 'კომპანია'}</span>
+      <span className="company-identity-name" title={company}>
+        {(large ? company : vacancyCardCompany(company)) || 'კომპანია'}
+      </span>
     </>
   );
   return href ? (

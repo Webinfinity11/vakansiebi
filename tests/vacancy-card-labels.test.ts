@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   vacancyCardTitle,
+  vacancyCardCompany,
+  vacancyCardLocation,
   vacancyCardSalary,
 } from '../lib/vacancy-card-labels';
 const source = 'vacancy.hr.gov.ge';
@@ -78,4 +80,22 @@ void test('individually negotiated pay has one clear label while numeric offers 
     vacancyCardSalary('1000 ₾ + ბონუსი', '', 'hr.ge'),
     '1 000 ₾ + ბონუსი',
   );
+});
+
+void test('bureaucratic hierarchy does not hide a territorial profession', () => {
+  assert.equal(
+    vacancyCardTitle(
+      'მსჯავრდებულთა რესოციალიზაციის დეპარტამენტის რეაბილიტაციის სამმართველოს სოციალური მუშაკი (სამოქმედო ტერიტორია - ქვემო ქართლის რეგიონი)',
+      'vacancy.hr.gov.ge',
+    ),
+    'სოციალური მუშაკი — ქვემო ქართლის რეგიონი',
+  );
+});
+
+void test('company and location labels omit boilerplate without changing full input', () => {
+  assert.equal(vacancyCardCompany('სსიპ - საქართველოს ეროვნული არქივი'), 'საქართველოს ეროვნული არქივი');
+  assert.equal(vacancyCardCompany('შპს მაგალითი'), 'მაგალითი');
+  assert.equal(vacancyCardLocation('ქ. თბილისი, უნივერსიტეტის ქუჩა №46 https://maps.google.com/example'), 'ქ. თბილისი, უნივერსიტეტის ქუჩა №46');
+  assert.equal(vacancyCardLocation('სოფელი მარტყოფი. ტრანსპორტირებას უზრუნველყოფს კომპანია'), 'სოფელი მარტყოფი.');
+  assert.equal(vacancyCardLocation('თბილისი, ბათუმი'), 'თბილისი, ბათუმი');
 });

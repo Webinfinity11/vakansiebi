@@ -26,10 +26,18 @@ export function vacancyCardTitle(title: string, source = '') {
     title.endsWith('განყოფილების სპეციალისტი')
   )
     return 'სპეციალისტი — საარქივო დოკუმენტების გამოყენება';
+  const territorialRole = title.match(
+    /(?:დეპარტამენტის|სამმართველოს|სამსახურის|განყოფილების)\s+((?:(?:მთავარი|უფროსი|წამყვანი)\s+)?(?:სოციალური მუშაკი|ფსიქოლოგი|სპეციალისტი|ინსპექტორი))\s*\(სამოქმედო ტერიტორია\s*[-–—:]\s*(.+)\)$/,
+  );
+  if (territorialRole)
+    return ellipsis(
+      `${territorialRole[1]} — ${territorialRole[2]}`,
+      cardTitleLimit,
+    );
   // Unknown long titles are visibly abbreviated, never assigned an invented profession.
   if (Array.from(title).length > cardTitleLimit) {
     const role = title.match(
-      /((?:მთავარი |უფროსი |წამყვანი )?(?:სპეციალისტი|კონსულტანტი|ინსპექტორი|იურისტი|მასწავლებელი))$/,
+      /((?:მთავარი |უფროსი |წამყვანი )?(?:სპეციალისტი|კონსულტანტი|ინსპექტორი|იურისტი|მასწავლებელი|სოციალური მუშაკი|ფსიქოლოგი))$/,
     );
     if (role) {
       const context = title.slice(0, -role[0].length).trim();
@@ -65,4 +73,20 @@ export function vacancyCardSalary(
   return Array.from(label).length <= cardSalaryLimit
     ? label
     : 'ანაზღაურება — იხ. დეტალები';
+}
+
+/** Legal forms add no useful distinction to the card; full identity remains available. */
+export function vacancyCardCompany(company: string) {
+  return ellipsis(
+    company.replace(/^(?:სსიპ|შპს|სს|ა\(ა\)იპ)\s*(?:[-–—]\s*|\s+)/, ''),
+    72,
+  );
+}
+
+export function vacancyCardLocation(location: string) {
+  const text = location
+    .split(/https?:\/\//i)[0]
+    .split(/ტრანსპორტირებას უზრუნველყოფს|კომპანია თანამშრომელს უზრუნველყოფს/)[0]
+    .replace(/[,;\s(]+$/, '');
+  return ellipsis(text, 64);
 }
