@@ -6,7 +6,7 @@ import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
 import { nearestCity } from '@/lib/nearest-city';
 import type { Application } from '@/lib/personal-space';
-import { compactSalary } from '@/lib/vacancy-presentation';
+import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
 import AdvancedFilterControls, {
   advancedDefaults,
@@ -225,6 +225,7 @@ function JobCard({
         <div className="job-info">
           <Link
             className="job-title"
+              title={j.title}
             data-vacancy-id={j.id}
             href={
               resultsPending
