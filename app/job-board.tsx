@@ -1326,19 +1326,16 @@ export default function JobBoard() {
               className="results"
               aria-busy={resultsPending}
             >
-              {!demo &&
-                !savedOnly &&
-                !activeCount &&
-                activity.recent.length > 0 && (
-                  <RecentVacancies
-                    items={activity.recent}
-                    returnPath={returnPath}
-                    onClear={() => {
-                      if (!activity.clearRecent())
-                        setFeedback('ბრაუზერმა გასუფთავება ვერ შეძლო.');
-                    }}
-                  />
-                )}
+              {!demo && activity.recent.length > 0 && (
+                <RecentVacancies
+                  items={activity.recent}
+                  returnPath={returnPath}
+                  onClear={() => {
+                    if (!activity.clearRecent())
+                      setFeedback('ბრაუზერმა გასუფთავება ვერ შეძლო.');
+                  }}
+                />
+              )}
               <div className="results-toolbar">
                 <div className="results-head">
                   <div>

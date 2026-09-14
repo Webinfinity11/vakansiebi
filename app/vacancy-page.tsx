@@ -163,9 +163,12 @@ export default function VacancyPage({
   const { markSeen } = activity;
   useEffect(() => {
     if (preview) return;
-    const timer = setTimeout(() => markSeen(job.id), 0);
+    const timer = setTimeout(
+      () => markSeen(job.id, { title: job.title, company: job.company }),
+      0,
+    );
     return () => clearTimeout(timer);
-  }, [job.id, preview, markSeen]);
+  }, [job.id, job.title, job.company, preview, markSeen]);
   /* One view per vacancy per page load; the ref keeps a re-run of the effect from counting twice. */
   const viewed = useRef('');
   useEffect(() => {
