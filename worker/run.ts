@@ -1,4 +1,5 @@
 import { completeDescription } from './linked-description';
+import { detailQueue } from './detail-queue';
 import { assessReportedTotal, structuralFailure } from './quality';
 import { randomUUID } from 'node:crypto';
 import {
@@ -102,6 +103,7 @@ export async function runSource(
       throw Error(
         'Listing returned no vacancy links; source structure may have changed',
       );
+    const latestIds = links.map((link) => link.externalId);
     const info = paginated
       ? readDiscoveryInfo(source as DiscoverySource, html)
       : null;
@@ -293,27 +295,27 @@ export async function runSource(
     if (sitemap) await discoverItems(source, unique);
     discovered = unique.length;
     // Split the budget between backlog and rechecks so neither can starve the other.
-    const quota = Math.max(1, Math.floor(limit * 0.75));
+    const quota = Math.max(1, Math.ceil(limit * 0.9));
     // Newest postings first: they are what readers look for, and an old backlog entry that
     // has meanwhile expired costs a fetch either way. Rechecks start with records that have
     // dropped out of the listings, the cheapest signal that a vacancy was withdrawn.
     const pending = (
       await db().query(
-        'SELECT * FROM source_items WHERE source_id=$1 AND raw IS NULL AND next_check_at<=now() ORDER BY discovered_at DESC,id LIMIT $2',
-        [source, limit],
+        'SELECT * FROM source_items WHERE source_id=$1 AND raw IS NULL AND next_check_at<=now() ORDER BY (external_id=ANY($3::text[])) DESC,discovered_at DESC,id LIMIT $2',
+        [source, limit, latestIds],
       )
     ).rows;
     const existing = (
       await db().query(
-        "SELECT * FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND next_check_at<=now() ORDER BY (last_seen_at<now()-interval '36 hours') DESC,next_check_at LIMIT $2",
-        [source, Math.max(1, limit - Math.min(pending.length, quota))],
+        "SELECT * FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND next_check_at<=now() AND job_id IN (SELECT id FROM jobs WHERE status='published') ORDER BY (last_seen_at<now()-interval '36 hours') DESC,next_check_at LIMIT $2",
+        [source, Math.max(0, limit - Math.min(pending.length, quota))],
       )
     ).rows;
     const newCount = Math.min(pending.length, limit - existing.length);
     let consecutiveDetailFailures = 0;
     let stoppedEarly = false;
     let attempted = 0;
-    const queue = [...pending.slice(0, newCount), ...existing].slice(0, limit);
+    const queue = detailQueue(pending.slice(0, newCount), existing).slice(0, limit);
     let next = 0;
     let halt = false;
     const processItem = async (item: (typeof queue)[number]) => {

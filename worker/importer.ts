@@ -237,7 +237,9 @@ const plainObject = (v: unknown): v is Record<string, unknown> =>
 /** Long text is kept as a readable head plus its original length, at every depth. */
 const shortened = (v: unknown): unknown => {
   if (typeof v === 'string')
-    return v.length > 240 ? v.slice(0, 240) + `…(${v.length})` : v;
+    return v.length > 240
+      ? Array.from(v).slice(0, 240).join('') + `…(${v.length})`
+      : v;
   if (Array.isArray(v)) return v.map(shortened);
   if (plainObject(v))
     return Object.fromEntries(
