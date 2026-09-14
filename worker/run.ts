@@ -20,6 +20,7 @@ import { reconcileJob } from './automation';
 import type { SourceId } from '../lib/types';
 import {
   getSourceConfig,
+  modules,
   detailRequestUrl,
   externalId,
   listLinks,
@@ -100,7 +101,12 @@ export async function runSource(
       : activeConfig.list;
     const html = await sourceFetch(source, listUrl);
     const links: ListedLink[] = listLinks(source, html, listUrl);
-    if (!links.length)
+    const firstObserved = links.length
+      ? links
+      : (modules[source]?.closedListingIds?.(html) || []).map((externalId) => ({
+          externalId,
+        }));
+    if (!firstObserved.length)
       throw Error(
         'Listing returned no vacancy links; source structure may have changed',
       );
@@ -109,17 +115,21 @@ export async function runSource(
       ? readDiscoveryInfo(source as DiscoverySource, html)
       : null;
     const guard = new DiscoveryPageGuard();
-    guard.accept(links);
-    const rememberPage = async (url: string, pageLinks: ListedLink[]) => {
+    guard.accept(firstObserved);
+    const rememberPage = async (
+      url: string,
+      pageLinks: ListedLink[],
+      observed = pageLinks.map(({ externalId }) => ({ externalId })),
+    ) => {
       // Store hints for parsing, without rewriting historical snapshots before new imports.
       await discoverItems(source, pageLinks, { updateStoredHints: false });
       await db().query(
         `INSERT INTO source_discovery_pages(source_id,url,signature,item_count) VALUES($1,$2,$3,$4)
         ON CONFLICT(source_id,url) DO UPDATE SET signature=excluded.signature,item_count=excluded.item_count,observed_at=now()`,
-        [source, url, listingFingerprint(pageLinks), pageLinks.length],
+        [source, url, listingFingerprint(observed), pageLinks.length],
       );
     };
-    await rememberPage(listUrl, links);
+    await rememberPage(listUrl, links, firstObserved);
     const countQuality = info
       ? assessReportedTotal(config.reported_total, info.reportedTotal, {
           value: config.reported_total_candidate,
@@ -231,12 +241,15 @@ export async function runSource(
     for (const extra of extraPages) {
       if (Date.now() - startedAt >= budgetMs * 0.2) break;
       try {
-        const pageLinks = listLinks(
-          source,
-          await sourceFetch(source, extra),
-          extra,
-        );
-        const accepted = guard.accept(pageLinks);
+        const pageHtml = await sourceFetch(source, extra);
+        const pageLinks = listLinks(source, pageHtml, extra);
+        const closedIds = pageLinks.length
+          ? []
+          : modules[source]?.closedListingIds?.(pageHtml) || [];
+        const observed = pageLinks.length
+          ? pageLinks
+          : closedIds.map((externalId) => ({ externalId }));
+        const accepted = guard.accept(observed);
         if (accepted !== 'accepted') {
           discoveryWarning =
             'Pagination returned ' +
@@ -248,7 +261,7 @@ export async function runSource(
           discoveryStructural = accepted === 'repeated';
           break;
         }
-        await rememberPage(extra, pageLinks);
+        await rememberPage(extra, pageLinks, observed);
         links.push(...pageLinks);
         await db().query(
           paginated

@@ -155,6 +155,14 @@ void test('a private advertisement publishes without an employer; other sources 
     datePosted: '2026-09-01',
   };
   assert.ok(publishable(ad, 'gancxadebebi', ad.url, '2026-09-11'));
+  assert.ok(
+    publishable(
+      { ...ad, description: 'გვჭირდება გამოცდილი მზარეული.' },
+      'gancxadebebi',
+      ad.url,
+      '2026-09-11',
+    ),
+  );
   assert.equal(
     publishable(
       { ...ad, source: 'jobs.ge', url: 'https://jobs.ge/ge/?view=jobs&id=1' },

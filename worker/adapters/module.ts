@@ -47,6 +47,8 @@ export type SourceModule = {
   listingUrl(page: number): string;
   listingInfo(text: string): ListingInfo;
   listLinks(text: string): ListedLink[];
+  /** Verified closed records can explain why an otherwise valid page has no active links. */
+  closedListingIds?(text: string): string[];
   /** Source-specific parse; the shared tail in `parseDetail` normalises and validates. */
   parseDetail(text: string, url: string, hints?: ListingHints): Vacancy;
   /** Larger JSON pages (embedded logos) need more room than an HTML page. */

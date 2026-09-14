@@ -45,12 +45,12 @@ void test('repeated repair failures cannot starve due discovery on successive wo
   await runSourceCycle('jobs', deps);
   assert.equal(events.filter((e) => e === 'discover').length, 2);
   assert.deepEqual(events.slice(0, 6), [
-    'refresh',
-    'refresh-reported',
-    'reconcile',
     'discover',
     'reconcile',
     'discovery-reported',
+    'refresh',
+    'refresh-reported',
+    'reconcile',
   ]);
 });
 void test('paused or not-yet-due discovery stays paused while requested repairs proceed', async () => {
@@ -71,5 +71,18 @@ void test('shutdown and infrastructure failures never start another discovery ba
     runSourceCycle('jobs', broken.deps),
     /database unavailable/,
   );
-  assert.ok(!broken.events.includes('discover'));
+  assert.equal(
+    broken.events.filter((e) => e === 'discover').length,
+    1,
+    'new vacancies were handled before the old repair failed',
+  );
+});
+
+void test('a discovery infrastructure failure stops the cycle before repairs', async () => {
+  const { events, deps } = fixture();
+  deps.discover = async () => {
+    throw Error('database unavailable');
+  };
+  await assert.rejects(runSourceCycle('jobs', deps), /database unavailable/);
+  assert.ok(!events.includes('refresh'));
 });

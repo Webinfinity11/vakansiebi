@@ -37,6 +37,7 @@ import { sourceHealth } from '@/lib/scraper-status';
 import { EmployersPanel } from './employers';
 import { AnalyticsPanel } from './analytics';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
+type AdminSource = Source & { removed_count?: number };
 const names: Record<string, string> = {
   pending: 'შემოტანილი',
   published: 'გამოქვეყნებული',
@@ -122,7 +123,7 @@ export default function AdminPanel() {
       manual: 0,
       blocked: 0,
     }),
-    [sources, setSources] = useState<Source[]>([]),
+    [sources, setSources] = useState<AdminSource[]>([]),
     [runs, setRuns] = useState<SourceRun[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(''),
@@ -800,6 +801,11 @@ export default function AdminPanel() {
                         დამუშავებული: <b>{s.imported}</b> · ლაივზე:{' '}
                         <b>{s.published_count ?? '—'}</b>
                       </p>
+                      {!!s.removed_count && (
+                        <p>
+                          წყაროდან მოხსნილი: <b>{s.removed_count}</b>
+                        </p>
+                      )}
                       <p>
                         წყაროს მითითებული რაოდენობა:{' '}
                         <b>{s.reported_total ?? 'არ არის მითითებული'}</b>

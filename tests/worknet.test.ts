@@ -190,3 +190,29 @@ void test('worknet rejects inactive, canceled and mismatched vacancies', () => {
   assert.throws(() => parseDetail('worknet', '<html>', publicUrl), /mismatched/);
   assert.throws(() => parseDetail('worknet', '[]', publicUrl), /mismatched/);
 });
+
+void test('only fully identified closed Worknet pages explain an empty active listing', () => {
+  const page = (items: unknown[]) => JSON.stringify({ items });
+  assert.deepEqual(
+    worknet.closedListingIds!(
+      page([
+        { id: 1, vacancyStatusId: 8 },
+        { id: 2, vacancyStatusId: 8 },
+      ]),
+    ),
+    ['1', '2'],
+  );
+  for (const text of [
+    'bad json',
+    page([]),
+    page([{ id: 1 }]),
+    page([{ id: 1, vacancyStatusId: 99 }]),
+    page([{ id: 1, vacancyStatusId: 1 }]),
+    page([{ vacancyStatusId: 8 }]),
+    page([
+      { id: 1, vacancyStatusId: 8 },
+      { id: 2, vacancyStatusId: 1 },
+    ]),
+  ])
+    assert.deepEqual(worknet.closedListingIds!(text), []);
+});

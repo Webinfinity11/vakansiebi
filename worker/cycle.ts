@@ -18,25 +18,26 @@ type CycleDependencies = {
   reportAutomation: (result: Record<string, number>) => void;
 };
 
-// Repairs and normal discovery each get a turn. A repeatedly failing old
-// employer link must not suppress discovery on every scheduled invocation.
+// Fresh vacancies get the first turn. Repairs keep their separate bounded budget
+// after discovery, so a slow old employer link cannot delay new publication.
 export async function runSourceCycle(
   source: ActiveSourceId,
   deps: CycleDependencies,
 ) {
-  const refresh = await deps.refresh(source, 20, 3 * 60_000);
-  deps.reportRefresh(refresh);
-  deps.reportAutomation(await deps.reconcile(source));
   if (deps.stopped()) return;
-  if (!(await deps.isDue(source))) {
+  if (await deps.isDue(source)) {
+    const result = await deps.discover(source);
+    deps.reportAutomation(await deps.reconcile(source));
+    deps.reportDiscovery(result);
+  } else {
     deps.reportDiscovery({
       source,
       skipped: true,
       reason: 'No enabled sources are due',
     });
-    return;
   }
-  const result = await deps.discover(source);
+  if (deps.stopped()) return;
+  const refresh = await deps.refresh(source, 20, 3 * 60_000);
+  deps.reportRefresh(refresh);
   deps.reportAutomation(await deps.reconcile(source));
-  deps.reportDiscovery(result);
 }

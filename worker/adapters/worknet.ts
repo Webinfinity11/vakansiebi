@@ -131,6 +131,20 @@ export const worknet: SourceModule = {
     }
     return [...result.values()];
   },
+  closedListingIds(text) {
+    const items = list(parse(text)?.items);
+    // Status 8 is the closed state observed on the public API. Unknown states,
+    // missing ids, malformed JSON and genuinely empty responses must still retry.
+    if (!items.length || items.length > 500) return [];
+    const ids: string[] = [];
+    for (const raw of items) {
+      const item = record(raw);
+      const id = item ? numericId(item.id) : '';
+      if (!item || !id || item.vacancyStatusId !== 8) return [];
+      ids.push(id);
+    }
+    return [...new Set(ids)];
+  },
   parseDetail(text, url, hints): Vacancy {
     const id = worknet.externalId(new URL(url));
     const data = parse(text);

@@ -4,6 +4,7 @@ import {
   vacancyContacts,
 } from '../../lib/vacancy-details';
 import { mailtoAddress } from '../../lib/application-contact';
+import { hasShortClassifiedDescription } from '../../lib/short-classified-description';
 import { companyKey } from '../../lib/company-key';
 import { visibleFields } from '../visible-fields';
 import { enrichVacancy } from '../enrich';
@@ -813,6 +814,10 @@ export function parseDetail(
   } else if (source === 'gancxadebebi') {
     // Everything is read inside the advertisement container; the page also lists unrelated ads.
     const ad = $('.am[itemscope]').first();
+    if (!ad.length || !ad.find('.ar').first().text().trim())
+      throw Error(
+        'Classified vacancy structure is missing; retain previous data',
+      );
     if (
       ad.find('.ar').first().text().trim() !==
       'GEO' + externalId(source, url)
@@ -1023,7 +1028,12 @@ function finishVacancy(
   if (!j.city && hints?.city) j.city = hints.city.replace(/\s+/g, ' ').trim();
   j.category = classify(j.title, fromSource);
   if (!j.company) j.warnings.push('კომპანიის სახელი წყაროზე ვერ მოიძებნა.');
-  if (j.title.length < 2 || (!verifiedMinimalSs && j.description.length < 40))
+  if (
+    j.title.length < 2 ||
+    (!verifiedMinimalSs &&
+      j.description.length < 40 &&
+      !hasShortClassifiedDescription(j))
+  )
     throw Error('Vacancy structure changed or description is missing');
   if (verifiedMinimalSs && !j.description)
     j.warnings.push(

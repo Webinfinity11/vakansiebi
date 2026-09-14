@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { hasShortClassifiedDescription } from './short-classified-description';
 import { safeLogoUrl } from './vacancy-media';
 export const vacancySchema = z
   .object({
@@ -61,6 +62,7 @@ export const vacancySchema = z
   .refine(
     (v) =>
       v.description.length >= 40 ||
+      hasShortClassifiedDescription(v) ||
       Boolean(
         v.source === 'jobs.ss.ge' &&
         v.company.trim() &&

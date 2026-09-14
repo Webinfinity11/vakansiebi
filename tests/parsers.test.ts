@@ -15,6 +15,7 @@ import {
   applyListingHints,
 } from '../worker/adapters';
 import { validateUrl } from '../worker/http';
+import { vacancySchema } from '../lib/vacancy-schema';
 void test('deduplicates listing links and rejects links to other origins', () => {
   const result = listLinks(
     'hr',
@@ -398,6 +399,51 @@ void test('a private advertisement keeps its own text and never borrows a neighb
     () => parseDetail('gancxadebebi', gxPage('GEO7777777'), gxVacancyUrl),
     UnavailableVacancy,
   );
+});
+
+void test('a short classified original passes both parsing and publication validation without borrowing text', () => {
+  const short = 'გვჭირდება გამოცდილი მზარეული.';
+  const html = gxPage().replace(
+    /(<div class="atx" itemprop="description">)[\s\S]*?(<\/div>)/,
+    '$1' + short + '$2',
+  );
+  const v = parseDetail('gancxadebebi', html, gxVacancyUrl);
+  assert.equal(v.description, short);
+  assert.ok(vacancySchema.safeParse(v).success);
+  for (const description of ['', '   ', '.........']) {
+    assert.throws(() =>
+      parseDetail(
+        'gancxadebebi',
+        html.replace(short, description),
+        gxVacancyUrl,
+      ),
+    );
+    assert.ok(!vacancySchema.safeParse({ ...v, description }).success);
+  }
+  assert.throws(
+    () =>
+      parseDetail(
+        'gancxadebebi',
+        html.replace('GEO1514848', 'GEO7777777'),
+        gxVacancyUrl,
+      ),
+    UnavailableVacancy,
+  );
+  for (const url of [
+    v.url.replace('gancxadebebi.ge', 'evil.test'),
+    v.url.replace('-25/', '-24/'),
+  ])
+    assert.ok(!vacancySchema.safeParse({ ...v, url }).success);
+  assert.ok(!vacancySchema.safeParse({ ...v, source: 'jobs.ge' }).success);
+  for (const page of [
+    '',
+    '<html><h1>Temporary error</h1></html>',
+    gxPage().replace(/class="ar"/g, 'class="missing-id"'),
+  ])
+    assert.throws(
+      () => parseDetail('gancxadebebi', page, gxVacancyUrl),
+      (e: unknown) => e instanceof Error && !(e instanceof UnavailableVacancy),
+    );
 });
 
 void test('private advertisements without an employer never pair up as duplicates', () => {
