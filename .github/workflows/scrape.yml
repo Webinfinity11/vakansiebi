@@ -1,7 +1,7 @@
 name: Vacancy scraper
 on:
   schedule:
-    - cron: '17,47 * * * *'
+    - cron: '17 */3 * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,6 +38,7 @@ jobs:
           DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
           # Bound transfer and historical discovery on the database plan.
           # The first listing page still gets priority; robots.txt spacing is unchanged.
+          SCRAPE_CRON_MINUTES: '180'
           CRAWL_BATCH_SIZE: '200'
           SCRAPE_BUDGET_MINUTES: '8'
           DETAIL_CONCURRENCY: '3'

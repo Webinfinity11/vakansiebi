@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Registers scripts/local-gov-sources.sh with launchd, every 30 minutes while this Mac is awake.
+# Registers scripts/local-gov-sources.sh with launchd, every 3 hours while this Mac is awake.
 #
 # macOS privacy protection blocks a launchd agent from reading files under ~/Desktop, where this
 # project lives, so the agent needs Full Disk Access for /bin/zsh — or the project has to live
@@ -27,7 +27,7 @@ cat > "$plist" <<PLIST
   <key>ProgramArguments</key>
   <array><string>/bin/zsh</string><string>$link/scripts/local-gov-sources.sh</string></array>
   <key>WorkingDirectory</key><string>$link</string>
-  <key>StartInterval</key><integer>1800</integer>
+  <key>StartInterval</key><integer>10800</integer>
   <key>RunAtLoad</key><true/>
   <key>StandardOutPath</key><string>$link/.local/gov-sources.log</string>
   <key>StandardErrorPath</key><string>$link/.local/gov-sources.log</string>

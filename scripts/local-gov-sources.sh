@@ -4,7 +4,7 @@
 # network, so both government sources are collected here.
 #
 #   zsh scripts/local-gov-sources.sh          one pass over the due government sources
-#   zsh scripts/local-gov-sources.sh --loop   keep passing every 30 minutes (Ctrl+C to stop)
+#   zsh scripts/local-gov-sources.sh --loop   keep passing every 3 hours (Ctrl+C to stop)
 #
 # Respect each source interval and failure backoff; government sources are not in the cloud matrix.
 # PostgreSQL advisory locks make this safe to run while the scheduled workflow is also running.
@@ -25,7 +25,7 @@ pass() {
 if [[ "${1:-}" == '--loop' ]]; then
   while true; do
     pass
-    sleep "${GOV_LOOP_SECONDS:-1800}"
+    sleep "${GOV_LOOP_SECONDS:-10800}"
   done
 else
   pass

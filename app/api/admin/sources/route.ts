@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { nextRunAt } from '@/worker/next-run';
 import { db } from '@/lib/server/db';
 import { githubScraperStatus } from '@/lib/server/scraper-github';
 import { wakeScraper } from '@/lib/server/scraper-control';
@@ -39,9 +40,28 @@ export async function GET() {
         'SELECT r.* FROM source_runs r JOIN sources s ON s.id=r.source_id WHERE NOT s.retired ORDER BY r.started_at DESC LIMIT 20',
       )
     ).rows;
+    const summary = (
+      await db().query(`SELECT
+      (SELECT jsonb_build_object(
+        'pending',count(*) FILTER(WHERE status='pending'),
+        'published',count(*) FILTER(WHERE status='published'),
+        'review',count(*) FILTER(WHERE needs_review AND status<>'merged'),
+        'archived',count(*) FILTER(WHERE status='archived'),
+        'manual',count(*) FILTER(WHERE NOT automation_managed AND status NOT IN ('merged','rejected')),
+        'paused',count(*) FILTER(WHERE automation_paused AND status NOT IN ('merged','rejected')),
+        'blocked',count(*) FILTER(WHERE automation_reason IS NOT NULL AND status NOT IN ('merged','rejected','published'))
+      ) FROM jobs) counts,
+      count(*)::int completed_runs,
+      COALESCE(sum(r.imported),0)::int imported,
+      COALESCE(sum(r.changed),0)::int changed,
+      COALESCE(sum(r.failed),0)::int failed
+      FROM source_runs r JOIN sources s ON s.id=r.source_id
+      WHERE NOT s.retired AND r.finished_at>now()-interval '24 hours'`)
+    ).rows[0];
     return Response.json({
       sources,
       runs,
+      summary,
       github: await githubScraperStatus(),
       notificationsEnabled: false,
       observedAt: new Date().toISOString(),
@@ -64,7 +84,14 @@ export async function POST(req: Request) {
         action: z.enum(['run', 'configure', 'retry']),
         enabled: z.boolean().optional(),
         autoEnabled: z.boolean().optional(),
-        intervalMinutes: z.number().int().min(15).max(1440).optional(),
+        intervalMinutes: z
+          .union([
+            z.literal(180),
+            z.literal(360),
+            z.literal(720),
+            z.literal(1440),
+          ])
+          .optional(),
         detailIntervalHours: z.number().int().min(1).max(168).optional(),
         autoPublish: z.boolean().optional(),
       })
@@ -84,6 +111,11 @@ export async function POST(req: Request) {
         );
         if (!r.rowCount) throw new ApiError('ჯერ ჩართე წყარო');
       }
+      if (['hrgov', 'worknet'].includes(data.id))
+        return Response.json({
+          ok: true,
+          message: 'მოთხოვნა შენახულია. Mac-ის შემდეგი შემოწმება დაამუშავებს.',
+        });
       const result = await wakeScraper();
       return Response.json({
         ok: true,
@@ -101,7 +133,9 @@ export async function POST(req: Request) {
        interval_minutes=COALESCE($4,interval_minutes),auto_publish=COALESCE($5,auto_publish),
        detail_interval_hours=COALESCE($6,detail_interval_hours),
        requested_at=CASE WHEN $2=false OR $3=false THEN NULL ELSE requested_at END,
-       next_run_at=CASE WHEN $3=true AND NOT auto_enabled THEN now() ELSE next_run_at END
+       next_run_at=CASE WHEN $7::timestamptz IS NOT NULL THEN
+         CASE WHEN consecutive_failures>0 THEN GREATEST(next_run_at,$7::timestamptz) ELSE $7::timestamptz END
+         WHEN $3=true AND NOT auto_enabled THEN now() ELSE next_run_at END
        WHERE ($1='all' OR id=$1) AND NOT retired`,
       [
         data.id,
@@ -110,6 +144,9 @@ export async function POST(req: Request) {
         data.intervalMinutes,
         data.autoPublish,
         data.detailIntervalHours,
+        data.intervalMinutes
+          ? nextRunAt(data.intervalMinutes, Date.now(), 180)
+          : null,
       ],
     );
     return Response.json({ ok: true });

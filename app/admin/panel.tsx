@@ -5,7 +5,6 @@ import {
   ArrowUpRight,
   RefreshCw,
   ShieldCheck,
-  BellOff,
   Check,
   Layers3,
   Search,
@@ -98,10 +97,16 @@ async function request(url: string, body?: unknown) {
 }
 export default function AdminPanel() {
   const [observedAt, setObservedAt] = useState(0);
+  const [summary, setSummary] = useState<{
+    imported: number;
+    changed: number;
+    failed: number;
+    completed_runs: number;
+  } | null>(null);
   const [github, setGithub] = useState<Awaited<
     ReturnType<typeof githubScraperStatus>
   > | null>(null);
-  const [tab, setTab] = useState('vacancies'),
+  const [tab, setTab] = useState('sources'),
     [status, setStatus] = useState('review'),
     [sourceFilter, setSourceFilter] = useState(''),
     [query, setQuery] = useState(''),
@@ -131,16 +136,22 @@ export default function AdminPanel() {
       targetId?: string;
     } | null>(null);
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       const [a, b] = await Promise.all([
-        request(
-          `/api/admin/jobs?status=${status}&q=${encodeURIComponent(query)}&page=${page}&source=${sourceFilter}`,
-        ),
+        tab === 'vacancies'
+          ? request(
+              `/api/admin/jobs?status=${status}&q=${encodeURIComponent(query)}&page=${page}&source=${sourceFilter}`,
+            )
+          : Promise.resolve(null),
         request('/api/admin/sources'),
       ]);
-      setJobs(a.jobs);
-      setTotal(a.total);
-      setCounts(a.counts);
+      if (a) {
+        setJobs(a.jobs);
+        setTotal(a.total);
+      }
+      setCounts(b.summary.counts);
+      setSummary(b.summary);
       setSources(b.sources);
       setRuns(b.runs);
       setGithub(b.github);
@@ -151,7 +162,7 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [status, query, page, sourceFilter]);
+  }, [status, query, page, sourceFilter, tab]);
   useEffect(() => {
     const t = setTimeout(() => void load(), 250);
     return () => clearTimeout(t);
@@ -274,56 +285,47 @@ export default function AdminPanel() {
               <ShieldCheck size={16} />
               მართვის სივრცე
             </div>
-            <h1>ყველაფერი შენი კონტროლით.</h1>
-            <p>შეამოწმე შემოტანილი ვაკანსიები, გაასწორე და გამოაქვეყნე.</p>
+            <h1>ადმინისტრაცია</h1>
+            <p>შემოტანის შედეგები და მართვა ერთ სივრცეში.</p>
           </div>
           <Link href="/?preview=1" target="_blank" className="secondary-button">
             წინასწარი ნახვა <ArrowUpRight size={17} />
           </Link>
         </div>
-        <div className="test-notice">
-          <BellOff size={19} />
-          <div>
-            <strong>ავტომატური მართვა</strong>
-            <span>
-              {' '}
-              ჩართული წყაროების ვაკანსიები ავტომატურად მოწმდება და ქვეყნდება.
-              ელფოსტა, SMS და სხვა შეტყობინებები არ იგზავნება.
-            </span>
-          </div>
-        </div>
-        <div className="admin-stats">
-          {(
-            [
-              ['გამოქვეყნებული', counts.published, 'published'],
-              ['შესამოწმებელი', counts.review, 'review'],
-              ['ხელით მართული', counts.manual, 'manual'],
-              ['ავტომატურად ვერ ქვეყნდება', counts.blocked, 'blocked'],
-              ['არქივი', counts.archived, 'archived'],
+        {tab === 'vacancies' && (
+          <div className="admin-stats">
+            {(
               [
-                'ჩართული წყარო',
-                `${sources.filter((s) => s.enabled).length} / ${sources.length}`,
-                '',
-              ],
-            ] as [string, number | string, string][]
-          ).map(([name, count, filter]) => (
-            <button
-              type="button"
-              key={name}
-              className={filter && status === filter ? 'stat-active' : ''}
-              disabled={!filter}
-              onClick={() => {
-                if (!filter) return;
-                setTab('vacancies');
-                setPage(1);
-                setStatus(filter);
-              }}
-            >
-              <span>{name}</span>
-              <strong>{count}</strong>
-            </button>
-          ))}
-        </div>
+                ['გამოქვეყნებული', counts.published, 'published'],
+                ['შესამოწმებელი', counts.review, 'review'],
+                ['ხელით მართული', counts.manual, 'manual'],
+                ['ავტომატურად ვერ ქვეყნდება', counts.blocked, 'blocked'],
+                ['არქივი', counts.archived, 'archived'],
+                [
+                  'ჩართული წყარო',
+                  `${sources.filter((s) => s.enabled).length} / ${sources.length}`,
+                  '',
+                ],
+              ] as [string, number | string, string][]
+            ).map(([name, count, filter]) => (
+              <button
+                type="button"
+                key={name}
+                className={filter && status === filter ? 'stat-active' : ''}
+                disabled={!filter}
+                onClick={() => {
+                  if (!filter) return;
+                  setTab('vacancies');
+                  setPage(1);
+                  setStatus(filter);
+                }}
+              >
+                <span>{name}</span>
+                <strong>{count}</strong>
+              </button>
+            ))}
+          </div>
+        )}
         {error && (
           <div role="alert" className="notice">
             {error}
@@ -493,23 +495,25 @@ export default function AdminPanel() {
           <TabsContent value="sources">
             <section className="scraper-overview" aria-label="სკრაპერის მართვა">
               <div>
-                <span className="scraper-eyebrow">GITHUB ACTIONS</span>
-                <h2>ავტომატური შემოტანის მართვა</h2>
-                <p>
-                  სკრაპერი GitHub-ზე მუშაობს. შენი კომპიუტერის ჩართვა საჭირო არ
-                  არის. გამონაკლისია სახელმწიფო წყაროები: GitHub-ის ქსელიდან ვერ
-                  იხსნება და ლოკალურად შემოდის (<code>npm run worker:gov</code>
-                  ).
-                </p>
+                <span className="scraper-eyebrow">ავტომატური განახლება</span>
+                <h2>ვაკანსიების შემოტანა</h2>
+                <p>ახალი ვაკანსიები მოწმდება და ქვეყნდება ავტომატურად.</p>
                 <p className="scraper-schedule">
-                  გაშვების განრიგი: ყოველ 30 წუთში · GitHub-ს შეუძლია გაშვება
-                  დააგვიანოს. მონაცემები აქ ყოველ 10 წამში ახლდება.
+                  განრიგი: ყოველ 3 საათში. დაგეგმილი გაშვება ზოგჯერ იგვიანებს.
                 </p>
               </div>
               <div className="scraper-controls">
                 <button
                   className="primary"
-                  disabled={busy || !sources.some((s) => s.enabled)}
+                  disabled={
+                    busy ||
+                    !sources.some((s) => s.enabled) ||
+                    sources.some(
+                      (s) =>
+                        !!s.requested_at ||
+                        sourceHealth(s, observedAt).tone === 'blue',
+                    )
+                  }
                   onClick={() =>
                     void sourceAction({ id: 'all' }, { action: 'run' })
                   }
@@ -569,6 +573,89 @@ export default function AdminPanel() {
                 </p>
               )}
             </section>
+            <section
+              className="scraper-results"
+              aria-label="შემოტანის შედეგები"
+            >
+              <div className="scraper-results-heading">
+                <h3>ბოლო 24 საათი</h3>
+                <span>
+                  დასრულებული გაშვებები ·{' '}
+                  {observedAt
+                    ? time(new Date(observedAt).toISOString())
+                    : 'იტვირთება…'}
+                </span>
+              </div>
+              <dl className="scraper-metrics">
+                <div>
+                  <dt>ახალი ვაკანსია</dt>
+                  <dd>{summary?.imported ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>განახლებული</dt>
+                  <dd>{summary?.changed ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>ვერ დამუშავდა</dt>
+                  <dd>{summary?.failed ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt>დასრულებული გაშვება</dt>
+                  <dd>{summary?.completed_runs ?? '—'}</dd>
+                </div>
+              </dl>
+              <div className="scraper-preferences">
+                <label>
+                  ყველა წყაროს ინტერვალი
+                  <select
+                    className="choice"
+                    aria-label="ყველა წყაროს ინტერვალი"
+                    disabled={busy || !sources.length}
+                    value={
+                      new Set(sources.map((s) => s.interval_minutes)).size === 1
+                        ? sources[0]?.interval_minutes
+                        : ''
+                    }
+                    onChange={(e) =>
+                      void sourceAction(
+                        { id: 'all' },
+                        {
+                          action: 'configure',
+                          intervalMinutes: Number(e.target.value),
+                        },
+                      )
+                    }
+                  >
+                    <option value="" disabled>
+                      წყაროებს განსხვავებული ინტერვალი აქვს
+                    </option>
+                    <option value={180}>3 საათი</option>
+                    <option value={360}>6 საათი</option>
+                    <option value={720}>12 საათი</option>
+                    <option value={1440}>24 საათი</option>
+                  </select>
+                </label>
+                <button
+                  className="secondary-button"
+                  disabled={loading || busy}
+                  onClick={() => void load()}
+                >
+                  <RefreshCw size={16} />
+                  შედეგების განახლება
+                </button>
+                <a
+                  href="https://console.neon.tech/app/projects/plain-sky-34116949"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  ბაზის მოხმარება <ExternalLink size={14} />
+                </a>
+              </div>
+              <p className="admin-helper">
+                შედეგები წუთში ერთხელ ახლდება, მხოლოდ გახსნილ ჩანართში.
+                სახელმწიფო წყაროებისთვის Mac ჩართული უნდა იყოს.
+              </p>
+            </section>
             <div className="source-grid">
               {sources.map((s) => (
                 <section className="source-card" key={s.id}>
@@ -604,7 +691,9 @@ export default function AdminPanel() {
                             : !s.auto_enabled
                               ? 'მხოლოდ მოთხოვნით'
                               : Date.parse(s.next_run_at) <= observedAt
-                                ? 'GitHub-ის შემდეგ ციკლში'
+                                ? ['hrgov', 'worknet'].includes(s.id)
+                                  ? 'ლოკალური შემოწმების მოლოდინში'
+                                  : 'ავტომატური გაშვების მოლოდინში'
                                 : time(s.next_run_at)}
                       </dd>
                     </div>
@@ -635,204 +724,215 @@ export default function AdminPanel() {
                       </span>
                     )}
                   </div>
-                  {!!s.top_errors?.length && (
-                    <details className="source-errors">
-                      <summary>
-                        ყველაზე ხშირი პასუხი წყაროდან ({s.errored})
-                      </summary>
-                      <ul>
-                        {s.top_errors.map((e) => (
-                          <li key={e.message}>
-                            <b>{e.count}</b> {e.message}
-                          </li>
-                        ))}
-                      </ul>
+                  <details className="source-settings">
+                    <summary>პარამეტრები და დეტალები</summary>
+                    {!!s.top_errors?.length && (
+                      <details className="source-errors">
+                        <summary>
+                          ყველაზე ხშირი პასუხი წყაროდან ({s.errored})
+                        </summary>
+                        <ul>
+                          {s.top_errors.map((e) => (
+                            <li key={e.message}>
+                              <b>{e.count}</b> {e.message}
+                            </li>
+                          ))}
+                        </ul>
+                        <small>
+                          მოხსნილი განცხადება (404/410) ნორმალურია — ჩანაწერი
+                          არქივში გადადის. სხვა შეცდომა მზარდი ინტერვალით
+                          მოწმდება.
+                        </small>
+                      </details>
+                    )}
+                    {!!s.deferred_runs && (
+                      <div className="source-repair-note">
+                        <strong>ამ ქსელიდან წყარო არ პასუხობს</strong>
+                        <p>
+                          ბოლო სამ დღეში {s.deferred_runs} გაშვება ვერ
+                          დაუკავშირდა წყაროს. სახელმწიფო წყაროების შემოტანისთვის
+                          Mac ჩართული უნდა იყოს.
+                        </p>
+                      </div>
+                    )}
+                    {!!s.refresh_pending && (
+                      <div className="source-repair-note">
+                        <strong>
+                          სრული ტექსტის განახლება: {s.refresh_pending}
+                        </strong>
+                        <p>
+                          {s.refresh_retrying || 0} განცხადება განმეორებით
+                          შემოწმებას ელოდება. ეს ახალი ვაკანსიების ძებნას აღარ
+                          აჩერებს.
+                        </p>
+                        <button
+                          className="text-button"
+                          disabled={busy || !s.enabled}
+                          onClick={() =>
+                            void sourceAction(s, { action: 'retry' })
+                          }
+                        >
+                          პრობლემურის ხელახალი შემოწმება
+                        </button>
+                      </div>
+                    )}
+                    {(s.quality_warning || !!s.quality_held) && (
+                      <div className="source-quality-note">
+                        <strong>ავტომატური ხელახალი შემოწმება</strong>
+                        <p>
+                          {s.quality_held
+                            ? `${s.quality_held} განცხადების ცვლილება დამატებით მოწმდება. მანამდე შენარჩუნებულია ბოლო სანდო მონაცემები.`
+                            : 'წყაროს რაოდენობა უჩვეულოდ შეიცვალა. დაფარვა ხელახლა მოწმდება.'}
+                        </p>
+                        <small>
+                          ხელით დადასტურება საჭირო არ არის; ვადაგასული და
+                          ხანგრძლივად გადაუმოწმებელი განცხადებები იხსნება.
+                        </small>
+                      </div>
+                    )}
+                    <div className="source-coverage">
+                      <p>
+                        დამუშავებული: <b>{s.imported}</b> · ლაივზე:{' '}
+                        <b>{s.published_count ?? '—'}</b>
+                      </p>
+                      <p>
+                        წყაროს მითითებული რაოდენობა:{' '}
+                        <b>{s.reported_total ?? 'არ არის მითითებული'}</b>
+                      </p>
+                      <p>
+                        ბოლო 24 საათში გავლილი გვერდები:{' '}
+                        <b>{s.observed_pages ?? 0}</b>
+                      </p>
                       <small>
-                        მოხსნილი განცხადება (404/410) ნორმალურია — ჩანაწერი
-                        არქივში გადადის. სხვა შეცდომა მზარდი ინტერვალით
-                        მოწმდება.
+                        წყაროს საერთო რაოდენობა შეიძლება შეიცავდეს დუბლიკატებსა
+                        და ვადაგასულ განცხადებებს.
                       </small>
-                    </details>
-                  )}
-                  {!!s.deferred_runs && (
-                    <div className="source-repair-note">
-                      <strong>ამ ქსელიდან წყარო არ პასუხობს</strong>
-                      <p>
-                        ბოლო სამ დღეში {s.deferred_runs} გაშვება ვერ დაუკავშირდა
-                        წყაროს. ეს წყაროს შეცდომა არ არის: GitHub-ის ქსელიდან
-                        ზოგიერთი სახელმწიფო საიტი დახურულია. შემოტანა ლოკალურად
-                        გრძელდება (`npm run worker:gov`).
-                      </p>
                     </div>
-                  )}
-                  {!!s.refresh_pending && (
-                    <div className="source-repair-note">
-                      <strong>
-                        სრული ტექსტის განახლება: {s.refresh_pending}
-                      </strong>
-                      <p>
-                        {s.refresh_retrying || 0} განცხადება განმეორებით
-                        შემოწმებას ელოდება. ეს ახალი ვაკანსიების ძებნას აღარ
-                        აჩერებს.
-                      </p>
-                      <button
-                        className="text-button"
-                        disabled={busy || !s.enabled}
-                        onClick={() =>
-                          void sourceAction(s, { action: 'retry' })
+                    <label
+                      className="check-row"
+                      htmlFor={`source-enabled-${s.id}`}
+                    >
+                      <Checkbox
+                        id={`source-enabled-${s.id}`}
+                        checked={s.enabled}
+                        disabled={busy}
+                        onCheckedChange={(v) =>
+                          void sourceAction(s, {
+                            action: 'configure',
+                            enabled: v,
+                          })
+                        }
+                      />
+                      წყაროს გამოყენება
+                    </label>
+                    <label
+                      className="check-row"
+                      htmlFor={`source-auto-${s.id}`}
+                    >
+                      <Checkbox
+                        id={`source-auto-${s.id}`}
+                        checked={s.auto_enabled}
+                        disabled={busy}
+                        onCheckedChange={(v) =>
+                          void sourceAction(s, {
+                            action: 'configure',
+                            autoEnabled: v,
+                          })
+                        }
+                      />
+                      ახალი ვაკანსიების ავტომატური ძებნა
+                    </label>
+                    <label
+                      className="check-row"
+                      htmlFor={`source-publish-${s.id}`}
+                    >
+                      <Checkbox
+                        id={`source-publish-${s.id}`}
+                        checked={!!s.auto_publish}
+                        disabled={busy}
+                        onCheckedChange={(v) =>
+                          void sourceAction(s, {
+                            action: 'configure',
+                            autoPublish: v,
+                          })
+                        }
+                      />
+                      შემოწმებული ვაკანსიების ავტომატური გამოქვეყნება
+                    </label>
+                    <div className="interval-row">
+                      <span>სიის შემოწმება</span>
+                      <select
+                        className="choice"
+                        aria-label={`${s.name}: შემოწმების ინტერვალი`}
+                        value={s.interval_minutes}
+                        disabled={busy}
+                        onChange={(e) =>
+                          void sourceAction(s, {
+                            action: 'configure',
+                            intervalMinutes: Number(e.target.value),
+                          })
                         }
                       >
-                        პრობლემურის ხელახალი შემოწმება
-                      </button>
+                        <option value={180}>3 საათი</option>
+                        <option value={360}>6 საათი</option>
+                        <option value={720}>12 საათი</option>
+                        <option value={1440}>24 საათი</option>
+                      </select>
                     </div>
-                  )}
-                  {(s.quality_warning || !!s.quality_held) && (
-                    <div className="source-quality-note">
-                      <strong>ავტომატური ხელახალი შემოწმება</strong>
-                      <p>
-                        {s.quality_held
-                          ? `${s.quality_held} განცხადების ცვლილება დამატებით მოწმდება. მანამდე შენარჩუნებულია ბოლო სანდო მონაცემები.`
-                          : 'წყაროს რაოდენობა უჩვეულოდ შეიცვალა. დაფარვა ხელახლა მოწმდება.'}
-                      </p>
-                      <small>
-                        ხელით დადასტურება საჭირო არ არის; ვადაგასული და
-                        ხანგრძლივად გადაუმოწმებელი განცხადებები იხსნება.
-                      </small>
+                    <div className="interval-row">
+                      <span>ვაკანსიის ხელახალი შემოწმება</span>
+                      <select
+                        className="choice"
+                        aria-label={`${s.name}: დეტალის შემოწმების ინტერვალი`}
+                        value={s.detail_interval_hours}
+                        disabled={busy}
+                        onChange={(e) =>
+                          void sourceAction(s, {
+                            action: 'configure',
+                            detailIntervalHours: Number(e.target.value),
+                          })
+                        }
+                      >
+                        <option value={6}>6 საათი</option>
+                        <option value={12}>12 საათი</option>
+                        <option value={24}>24 საათი</option>
+                        <option value={48}>2 დღე</option>
+                        <option value={168}>7 დღე</option>
+                      </select>
                     </div>
-                  )}
-                  <div className="source-coverage">
-                    <p>
-                      დამუშავებული: <b>{s.imported}</b> · ლაივზე:{' '}
-                      <b>{s.published_count ?? '—'}</b>
+                    <p className="admin-helper">
+                      უფრო გრძელი ინტერვალი ახალ ვაკანსიებს მეტ ადგილს უთმობს
+                      გაშვების ბიუჯეტში; სიიდან გამქრალი ჩანაწერები ისედაც
+                      პირველ რიგში მოწმდება.
                     </p>
-                    <p>
-                      წყაროს მითითებული რაოდენობა:{' '}
-                      <b>{s.reported_total ?? 'არ არის მითითებული'}</b>
-                    </p>
-                    <p>
-                      ბოლო 24 საათში გავლილი გვერდები:{' '}
-                      <b>{s.observed_pages ?? 0}</b>
-                    </p>
-                    <small>
-                      წყაროს საერთო რაოდენობა შეიძლება შეიცავდეს დუბლიკატებსა და
-                      ვადაგასულ განცხადებებს.
-                    </small>
-                  </div>
-                  <label
-                    className="check-row"
-                    htmlFor={`source-enabled-${s.id}`}
-                  >
-                    <Checkbox
-                      id={`source-enabled-${s.id}`}
-                      checked={s.enabled}
-                      disabled={busy}
-                      onCheckedChange={(v) =>
-                        void sourceAction(s, {
-                          action: 'configure',
-                          enabled: v,
-                        })
-                      }
-                    />
-                    წყაროს გამოყენება
-                  </label>
-                  <label className="check-row" htmlFor={`source-auto-${s.id}`}>
-                    <Checkbox
-                      id={`source-auto-${s.id}`}
-                      checked={s.auto_enabled}
-                      disabled={busy}
-                      onCheckedChange={(v) =>
-                        void sourceAction(s, {
-                          action: 'configure',
-                          autoEnabled: v,
-                        })
-                      }
-                    />
-                    ახალი ვაკანსიების ავტომატური ძებნა
-                  </label>
-                  <label
-                    className="check-row"
-                    htmlFor={`source-publish-${s.id}`}
-                  >
-                    <Checkbox
-                      id={`source-publish-${s.id}`}
-                      checked={!!s.auto_publish}
-                      disabled={busy}
-                      onCheckedChange={(v) =>
-                        void sourceAction(s, {
-                          action: 'configure',
-                          autoPublish: v,
-                        })
-                      }
-                    />
-                    შემოწმებული ვაკანსიების ავტომატური გამოქვეყნება
-                  </label>
-                  <div className="interval-row">
-                    <span>სიის შემოწმება</span>
-                    <select
-                      className="choice"
-                      aria-label={`${s.name}: შემოწმების ინტერვალი`}
-                      value={s.interval_minutes}
-                      disabled={busy}
-                      onChange={(e) =>
-                        void sourceAction(s, {
-                          action: 'configure',
-                          intervalMinutes: Number(e.target.value),
-                        })
-                      }
-                    >
-                      <option value={30}>30 წუთი</option>
-                      <option value={60}>1 საათი</option>
-                      <option value={180}>3 საათი</option>
-                      <option value={1440}>24 საათი</option>
-                    </select>
-                  </div>
-                  <div className="interval-row">
-                    <span>ვაკანსიის ხელახალი შემოწმება</span>
-                    <select
-                      className="choice"
-                      aria-label={`${s.name}: დეტალის შემოწმების ინტერვალი`}
-                      value={s.detail_interval_hours}
-                      disabled={busy}
-                      onChange={(e) =>
-                        void sourceAction(s, {
-                          action: 'configure',
-                          detailIntervalHours: Number(e.target.value),
-                        })
-                      }
-                    >
-                      <option value={6}>6 საათი</option>
-                      <option value={12}>12 საათი</option>
-                      <option value={24}>24 საათი</option>
-                      <option value={48}>2 დღე</option>
-                      <option value={168}>7 დღე</option>
-                    </select>
-                  </div>
-                  <p className="admin-helper">
-                    უფრო გრძელი ინტერვალი ახალ ვაკანსიებს მეტ ადგილს უთმობს
-                    გაშვების ბიუჯეტში; სიიდან გამქრალი ჩანაწერები ისედაც პირველ
-                    რიგში მოწმდება.
-                  </p>
-                  {s.last_error && (
-                    <div className="notice">
-                      <p>
-                        ბოლო შემოწმება სრულად ვერ დასრულდა. სისტემა ავტომატურად
-                        გადაამოწმებს.
-                      </p>
-                      <details>
-                        <summary>შემოწმების დეტალები</summary>
-                        <p>{s.last_error}</p>
-                      </details>
-                    </div>
-                  )}
+                    {s.last_error && (
+                      <div className="notice">
+                        <p>
+                          ბოლო შემოწმება სრულად ვერ დასრულდა. სისტემა
+                          ავტომატურად გადაამოწმებს.
+                        </p>
+                        <details>
+                          <summary>შემოწმების დეტალები</summary>
+                          <p>{s.last_error}</p>
+                        </details>
+                      </div>
+                    )}
+                  </details>
                   <button
                     className="secondary-button"
-                    disabled={busy || !s.enabled}
+                    disabled={
+                      busy ||
+                      !s.enabled ||
+                      !!s.requested_at ||
+                      sourceHealth(s, observedAt).tone === 'blue'
+                    }
                     onClick={() => void sourceAction(s, { action: 'run' })}
                   >
                     <RefreshCw size={16} />
                     {s.requested_at
-                      ? 'გაშვების ხელახლა მოთხოვნა'
-                      : github?.dispatchConfigured
+                      ? 'გაშვების რიგშია'
+                      : github?.dispatchConfigured &&
+                          !['hrgov', 'worknet'].includes(s.id)
                         ? 'ახლავე შემოწმება'
                         : 'შემოწმების მოთხოვნა'}
                   </button>

@@ -1,3 +1,4 @@
+import { nextRunAt } from './next-run';
 import { completeDescription } from './linked-description';
 import { detailQueue, detailQueueProjection } from './detail-queue';
 import { assessReportedTotal, structuralFailure } from './quality';
@@ -469,8 +470,13 @@ export async function runSource(
       qualityWarning,
     ]);
     await db().query(
-      "UPDATE sources SET last_success_at=CASE WHEN $3::text IS NULL THEN now() ELSE last_success_at END,last_error=$2,consecutive_failures=0,next_run_at=now()+(interval_minutes*interval '1 minute') WHERE id=$1",
-      [source, operationalWarning, structural],
+      'UPDATE sources SET last_success_at=CASE WHEN $3::text IS NULL THEN now() ELSE last_success_at END,last_error=$2,consecutive_failures=0,next_run_at=$4 WHERE id=$1',
+      [
+        source,
+        operationalWarning,
+        structural,
+        nextRunAt(config.interval_minutes),
+      ],
     );
     return {
       source,
