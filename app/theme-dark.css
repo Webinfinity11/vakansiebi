@@ -1859,7 +1859,6 @@
 }
 :root[data-theme='dark'] .board-shell.editorial-board .desktop-filters {
   border: 0;
-  border-right: 1px solid #2f3748;
   background: transparent;
 }
 :root[data-theme='dark'] .board-shell.editorial-board .job-card {
