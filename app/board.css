@@ -2470,6 +2470,12 @@
   font-size: 12px;
   justify-content: center;
 }
+.vacancy-progress-only > .vacancy-contact-guidance {
+  margin: 0 0 12px;
+  padding: 20px;
+  border-radius: 12px;
+  font-size: 13px;
+}
 .vacancy-progress-only > .application-control {
   position: sticky;
   top: 24px;

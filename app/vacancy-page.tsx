@@ -601,7 +601,13 @@ export default function VacancyPage({
                 <p>ამონარიდები განცხადებიდან — სრული პირობები აღწერაშია.</p>
               </section>
             )}
-            {!hasAction && (
+          </section>
+          {!hasAction && (
+            <aside
+              className="vacancy-contact vacancy-progress-only"
+              aria-label="დამსაქმებელთან დაკავშირება"
+            >
+              {/* Without an email, phone or form, the way to apply sits where those would be. */}
               <div className="vacancy-contact-guidance">
                 <strong>დაკავშირების გზა</strong>
                 <a
@@ -613,10 +619,6 @@ export default function VacancyPage({
                   კონტაქტი ნახე ორიგინალ განცხადებაში <ArrowUpRight size={15} />
                 </a>
               </div>
-            )}
-          </section>
-          {!hasAction && (
-            <aside className="vacancy-contact vacancy-progress-only">
               {progress}
             </aside>
           )}
