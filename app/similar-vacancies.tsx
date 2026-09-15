@@ -109,7 +109,7 @@ export function SimilarVacancies({
                 seen={activity.seen.includes(job.id)}
                 status={applicationsById.get(job.id)}
               />
-              {job.salary && (
+              {vacancyCardSalary(job.salary, job.salaryPeriod, job.source) && (
                 <span className="similar-salary">
                   {vacancyCardSalary(job.salary, job.salaryPeriod, job.source)}
                 </span>

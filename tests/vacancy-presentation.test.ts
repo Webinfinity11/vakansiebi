@@ -69,20 +69,17 @@ void test('enrichment fills a missing city while respecting existing location an
   assert.equal(enrichVacancy({ ...job, city: 'თბილისი' }).city, 'თბილისი');
   assert.equal(enrichVacancy(job).description, job.description);
 });
-void test('salary labels keep source qualifiers alongside formatted amounts', () => {
+void test('salary labels show the shared concise amount while original conditions stay in source text', () => {
   for (const [source, expected] of [
-    [
-      'ფიქსირებული ხელფასი (1000 ლარი) + ყოველთვიური ბონუსი',
-      'ფიქსირებული ხელფასი (1 000 ₾) + ყოველთვიური ბონუსი',
-    ],
-    ['2 000 ₾ Net;', '2 000 ₾ ხელზე ასაღები'],
-    ['1000–1500 USD gross', '1 000–1 500 USD დარიცხული'],
+    ['ფიქსირებული ხელფასი (1000 ლარი) + ყოველთვიური ბონუსი', '1 000 ₾'],
+    ['2 000 ₾ Net;', '2 000 ₾'],
+    ['1000–1500 USD gross', '1 000–1 500 $'],
     ['1000 ლარი - 1500 ლარი', '1 000–1 500 ₾'],
-    ['100 ₾ დღეში', '100 ₾ დღეში'],
-    ['საათში 15 €', 'საათში 15 €'],
+    ['100 ₾ დღეში', '100 ₾ / დღე'],
+    ['საათში 15 €', '15 € / სთ'],
     ['შეთანხმებით', 'შეთანხმებით'],
-    ['1000–2000 ₾ + ბონუსი', '1 000–2 000 ₾ + ბონუსი'],
-    ['800 ლარი (ხელზე ასაღები)', '800 ₾ (ხელზე ასაღები)'],
+    ['1000–2000 ₾ + ბონუსი', '1 000–2 000+ ₾'],
+    ['800 ლარი (ხელზე ასაღები)', '800 ₾'],
   ])
     assert.equal(compactSalary(source), expected);
   assert.equal(
@@ -120,10 +117,10 @@ void test('multi-city regional postings do not collapse to one recognized city',
   );
 });
 
-void test('salary keeps qualifiers and adds only a known missing rate period', () => {
-  assert.equal(compactSalary('2000 ლარი Net', 'თვე'), '2 000 ₾ ხელზე ასაღები · თვეში');
-  assert.equal(compactSalary('100 ₾ დღეში', 'დღე'), '100 ₾ დღეში');
-  assert.equal(compactSalary('1000 ლარიდან + ბონუსი'), '1000 ლარიდან + ბონუსი');
+void test('salary adds only a known missing rate period', () => {
+  assert.equal(compactSalary('2000 ლარი Net', 'თვე'), '2 000 ₾ / თვე');
+  assert.equal(compactSalary('100 ₾ დღეში', 'დღე'), '100 ₾ / დღე');
+  assert.equal(compactSalary('1000 ლარიდან + ბონუსი'), '1 000+ ₾');
   assert.equal(compactSalary('1500 ₾', ''), '1 500 ₾');
   assert.equal(compactSalary('1500 ₾', 'unknown'), '1 500 ₾');
   assert.equal(compactSalary(''), '');

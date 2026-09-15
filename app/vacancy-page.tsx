@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { salaryDetails } from '@/lib/salary-summary';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import {
   ArrowUpRight,
@@ -266,6 +267,16 @@ export default function VacancyPage({
         ...summary.map((s) => s.value),
       ]),
   );
+  const payConditions = salaryDetails(job.salary, job.salaryPeriod);
+  if (
+    payConditions &&
+    !factAlreadyVisible(
+      payConditions,
+      job.description,
+      extraFacts.map((f) => f.value),
+    )
+  )
+    extraFacts.push({ label: 'ანაზღაურების პირობები', value: payConditions });
   if (
     extraFacts.length === 1 &&
     /კატეგორია|category/i.test(extraFacts[0].label)

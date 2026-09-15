@@ -1,3 +1,4 @@
+import { compactSalary } from '@/lib/vacancy-presentation';
 import { vacancyUrl, jobPosting, jsonLd } from '@/lib/seo';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -31,7 +32,12 @@ async function load({ params, searchParams }: Props) {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { job, preview } = await load(props);
   const title = `${job.title} — ${job.company} | JOBX`;
-  const description = [job.company, job.city, job.salary, job.employmentType]
+  const description = [
+    job.company,
+    job.city,
+    compactSalary(job.salary, job.salaryPeriod),
+    job.employmentType,
+  ]
     .filter(Boolean)
     .join(' · ')
     .slice(0, 180);

@@ -50,42 +50,9 @@ export function vacancyCardTitle(title: string, source = '') {
 export function vacancyCardSalary(
   salary: string,
   period: string,
-  source: string,
+  _source: string,
 ) {
-  if (government(source)) {
-    const contactHour = salary.match(
-      /1\s+საკონტაქტო\s+ს[თტ]\.?\s*[-–—:]\s*(\d+(?:[.,]\d+)?)\s*(?:₾|ლ(?:არი)?\.?)\s*$/,
-    );
-    if (contactHour)
-      return `${contactHour[1].replace(',', '.')} ₾ / საკონტაქტო სთ`;
-  }
-  if (
-    !/\d/.test(salary) &&
-    /შეთანხმებით|ინდივიდუალურ|კვალიფიკაცი|გამოცდილებ/.test(salary)
-  )
-    return 'შეთანხმებით';
-  // Match the whole condition: never drop a trailing bonus, tax or schedule clause.
-  const range = salary
-    .trim()
-    .match(
-      /^(საშუალოდ\s+)?(\d+(?:[ \u00a0\u202f]\d{3})*)\s*ლარიდან\s+(\d+(?:[ \u00a0\u202f]\d{3})*)\s*ლარამდე(\s+და\s+მეტი)?[.!]?$/,
-    );
-  if (range) {
-    const amount = compactSalary(`${range[2]}–${range[3]} ₾`, period).replace(
-      ' ₾',
-      `${range[4] ? '+' : ''} ₾`,
-    );
-    return `${range[1] ? 'საშ. ' : ''}${amount}`;
-  }
-  const label = compactSalary(salary, period).replace(
-    /^(?:შრომის ანაზღაურება|ანაზღაურება|ხელფასი)\s*:\s*/,
-    '',
-  );
-  // Do not extract a single amount from complex pay: that could hide a range,
-  // bonus condition, different periods, or a gross/net qualification.
-  return Array.from(label).length <= cardSalaryLimit
-    ? label
-    : 'ანაზღაურება — იხ. დეტალები';
+  return compactSalary(salary, period);
 }
 
 /** Legal forms add no useful distinction to the card; full identity remains available. */

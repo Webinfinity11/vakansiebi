@@ -21,10 +21,7 @@ void test('government card labels retain the actual teaching subject and contact
     '32.20 ₾ / საკონტაქტო სთ',
   );
   assert.equal(vacancyCardSalary('1760 ₾', '', source), '1 760 ₾');
-  assert.equal(
-    vacancyCardSalary('1000 ₾ + ბონუსი', '', source),
-    '1 000 ₾ + ბონუსი',
-  );
+  assert.equal(vacancyCardSalary('1000 ₾ + ბონუსი', '', source), '1 000+ ₾');
 });
 void test('archive role is concise without inventing seniority', () => {
   const title =
@@ -39,7 +36,7 @@ void test('archive role is concise without inventing seniority', () => {
   );
 });
 
-void test('all sources have bounded labels without silently discarding complex pay conditions', () => {
+void test('all sources use concise labels with no free-text fallback', () => {
   for (const source of [
     'jobs.ge',
     'hr.ge',
@@ -61,7 +58,7 @@ void test('all sources have bounded labels without silently discarding complex p
         '',
         source,
       ),
-      'ანაზღაურება — იხ. დეტალები',
+      '1 000 ₾',
     );
   }
 });
@@ -76,10 +73,7 @@ void test('individually negotiated pay has one clear label while numeric offers 
     'შეთანხმებით',
   );
   assert.equal(vacancyCardSalary('შეთანხმებით', '', 'hr.ge'), 'შეთანხმებით');
-  assert.equal(
-    vacancyCardSalary('1000 ₾ + ბონუსი', '', 'hr.ge'),
-    '1 000 ₾ + ბონუსი',
-  );
+  assert.equal(vacancyCardSalary('1000 ₾ + ბონუსი', '', 'hr.ge'), '1 000+ ₾');
 });
 
 void test('bureaucratic hierarchy does not hide a territorial profession', () => {
@@ -120,11 +114,11 @@ void test('worded ranges stay compact without losing average, open upper bound o
       '',
       'jobs.ge',
     ),
-    'საშ. 1 200–3 000+ ₾',
+    '≈ 1 200–3 000+ ₾',
   );
   assert.equal(
     vacancyCardSalary('1200 ლარიდან 3000 ლარამდე', 'month', 'hr.ge'),
-    '1 200–3 000 ₾ · თვეში',
+    '1 200–3 000 ₾ / თვე',
   );
   assert.equal(
     vacancyCardSalary(
@@ -132,6 +126,6 @@ void test('worded ranges stay compact without losing average, open upper bound o
       '',
       'jobs.ge',
     ),
-    'ანაზღაურება — იხ. დეტალები',
+    '≈ 1 200–3 000+ ₾',
   );
 });

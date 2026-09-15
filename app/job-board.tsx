@@ -298,7 +298,7 @@ const JobCard = memo(function JobCard({
         </div>
         <div className="job-conditions">
           {salary && (
-            <span className="salary" title={j.salary}>
+            <span className="salary" title={salary}>
               {salary}
             </span>
           )}
