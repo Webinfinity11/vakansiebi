@@ -230,9 +230,11 @@ export function searchPlan(
       filters.source === 'ყველა'
         ? 'true'
         : `j.group_key IN (SELECT m.group_key FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE NOT s.retired AND s.name=${bind(filters.source)})`,
-    paid: filters.paid ? `COALESCE(${p('salary')},'')<>''` : 'true',
+    // "Pay is stated" needs an actual figure; "by agreement" or "depends on experience" is not one.
+    paid: filters.paid ? `COALESCE(${p('salary')},'') ~ '[0-9]'` : 'true',
+    // A remote title counts unless the source states the work is on site.
     remote: filters.remote
-      ? `(${p('mode')} IN ('დისტანციური','სამუშაო სახლიდან') OR j.title_norm ~ '(დისტანციურ|\\mremote)')`
+      ? `(${p('mode')} IN ('დისტანციური','სამუშაო სახლიდან') OR (COALESCE(${p('mode')},'')<>'ადგილზე' AND j.title_norm ~ '(დისტანციურ|\\mremote)'))`
       : 'true',
     salary: [
       filters.salaryPeriod === 'day' ? `${salary} IS NOT NULL` : 'true',
