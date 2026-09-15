@@ -392,6 +392,7 @@ export async function bulkPublishJobs(input: unknown) {
       });
     }
   }
+  clearPublicJobsCache();
   return { results };
 }
 
@@ -420,7 +421,9 @@ export async function mutateJob(input: unknown) {
       targetId: z.uuid().optional(),
     })
     .parse(input);
-  return transaction(async (c) => {
+  // A moderated vacancy has to show (or disappear) on the next list this server builds, not
+  // after its held copy expires.
+  const result = await transaction(async (c) => {
     // Consistent ordering prevents deadlocks for concurrent opposite-direction merges.
     const ids = [data.id, ...(data.targetId ? [data.targetId] : [])].sort();
     const rows = (
@@ -613,4 +616,6 @@ export async function mutateJob(input: unknown) {
     );
     return { ok: true };
   });
+  clearPublicJobsCache();
+  return result;
 }

@@ -1,7 +1,8 @@
 /* A list that depends on nothing but the filters is the same list for everyone, and the same
    filters are asked for over and over — the unfiltered first page most of all, which measured
    around two seconds every time. Those answers are held at the edge for a minute and served
-   stale for five more while one request refreshes them behind the reader's back.
+   stale for one more while one request refreshes them behind the reader's back. The stale
+   window stays short because an approved VIP or premium vacancy has to appear promptly.
 
    Three kinds of request are never cached, because their answer belongs to one person: the
    admin preview, a saved list (`ids`), and a list with someone's hidden vacancies removed
@@ -14,7 +15,7 @@ export function cacheHeader(params: URLSearchParams) {
     params.get('preview') === '1' || params.has('ids') || params.has('exclude');
   return personal
     ? 'private, no-store'
-    : 'public, s-maxage=60, stale-while-revalidate=300';
+    : 'public, s-maxage=60, stale-while-revalidate=60';
 }
 
 export function publicJobsCacheKey(
