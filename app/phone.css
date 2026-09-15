@@ -1004,3 +1004,16 @@
     font-size: 11px;
   }
 }
+
+@media (max-width: 760px) {
+  /* A row's status badges wrap under the title instead of pushing the row past the screen. */
+  .admin-page .admin-job-status {
+    flex-wrap: wrap;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .admin-page .admin-job-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}

@@ -16,7 +16,7 @@ type Report = {
   created_at: string;
 };
 
-export function ReportsSection() {
+export function ReportsSection({ onChange }: { onChange?: () => void }) {
   const [reports, setReports] = useState<Report[] | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -55,6 +55,7 @@ export function ReportsSection() {
       if (!response.ok)
         throw Error(body.error || 'ცვლილება ვერ შეინახა. სცადე ხელახლა.');
       setReports((items) => items?.filter((item) => item.id !== id) ?? null);
+      onChange?.();
       setMessage('შეტყობინება მონიშნულია გადაწყვეტილად.');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'ცვლილება ვერ შეინახა.');
@@ -64,9 +65,8 @@ export function ReportsSection() {
   }
 
   return (
-    <section className="reports-section" aria-labelledby="reports-heading">
+    <section className="reports-section" aria-label="ღია შეტყობინებები">
       <div className="reports-heading">
-        <h2 id="reports-heading">ვაკანსიების პრობლემები</h2>
         <button
           type="button"
           className="secondary-button reports-action"

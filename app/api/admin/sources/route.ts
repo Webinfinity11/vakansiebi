@@ -54,7 +54,8 @@ export async function GET() {
         'submissions',count(*) FILTER(WHERE status='pending' AND sub.job_id IS NOT NULL),
         'submissions-published',count(*) FILTER(WHERE status='published' AND sub.job_id IS NOT NULL),
         'submissions-closed',count(*) FILTER(WHERE status IN ('archived','rejected') AND sub.job_id IS NOT NULL),
-        'submissions-all',count(*) FILTER(WHERE status<>'merged' AND sub.job_id IS NOT NULL)
+        'submissions-all',count(*) FILTER(WHERE status<>'merged' AND sub.job_id IS NOT NULL),
+        'reports',(SELECT count(*) FROM job_reports WHERE resolved_at IS NULL)
       ) FROM jobs LEFT JOIN job_submissions sub ON sub.job_id=jobs.id) counts,
       count(*)::int completed_runs,
       COALESCE(sum(r.imported),0)::int imported,

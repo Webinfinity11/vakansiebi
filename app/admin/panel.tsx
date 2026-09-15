@@ -25,6 +25,7 @@ import {
   History,
   BarChart3,
   Building2,
+  Flag,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
@@ -52,6 +53,7 @@ import { EmployersPanel } from './employers';
 import { AnalyticsPanel } from './analytics';
 import { ReportsSection } from './reports';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
+import { runMessage } from '@/lib/run-messages';
 type AdminSource = Source & { removed_count?: number };
 const names: Record<string, string> = {
   pending: 'შემოტანილი',
@@ -128,6 +130,21 @@ const submissionViews = [
   ['submissions-all', 'ყველა'],
 ] as const;
 type SubmissionView = (typeof submissionViews)[number][0];
+/* Every section opens the same way: what it is and what the admin does there. */
+function SectionHeading({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="admin-section-heading">
+      <h2>{title}</h2>
+      <p>{children}</p>
+    </div>
+  );
+}
 /* A submission is read first and edited only if needed, so its editor starts folded away. */
 function EditorWrap({
   submission,
@@ -227,6 +244,7 @@ export default function AdminPanel() {
       'submissions-published': 0,
       'submissions-closed': 0,
       'submissions-all': 0,
+      reports: 0,
     } as Record<string, number>),
     [sources, setSources] = useState<AdminSource[]>([]),
     [runs, setRuns] = useState<SourceRun[]>([]),
@@ -556,6 +574,11 @@ export default function AdminPanel() {
               <ListChecks size={17} />
               <span>ვაკანსიები</span>
             </TabsTrigger>
+            <TabsTrigger value="reports">
+              <Flag size={17} />
+              <span>შეტყობინებები</span>
+              {counts.reports > 0 && <b>{counts.reports}</b>}
+            </TabsTrigger>
             <TabsTrigger value="billing">
               <ReceiptText size={17} />
               <span>ინვოისები</span>
@@ -578,14 +601,11 @@ export default function AdminPanel() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="submissions">
-            <div className="admin-section-heading">
-              <h2>ჩვენი ვაკანსიები</h2>
-              <p>
-                JOBX-ზე ფორმით გაგზავნილი ვაკანსიები, სხვა საიტებიდან
-                შემოტანილის გარეშე. ახალი ვაკანსია საიტზე მხოლოდ შენი
-                დადასტურების შემდეგ გამოჩნდება.
-              </p>
-            </div>
+            <SectionHeading title="ჩვენი ვაკანსიები">
+              JOBX-ზე ფორმით გაგზავნილი ვაკანსიები, სხვა საიტებიდან შემოტანილის
+              გარეშე. ახალი ვაკანსია საიტზე მხოლოდ შენი დადასტურების შემდეგ
+              გამოჩნდება.
+            </SectionHeading>
             <fieldset
               className="submission-views"
               aria-label="ჩვენი ვაკანსიების სტატუსი"
@@ -607,6 +627,10 @@ export default function AdminPanel() {
             {jobList()}
           </TabsContent>
           <TabsContent value="vacancies">
+            <SectionHeading title="ვაკანსიები">
+              სხვა საიტებიდან შემოტანილი ვაკანსიები. ავტომატურად ქვეყნდება; აქ
+              ჩანს, რაც შემოწმებას ან ხელით მართვას სჭირდება.
+            </SectionHeading>
             <div className="admin-stats">
               {(
                 [
@@ -705,7 +729,21 @@ export default function AdminPanel() {
             </div>
             {jobList()}
           </TabsContent>
+          <TabsContent value="reports">
+            <SectionHeading title="შეტყობინებები">
+              მომხმარებლების შეტყობინებები ვაკანსიის პრობლემის შესახებ:
+              ვადაგასული, არასწორი ინფორმაცია ან დუბლიკატი. გადაამოწმე და
+              მონიშნე გადაწყვეტილად.
+            </SectionHeading>
+            {tab === 'reports' && (
+              <ReportsSection onChange={() => void load()} />
+            )}
+          </TabsContent>
           <TabsContent value="billing">
+            <SectionHeading title="ინვოისები">
+              პრემიუმ განთავსების ინვოისები და ანგარიშის რეკვიზიტები, რომ
+              ინვოისზე დამსაქმებელს სწორი ანგარიში დაუჩნდეს.
+            </SectionHeading>
             {tab === 'billing' && (
               <BillingSettings
                 key={billingVersion}
@@ -727,7 +765,10 @@ export default function AdminPanel() {
             )}
           </TabsContent>
           <TabsContent value="sources">
-            {tab === 'sources' && <ReportsSection />}
+            <SectionHeading title="წყაროები და განახლება">
+              საიტები, საიდანაც ვაკანსიები ავტომატურად შემოდის: ბოლო შემოწმება,
+              შედეგები და პარამეტრები.
+            </SectionHeading>
             <section className="scraper-overview" aria-label="სკრაპერის მართვა">
               <div>
                 <span className="scraper-eyebrow">ავტომატური განახლება</span>
@@ -970,7 +1011,7 @@ export default function AdminPanel() {
                         <ul>
                           {s.top_errors.map((e) => (
                             <li key={e.message}>
-                              <b>{e.count}</b> {e.message}
+                              <b>{e.count}</b> {runMessage(e.message)}
                             </li>
                           ))}
                         </ul>
@@ -1154,7 +1195,7 @@ export default function AdminPanel() {
                         </p>
                         <details>
                           <summary>შემოწმების დეტალები</summary>
-                          <p>{s.last_error}</p>
+                          <p>{runMessage(s.last_error)}</p>
                         </details>
                       </div>
                     )}
@@ -1188,12 +1229,23 @@ export default function AdminPanel() {
             </p>
           </TabsContent>
           <TabsContent value="analytics">
+            <SectionHeading title="ანალიტიკა">
+              რას ეძებენ, რომელი ვაკანსიებ ხსნიან და ვის უკავშირდებიან.
+            </SectionHeading>
             {tab === 'analytics' && <AnalyticsPanel />}
           </TabsContent>
           <TabsContent value="employers">
+            <SectionHeading title="კომპანიების სახელები">
+              ერთი კომპანიის სხვადასხვა ჩარჩოში დაწერილი სახელები — გაერთიანე ან
+              გამოყავი, რომ კომპანიის გვერდი სწორი იყოს.
+            </SectionHeading>
             {tab === 'employers' && <EmployersPanel />}
           </TabsContent>
           <TabsContent value="runs">
+            <SectionHeading title="შემოტანის ისტორია">
+              ყოველი წყაროს ბოლო გაშვებები: რამდენი ახალი და შეცვლილი ვაკანსია
+              შემოვიდა და რა არ გამოვიდა.
+            </SectionHeading>
             <div className="run-list">
               {runs.map((r) => (
                 <div className="run-row" key={r.id}>
@@ -1210,7 +1262,7 @@ export default function AdminPanel() {
                     ახალი: {r.imported} · შეცვლილი: {r.changed} · შეცდომა:{' '}
                     {r.failed}
                   </span>
-                  {r.error && <p>{r.error}</p>}
+                  {r.error && <p>{runMessage(r.error)}</p>}
                 </div>
               ))}
               {!runs.length && (
