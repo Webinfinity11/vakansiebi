@@ -3,7 +3,10 @@ import { searchPlan } from '@/lib/server/search-plan';
 import { employerPages } from '@/lib/server/employers';
 import { siteUrl } from '@/lib/seo';
 
-export const dynamic = 'force-dynamic';
+// Serve a cached sitemap to crawlers; rebuilding thousands of URLs on every
+// request makes a cold database connection part of Google's fetch deadline.
+export const dynamic = 'force-static';
+export const revalidate = 300;
 const escape = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 export async function GET() {
