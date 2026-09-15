@@ -297,7 +297,12 @@ export async function adminJobs(
   // predicate is built once and given the placeholder each one uses.
   const where = (sourceParam: string, idParam: string) => `j.status<>'merged'
     AND ($1='all' OR ($1='review' AND j.needs_review=true)
-      OR ($1='submissions' AND j.status='pending' AND EXISTS (SELECT 1 FROM job_submissions sub WHERE sub.job_id=j.id))
+      OR ($1 IN ('submissions','submissions-published','submissions-closed','submissions-all')
+        AND EXISTS (SELECT 1 FROM job_submissions sub WHERE sub.job_id=j.id)
+        AND CASE $1 WHEN 'submissions' THEN j.status='pending'
+          WHEN 'submissions-published' THEN j.status='published'
+          WHEN 'submissions-closed' THEN j.status IN ('archived','rejected')
+          ELSE true END)
       OR ($1='paused' AND j.automation_paused AND j.status<>'rejected')
       OR ($1='manual' AND NOT j.automation_managed AND j.status<>'rejected')
       OR ($1='blocked' AND j.automation_reason IS NOT NULL AND j.status<>'published')

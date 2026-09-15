@@ -691,3 +691,42 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.submission-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+.submission-views button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 14px;
+  border: 1px solid #d6dce6;
+  border-radius: 999px;
+  background: #fff;
+  color: #3d4a5e;
+  font-size: 13px;
+}
+.submission-views button b {
+  color: #66738a;
+  font-size: 12px;
+}
+.submission-views button[aria-pressed='true'] {
+  border-color: #2457e6;
+  background: #eaf0ff;
+  color: #1f3f96;
+  font-weight: 650;
+}
+.submission-views button[aria-pressed='true'] b {
+  color: #1f3f96;
+}
+@media (max-width: 760px) {
+  .submission-views button {
+    min-height: 44px;
+  }
+}

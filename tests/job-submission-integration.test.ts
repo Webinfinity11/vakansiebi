@@ -109,6 +109,8 @@ void test(
       );
       assert.ok(queued.jobs[0].submitted_at);
       assert.ok(queued.counts.submissions >= 1);
+      assert.equal((await adminJobs('submissions-all', key)).total, 1);
+      assert.equal((await adminJobs('submissions-published', key)).total, 0);
       assert.ok(!(await bulkPublishCandidates()).some((v) => v.id === ids[0]));
       await assert.rejects(
         mutateJob({
@@ -126,6 +128,9 @@ void test(
       });
       row = (await db().query('SELECT * FROM jobs WHERE id=$1', [ids[0]]))
         .rows[0];
+      assert.equal((await adminJobs('submissions', key)).total, 0);
+      assert.equal((await adminJobs('submissions-published', key)).total, 1);
+      assert.equal((await adminJobs('submissions-all', key)).total, 1);
       assert.ok(
         Math.abs(
           new Date(row.placement_expires_at).getTime() -

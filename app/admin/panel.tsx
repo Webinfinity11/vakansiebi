@@ -112,6 +112,14 @@ async function request(url: string, body?: unknown) {
   if (!r.ok) throw Error(d.error || 'ოპერაცია ვერ შესრულდა');
   return d;
 }
+/* JOBX's own vacancies, sent through the posting form, kept apart from the imported catalogue. */
+const submissionViews = [
+  ['submissions', 'დადასტურებას ელოდება'],
+  ['submissions-published', 'გამოქვეყნებული'],
+  ['submissions-closed', 'არქივი / უარყოფილი'],
+  ['submissions-all', 'ყველა'],
+] as const;
+type SubmissionView = (typeof submissionViews)[number][0];
 /* A submission is read first and edited only if needed, so its editor starts folded away. */
 function EditorWrap({
   submission,
@@ -191,6 +199,8 @@ export default function AdminPanel() {
     ReturnType<typeof githubScraperStatus>
   > | null>(null);
   const [tab, setTab] = useState('submissions'),
+    [submissionView, setSubmissionView] =
+      useState<SubmissionView>('submissions'),
     [status, setStatus] = useState('review'),
     [sourceFilter, setSourceFilter] = useState(''),
     [query, setQuery] = useState(''),
@@ -206,7 +216,10 @@ export default function AdminPanel() {
       manual: 0,
       blocked: 0,
       submissions: 0,
-    }),
+      'submissions-published': 0,
+      'submissions-closed': 0,
+      'submissions-all': 0,
+    } as Record<string, number>),
     [sources, setSources] = useState<AdminSource[]>([]),
     [runs, setRuns] = useState<SourceRun[]>([]),
     [loading, setLoading] = useState(true),
@@ -231,7 +244,7 @@ export default function AdminPanel() {
               `/api/admin/jobs?status=${status}&q=${encodeURIComponent(query)}&page=${page}&source=${sourceFilter}`,
             )
           : tab === 'submissions'
-            ? request(`/api/admin/jobs?status=submissions&page=${page}`)
+            ? request(`/api/admin/jobs?status=${submissionView}&page=${page}`)
             : Promise.resolve(null),
         request('/api/admin/sources'),
       ]);
@@ -251,7 +264,7 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [status, query, page, sourceFilter, tab]);
+  }, [status, query, page, sourceFilter, tab, submissionView]);
   useEffect(() => {
     const t = setTimeout(() => void load(), 250);
     return () => clearTimeout(t);
@@ -374,8 +387,12 @@ export default function AdminPanel() {
           <Layers3 size={32} />
           {tab === 'submissions' ? (
             <>
-              <h3>ახალი განცხადება არ არის</h3>
-              <p>დამსაქმებლის გაგზავნილი ვაკანსია აქ გამოჩნდება.</p>
+              <h3>
+                {submissionView === 'submissions'
+                  ? 'ახალი განცხადება არ არის'
+                  : 'ამ სიაში ვაკანსია არ არის'}
+              </h3>
+              <p>JOBX-ზე ფორმით გაგზავნილი ვაკანსია აქ გამოჩნდება.</p>
             </>
           ) : (
             <>
@@ -528,7 +545,7 @@ export default function AdminPanel() {
           <TabsList variant="line" className="admin-tabs">
             <TabsTrigger value="submissions">
               <Inbox size={17} />
-              <span>დამსაქმებლის განცხადებები</span>
+              <span>ჩვენი ვაკანსიები</span>
               {counts.submissions > 0 && <b>{counts.submissions}</b>}
             </TabsTrigger>
             <TabsTrigger value="vacancies">
@@ -558,13 +575,31 @@ export default function AdminPanel() {
           </TabsList>
           <TabsContent value="submissions">
             <div className="admin-section-heading">
-              <h2>დამსაქმებლის განცხადებები</h2>
+              <h2>ჩვენი ვაკანსიები</h2>
               <p>
-                ვაკანსია, რომელიც დამსაქმებელმა საიტის ფორმით გამოგზავნა, საიტზე
-                მხოლოდ შენი დადასტურების შემდეგ გამოჩნდება. გახსენი, გადაამოწმე
-                და დაადასტურე ან უარყავი.
+                JOBX-ზე ფორმით გაგზავნილი ვაკანსიები, სხვა საიტებიდან
+                შემოტანილის გარეშე. ახალი ვაკანსია საიტზე მხოლოდ შენი
+                დადასტურების შემდეგ გამოჩნდება.
               </p>
             </div>
+            <fieldset
+              className="submission-views"
+              aria-label="ჩვენი ვაკანსიების სტატუსი"
+            >
+              {submissionViews.map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={submissionView === key}
+                  onClick={() => {
+                    setPage(1);
+                    setSubmissionView(key);
+                  }}
+                >
+                  {label} <b>{counts[key] ?? 0}</b>
+                </button>
+              ))}
+            </fieldset>
             {jobList()}
           </TabsContent>
           <TabsContent value="vacancies">
