@@ -323,15 +323,6 @@
   padding: 7px 12px;
   border-radius: 8px;
 }
-.share-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #424853;
-  font-size: 11px;
-  min-height: 32px;
-  margin-bottom: 10px;
-}
 .board-shell .active-filters {
   margin-bottom: 16px;
 }
@@ -1009,8 +1000,7 @@
 .board-shell .source-pill > span {
   display: none;
 }
-.board-shell .filter-head > button:not(:disabled),
-.share-search {
+.board-shell .filter-head > button:not(:disabled) {
   color: #2457e6;
 }
 .board-shell .category-options .check-row > span {
@@ -1090,12 +1080,8 @@
   align-items: center;
   gap: 8px 12px;
 }
-.board-shell .results-tools .personal-tools,
-.results-tools .share-search {
+.board-shell .results-tools .personal-tools {
   margin: 0;
-}
-.results-tools:has(.share-search) {
-  margin-bottom: 14px;
 }
 @media (max-width: 760px) {
   .board-shell .searchbar {
@@ -1144,9 +1130,6 @@
     width: auto;
     flex: 1;
     margin: 0;
-  }
-  .board-shell .results-tools .share-search {
-    flex-basis: 100%;
   }
 }
 
@@ -1991,12 +1974,21 @@
   color: #5a6a80;
   margin: 6px 0 10px;
 }
-.vacancy-contact-guidance a {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #284ea4;
-  text-decoration: underline;
+.vacancy-contact-guidance h3 {
+  color: #253650;
+  font-weight: 650;
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+.vacancy-contact-guidance a.primary {
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+  color: #fff;
+  text-decoration: none;
+}
+.vacancy-contact-guidance p {
+  margin: 8px 0 0;
 }
 .vacancy-layout > .vacancy-source {
   background: #edf2f9;
@@ -2444,10 +2436,39 @@
   justify-content: space-between;
   gap: 8px;
 }
-.vacancy-page .application-control select {
-  font-size: 13px;
-  min-height: 44px;
+.application-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
   margin: 10px 0 8px;
+  padding: 0;
+  border: 0;
+}
+.application-stages button {
+  min-height: 34px;
+  padding: 5px 11px;
+  border: 1px solid #d6dce6;
+  border-radius: 999px;
+  background: #fff;
+  color: #3d4a5e;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.application-stages button:hover:not(:disabled) {
+  border-color: #9fb4dc;
+}
+.application-stages button[aria-pressed='true'] {
+  color: var(--status-text, #253650);
+  background: var(--status-bg, #eef1f6);
+  border-color: var(--status-border, #9aa6b8);
+  font-weight: 650;
+}
+.application-stages button:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 .vacancy-page .application-control p {
   font-size: 11px;
@@ -2499,12 +2520,6 @@
   font-size: 11px;
   font-weight: 650;
   padding: 3px 7px;
-}
-.vacancy-page .application-control:not([data-application-status='']) select {
-  color: var(--status-text);
-  background: var(--status-bg);
-  border-color: var(--status-border);
-  font-weight: 600;
 }
 
 /* An editorial blue masthead and compact, useful discovery navigation. */
@@ -3279,31 +3294,6 @@
   top: calc(var(--header-height) + 16px);
   scroll-margin-top: calc(var(--header-height) + 16px);
 }
-.optional-application-progress {
-  margin-top: 16px;
-  border-top: 1px solid #e3e7ef;
-  padding-top: 8px;
-}
-.optional-application-progress summary {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: #536076;
-  font-size: 13px;
-}
-.optional-application-progress summary::before {
-  content: '+';
-  font-size: 19px;
-}
-.optional-application-progress[open] summary::before {
-  content: '−';
-}
-.vacancy-page .optional-application-progress .application-control {
-  margin-top: 0;
-}
-
 /* Recognizable company initials when original artwork is unavailable. */
 .company-avatar.company-placeholder,
 .board-shell .company-avatar.company-placeholder {

@@ -52,7 +52,6 @@ import {
   readSearchPage,
   searchParams,
 } from '@/lib/search-state';
-import { shareLink } from '@/lib/share';
 import { track } from '@/lib/analytics-client';
 import {
   ArrowUpRight,
@@ -65,7 +64,6 @@ import {
   Bookmark,
   Check,
   X,
-  Share2,
   Globe2,
   Laptop,
   ShieldCheck,
@@ -1673,30 +1671,6 @@ export default function JobBoard({
                       ]}
                     />
                   </div>
-                  {activeCount > 0 && (
-                    <button
-                      className="share-search"
-                      aria-label="ძიების გაზიარება"
-                      onClick={async () => {
-                        const outcome = await shareLink(
-                          window.location.origin +
-                            '/?' +
-                            searchParams(currentSearch),
-                          'JOBX — ვაკანსიების ძებნა',
-                        );
-                        setFeedback(
-                          outcome === 'shared'
-                            ? 'ძიება გაზიარებულია'
-                            : outcome === 'copied'
-                              ? 'ძიების ბმული დაკოპირებულია'
-                              : 'ბმულის კოპირება ვერ მოხერხდა',
-                        );
-                      }}
-                    >
-                      <Share2 size={14} />{' '}
-                      <span className="share-label">ძიების გაზიარება</span>
-                    </button>
-                  )}
                   <PersonalSpace
                     space={personal}
                     filters={currentSearch}

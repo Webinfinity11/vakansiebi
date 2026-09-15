@@ -493,11 +493,6 @@
     width: 100%;
     min-width: 0;
   }
-  .board-shell .results-tools .share-search {
-    grid-column: 2;
-    grid-row: 2;
-    justify-self: end;
-  }
   .board-shell .personal-nav {
     width: 44px;
     padding: 0;

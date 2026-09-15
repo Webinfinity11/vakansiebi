@@ -218,26 +218,28 @@ export function ApplicationControl({
       data-application-status={entry?.status || ''}
     >
       <div className="application-control-heading">
-        <label htmlFor={stageId}>ჩემი სტატუსი</label>
+        <strong id={stageId}>ჩემი სტატუსი</strong>
         {seen && <span className="seen-badge">ნანახია</span>}
       </div>
-      <select
-        id={stageId}
-        disabled={disabled || !space.ready}
-        value={entry?.status || ''}
-        onChange={(e) => {
-          if (e.target.value)
-            space.track(job, e.target.value as Application['status']);
-          else if (entry) space.remove(entry);
-        }}
-      >
-        <option value="">ეტაპის გარეშე</option>
-        {Object.entries(applicationStatuses).map(([key, label]) => (
-          <option key={key} value={key}>
-            {label}
-          </option>
-        ))}
-      </select>
+      <fieldset className="application-stages" aria-labelledby={stageId}>
+        {[['', 'ეტაპის გარეშე'], ...Object.entries(applicationStatuses)].map(
+          ([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              data-stage={key}
+              aria-pressed={(entry?.status || '') === key}
+              disabled={disabled || !space.ready}
+              onClick={() => {
+                if (key) space.track(job, key as Application['status']);
+                else if (entry) space.remove(entry);
+              }}
+            >
+              {label}
+            </button>
+          ),
+        )}
+      </fieldset>
       {entry?.status === 'started' && (
         <div className="application-confirm">
           <p>ბმულის გახსნა გაგზავნას არ ადასტურებს. უკვე გაგზავნე განაცხადი?</p>

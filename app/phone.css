@@ -253,10 +253,8 @@
   }
 
   /* ---------- Results toolbar ----------
-     A two-column grid. Without active filters it is one row: [ფილტრები] [ჩემი სივრცე], stuck to
-     the top while the list scrolls. With active filters a first row [ძიების შენახვა] [share]
-     appears above it; that row belongs to the search, not to navigation, so the bar's sticky
-     offset is raised by exactly that row's height and only the second row stays on screen. */
+     A two-column grid stuck to the top while the list scrolls. With active filters
+     [ძიების შენახვა] joins [ფილტრები] and [ჩემი სივრცე]. */
   .board-shell .results-tools {
     position: sticky;
     top: 0;
@@ -269,9 +267,6 @@
     padding: 8px 0;
     background: #f6f7fa;
     box-shadow: 0 6px 12px -10px #18243b40;
-  }
-  .board-shell .results-tools:has(.share-search) {
-    top: -60px; /* padding 8 + row 44 + gap 8 */
   }
   .board-shell .results-tools .personal-tools {
     display: contents;
@@ -286,26 +281,6 @@
   }
   .board-shell .results-tools .personal-tools > button:first-child:disabled {
     display: none;
-  }
-  .board-shell .results-tools .share-search {
-    order: 2;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    min-height: 44px;
-    padding: 0;
-    margin: 0;
-    border: 1px solid #dcddde;
-    border-radius: 8px;
-    background: #fff;
-  }
-  .board-shell .results-tools .share-search > span {
-    display: none;
-  }
-  .board-shell .results-tools .share-search svg {
-    width: 18px;
-    height: 18px;
   }
   .board-shell .results-tools .mobile-filter-toggle {
     order: 3;
@@ -707,11 +682,9 @@
   .vacancy-mobile-action .secondary-button {
     font-size: 13px;
   }
-  .vacancy-contact-guidance a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+  .application-stages button {
     min-height: 44px;
+    font-size: 13px;
   }
   .vacancy-page .feedback-toast {
     bottom: calc(16px + env(safe-area-inset-bottom));
@@ -897,8 +870,7 @@
     gap: 12px;
     padding: 0 16px;
   }
-  .board-shell .results-tools,
-  .board-shell .results-tools:has(.share-search) {
+  .board-shell .results-tools {
     top: var(--header-height);
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -906,11 +878,6 @@
     grid-column: 1;
     grid-row: 1;
     order: 0;
-  }
-  .board-shell .results-tools .share-search {
-    grid-column: 2;
-    grid-row: 1;
-    order: 1;
   }
   .board-shell .jobx-footer {
     margin: 28px 16px 0;

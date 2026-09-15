@@ -447,7 +447,8 @@ export default function VacancyPage({
     if (
       href &&
       (/^(?:mailto:|tel:)/i.test(href) ||
-        href === applicationDestination(job)?.url)
+        href === applicationDestination(job)?.url ||
+        (!hasAction && href === job.url))
     )
       personal.begin(job);
   }
@@ -457,15 +458,12 @@ export default function VacancyPage({
       ? 'შენახულებში დაბრუნება'
       : 'შედეგებზე დაბრუნება';
   const progress = (
-    <details className="optional-application-progress">
-      <summary>განაცხადის პირადი აღრიცხვა</summary>
-      <ApplicationControl
-        job={job}
-        space={personal}
-        disabled={preview}
-        seen={activity.seen.includes(job.id)}
-      />
-    </details>
+    <ApplicationControl
+      job={job}
+      space={personal}
+      disabled={preview}
+      seen={activity.seen.includes(job.id)}
+    />
   );
   return (
     <div
@@ -609,15 +607,16 @@ export default function VacancyPage({
             >
               {/* Without an email, phone or form, the way to apply sits where those would be. */}
               <div className="vacancy-contact-guidance">
-                <strong>დაკავშირების გზა</strong>
+                <h3>დაუკავშირდი დამსაქმებელს</h3>
                 <a
-                  className="secondary-button"
+                  className="primary"
                   href={job.url}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  კონტაქტი ნახე ორიგინალ განცხადებაში <ArrowUpRight size={15} />
+                  განაცხადის გაგზავნა <ArrowUpRight size={16} />
                 </a>
+                <p>გაიხსნება ორიგინალი განცხადება.</p>
               </div>
               {progress}
             </aside>

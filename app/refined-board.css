@@ -793,17 +793,6 @@
     background: #f7f8fa;
     border-bottom: 1px solid #e1e5ed;
   }
-  .board-shell.editorial-board.crafted-board.refined-board
-    .results-tools:has(.share-search) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 40px;
-  }
-  .board-shell.editorial-board.crafted-board.refined-board
-    .results-tools
-    .share-search {
-    grid-column: 3;
-    grid-row: 1;
-    width: 40px;
-  }
   .save-confirmation {
     flex-wrap: wrap;
     gap: 4px 8px;
