@@ -3,6 +3,19 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { isLocalLogoUrl, safeExternalUrl } from '@/lib/vacancy-media';
 
+const legalForms = /^(შპს|სს|ი\/მ|ააიპ|სპს|კს|llc|ltd|inc|jsc)$/i;
+/* Two letters say more than one: "JOBX ტესტი" becomes two initials, skipping legal forms like შპს. */
+export function companyInitials(company: string) {
+  const words = company
+    .replace(/["'«»„“”()]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word && !legalForms.test(word.replace(/[.,]/g, '')));
+  const letters = words
+    .slice(0, 2)
+    .map((word) => Array.from(word)[0]?.toLocaleUpperCase() || '');
+  return letters.join('') || '—';
+}
+
 export function CompanyLogo({
   company,
   url,
@@ -39,7 +52,7 @@ export function CompanyLogo({
       {(!showLogo || loaded !== src) &&
         (fallback === 'initial' ? (
           <span className="company-fallback-initial" aria-hidden="true">
-            {Array.from(company.trim())[0]?.toLocaleUpperCase() || '—'}
+            {companyInitials(company)}
           </span>
         ) : (
           <Image

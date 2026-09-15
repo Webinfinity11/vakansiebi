@@ -56,6 +56,8 @@ import { track } from '@/lib/analytics-client';
 import {
   ArrowUpRight,
   ArrowRight,
+  Crown,
+  Gem,
   Search,
   SlidersHorizontal,
   MapPin,
@@ -228,6 +230,9 @@ const JobCard = memo(function JobCard({
   const style: CSSProperties | undefined = swipe.dx
     ? { transform: `translateX(${swipe.dx}px)` }
     : undefined;
+  // A promoted card leading the list names its own placement; its section has no heading.
+  const featured = j.placement?.priority ? j.placement.tier : undefined;
+  const openHref = vacancyPath(j.id, { preview: demo, from: returnPath });
   return (
     <div
       className="swipe-shell"
@@ -248,6 +253,7 @@ const JobCard = memo(function JobCard({
       )}
       <article
         className={`job-card swipe-card${j.placement ? ` placement-${j.placement.tier}` : ''}`}
+        data-featured={featured}
         data-long-pay={salary.length > 80 || undefined}
         data-has-pay={Boolean(salary) || undefined}
         style={style}
@@ -255,12 +261,18 @@ const JobCard = memo(function JobCard({
         {...swipe.handlers}
       >
         <div className="job-info">
+          {featured === 'premium' && (
+            <span className="featured-label">
+              <Gem size={13} aria-hidden="true" />
+              პრემიუმ ვაკანსია
+            </span>
+          )}
           <div className="job-title-row">
             <Link
               className="job-title"
               title={j.title}
               data-vacancy-id={j.id}
-              href={vacancyPath(j.id, { preview: demo, from: returnPath })}
+              href={openHref}
               prefetch={false}
               onClick={(event) => {
                 if (swipe.suppressClick()) event.preventDefault();
@@ -278,6 +290,12 @@ const JobCard = memo(function JobCard({
                 title="გამორჩეული განთავსება"
               >
                 {j.placement.tier === 'premium' ? 'პრემიუმი' : 'VIP'}
+              </span>
+            )}
+            {featured === 'vip' && (
+              <span className="featured-label featured-label-vip">
+                <Crown size={12} aria-hidden="true" />
+                VIP
               </span>
             )}
             {isNew(j.datePosted) && <span className="job-new">ახალი</span>}
@@ -339,6 +357,23 @@ const JobCard = memo(function JobCard({
         </div>
         <div className="job-side">
           <div className="job-actions">
+            {featured === 'premium' && (
+              <Link
+                className="featured-cta"
+                href={openHref}
+                prefetch={false}
+                aria-label={`${j.title} — ვაკანსიის ნახვა`}
+                onClick={(event) => {
+                  if (swipe.suppressClick()) event.preventDefault();
+                }}
+                onNavigate={(event) => {
+                  if (swipe.suppressClick()) event.preventDefault();
+                  else onOpen(j);
+                }}
+              >
+                ვაკანსიის ნახვა <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            )}
             <button
               className={`save-button ${saved ? 'is-saved' : ''}`}
               aria-label={
@@ -993,7 +1028,10 @@ export default function JobBoard({
   useEffect(() => {
     if (demo || trackedFilters.current === filterSnapshot) return;
     const timer = setTimeout(() => {
-      const before = JSON.parse(trackedFilters.current) as Record<string, unknown>;
+      const before = JSON.parse(trackedFilters.current) as Record<
+        string,
+        unknown
+      >;
       const after = JSON.parse(filterSnapshot) as Record<string, unknown>;
       trackedFilters.current = filterSnapshot;
       for (const key of Object.keys(after))
@@ -2017,17 +2055,19 @@ export default function JobBoard({
             პირველწყაროზე. შენახული ვაკანსიები ამ ბრაუზერში რჩება და სხვა
             მოწყობილობაზე ავტომატურად არ გადადის. თემას, შენახულ ვაკანსიებსა და
             შენ მიერ შენახულ კონტაქტებს ამ ბრაუზერში ვინახავთ; ძიებებისა და
-            მოქმედებების ანონიმური სტატისტიკა სერვერზე ინახება, ზოგი ლოგო კი გარე
-            საიტიდან იტვირთება. საჯარო გვერდების ვიზიტებს Google Analytics-ითაც
-            ვზომავთ; ის ანალიტიკურ ქუქი-ფაილებს იყენებს. ფორმებში შეყვანილ პირად
-            მონაცემებსა და შენახულ კონტაქტებს Google Analytics-ს არ ვუგზავნით.{' '}
+            მოქმედებების ანონიმური სტატისტიკა სერვერზე ინახება, ზოგი ლოგო კი
+            გარე საიტიდან იტვირთება. საჯარო გვერდების ვიზიტებს Google
+            Analytics-ითაც ვზომავთ; ის ანალიტიკურ ქუქი-ფაილებს იყენებს. ფორმებში
+            შეყვანილ პირად მონაცემებსა და შენახულ კონტაქტებს Google Analytics-ს
+            არ ვუგზავნით.{' '}
             <a
               href="https://policies.google.com/technologies/partner-sites"
               target="_blank"
               rel="noopener noreferrer"
             >
               როგორ იყენებს Google მონაცემებს
-            </a>.
+            </a>
+            .
           </p>
         </details>
         <div className="footer-meta">

@@ -25,10 +25,6 @@ export function VacancySections({
           className="featured-vacancies featured-premium"
           aria-label="პრემიუმ ვაკანსიები"
         >
-          <header>
-            <h3>პრემიუმ ვაკანსიები</h3>
-            <span className="featured-count">{premium.length}</span>
-          </header>
           <div>{premium.map(card)}</div>
         </section>
       )}
@@ -37,10 +33,6 @@ export function VacancySections({
           className="featured-vacancies featured-vip"
           aria-label="VIP ვაკანსიები"
         >
-          <header>
-            <h3>VIP ვაკანსიები</h3>
-            <span className="featured-count">{vip.length}</span>
-          </header>
           <div>{vip.map(card)}</div>
         </section>
       )}
