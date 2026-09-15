@@ -6,12 +6,24 @@ export const sitemapPaths = [
   '/companies/sitemap.xml',
 ] as const;
 
-// The index has no database dependency: crawlers can discover each independent
-// sitemap even while a vacancy or employer snapshot is being regenerated.
-export function sitemapIndexResponse() {
+export type SitemapEntry = { url: string; lastModified?: Date };
+
+const lastmod = (date?: Date) =>
+  date ? `<lastmod>${date.toISOString()}</lastmod>` : '';
+
+/* The index still answers when the dates cannot be read: crawlers can always discover each
+   sitemap, and the dates return on the next refresh. */
+export function sitemapIndexResponse(
+  modified: Partial<Record<(typeof sitemapPaths)[number], Date>> = {},
+) {
   return new Response(
-    `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapPaths.map((path) => `  <sitemap><loc>${siteUrl}${path}</loc></sitemap>`).join('\n')}\n</sitemapindex>\n`,
-    { headers: { 'Content-Type': 'application/xml; charset=utf-8' } },
+    `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapPaths.map((path) => `  <sitemap><loc>${siteUrl}${path}</loc>${lastmod(modified[path])}</sitemap>`).join('\n')}\n</sitemapindex>\n`,
+    {
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        'Cache-Control': sitemapCacheControl,
+      },
+    },
   );
 }
 
@@ -29,9 +41,9 @@ const xmlEscape = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
 
-export function urlsetResponse(urls: readonly string[]) {
+export function urlsetResponse(entries: readonly SitemapEntry[]) {
   return new Response(
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((url) => `<url><loc>${xmlEscape(url)}</loc></url>`).join('\n')}\n</urlset>\n`,
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.map((e) => `<url><loc>${xmlEscape(e.url)}</loc>${lastmod(e.lastModified)}</url>`).join('\n')}\n</urlset>\n`,
     {
       headers: {
         'Content-Type': 'application/xml; charset=utf-8',
