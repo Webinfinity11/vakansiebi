@@ -2541,6 +2541,18 @@
 :root[data-theme='dark'] .vacancy-page .extra-facts {
   border: 0;
 }
+:root[data-theme='dark'] .vacancy-skeleton i,
+:root[data-theme='dark'] .vacancy-skeleton span,
+:root[data-theme='dark'] .vacancy-skeleton-line i {
+  background: #283242;
+}
+:root[data-theme='dark'] .vacancy-skeleton-facts {
+  border-top: 1px solid #272f3a;
+}
+:root[data-theme='dark'] .vacancy-skeleton-panel {
+  border: 1px solid #273040;
+  background: #131b2c;
+}
 
 /* ── from app/public-header.css ── */
 :root[data-theme='dark'] .board-shell .topbar.public-header {
