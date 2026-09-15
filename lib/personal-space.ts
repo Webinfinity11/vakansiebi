@@ -70,6 +70,21 @@ export const applicationStatuses = {
   rejected: 'უარი მივიღე',
   closed: 'დასრულებული',
 } as const;
+/* People choose between four stages. The finer stored statuses stay valid, so records saved
+   earlier keep working and each one shows under the stage it belongs to. */
+export const applicationStages = {
+  planned: 'გასაგზავნი',
+  applied: 'გაგზავნილია',
+  interview: 'გასაუბრება',
+  closed: 'დასრულებული',
+} as const;
+export type ApplicationStage = keyof typeof applicationStages;
+export function stageOf(status: Application['status']): ApplicationStage {
+  if (status === 'started') return 'planned';
+  if (status === 'offer') return 'interview';
+  if (status === 'hired' || status === 'rejected') return 'closed';
+  return status;
+}
 export const filtersSchema = z.object({
   query: z.string().max(200),
   city: z.string().max(300),

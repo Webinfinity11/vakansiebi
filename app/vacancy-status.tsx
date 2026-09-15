@@ -1,5 +1,9 @@
 import { Eye, CheckCheck, Clock3 } from 'lucide-react';
-import { applicationStatuses, type Application } from '@/lib/personal-space';
+import {
+  applicationStages,
+  stageOf,
+  type Application,
+} from '@/lib/personal-space';
 export function VacancyStatus({
   status,
   seen,
@@ -12,7 +16,7 @@ export function VacancyStatus({
   return (
     <span className={`vacancy-status status-${status || 'seen'}`}>
       <Icon size={12} aria-hidden="true" />
-      {status ? applicationStatuses[status] : 'ნანახია'}
+      {status ? applicationStages[stageOf(status)] : 'ნანახია'}
     </span>
   );
 }

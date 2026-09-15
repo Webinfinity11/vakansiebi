@@ -24,7 +24,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  applicationStatuses,
+  applicationStages,
+  stageOf,
+  type ApplicationStage,
   beginApplication,
   PERSONAL_PREFIX,
   readPersonal,
@@ -113,7 +115,7 @@ export function usePersonalSpace() {
         updatedAt: new Date().toISOString(),
       });
       if (undo?.id === job.id) setUndo(null);
-    }, 'პირადი სტატუსი განახლდა.');
+    }, '');
   }
   function begin(job: PublicJob) {
     return act(() => {
@@ -178,7 +180,7 @@ export function usePersonalSpace() {
       act(() => {
         saveSearch(localStorage, name, filters);
         trackEvent('saved_search', 'saved');
-      },'ძიება შენახულია. შეტყობინებები არ ჩაირთო.'),
+      }, 'ძიება შენახულია. შეტყობინებები არ ჩაირთო.'),
   };
 }
 export type PersonalController = ReturnType<typeof usePersonalSpace>;
@@ -215,30 +217,32 @@ export function ApplicationControl({
   return (
     <section
       className="application-control"
-      data-application-status={entry?.status || ''}
+      data-application-status={entry ? stageOf(entry.status) : ''}
     >
       <div className="application-control-heading">
         <strong id={stageId}>ჩემი სტატუსი</strong>
         {seen && <span className="seen-badge">ნანახია</span>}
       </div>
       <fieldset className="application-stages" aria-labelledby={stageId}>
-        {[['', 'ეტაპის გარეშე'], ...Object.entries(applicationStatuses)].map(
-          ([key, label]) => (
+        {/* Pressing the current stage again clears it. */}
+        {Object.entries(applicationStages).map(([key, label]) => {
+          const active = !!entry && stageOf(entry.status) === key;
+          return (
             <button
               key={key}
               type="button"
               data-stage={key}
-              aria-pressed={(entry?.status || '') === key}
+              aria-pressed={active}
               disabled={disabled || !space.ready}
               onClick={() => {
-                if (key) space.track(job, key as Application['status']);
-                else if (entry) space.remove(entry);
+                if (active) space.remove(entry);
+                else space.track(job, key as ApplicationStage);
               }}
             >
               {label}
             </button>
-          ),
-        )}
+          );
+        })}
       </fieldset>
       {entry?.status === 'started' && (
         <div className="application-confirm">
@@ -252,11 +256,7 @@ export function ApplicationControl({
           </button>
         </div>
       )}
-      <p>
-        {disabled
-          ? 'წინასწარი ნახვის რეჟიმში პირადი აღრიცხვა გამორთულია.'
-          : 'პირადი აღნიშვნა · ინახება ამ ბრაუზერში.'}
-      </p>
+      {disabled && <p>წინასწარი ნახვის რეჟიმში პირადი აღრიცხვა გამორთულია.</p>}
       <Feedback space={space} />
     </section>
   );
@@ -651,16 +651,20 @@ export function PersonalSpace({
                     onChange={(e) => setStage(e.target.value)}
                   >
                     <option value="all">ყველა ეტაპი</option>
-                    {Object.entries(applicationStatuses).map(([key, label]) => (
+                    {Object.entries(applicationStages).map(([key, label]) => (
                       <option key={key} value={key}>
                         {label} (
-                        {applications.filter((r) => r.status === key).length})
+                        {
+                          applications.filter((r) => stageOf(r.status) === key)
+                            .length
+                        }
+                        )
                       </option>
                     ))}
                   </select>
                 </label>
                 {!applications.filter(
-                  (r) => stage === 'all' || r.status === stage,
+                  (r) => stage === 'all' || stageOf(r.status) === stage,
                 ).length && (
                   <div className="personal-empty">
                     <h3>ამ ეტაპზე ჩანაწერი არ გაქვს</h3>
@@ -670,7 +674,7 @@ export function PersonalSpace({
                   </div>
                 )}
                 {applications
-                  .filter((r) => stage === 'all' || r.status === stage)
+                  .filter((r) => stage === 'all' || stageOf(r.status) === stage)
                   .map((record) => (
                     <article className="personal-card" key={record.id}>
                       <p>
@@ -682,7 +686,7 @@ export function PersonalSpace({
                       <label>
                         ჩემი ეტაპი
                         <select
-                          value={record.status}
+                          value={stageOf(record.status)}
                           onChange={(e) =>
                             space.updateStatus(
                               record,
@@ -690,7 +694,7 @@ export function PersonalSpace({
                             )
                           }
                         >
-                          {Object.entries(applicationStatuses).map(
+                          {Object.entries(applicationStages).map(
                             ([key, label]) => (
                               <option key={key} value={key}>
                                 {label}

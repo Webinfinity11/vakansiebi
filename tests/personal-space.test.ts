@@ -15,6 +15,8 @@ import {
   type PersonalStorage,
   type SearchFilters,
   type Application,
+  stageOf,
+  applicationStages,
 } from '../lib/personal-space';
 function memory(): PersonalStorage {
   const data = new Map<string, string>();
@@ -234,4 +236,21 @@ void test('personal details reject what cannot be a phone or an address and cap 
   putPersonal(older, application());
   assert.equal(readApplicant(older), null);
   assert.equal(readPersonal(older).invalid, 0);
+});
+
+void test('every stored status shows under one of the four stages people choose from', () => {
+  const expected = {
+    planned: 'planned',
+    started: 'planned',
+    applied: 'applied',
+    interview: 'interview',
+    offer: 'interview',
+    hired: 'closed',
+    rejected: 'closed',
+    closed: 'closed',
+  } as const;
+  for (const [status, stage] of Object.entries(expected)) {
+    assert.equal(stageOf(status as keyof typeof expected), stage);
+    assert.ok(stage in applicationStages);
+  }
 });
