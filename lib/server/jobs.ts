@@ -71,15 +71,12 @@ async function loadPublicJobs(
   const cut = metrics.indexOf(
     '\n    SELECT (SELECT count(*)::int FROM matches',
   );
-  const boosted =
-    !preview &&
-    !params.has('ids') &&
-    !['salary', 'new', 'deadline'].includes(params.get('sort') || '');
+  /* Whatever the filters and the chosen sort, a matching premium vacancy comes first, then VIP,
+     each group newest-published first; everything else follows in the chosen order. A saved
+     list (ids) keeps its own order, and the admin preview shows no promotion. */
+  const boosted = !preview && !params.has('ids');
   const priority = boosted
-    ? 'CASE WHEN j.promotion_position<=3 THEN j.promotion_rank ELSE 0 END DESC,'
-    : '';
-  const eligible = boosted
-    ? `, eligible AS (SELECT j.*,row_number() OVER (PARTITION BY j.promotion_rank ORDER BY CASE WHEN j.promotion_rank>0 THEN md5(j.id::text || to_char(now() AT TIME ZONE 'UTC','YYYY-MM-DD-HH24')) ELSE '' END,${ordering},j.id) AS promotion_position FROM searchable j WHERE ${where})`
+    ? 'j.promotion_rank DESC,CASE WHEN j.promotion_rank>0 THEN COALESCE(j.published_at,j.created_at) END DESC NULLS LAST,'
     : '';
   // A card needs one recent link per source; detail retains every original link.
   const sources = summary
@@ -88,8 +85,7 @@ async function loadPublicJobs(
   const statement = countsOnly
     ? metrics
     : metrics.slice(0, cut) +
-      eligible +
-      `, ranked AS (SELECT j.id,j.promotion_rank,j.placement_expires_at,${boosted ? '(j.promotion_rank>0 AND j.promotion_position<=3)' : 'false'} AS priority_placement,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,${sources} AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id, row_number() OVER (ORDER BY ${priority}${ordering},j.id) AS ord FROM ${boosted ? 'eligible' : 'searchable'} j WHERE ${boosted ? 'true' : where}), page AS (SELECT * FROM ranked WHERE ord > $${args.length + 2} AND ord <= $${args.length + 2} + $${args.length + 1})` +
+      `, ranked AS (SELECT j.id,j.promotion_rank,j.placement_expires_at,${boosted ? 'j.promotion_rank>0' : 'false'} AS priority_placement,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,${sources} AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id, row_number() OVER (ORDER BY ${priority}${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT * FROM ranked WHERE ord > $${args.length + 2} AND ord <= $${args.length + 2} + $${args.length + 1})` +
       metrics.slice(cut) +
       `, (SELECT COALESCE(jsonb_agg(to_jsonb(pg) - 'ord' ORDER BY pg.ord),'[]'::jsonb) FROM page pg) AS page_rows`;
   const measured = (

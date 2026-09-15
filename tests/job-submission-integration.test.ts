@@ -194,19 +194,29 @@ void test(
         action: 'publish',
         placement: 'standard',
       });
-      const ordinary = (
-        await publicJobs(new URLSearchParams({ q: key, sort: 'new' }))
-      ).jobs;
+      // The standard vacancy is newer, yet the VIP stays first under every sort.
+      for (const sort of ['', 'new', 'salary', 'deadline']) {
+        const listed = (
+          await publicJobs(
+            new URLSearchParams(sort ? { q: key, sort } : { q: key }),
+          )
+        ).jobs;
+        assert.deepEqual(
+          listed.map((j) => j.id),
+          [ids[0], second.id],
+          `a matching VIP vacancy leads the ${sort || 'default'} order`,
+        );
+        assert.equal(listed[0].placement?.priority, true);
+        assert.equal(listed[1].placement, undefined);
+      }
       assert.equal(
-        ordinary[0].id,
-        second.id,
-        'newest sorting is not overridden by promotions',
-      );
-      const promoted = (await publicJobs(new URLSearchParams({ q: key }))).jobs;
-      assert.equal(
-        promoted[0].id,
-        ids[0],
-        'default sorting promotes a matching VIP vacancy',
+        (
+          await publicJobs(
+            new URLSearchParams({ q: key, city: 'ბათუმი', sort: 'new' }),
+          )
+        ).total,
+        0,
+        'a VIP vacancy that does not match the filters is not shown',
       );
       await db().query(
         "UPDATE jobs SET placement_expires_at=now()-interval '1 second' WHERE id=$1",
