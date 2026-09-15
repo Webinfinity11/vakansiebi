@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Crown, Gem } from 'lucide-react';
 import type { PublicJob } from '@/lib/types';
 
 export function VacancySections({
@@ -27,13 +26,8 @@ export function VacancySections({
           aria-label="პრემიუმ ვაკანსიები"
         >
           <header>
-            <div className="featured-heading">
-              <span className="featured-emblem">
-                <Gem size={21} aria-hidden="true" />
-              </span>
-              <h3>პრემიუმ ვაკანსიები</h3>
-            </div>
-            <span className="featured-count">{premium.length} ვაკანსია</span>
+            <h3>პრემიუმ ვაკანსიები</h3>
+            <span className="featured-count">{premium.length}</span>
           </header>
           <div>{premium.map(card)}</div>
         </section>
@@ -44,13 +38,8 @@ export function VacancySections({
           aria-label="VIP ვაკანსიები"
         >
           <header>
-            <div className="featured-heading">
-              <span className="featured-emblem">
-                <Crown size={21} aria-hidden="true" />
-              </span>
-              <h3>VIP ვაკანსიები</h3>
-            </div>
-            <span className="featured-count">{vip.length} ვაკანსია</span>
+            <h3>VIP ვაკანსიები</h3>
+            <span className="featured-count">{vip.length}</span>
           </header>
           <div>{vip.map(card)}</div>
         </section>

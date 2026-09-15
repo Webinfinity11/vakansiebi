@@ -7,11 +7,13 @@ export function CompanyLogo({
   company,
   url,
   large = false,
+  fallback = 'illustration',
 }: {
   company: string;
   url?: string;
   large?: boolean;
   category?: string;
+  fallback?: 'illustration' | 'initial';
 }) {
   const [failed, setFailed] = useState('');
   const [loaded, setLoaded] = useState('');
@@ -34,16 +36,21 @@ export function CompanyLogo({
           onError={() => setFailed(src)}
         />
       )}
-      {(!showLogo || loaded !== src) && (
-        <Image
-          src="/images/jobx-company-3d-v1.png"
-          alt=""
-          width={80}
-          height={80}
-          sizes={large ? '80px' : '48px'}
-          className="company-fallback-3d"
-        />
-      )}
+      {(!showLogo || loaded !== src) &&
+        (fallback === 'initial' ? (
+          <span className="company-fallback-initial" aria-hidden="true">
+            {Array.from(company.trim())[0]?.toLocaleUpperCase() || '—'}
+          </span>
+        ) : (
+          <Image
+            src="/images/jobx-company-3d-v1.png"
+            alt=""
+            width={80}
+            height={80}
+            sizes={large ? '80px' : '48px'}
+            className="company-fallback-3d"
+          />
+        ))}
     </span>
   );
 }
