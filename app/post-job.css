@@ -389,11 +389,19 @@
 .featured-vacancies .swipe-shell:last-child .job-card {
   margin-bottom: 0;
 }
+/* Inside the promoted and regular sections the cards are no longer direct children of the
+   list, so each section repeats the list's spacing between cards. */
+.featured-vacancies > div,
+.regular-vacancies {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .regular-vacancies {
   min-width: 0;
 }
 .regular-vacancies > h3 {
-  margin: 6px 0 14px;
+  margin: 6px 0 4px;
 }
 @media (max-width: 600px) {
   .featured-vacancies {
