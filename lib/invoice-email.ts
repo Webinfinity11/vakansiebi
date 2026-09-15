@@ -1,5 +1,11 @@
 import { invoiceContact, invoiceNumber, type JobInvoice } from './billing';
 import { safeEmail } from './application-contact';
+import {
+  emailOrigin,
+  emailLayout,
+  emailButton,
+  escapeEmailHtml as escapeHtml,
+} from './email-layout';
 
 export type InvoiceEmail = {
   from: string;
@@ -10,15 +16,6 @@ export type InvoiceEmail = {
   html: string;
   text: string;
 };
-const escapeHtml = (value: string | number) =>
-  String(value).replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[
-        c
-      ]!,
-  );
-
 export function invoiceEmail(
   invoice: JobInvoice,
   recipient: string,
@@ -27,22 +24,11 @@ export function invoiceEmail(
 ): InvoiceEmail {
   const email = safeEmail(recipient);
   const copy = safeEmail(copyTo);
-  const origin = new URL(appUrl);
-  if (
-    !email ||
-    !copy ||
-    (origin.protocol !== 'https:' &&
-      !(
-        origin.protocol === 'http:' &&
-        ['localhost', '127.0.0.1'].includes(origin.hostname)
-      )) ||
-    origin.username ||
-    origin.password
-  )
-    throw new Error('Invalid invoice email configuration');
+  const origin = emailOrigin(appUrl);
+  if (!email || !copy) throw new Error('Invalid invoice email configuration');
   if (!/^[a-f0-9]{64}$/.test(invoice.token))
     throw new Error('Invalid invoice token');
-  const url = new URL(`/invoices/${invoice.token}`, origin.origin).href;
+  const url = new URL(`/invoices/${invoice.token}`, origin).href;
   const number = invoiceNumber(invoice.number, invoice.created_at);
   const rows: [string, string | number][] = [
     ['ინვოისი', number],
@@ -70,6 +56,28 @@ export function invoiceEmail(
       contactText,
       invoiceContact.email,
     ].join('\n\n'),
-    html: `<!doctype html><html lang="ka"><body style="margin:0;background:#f5f6f8;color:#202b3d;font-family:Arial,sans-serif"><div style="max-width:600px;margin:24px auto;padding:28px;background:white"><p style="font-size:24px;font-weight:bold;margin-top:0">JOBX</p><h1 style="font-size:21px">თქვენი ინვოისი მზად არის</h1><table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px">${rows.map(([label, value]) => `<tr><td style="padding:10px 8px;border-bottom:1px solid #e1e5ed;color:#536078;vertical-align:top">${escapeHtml(label)}</td><td style="padding:10px 8px;border-bottom:1px solid #e1e5ed;overflow-wrap:anywhere">${escapeHtml(value)}</td></tr>`).join('')}</table><p style="margin:28px 0"><a href="${escapeHtml(url)}" style="display:inline-block;background:#2457e6;color:white;padding:13px 20px;text-decoration:none;border-radius:6px">ინვოისის ნახვა</a></p><p style="font-size:13px;line-height:1.8">გადახდამდე გადაამოწმეთ ინვოისის მიმდინარე სტატუსი. პრემიუმი გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ.</p><p style="font-size:13px;line-height:1.8;border-top:1px solid #e1e5ed;padding-top:20px">ინვოისთან ან გადახდასთან დაკავშირებით დაგვიკავშირდით:<br><a href="tel:${invoiceContact.telephone}">${invoiceContact.phone}</a><br><a href="mailto:${invoiceContact.email}">${invoiceContact.email}</a></p></div></body></html>`,
+    html: emailLayout(
+      origin,
+      'თქვენი ინვოისი მზად არის',
+      `ინვოისი ${number} · ${invoice.amount_gel} ₾ · პრემიუმ განთავსება JOBX-ზე`,
+      `
+<p style="margin:0 0 22px;font-size:14px;line-height:24px;color:#536078">გმადლობთ, რომ JOBX აირჩიეთ. თქვენი პრემიუმ განთავსების დეტალები:</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f2f6ff" style="margin-bottom:24px;border:1px solid #dce6fa;border-radius:6px"><tr>
+<td width="58%" style="padding:18px 16px;vertical-align:top"><p style="margin:0 0 6px;font-size:12px;line-height:20px;color:#536078">ინვოისის კოდი</p><strong style="font-size:${number.length > 6 ? 17 : 25}px;line-height:32px;color:#202b3d;word-break:break-word">${escapeHtml(number)}</strong></td>
+<td width="42%" style="padding:18px 16px;vertical-align:top;text-align:right"><p style="margin:0 0 6px;font-size:12px;line-height:20px;color:#536078">გადასახდელი</p><strong style="font-size:25px;line-height:32px;white-space:nowrap;color:#202b3d">${escapeHtml(invoice.amount_gel)} ₾</strong></td></tr></table>
+<table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;table-layout:fixed;font-size:13px;line-height:22px">${rows
+        .filter(
+          ([label]) =>
+            !['ინვოისი', 'თანხა', 'გადარიცხვის დანიშნულება'].includes(label),
+        )
+        .map(
+          ([label, value]) =>
+            `<tr><th scope="row" width="40%" style="text-align:left;font-weight:normal;padding:11px 12px 11px 0;border-bottom:1px solid #e9edf3;color:#667287;vertical-align:top;overflow-wrap:anywhere">${escapeHtml(label)}</th><td style="padding:11px 0;border-bottom:1px solid #e9edf3;vertical-align:top;color:#202b3d;overflow-wrap:anywhere;word-break:break-word">${escapeHtml(value)}</td></tr>`,
+        )
+        .join('')}</table>
+<p style="margin:20px 0 0;font-size:13px;line-height:23px;color:#536078">გადარიცხვის დანიშნულებაში მიუთითეთ კოდი: <strong style="color:#202b3d">${escapeHtml(number)}</strong>.</p>
+${emailButton(url, 'ინვოისის ნახვა')}
+<p style="margin:0;font-size:12px;line-height:22px;color:#667287">გადახდამდე გადაამოწმეთ ინვოისის მიმდინარე სტატუსი. პრემიუმი გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ.</p>`,
+    ),
   };
 }
