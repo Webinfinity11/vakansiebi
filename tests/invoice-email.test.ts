@@ -32,7 +32,8 @@ void test('invoice mail escapes user content, links the private invoice and has 
   assert.ok(email.html.includes(`https://jobx.ge/invoices/${invoice.token}`));
   assert.ok(email.html.includes(`tel:${invoiceContact.telephone}`));
   assert.ok(email.text.includes(invoiceContact.phone));
-  assert.ok(email.subject.includes('JOBX-2026-000007'));
+  assert.equal(email.subject, 'JOBX — ინვოისი 000007');
+  assert.doesNotMatch(email.html + email.text, /JOBX-2026-/);
 });
 void test('mail does not duplicate the owner address and rejects malformed destinations and links', () => {
   assert.equal(

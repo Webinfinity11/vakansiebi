@@ -21,7 +21,7 @@ export default async function InvoicePage({
   const { token } = await params;
   const invoice = await getInvoice(token);
   if (!invoice) notFound();
-  const number = invoiceNumber(invoice.number, invoice.created_at);
+  const number = invoiceNumber(invoice.number);
   return (
     <main className="invoice-page">
       <div className="invoice-toolbar">

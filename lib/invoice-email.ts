@@ -30,7 +30,7 @@ export function invoiceEmail(
   if (!/^[a-f0-9]{64}$/.test(invoice.token))
     throw new Error('Invalid invoice token');
   const url = new URL(`/invoices/${invoice.token}`, origin).href;
-  const number = invoiceNumber(invoice.number, invoice.created_at);
+  const number = invoiceNumber(invoice.number);
   const title = testCopy ? 'ინვოისის სატესტო ასლი' : 'თქვენი ინვოისი მზად არის';
   const rows: [string, string | number][] = [
     ['ინვოისი', number],

@@ -51,8 +51,8 @@ export function InvoiceEmailTest({ invoices }: { invoices: JobInvoice[] }) {
           <option value="">აირჩიე ინვოისი</option>
           {invoices.map((invoice) => (
             <option key={invoice.token} value={invoice.token}>
-              {invoiceNumber(invoice.number, invoice.created_at)} ·{' '}
-              {invoice.payer_name} · {invoice.vacancy_title}
+              {invoiceNumber(invoice.number)} · {invoice.payer_name} ·{' '}
+              {invoice.vacancy_title}
             </option>
           ))}
         </select>

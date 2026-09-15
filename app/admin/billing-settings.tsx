@@ -74,7 +74,7 @@ export function BillingSettings({
           <article key={inv.token}>
             <div>
               <strong>
-                {invoiceNumber(inv.number, inv.created_at)} · {inv.amount_gel} ₾
+                {invoiceNumber(inv.number)} · {inv.amount_gel} ₾
               </strong>
               <p>
                 {inv.payer_name} · {inv.vacancy_title}

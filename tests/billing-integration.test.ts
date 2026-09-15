@@ -11,11 +11,11 @@ import { submissionDate } from '../lib/job-submission';
 import { validGeorgianIban, invoiceNumber } from '../lib/billing';
 
 void test('invoice numbers and Georgian account checks reject broken details', () => {
-  assert.equal(invoiceNumber(4, '2026-09-15'), 'JOBX-2026-000004');
-  assert.equal(invoiceNumber(4, '2026-09-15T14:15:47Z'), '000004');
-  assert.equal(invoiceNumber(123, '2027-01-01'), '000123');
-  assert.equal(invoiceNumber(999999, '2027-01-01'), '999999');
-  assert.equal(invoiceNumber(1000000, '2027-01-01'), '1000000');
+  assert.equal(invoiceNumber('2'), '000002');
+  assert.equal(invoiceNumber(4), '000004');
+  assert.equal(invoiceNumber(123), '000123');
+  assert.equal(invoiceNumber(999999), '999999');
+  assert.throws(() => invoiceNumber(1000000));
   assert.equal(validGeorgianIban('GE00ZZ0000000000000000'), false);
   assert.equal(validGeorgianIban('invalid'), false);
 });

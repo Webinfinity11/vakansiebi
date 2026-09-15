@@ -197,7 +197,7 @@ Vacancy details extract and display email addresses from the approved descriptio
 
 ## Invoice email
 
-Invoices issued from 2026-09-15 14:15:47 UTC use the sequential six-digit payment code (for example `000123`), consistently on the invoice page, email and admin screen. Older invoices retain their `JOBX-year-number` reference. The sequence does not reset each year and is never truncated; beyond 999999 it grows to prevent duplicate payment references. The private invoice URL still uses its random 64-character token.
+All invoices use a sequential six-digit payment code (for example `000123`), consistently on the invoice page, email and admin screen. Existing invoices use this same format. The sequence does not reset each year and is never truncated or wrapped; values above 999999 are rejected to avoid duplicate payment references. The private invoice URL still uses its random 64-character token.
 
 Premium submissions require a separate, private `billingEmail`. The invoice and an immutable email payload are saved in the same database transaction (`026_invoice_email_delivery.sql`). The address is excluded from the public vacancy. Resend sends the invoice details and private invoice link to that address, with a BCC to `invoice@jobx.ge`; replies go to the same domain address. The email and invoice page include support number **579 53 53 20**. The domain inbox is intended to forward through ImprovMX to the owner's Gmail.
 

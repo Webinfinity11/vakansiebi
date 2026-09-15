@@ -1347,10 +1347,7 @@ export default function AdminPanel() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {invoiceNumber(
-                      selected.invoice.number,
-                      selected.invoice.created_at,
-                    )}{' '}
+                    {invoiceNumber(selected.invoice.number)}{' '}
                     · {selected.invoice.amount_gel} ₾
                   </a>
                   {selected.invoice.status === 'pending' && (

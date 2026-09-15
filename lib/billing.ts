@@ -35,14 +35,12 @@ export const billingSettingsSchema = z.object({
     .transform((v) => v.replace(/\s/g, '').toUpperCase())
     .refine(validGeorgianIban, 'შეამოწმე ქართული IBAN-ის სისწორე'),
 });
-export function invoiceNumber(number: string | number, date: string | Date) {
-  const issuedAt = new Date(date);
-  const code = String(number).padStart(6, '0');
-  // Keep the payment references on invoices issued before this format change.
-  if (issuedAt < new Date('2026-09-15T14:15:47Z'))
-    return `JOBX-${issuedAt.getUTCFullYear()}-${code}`;
-  // The database sequence never resets; do not truncate or reuse a code.
-  return code;
+export function invoiceNumber(number: string | number) {
+  const digits = String(number);
+  // Never wrap or truncate the unique sequence to reuse a payment code.
+  if (!/^\d{1,6}$/.test(digits))
+    throw new Error('Invalid six-digit invoice number');
+  return digits.padStart(6, '0');
 }
 export type JobInvoice = {
   id: string;
