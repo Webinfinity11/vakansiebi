@@ -73,6 +73,8 @@ export type AdminJob = {
     'status' | 'number' | 'created_at' | 'token' | 'amount_gel'
   > | null;
   requested_placement?: PlacementTier;
+  /** Set only for a vacancy an employer sent through the posting form. */
+  submitted_at?: string | null;
   placement_tier: PlacementTier;
   placement_expires_at: string | null;
   id: string;

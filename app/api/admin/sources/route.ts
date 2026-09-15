@@ -50,7 +50,8 @@ export async function GET() {
         'archived',count(*) FILTER(WHERE status='archived'),
         'manual',count(*) FILTER(WHERE NOT automation_managed AND status NOT IN ('merged','rejected')),
         'paused',count(*) FILTER(WHERE automation_paused AND status NOT IN ('merged','rejected')),
-        'blocked',count(*) FILTER(WHERE automation_reason IS NOT NULL AND status NOT IN ('merged','rejected','published'))
+        'blocked',count(*) FILTER(WHERE automation_reason IS NOT NULL AND status NOT IN ('merged','rejected','published')),
+        'submissions',count(*) FILTER(WHERE status='pending' AND EXISTS (SELECT 1 FROM job_submissions sub WHERE sub.job_id=jobs.id))
       ) FROM jobs) counts,
       count(*)::int completed_runs,
       COALESCE(sum(r.imported),0)::int imported,

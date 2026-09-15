@@ -7,7 +7,7 @@ import {
   type PlacementTier,
 } from '@/lib/placement';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   ArrowUpRight,
   RefreshCw,
@@ -18,6 +18,13 @@ import {
   LogOut,
   Clock3,
   ExternalLink,
+  Inbox,
+  ListChecks,
+  ReceiptText,
+  DatabaseZap,
+  History,
+  BarChart3,
+  Building2,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
@@ -105,6 +112,73 @@ async function request(url: string, body?: unknown) {
   if (!r.ok) throw Error(d.error || 'ოპერაცია ვერ შესრულდა');
   return d;
 }
+/* A submission is read first and edited only if needed, so its editor starts folded away. */
+function EditorWrap({
+  submission,
+  children,
+}: {
+  submission: boolean;
+  children: ReactNode;
+}) {
+  if (!submission) return <>{children}</>;
+  return (
+    <details className="raw-details submission-edit">
+      <summary>რედაქტირება დადასტურებამდე</summary>
+      {children}
+    </details>
+  );
+}
+/* What the employer sent through the posting form, laid out the way it will read on the site. */
+function SubmissionSummary({ job, draft }: { job: AdminJob; draft: Vacancy }) {
+  const rows: [string, string][] = [
+    ['პოზიცია', draft.title],
+    ['კომპანია', draft.company],
+    ['მიმართულება', draft.category],
+    ['ქალაქი', draft.city],
+    ['სამუშაო რეჟიმი', draft.mode || ''],
+    ['განაკვეთი', draft.employmentType || ''],
+    ['ანაზღაურება', draft.salary],
+    ['ბოლო ვადა', draft.deadline],
+    [
+      'განთავსება',
+      job.requested_placement ? placementLabels[job.requested_placement] : '',
+    ],
+    ['გაგზავნდა', time(job.submitted_at || job.created_at)],
+  ];
+  const contacts = [
+    ...(draft.facts || []).map((f) => `${f.label}: ${f.value}`),
+    ...(draft.applicationLinks || []).map((l) => `${l.label}: ${l.url}`),
+  ];
+  return (
+    <section className="submission-summary">
+      <div className="editor-logo-row">
+        <CompanyLogo company={draft.company} url={draft.logoUrl} />
+        <div>
+          <strong>{draft.title}</strong>
+          <p>{draft.logoUrl ? 'ატვირთული ლოგო' : 'ლოგო არ ატვირთა'}</p>
+        </div>
+      </div>
+      <dl>
+        {rows.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value || '—'}</dd>
+          </div>
+        ))}
+        <div className="full-width">
+          <dt>დაკავშირების გზა</dt>
+          <dd>
+            {contacts.length
+              ? contacts.map((c) => <span key={c}>{c}</span>)
+              : 'მითითებული არ არის'}
+          </dd>
+        </div>
+      </dl>
+      <h3>აღწერა</h3>
+      <p className="raw-text">{draft.description}</p>
+    </section>
+  );
+}
 export default function AdminPanel() {
   const [observedAt, setObservedAt] = useState(0);
   const [summary, setSummary] = useState<{
@@ -116,7 +190,7 @@ export default function AdminPanel() {
   const [github, setGithub] = useState<Awaited<
     ReturnType<typeof githubScraperStatus>
   > | null>(null);
-  const [tab, setTab] = useState('sources'),
+  const [tab, setTab] = useState('submissions'),
     [status, setStatus] = useState('review'),
     [sourceFilter, setSourceFilter] = useState(''),
     [query, setQuery] = useState(''),
@@ -131,6 +205,7 @@ export default function AdminPanel() {
       paused: 0,
       manual: 0,
       blocked: 0,
+      submissions: 0,
     }),
     [sources, setSources] = useState<AdminSource[]>([]),
     [runs, setRuns] = useState<SourceRun[]>([]),
@@ -155,7 +230,9 @@ export default function AdminPanel() {
           ? request(
               `/api/admin/jobs?status=${status}&q=${encodeURIComponent(query)}&page=${page}&source=${sourceFilter}`,
             )
-          : Promise.resolve(null),
+          : tab === 'submissions'
+            ? request(`/api/admin/jobs?status=submissions&page=${page}`)
+            : Promise.resolve(null),
         request('/api/admin/sources'),
       ]);
       if (a) {
@@ -208,7 +285,9 @@ export default function AdminPanel() {
       setMessage(
         action === 'publish'
           ? 'ვაკანსია გამოქვეყნდა. შეტყობინება არ გაგზავნილა.'
-          : 'ცვლილება შენახულია.',
+          : action === 'reject'
+            ? 'განცხადება უარყოფილია. შეტყობინება არ გაგზავნილა.'
+            : 'ცვლილება შენახულია.',
       );
       await load();
     } catch (e) {
@@ -275,6 +354,114 @@ export default function AdminPanel() {
     sources.length && new Set(sources.map((s) => s.interval_minutes)).size === 1
       ? sources[0].interval_minutes
       : null;
+  const openJob = (j: AdminJob) => {
+    setSelected(j);
+    setDraft(j.draft);
+    setPlacement(
+      j.placement_expires_at
+        ? j.placement_tier
+        : j.requested_placement || 'standard',
+    );
+    setError('');
+  };
+  const submission = !!selected?.submitted_at;
+  const jobList = () => (
+    <>
+      {loading ? (
+        <p className="empty">იტვირთება…</p>
+      ) : !jobs.length ? (
+        <div className="empty">
+          <Layers3 size={32} />
+          {tab === 'submissions' ? (
+            <>
+              <h3>ახალი განცხადება არ არის</h3>
+              <p>დამსაქმებლის გაგზავნილი ვაკანსია აქ გამოჩნდება.</p>
+            </>
+          ) : (
+            <>
+              <h3>ამ სიაში ვაკანსიები ჯერ არ არის</h3>
+              <p>
+                წყაროების ჩანართიდან გაუშვი შემოწმება ან აირჩიე სხვა სტატუსი.
+              </p>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="admin-job-list">
+          {jobs.map((j) => (
+            <button className="admin-job" key={j.id} onClick={() => openJob(j)}>
+              <CompanyLogo company={j.draft.company} url={j.draft.logoUrl} />
+              <div className="admin-job-text">
+                <span>
+                  {j.draft.company} ·{' '}
+                  {j.submitted_at
+                    ? `გაგზავნდა ${time(j.submitted_at)}`
+                    : j.draft.source}
+                </span>
+                <strong>{j.draft.title}</strong>
+                <small>
+                  {j.draft.city || 'ქალაქი დასაზუსტებელია'} ·{' '}
+                  {j.draft.salary || 'ხელფასი მითითებული არ არის'}
+                </small>
+              </div>
+              <div className="admin-job-status">
+                {j.submitted_at && j.status === 'pending' ? (
+                  <span className="status status-pending">
+                    დადასტურებას ელოდება
+                  </span>
+                ) : (
+                  <span className={`status status-${j.status}`}>
+                    {names[j.status]}
+                  </span>
+                )}
+                {j.requested_placement &&
+                  j.requested_placement !== 'standard' && (
+                    <span className="review-label">
+                      {placementLabels[j.requested_placement]}
+                    </span>
+                  )}
+                {!j.submitted_at &&
+                  (j.automation_paused || !j.automation_managed) && (
+                    <span className="review-label">ხელით მართული</span>
+                  )}
+                {!j.submitted_at &&
+                  j.automation_reason &&
+                  j.status !== 'published' && (
+                    <span className="review-label">
+                      {automationReasons[j.automation_reason] ||
+                        j.automation_reason}
+                    </span>
+                  )}
+                {j.needs_review &&
+                  !['pending', 'rejected'].includes(j.status) && (
+                    <span className="review-label">
+                      ცვლილება შესამოწმებელია
+                    </span>
+                  )}
+                {j.duplicates.length > 0 && (
+                  <span className="review-label">შესაძლო დუბლიკატი</span>
+                )}
+                <ArrowUpRight size={17} />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="admin-pagination">
+        <span>{total} ჩანაწერი</span>
+        <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+          წინა
+        </button>
+        <span>{page}</span>
+        <button
+          disabled={page * 30 >= total}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          შემდეგი
+        </button>
+      </div>
+    </>
+  );
   return (
     <>
       <header className="topbar admin-topbar">
@@ -312,40 +499,6 @@ export default function AdminPanel() {
             წინასწარი ნახვა <ArrowUpRight size={17} />
           </Link>
         </div>
-        {tab === 'vacancies' && (
-          <div className="admin-stats">
-            {(
-              [
-                ['გამოქვეყნებული', counts.published, 'published'],
-                ['შესამოწმებელი', counts.review, 'review'],
-                ['ხელით მართული', counts.manual, 'manual'],
-                ['ავტომატურად ვერ ქვეყნდება', counts.blocked, 'blocked'],
-                ['არქივი', counts.archived, 'archived'],
-                [
-                  'ჩართული წყარო',
-                  `${sources.filter((s) => s.enabled).length} / ${sources.length}`,
-                  '',
-                ],
-              ] as [string, number | string, string][]
-            ).map(([name, count, filter]) => (
-              <button
-                type="button"
-                key={name}
-                className={filter && status === filter ? 'stat-active' : ''}
-                disabled={!filter}
-                onClick={() => {
-                  if (!filter) return;
-                  setTab('vacancies');
-                  setPage(1);
-                  setStatus(filter);
-                }}
-              >
-                <span>{name}</span>
-                <strong>{count}</strong>
-              </button>
-            ))}
-          </div>
-        )}
         {error && (
           <div role="alert" className="notice">
             {error}
@@ -363,25 +516,101 @@ export default function AdminPanel() {
             </button>
           </output>
         )}
-        <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
+        <Tabs
+          value={tab}
+          orientation="vertical"
+          className="admin-layout"
+          onValueChange={(v) => {
+            setPage(1);
+            setTab(String(v));
+          }}
+        >
           <TabsList variant="line" className="admin-tabs">
-            <TabsTrigger value="vacancies">ვაკანსიები</TabsTrigger>
-            <TabsTrigger value="billing">ინვოისები</TabsTrigger>
-            <TabsTrigger value="sources">წყაროები და განახლება</TabsTrigger>
-            <TabsTrigger value="runs">შემოტანის ისტორია</TabsTrigger>
-            <TabsTrigger value="analytics">ანალიტიკა</TabsTrigger>
-            <TabsTrigger value="employers">კომპანიების სახელები</TabsTrigger>
+            <TabsTrigger value="submissions">
+              <Inbox size={17} />
+              <span>დამსაქმებლის განცხადებები</span>
+              {counts.submissions > 0 && <b>{counts.submissions}</b>}
+            </TabsTrigger>
+            <TabsTrigger value="vacancies">
+              <ListChecks size={17} />
+              <span>ვაკანსიები</span>
+            </TabsTrigger>
+            <TabsTrigger value="billing">
+              <ReceiptText size={17} />
+              <span>ინვოისები</span>
+            </TabsTrigger>
+            <TabsTrigger value="sources">
+              <DatabaseZap size={17} />
+              <span>წყაროები და განახლება</span>
+            </TabsTrigger>
+            <TabsTrigger value="runs">
+              <History size={17} />
+              <span>შემოტანის ისტორია</span>
+            </TabsTrigger>
+            <TabsTrigger value="analytics">
+              <BarChart3 size={17} />
+              <span>ანალიტიკა</span>
+            </TabsTrigger>
+            <TabsTrigger value="employers">
+              <Building2 size={17} />
+              <span>კომპანიების სახელები</span>
+            </TabsTrigger>
           </TabsList>
+          <TabsContent value="submissions">
+            <div className="admin-section-heading">
+              <h2>დამსაქმებლის განცხადებები</h2>
+              <p>
+                ვაკანსია, რომელიც დამსაქმებელმა საიტის ფორმით გამოგზავნა, საიტზე
+                მხოლოდ შენი დადასტურების შემდეგ გამოჩნდება. გახსენი, გადაამოწმე
+                და დაადასტურე ან უარყავი.
+              </p>
+            </div>
+            {jobList()}
+          </TabsContent>
           <TabsContent value="vacancies">
+            <div className="admin-stats">
+              {(
+                [
+                  ['გამოქვეყნებული', counts.published, 'published'],
+                  ['შესამოწმებელი', counts.review, 'review'],
+                  ['ხელით მართული', counts.manual, 'manual'],
+                  ['ავტომატურად ვერ ქვეყნდება', counts.blocked, 'blocked'],
+                  ['არქივი', counts.archived, 'archived'],
+                  [
+                    'ჩართული წყარო',
+                    `${sources.filter((s) => s.enabled).length} / ${sources.length}`,
+                    '',
+                  ],
+                ] as [string, number | string, string][]
+              ).map(([name, count, filter]) => (
+                <button
+                  type="button"
+                  key={name}
+                  className={filter && status === filter ? 'stat-active' : ''}
+                  disabled={!filter}
+                  onClick={() => {
+                    if (!filter) return;
+                    setTab('vacancies');
+                    setPage(1);
+                    setStatus(filter);
+                  }}
+                >
+                  <span>{name}</span>
+                  <strong>{count}</strong>
+                </button>
+              ))}
+            </div>
             <div className="admin-toolbar">
               <button
                 className="primary"
-                disabled={busy || loading || counts.pending === 0}
+                disabled={
+                  busy || loading || counts.pending - counts.submissions <= 0
+                }
                 onClick={() => setConfirm({ action: 'bulk-publish' })}
               >
                 {busy
                   ? 'მიმდინარეობს…'
-                  : `ყველას დადასტურება (${counts.pending})`}
+                  : `შემოტანილის დადასტურება (${counts.pending - counts.submissions})`}
               </button>
               <div className="admin-search">
                 <Search size={18} />
@@ -435,90 +664,7 @@ export default function AdminPanel() {
                 <RefreshCw size={18} />
               </button>
             </div>
-            {loading ? (
-              <p className="empty">იტვირთება…</p>
-            ) : !jobs.length ? (
-              <div className="empty">
-                <Layers3 size={32} />
-                <h3>ამ სიაში ვაკანსიები ჯერ არ არის</h3>
-                <p>
-                  წყაროების ჩანართიდან გაუშვი შემოწმება ან აირჩიე სხვა სტატუსი.
-                </p>
-              </div>
-            ) : (
-              <div className="admin-job-list">
-                {jobs.map((j) => (
-                  <button
-                    className="admin-job"
-                    key={j.id}
-                    onClick={() => {
-                      setSelected(j);
-                      setDraft(j.draft);
-                      setPlacement(
-                        j.placement_expires_at
-                          ? j.placement_tier
-                          : j.requested_placement || 'standard',
-                      );
-                      setError('');
-                    }}
-                  >
-                    <CompanyLogo
-                      company={j.draft.company}
-                      url={j.draft.logoUrl}
-                    />
-                    <div className="admin-job-text">
-                      <span>
-                        {j.draft.company} · {j.draft.source}
-                      </span>
-                      <strong>{j.draft.title}</strong>
-                      <small>
-                        {j.draft.city || 'ქალაქი დასაზუსტებელია'} ·{' '}
-                        {j.draft.salary || 'ხელფასი მითითებული არ არის'}
-                      </small>
-                    </div>
-                    <div className="admin-job-status">
-                      <span className={`status status-${j.status}`}>
-                        {names[j.status]}
-                      </span>
-                      {(j.automation_paused || !j.automation_managed) && (
-                        <span className="review-label">ხელით მართული</span>
-                      )}
-                      {j.automation_reason && j.status !== 'published' && (
-                        <span className="review-label">
-                          {automationReasons[j.automation_reason] ||
-                            j.automation_reason}
-                        </span>
-                      )}
-                      {j.needs_review && j.status !== 'pending' && (
-                        <span className="review-label">
-                          ცვლილება შესამოწმებელია
-                        </span>
-                      )}
-                      {j.duplicates.length > 0 && (
-                        <span className="review-label">შესაძლო დუბლიკატი</span>
-                      )}
-                      <ArrowUpRight size={17} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="admin-pagination">
-              <span>{total} ჩანაწერი</span>
-              <button
-                disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                წინა
-              </button>
-              <span>{page}</span>
-              <button
-                disabled={page * 30 >= total}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                შემდეგი
-              </button>
-            </div>
+            {jobList()}
           </TabsContent>
           <TabsContent value="billing">
             {tab === 'billing' && (
@@ -531,13 +677,7 @@ export default function AdminPanel() {
                     );
                     const j = data.jobs[0] as AdminJob | undefined;
                     if (!j) throw Error('განცხადება ვერ მოიძებნა');
-                    setSelected(j);
-                    setDraft(j.draft);
-                    setPlacement(
-                      j.placement_expires_at
-                        ? j.placement_tier
-                        : j.requested_placement || 'standard',
-                    );
+                    openJob(j);
                   } catch (e) {
                     setError(
                       e instanceof Error ? e.message : 'ჩატვირთვა ვერ მოხერხდა',
@@ -1051,14 +1191,21 @@ export default function AdminPanel() {
           <SheetHeader>
             <SheetDescription>
               {selected?.draft.company} ·{' '}
-              {selected ? names[selected.status] : ''}
+              {submission && selected?.status === 'pending'
+                ? 'დადასტურებას ელოდება'
+                : selected
+                  ? names[selected.status]
+                  : ''}
             </SheetDescription>
             <SheetTitle className="detail-title">
-              ვაკანსიის შემოწმება
+              {submission
+                ? 'დამსაქმებლის განცხადების შემოწმება'
+                : 'ვაკანსიის შემოწმება'}
             </SheetTitle>
           </SheetHeader>
           {selected && draft && (
             <div className="edit-body">
+              {submission && <SubmissionSummary job={selected} draft={draft} />}
               {selected.requested_placement && (
                 <section className="notice">
                   <h3>
@@ -1130,390 +1277,403 @@ export default function AdminPanel() {
                   )}
                 </section>
               )}
-              <div className="editor-logo-row">
-                <CompanyLogo company={draft.company} url={draft.logoUrl} />
-                <div>
-                  <strong>{draft.company}</strong>
-                  <p>
-                    {selected.requested_placement
-                      ? 'ატვირთული ლოგო'
-                      : 'ლოგო პირველწყაროდან'}{' '}
-                    · გამოქვეყნებამდე გადაამოწმე
-                  </p>
-                </div>
-                {draft.logoUrl && (
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    disabled={busy}
-                    onClick={() => change('logoUrl', '')}
-                  >
-                    ლოგოს მოცილება
-                  </button>
-                )}
-              </div>
-              <div
-                className={
-                  selected.automation_paused || !selected.automation_managed
-                    ? 'notice'
-                    : 'automation-state'
-                }
-              >
-                <strong>
-                  {selected.automation_paused || !selected.automation_managed
-                    ? 'ეს ჩანაწერი ხელით იმართება'
-                    : 'ეს ჩანაწერი ავტომატურად იმართება'}
-                </strong>
-                <p>
-                  {selected.automation_paused || !selected.automation_managed
-                    ? 'წყაროს ახალი ტექსტი საჯარო ვერსიას აღარ ცვლის. ავტომატურ მართვას დაბრუნებისას წყაროს ბოლო შემოწმებული ვერსია აქვეყნებს ჩანაწერს და შენი რედაქცია გადაიწერება.'
-                    : 'წყაროს ცვლილება ავტომატურად ქვეყნდება, ვადაგასული და მოხსნილი ჩანაწერი კი არქივდება. ქვემოთ ნებისმიერი შენახვა ამ ავტომატიზაციას აჩერებს.'}
-                  {selected.automation_reason
-                    ? ' მიზეზი: ' +
-                      (automationReasons[selected.automation_reason] ||
-                        selected.automation_reason) +
-                      '.'
-                    : ''}
-                </p>
-                <small>
-                  ბოლო ავტომატური შემოწმება:{' '}
-                  {time(selected.automation_checked_at)}
-                </small>
-                {!selected.items.some((i) => i.source_id === 'jobx') &&
-                  (selected.automation_paused ||
-                    !selected.automation_managed) && (
+              <EditorWrap submission={submission}>
+                <div className="editor-logo-row">
+                  <CompanyLogo company={draft.company} url={draft.logoUrl} />
+                  <div>
+                    <strong>{draft.company}</strong>
+                    <p>
+                      {selected.requested_placement
+                        ? 'ატვირთული ლოგო'
+                        : 'ლოგო პირველწყაროდან'}{' '}
+                      · გამოქვეყნებამდე გადაამოწმე
+                    </p>
+                  </div>
+                  {draft.logoUrl && (
                     <button
                       className="secondary-button"
+                      type="button"
                       disabled={busy}
-                      onClick={() =>
-                        setConfirm({ action: 'resume-automation' })
-                      }
+                      onClick={() => change('logoUrl', '')}
                     >
-                      ავტომატურ მართვას დაბრუნება
+                      ლოგოს მოცილება
                     </button>
                   )}
-              </div>
-              {!!draft.warnings?.length && (
-                <div className="notice">
-                  {draft.warnings.map((w) => (
-                    <p key={w}>{w}</p>
-                  ))}
-                  <button
-                    className="secondary-button"
-                    onClick={() => change('warnings', [])}
-                  >
-                    გადავამოწმე
-                  </button>
                 </div>
-              )}
-              {error && (
-                <p role="alert" className="notice">
-                  {error}
-                </p>
-              )}
-              <div className="editor-source-links">
-                {selected.items.map((i) => (
-                  <a
-                    key={i.id}
-                    href={i.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {!submission && (
+                  <div
+                    className={
+                      selected.automation_paused || !selected.automation_managed
+                        ? 'notice'
+                        : 'automation-state'
+                    }
                   >
-                    <ExternalLink size={14} />
-                    {listingSourceNames[
-                      i.source_id as keyof typeof listingSourceNames
-                    ] || i.source_id}
-                  </a>
-                ))}
-              </div>
-              <div className="edit-form">
-                <label className="full-width">
-                  კომპანიის ლოგოს მისამართი
-                  <input
-                    value={draft.logoUrl || ''}
-                    onChange={(e) => change('logoUrl', e.target.value)}
-                    placeholder="https://…"
-                  />
-                </label>
-                <label className="full-width">
-                  განაკვეთი
-                  <input
-                    value={draft.employmentType || ''}
-                    onChange={(e) => change('employmentType', e.target.value)}
-                    placeholder="სრული განაკვეთი, ნახევარი განაკვეთი…"
-                  />
-                </label>
-                <label>
-                  პოზიცია
-                  <input
-                    value={draft.title}
-                    onChange={(e) => change('title', e.target.value)}
-                  />
-                </label>
-                <label>
-                  კომპანია
-                  <input
-                    value={draft.company}
-                    onChange={(e) => change('company', e.target.value)}
-                  />
-                </label>
-                <label>
-                  ქალაქი
-                  <input
-                    value={draft.city}
-                    onChange={(e) => change('city', e.target.value)}
-                  />
-                </label>
-                <label htmlFor="edit-category">
-                  მიმართულება
-                  <Choice
-                    id="edit-category"
-                    label="მიმართულება"
-                    value={draft.category}
-                    onChange={(v) =>
-                      change('category', v === 'ყველა' ? 'სხვა' : v)
-                    }
-                    options={[...categories]}
-                  />
-                </label>
-                <label>
-                  ხელფასი — ზუსტად როგორც წყაროში
-                  <input
-                    value={draft.salary}
-                    onChange={(e) => change('salary', e.target.value)}
-                  />
-                </label>
-                <label>
-                  მინიმალური თანხა
-                  <input
-                    type="number"
-                    min="0"
-                    value={draft.salaryMin ?? ''}
-                    onChange={(e) =>
-                      change(
-                        'salaryMin',
-                        e.target.value === '' ? null : Number(e.target.value),
-                      )
-                    }
-                  />
-                </label>
-                <label>
-                  ვალუტა
-                  <input
-                    placeholder="GEL / USD / EUR"
-                    value={draft.currency}
-                    onChange={(e) =>
-                      change('currency', e.target.value.toUpperCase())
-                    }
-                  />
-                </label>
-                <label htmlFor="edit-period">
-                  ანაზღაურების სიხშირე
-                  <Choice
-                    id="edit-period"
-                    label="არ არის მითითებული"
-                    value={draft.salaryPeriod || 'ყველა'}
-                    options={['თვე', 'საათი', 'დღე', 'კვირა', 'წელი']}
-                    onChange={(v) =>
-                      change('salaryPeriod', v === 'ყველა' ? '' : v)
-                    }
-                  />
-                </label>
-                <label htmlFor="edit-mode">
-                  სამუშაო რეჟიმი
-                  <Choice
-                    id="edit-mode"
-                    label="არ არის მითითებული"
-                    value={draft.mode || 'ყველა'}
-                    options={['ადგილზე', 'დისტანციური', 'ჰიბრიდული']}
-                    onChange={(v) => change('mode', v === 'ყველა' ? '' : v)}
-                  />
-                </label>
-                <label>
-                  ბოლო ვადა
-                  <input
-                    type="date"
-                    value={draft.deadline}
-                    onChange={(e) => change('deadline', e.target.value)}
-                  />
-                </label>
-                <label className="full-width">
-                  აღწერა
-                  <textarea
-                    rows={13}
-                    value={draft.description}
-                    onChange={(e) => change('description', e.target.value)}
-                  />
-                </label>
-              </div>
-              <CompanyEditor
-                key={draft.company}
-                name={draft.company}
-                sourceLogo={
-                  draft.logoUrl ||
-                  selected.items.find((i) => i.raw?.logoUrl)?.raw.logoUrl
-                }
-              />
-              {!!draft.facts?.length && (
-                <details className="raw-details">
-                  <summary>
-                    დამატებითი პირობების რედაქტირება ({draft.facts.length})
-                  </summary>
-                  <div className="metadata-editor">
-                    {draft.facts.map((f, index) => (
-                      <div key={index}>
-                        <label>
-                          {f.label}
-                          <textarea
-                            rows={2}
-                            value={f.value}
-                            onChange={(e) =>
-                              change(
-                                'facts',
-                                draft.facts!.map((v, k) =>
-                                  k === index
-                                    ? { ...v, value: e.target.value }
-                                    : v,
-                                ),
-                              )
-                            }
-                          />
-                        </label>
+                    <strong>
+                      {selected.automation_paused ||
+                      !selected.automation_managed
+                        ? 'ეს ჩანაწერი ხელით იმართება'
+                        : 'ეს ჩანაწერი ავტომატურად იმართება'}
+                    </strong>
+                    <p>
+                      {selected.automation_paused ||
+                      !selected.automation_managed
+                        ? 'წყაროს ახალი ტექსტი საჯარო ვერსიას აღარ ცვლის. ავტომატურ მართვას დაბრუნებისას წყაროს ბოლო შემოწმებული ვერსია აქვეყნებს ჩანაწერს და შენი რედაქცია გადაიწერება.'
+                        : 'წყაროს ცვლილება ავტომატურად ქვეყნდება, ვადაგასული და მოხსნილი ჩანაწერი კი არქივდება. ქვემოთ ნებისმიერი შენახვა ამ ავტომატიზაციას აჩერებს.'}
+                      {selected.automation_reason
+                        ? ' მიზეზი: ' +
+                          (automationReasons[selected.automation_reason] ||
+                            selected.automation_reason) +
+                          '.'
+                        : ''}
+                    </p>
+                    <small>
+                      ბოლო ავტომატური შემოწმება:{' '}
+                      {time(selected.automation_checked_at)}
+                    </small>
+                    {!selected.items.some((i) => i.source_id === 'jobx') &&
+                      (selected.automation_paused ||
+                        !selected.automation_managed) && (
                         <button
-                          type="button"
+                          className="secondary-button"
+                          disabled={busy}
                           onClick={() =>
-                            change(
-                              'facts',
-                              draft.facts!.filter((_, k) => k !== index),
-                            )
+                            setConfirm({ action: 'resume-automation' })
                           }
                         >
-                          წაშლა
+                          ავტომატურ მართვას დაბრუნება
                         </button>
-                      </div>
-                    ))}
+                      )}
                   </div>
-                </details>
-              )}
-              {!!draft.applicationLinks?.length && (
-                <details className="raw-details">
-                  <summary>
-                    განცხადების ბმულები ({draft.applicationLinks.length})
-                  </summary>
-                  <div className="metadata-editor">
-                    {draft.applicationLinks.map((link, index) => (
-                      <div key={index}>
-                        <label>
-                          {link.label}
-                          <input
-                            value={link.url}
-                            onChange={(e) =>
-                              change(
-                                'applicationLinks',
-                                draft.applicationLinks!.map((v, k) =>
-                                  k === index
-                                    ? { ...v, url: e.target.value }
-                                    : v,
-                                ),
-                              )
-                            }
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            change(
-                              'applicationLinks',
-                              draft.applicationLinks!.filter(
-                                (_, k) => k !== index,
-                              ),
-                            )
-                          }
-                        >
-                          წაშლა
-                        </button>
-                      </div>
+                )}
+                {!!draft.warnings?.length && (
+                  <div className="notice">
+                    {draft.warnings.map((w) => (
+                      <p key={w}>{w}</p>
                     ))}
-                  </div>
-                </details>
-              )}
-              <details className="raw-details">
-                <summary>წყაროს ბოლო ვერსიის შედარება</summary>
-                {selected.items.map((i) => (
-                  <div key={i.id}>
-                    <p>
-                      {listingSourceNames[
-                        i.source_id as keyof typeof listingSourceNames
-                      ] || i.source_id}{' '}
-                      · შემოწმდა {time(i.last_checked_at)} · შემდეგი{' '}
-                      {time(i.next_check_at)}
-                      {i.failures ? ` · წარუმატებელი ცდა: ${i.failures}` : ''}
-                    </p>
-                    {i.error && <p className="notice">{i.error}</p>}
-                    {i.quality_warning && (
-                      <p className="notice">
-                        ხარისხის შემოწმება: {i.quality_warning}
-                      </p>
-                    )}
-                    {!!i.raw?.warnings?.length && (
-                      <div className="notice">
-                        {i.raw.warnings.map((w) => (
-                          <p key={w}>{w}</p>
-                        ))}
-                      </div>
-                    )}
-                    <CompanyLogo
-                      company={i.raw?.company || ''}
-                      url={i.raw?.logoUrl}
-                    />
-                    <h3>{i.raw?.title}</h3>
-                    <p>
-                      {i.raw?.salary} · {i.raw?.city} · {i.raw?.deadline}
-                    </p>
-                    <p className="raw-text">{i.raw?.description}</p>
-                    {!!i.raw?.facts?.length && (
-                      <div className="editor-extra-facts">
-                        {i.raw.facts.map((f) => (
-                          <div key={f.label}>
-                            <strong>{f.label}</strong>
-                            <span>{f.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                     <button
                       className="secondary-button"
-                      disabled={
-                        busy || !i.raw || i.raw.company !== draft.company
+                      onClick={() => change('warnings', [])}
+                    >
+                      გადავამოწმე
+                    </button>
+                  </div>
+                )}
+                {error && (
+                  <p role="alert" className="notice">
+                    {error}
+                  </p>
+                )}
+                {!submission && (
+                  <div className="editor-source-links">
+                    {selected.items.map((i) => (
+                      <a
+                        key={i.id}
+                        href={i.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink size={14} />
+                        {listingSourceNames[
+                          i.source_id as keyof typeof listingSourceNames
+                        ] || i.source_id}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                <div className="edit-form">
+                  <label className="full-width">
+                    კომპანიის ლოგოს მისამართი
+                    <input
+                      value={draft.logoUrl || ''}
+                      onChange={(e) => change('logoUrl', e.target.value)}
+                      placeholder="https://…"
+                    />
+                  </label>
+                  <label className="full-width">
+                    განაკვეთი
+                    <input
+                      value={draft.employmentType || ''}
+                      onChange={(e) => change('employmentType', e.target.value)}
+                      placeholder="სრული განაკვეთი, ნახევარი განაკვეთი…"
+                    />
+                  </label>
+                  <label>
+                    პოზიცია
+                    <input
+                      value={draft.title}
+                      onChange={(e) => change('title', e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    კომპანია
+                    <input
+                      value={draft.company}
+                      onChange={(e) => change('company', e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    ქალაქი
+                    <input
+                      value={draft.city}
+                      onChange={(e) => change('city', e.target.value)}
+                    />
+                  </label>
+                  <label htmlFor="edit-category">
+                    მიმართულება
+                    <Choice
+                      id="edit-category"
+                      label="მიმართულება"
+                      value={draft.category}
+                      onChange={(v) =>
+                        change('category', v === 'ყველა' ? 'სხვა' : v)
                       }
-                      onClick={() =>
-                        setDraft(
-                          (d) =>
-                            d && {
-                              ...d,
-                              logoUrl: i.raw.logoUrl || '',
-                              employmentType: i.raw.employmentType || '',
-                              facts: i.raw.facts || [],
-                              applicationLinks: i.raw.applicationLinks || [],
-                              warnings: i.raw.warnings || [],
-                            },
+                      options={[...categories]}
+                    />
+                  </label>
+                  <label>
+                    ხელფასი — ზუსტად როგორც წყაროში
+                    <input
+                      value={draft.salary}
+                      onChange={(e) => change('salary', e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    მინიმალური თანხა
+                    <input
+                      type="number"
+                      min="0"
+                      value={draft.salaryMin ?? ''}
+                      onChange={(e) =>
+                        change(
+                          'salaryMin',
+                          e.target.value === '' ? null : Number(e.target.value),
                         )
                       }
-                    >
-                      მხოლოდ ლოგოსა და დამატებითი დეტალების ჩასმა
-                    </button>
-                    <button
-                      className="secondary-button"
-                      disabled={busy}
-                      onClick={() =>
-                        setConfirm({ action: 'apply-source', itemId: i.id })
+                    />
+                  </label>
+                  <label>
+                    ვალუტა
+                    <input
+                      placeholder="GEL / USD / EUR"
+                      value={draft.currency}
+                      onChange={(e) =>
+                        change('currency', e.target.value.toUpperCase())
                       }
-                    >
-                      წყაროს ვერსიის ჩასმა რედაქციაში
-                    </button>
-                  </div>
-                ))}
-              </details>
+                    />
+                  </label>
+                  <label htmlFor="edit-period">
+                    ანაზღაურების სიხშირე
+                    <Choice
+                      id="edit-period"
+                      label="არ არის მითითებული"
+                      value={draft.salaryPeriod || 'ყველა'}
+                      options={['თვე', 'საათი', 'დღე', 'კვირა', 'წელი']}
+                      onChange={(v) =>
+                        change('salaryPeriod', v === 'ყველა' ? '' : v)
+                      }
+                    />
+                  </label>
+                  <label htmlFor="edit-mode">
+                    სამუშაო რეჟიმი
+                    <Choice
+                      id="edit-mode"
+                      label="არ არის მითითებული"
+                      value={draft.mode || 'ყველა'}
+                      options={['ადგილზე', 'დისტანციური', 'ჰიბრიდული']}
+                      onChange={(v) => change('mode', v === 'ყველა' ? '' : v)}
+                    />
+                  </label>
+                  <label>
+                    ბოლო ვადა
+                    <input
+                      type="date"
+                      value={draft.deadline}
+                      onChange={(e) => change('deadline', e.target.value)}
+                    />
+                  </label>
+                  <label className="full-width">
+                    აღწერა
+                    <textarea
+                      rows={13}
+                      value={draft.description}
+                      onChange={(e) => change('description', e.target.value)}
+                    />
+                  </label>
+                </div>
+                <CompanyEditor
+                  key={draft.company}
+                  name={draft.company}
+                  sourceLogo={
+                    draft.logoUrl ||
+                    selected.items.find((i) => i.raw?.logoUrl)?.raw.logoUrl
+                  }
+                />
+                {!!draft.facts?.length && (
+                  <details className="raw-details">
+                    <summary>
+                      დამატებითი პირობების რედაქტირება ({draft.facts.length})
+                    </summary>
+                    <div className="metadata-editor">
+                      {draft.facts.map((f, index) => (
+                        <div key={index}>
+                          <label>
+                            {f.label}
+                            <textarea
+                              rows={2}
+                              value={f.value}
+                              onChange={(e) =>
+                                change(
+                                  'facts',
+                                  draft.facts!.map((v, k) =>
+                                    k === index
+                                      ? { ...v, value: e.target.value }
+                                      : v,
+                                  ),
+                                )
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              change(
+                                'facts',
+                                draft.facts!.filter((_, k) => k !== index),
+                              )
+                            }
+                          >
+                            წაშლა
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                {!!draft.applicationLinks?.length && (
+                  <details className="raw-details">
+                    <summary>
+                      განცხადების ბმულები ({draft.applicationLinks.length})
+                    </summary>
+                    <div className="metadata-editor">
+                      {draft.applicationLinks.map((link, index) => (
+                        <div key={index}>
+                          <label>
+                            {link.label}
+                            <input
+                              value={link.url}
+                              onChange={(e) =>
+                                change(
+                                  'applicationLinks',
+                                  draft.applicationLinks!.map((v, k) =>
+                                    k === index
+                                      ? { ...v, url: e.target.value }
+                                      : v,
+                                  ),
+                                )
+                              }
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              change(
+                                'applicationLinks',
+                                draft.applicationLinks!.filter(
+                                  (_, k) => k !== index,
+                                ),
+                              )
+                            }
+                          >
+                            წაშლა
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                {!submission && (
+                  <details className="raw-details">
+                    <summary>წყაროს ბოლო ვერსიის შედარება</summary>
+                    {selected.items.map((i) => (
+                      <div key={i.id}>
+                        <p>
+                          {listingSourceNames[
+                            i.source_id as keyof typeof listingSourceNames
+                          ] || i.source_id}{' '}
+                          · შემოწმდა {time(i.last_checked_at)} · შემდეგი{' '}
+                          {time(i.next_check_at)}
+                          {i.failures
+                            ? ` · წარუმატებელი ცდა: ${i.failures}`
+                            : ''}
+                        </p>
+                        {i.error && <p className="notice">{i.error}</p>}
+                        {i.quality_warning && (
+                          <p className="notice">
+                            ხარისხის შემოწმება: {i.quality_warning}
+                          </p>
+                        )}
+                        {!!i.raw?.warnings?.length && (
+                          <div className="notice">
+                            {i.raw.warnings.map((w) => (
+                              <p key={w}>{w}</p>
+                            ))}
+                          </div>
+                        )}
+                        <CompanyLogo
+                          company={i.raw?.company || ''}
+                          url={i.raw?.logoUrl}
+                        />
+                        <h3>{i.raw?.title}</h3>
+                        <p>
+                          {i.raw?.salary} · {i.raw?.city} · {i.raw?.deadline}
+                        </p>
+                        <p className="raw-text">{i.raw?.description}</p>
+                        {!!i.raw?.facts?.length && (
+                          <div className="editor-extra-facts">
+                            {i.raw.facts.map((f) => (
+                              <div key={f.label}>
+                                <strong>{f.label}</strong>
+                                <span>{f.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <button
+                          className="secondary-button"
+                          disabled={
+                            busy || !i.raw || i.raw.company !== draft.company
+                          }
+                          onClick={() =>
+                            setDraft(
+                              (d) =>
+                                d && {
+                                  ...d,
+                                  logoUrl: i.raw.logoUrl || '',
+                                  employmentType: i.raw.employmentType || '',
+                                  facts: i.raw.facts || [],
+                                  applicationLinks:
+                                    i.raw.applicationLinks || [],
+                                  warnings: i.raw.warnings || [],
+                                },
+                            )
+                          }
+                        >
+                          მხოლოდ ლოგოსა და დამატებითი დეტალების ჩასმა
+                        </button>
+                        <button
+                          className="secondary-button"
+                          disabled={busy}
+                          onClick={() =>
+                            setConfirm({ action: 'apply-source', itemId: i.id })
+                          }
+                        >
+                          წყაროს ვერსიის ჩასმა რედაქციაში
+                        </button>
+                      </div>
+                    ))}
+                  </details>
+                )}
+              </EditorWrap>
               {selected.duplicates.length > 0 && (
                 <div className="duplicates">
                   <h3>შესაძლო დუბლიკატები</h3>
@@ -1538,51 +1698,77 @@ export default function AdminPanel() {
                   ))}
                 </div>
               )}
-              <div className="editor-actions">
-                <button
-                  className="secondary-button"
-                  disabled={busy}
-                  onClick={() => void act('save')}
-                >
-                  რედაქციის შენახვა
-                </button>
-                <button
-                  className="primary"
-                  disabled={busy}
-                  onClick={() => setConfirm({ action: 'publish' })}
-                >
-                  გამოქვეყნება <Check size={17} />
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() => setConfirm({ action: 'archive' })}
-                >
-                  არქივში გადატანა
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() => setConfirm({ action: 'reject' })}
-                >
-                  უარყოფა
-                </button>
-                {['archived', 'rejected'].includes(selected.status) && (
-                  <button disabled={busy} onClick={() => void act('restore')}>
-                    შემოტანილებში დაბრუნება
+              {submission && selected.status === 'pending' ? (
+                <div className="editor-actions submission-actions">
+                  <button
+                    className="primary"
+                    disabled={busy}
+                    onClick={() => setConfirm({ action: 'publish' })}
+                  >
+                    დადასტურება და გამოქვეყნება <Check size={17} />
                   </button>
-                )}
-                {selected.needs_review && selected.status === 'published' && (
+                  <button
+                    className="secondary-button"
+                    disabled={busy}
+                    onClick={() => setConfirm({ action: 'reject' })}
+                  >
+                    უარყოფა
+                  </button>
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() => void act('save')}
+                  >
+                    რედაქციის შენახვა
+                  </button>
+                </div>
+              ) : (
+                <div className="editor-actions">
+                  <button
+                    className="secondary-button"
+                    disabled={busy}
+                    onClick={() => void act('save')}
+                  >
+                    რედაქციის შენახვა
+                  </button>
+                  <button
+                    className="primary"
+                    disabled={busy}
+                    onClick={() => setConfirm({ action: 'publish' })}
+                  >
+                    გამოქვეყნება <Check size={17} />
+                  </button>
                   <button
                     disabled={busy}
-                    onClick={() => void act('dismiss-update')}
+                    onClick={() => setConfirm({ action: 'archive' })}
                   >
-                    არსებული ვერსიის დატოვება
+                    არქივში გადატანა
                   </button>
-                )}
-              </div>
+                  <button
+                    disabled={busy}
+                    onClick={() => setConfirm({ action: 'reject' })}
+                  >
+                    უარყოფა
+                  </button>
+                  {['archived', 'rejected'].includes(selected.status) && (
+                    <button disabled={busy} onClick={() => void act('restore')}>
+                      შემოტანილებში დაბრუნება
+                    </button>
+                  )}
+                  {selected.needs_review && selected.status === 'published' && (
+                    <button
+                      disabled={busy}
+                      onClick={() => void act('dismiss-update')}
+                    >
+                      არსებული ვერსიის დატოვება
+                    </button>
+                  )}
+                </div>
+              )}
               <p className="admin-helper">
-                ხელით შენახვა ამ ჩანაწერის ავტომატურ განახლებას აჩერებს. საჯარო
-                ვერსიის შესაცვლელად გამოიყენე გამოქვეყნება. შეტყობინებები არ
-                იგზავნება.
+                {submission
+                  ? 'დამსაქმებლის განცხადება ავტომატურად არასდროს ქვეყნდება. დამსაქმებელს შეტყობინება არ იგზავნება.'
+                  : 'ხელით შენახვა ამ ჩანაწერის ავტომატურ განახლებას აჩერებს. საჯარო ვერსიის შესაცვლელად გამოიყენე გამოქვეყნება. შეტყობინებები არ იგზავნება.'}
               </p>
             </div>
           )}
@@ -1600,12 +1786,16 @@ export default function AdminPanel() {
               {confirm?.action === 'bulk-publish'
                 ? 'ყველა შემოტანილი ვაკანსია გამოვაქვეყნოთ?'
                 : confirm?.action === 'publish'
-                  ? 'გამოვაქვეყნოთ ეს ვერსია?'
-                  : confirm?.action === 'merge'
-                    ? 'გავაერთიანოთ ვაკანსიები?'
-                    : confirm?.action === 'resume-automation'
-                      ? 'ავტომატურ მართვას დავუბრუნოთ?'
-                      : 'დაადასტურე ცვლილება'}
+                  ? submission
+                    ? 'დავადასტუროთ და გამოვაქვეყნოთ?'
+                    : 'გამოვაქვეყნოთ ეს ვერსია?'
+                  : confirm?.action === 'reject' && submission
+                    ? 'უარვყოფთ განცხადებას?'
+                    : confirm?.action === 'merge'
+                      ? 'გავაერთიანოთ ვაკანსიები?'
+                      : confirm?.action === 'resume-automation'
+                        ? 'ავტომატურ მართვას დავუბრუნოთ?'
+                        : 'დაადასტურე ცვლილება'}
             </DialogTitle>
             <DialogDescription>
               {confirm?.action === 'confirm-payment'
@@ -1613,7 +1803,7 @@ export default function AdminPanel() {
                 : confirm?.action === 'confirm-refund'
                   ? 'დაადასტურე მხოლოდ უკვე შესრულებული საბანკო დაბრუნება. ღილაკი თანხას არ რიცხავს.'
                   : confirm?.action === 'bulk-publish'
-                    ? 'გამოქვეყნდება ყველა მოლოდინში მყოფი ვაკანსიის შენახული რედაქცია, ყველა გვერდიდან და ფილტრის მიუხედავად. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
+                    ? 'გამოქვეყნდება წყაროებიდან შემოტანილი ყველა მოლოდინში მყოფი ვაკანსია, ყველა გვერდიდან და ფილტრის მიუხედავად. დამსაქმებლის განცხადებები ამაში არ შედის — ისინი ცალ-ცალკე დასტურდება. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
                     : confirm?.action === 'publish'
                       ? 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
                       : confirm?.action === 'apply-source'

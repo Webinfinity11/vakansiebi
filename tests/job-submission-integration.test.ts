@@ -102,6 +102,13 @@ void test(
       const reviewed = await adminJobs('review', key, 1, 'jobx');
       assert.equal(reviewed.jobs.length, 1);
       assert.equal(reviewed.jobs[0].requested_placement, 'vip');
+      const queued = await adminJobs('submissions', key);
+      assert.deepEqual(
+        queued.jobs.map((j) => j.id),
+        [ids[0]],
+      );
+      assert.ok(queued.jobs[0].submitted_at);
+      assert.ok(queued.counts.submissions >= 1);
       assert.ok(!(await bulkPublishCandidates()).some((v) => v.id === ids[0]));
       await assert.rejects(
         mutateJob({

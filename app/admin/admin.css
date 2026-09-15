@@ -543,3 +543,151 @@
 .reports-action { min-height: 44px; }
 .reports-error { color: #a32828; }
 .reports-status:empty { display: none; }
+
+/* Sections sit in a left column so the working list keeps the full width beside it. */
+.admin-page .admin-layout {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  align-items: start;
+  gap: 32px;
+  margin-top: 24px;
+}
+.admin-page .admin-tabs {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  height: auto !important;
+  min-height: 0 !important;
+  gap: 2px !important;
+  margin: 0;
+  padding: 8px !important;
+  border: 1px solid #e1e6ef;
+  border-radius: 12px;
+  background: #fff;
+}
+.admin-page .admin-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px !important;
+  border-radius: 8px;
+  color: #465570;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+}
+.admin-page .admin-tabs button::after {
+  display: none;
+}
+.admin-page .admin-tabs button:hover {
+  background: #f3f6fb;
+}
+.admin-page .admin-tabs button[data-active] {
+  background: #eaf0ff;
+  color: #1f3f96;
+  font-weight: 650;
+}
+.admin-page .admin-tabs button span {
+  flex: 1;
+}
+.admin-page .admin-tabs button b {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #2457e6;
+  color: #fff;
+  font-size: 11px;
+  text-align: center;
+}
+.admin-page .admin-layout > [role='tabpanel'] {
+  min-width: 0;
+}
+.admin-section-heading {
+  margin-bottom: 18px;
+}
+.admin-section-heading h2 {
+  font-size: 20px;
+  color: #172e50;
+  margin-bottom: 6px;
+}
+.admin-section-heading p {
+  max-width: 640px;
+  color: #52647e;
+  font-size: 13px;
+  line-height: 1.8;
+}
+@media (max-width: 900px) {
+  .admin-page .admin-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .admin-page .admin-tabs {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-page .admin-tabs button {
+    min-height: 44px;
+    font-size: 12px;
+  }
+}
+
+/* An employer submission is read as sent, then approved or rejected by hand. */
+.submission-summary {
+  margin-bottom: 20px;
+}
+.submission-summary dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+  margin: 0 0 18px;
+}
+.submission-summary dt {
+  color: #66738a;
+  font-size: 11px;
+}
+.submission-summary dd {
+  color: #1d2b42;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.submission-summary dd span {
+  display: block;
+  font-weight: 500;
+}
+.submission-summary .full-width {
+  grid-column: 1 / -1;
+}
+.submission-summary h3 {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.submission-summary .raw-text {
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.8;
+  padding: 14px;
+  border-radius: 8px;
+  background: #f5f7fb;
+}
+.submission-edit > summary + * {
+  margin-top: 16px;
+}
+.submission-actions .primary {
+  flex: 1;
+  justify-content: center;
+  min-height: 44px;
+}
+@media (max-width: 560px) {
+  .submission-summary dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
