@@ -104,7 +104,7 @@ import {
 import { CompanyIdentity } from './company-identity';
 import { ShortcutMark } from './shortcut-mark';
 import { useVacancyActivity } from './use-vacancy-activity';
-import { usePersonalSpace } from './personal-space';
+import { PersonalSpace, usePersonalSpace } from './personal-space';
 import type { SearchFilters } from '@/lib/personal-space';
 import type { PublicJob as Job } from '@/lib/types';
 import { categories, listingSourceNames } from '@/lib/types';
@@ -391,6 +391,7 @@ export default function JobBoard({
   const activity = useVacancyActivity();
   const excluded = demo ? '' : activity.hidden.map((item) => item.id).join(',');
   const personal = usePersonalSpace();
+  const [personalOpen, setPersonalOpen] = useState(false);
   const searchBeforeSaved = useRef<SearchFilters | null>(null);
   const applicationsById = useMemo(
     () =>
@@ -1674,6 +1675,15 @@ export default function JobBoard({
                       <span className="share-label">ძიების გაზიარება</span>
                     </button>
                   )}
+                  <PersonalSpace
+                    space={personal}
+                    filters={currentSearch}
+                    onApply={applySearch}
+                    active={activeCount > 0}
+                    disabled={demo || savedOnly}
+                    open={personalOpen}
+                    setOpen={setPersonalOpen}
+                  />
                 </div>
               </div>
               {!!activeCount && (
