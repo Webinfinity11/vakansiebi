@@ -83,6 +83,8 @@ import {
   Scale,
   Scissors,
   Ellipsis,
+  Crown,
+  Gem,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -277,6 +279,11 @@ const JobCard = memo(function JobCard({
                 className={`placement-badge placement-badge-${j.placement.tier}`}
                 title="გამორჩეული განთავსება"
               >
+                {j.placement.tier === 'premium' ? (
+                  <Gem size={11} aria-hidden="true" />
+                ) : (
+                  <Crown size={11} aria-hidden="true" />
+                )}
                 {j.placement.tier === 'premium' ? 'პრემიუმი' : 'VIP'}
               </span>
             )}
@@ -334,6 +341,23 @@ const JobCard = memo(function JobCard({
             <span className={`job-when${urgent ? ' is-urgent' : ''}`}>
               {when}
             </span>
+          )}
+          {j.placement?.priority && (
+            <Link
+              className="featured-card-open"
+              href={vacancyPath(j.id, { preview: demo, from: returnPath })}
+              prefetch={false}
+              aria-label={`${j.title} — ვაკანსიის ნახვა`}
+              onClick={(event) => {
+                if (swipe.suppressClick()) event.preventDefault();
+              }}
+              onNavigate={(event) => {
+                if (swipe.suppressClick()) event.preventDefault();
+                else onOpen(j);
+              }}
+            >
+              ვაკანსიის ნახვა <ArrowUpRight size={16} aria-hidden="true" />
+            </Link>
           )}
         </div>
         <div className="job-side">
