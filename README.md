@@ -126,6 +126,16 @@ GitHub schedules may be delayed. In public repositories, schedules disable after
 
 `Webinfinity11/vakansiebi` რეპოზიტორიის `main` ბრენჩზე ატვირთვა ავტომატურად აახლებს `infinity-solutions/vakansiebi`-ის Production გარემოს და `jobx.ge`-ს. განთავსების შემდეგ გადაამოწმე Vercel-ის `Ready` სტატუსი და `https://jobx.ge/api/health`-ის `{"status":"ok"}` პასუხი. `APP_URL` უნდა იყოს `https://jobx.ge`; გარემოს პარამეტრების ცვლილება ახალი განთავსების შემდეგ მოქმედებს. CLI-ის გამოყენებამდე გადაამოწმე ანგარიში და პროექტი — ლოკალური `.vercel/project.json` შეიძლება ძველ სატესტო პროექტზე იყოს მიბმული.
 
+## Google Analytics და Search Console
+
+`jobx.ge`-ის GA4 ანგარიშია **JOBX** (`408126196`), property — **JOBX — jobx.ge** (`554293924`), ვებნაკადი — **JOBX Website** (`15781177095`), Measurement ID — `G-9S8J0W7QXM`. დროის სარტყელია საქართველო (UTC+4), ვალუტა — GEL.
+
+Search Console-ის property: `https://jobx.ge/`. საკუთრებას ადასტურებს root metadata-ს `google-site-verification`; მისი წაშლა ვერიფიკაციას გააუქმებს. Sitemap: `https://jobx.ge/sitemap.xml`.
+
+`app/google-analytics.tsx` ტვირთავს Google tag-ს მხოლოდ production `https://jobx.ge`-ის საჯარო გვერდებზე. `page_view` იგზავნება ერთხელ თითო გვერდზე, Next.js-ის ნავიგაციის დროსაც. URL-ის query/hash და referrer-ის კერძო გზები იშლება. ადმინი, ინვოისები და preview გამორიცხულია; ფორმების ველები, აპლიკანტის კონტაქტები და შიდა ძიების ტექსტი არ იგზავნება. სარეკლამო პერსონალიზაცია და Google signals გამორთულია.
+
+ვებნაკადის **Enhanced measurement გამორთული უნდა დარჩეს**: გვერდების ნახვებს კოდი მართავს. მისი ჩართვა browser-history page views-ს გააორმაგებს და შეიძლება შეაგროვოს გაუფილტრავი URL-ები ან ფორმების მეტამონაცემები. სტანდარტული სესიები, ვიზიტორები და ჩართულობა GA4-ს რჩება. ადგილობრივი `/api/events` სტატისტიკა დამოუკიდებლად მუშაობს.
+
 ## Railway-ისთვის მომზადებული სტრუქტურა
 
 Railway-ზე სერვისი ჯერ არ არის გაშვებული. ქვემოთ მოცემული კონფიგურაცია მომავალში ცალკე პარსერის ან სრული გარემოს განსათავსებლადაა მომზადებული.

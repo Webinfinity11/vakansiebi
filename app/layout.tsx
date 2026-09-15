@@ -1,5 +1,7 @@
 import { siteUrl } from '@/lib/seo';
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
+import { GoogleAnalytics } from './google-analytics';
 import './globals.css';
 import './board.css';
 import './phone.css';
@@ -62,7 +64,12 @@ export default function RootLayout({
         {/* Before the first paint: a themed page never flashes the other theme. */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Suspense fallback={null}>
+          <GoogleAnalytics measurementId="G-9S8J0W7QXM" />
+        </Suspense>
+      </body>
     </html>
   );
 }
