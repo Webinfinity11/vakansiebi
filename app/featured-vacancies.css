@@ -88,6 +88,92 @@
   font-weight: 500;
   line-height: 1;
 }
+/* VIP gets more room for the role and pay, with the same quiet styling. */
+.board-shell.refined-board .featured-vip {
+  margin-bottom: 28px;
+}
+.board-shell.refined-board .featured-vip > header {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+.board-shell.refined-board .featured-vip h3 {
+  font-size: 16px;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .featured-vip
+  .job-card {
+  min-height: 184px;
+  padding: 30px 28px;
+  gap: 20px;
+  border-left-width: 3px;
+  border-radius: 8px;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .featured-vip
+  .job-info {
+  padding-left: 72px;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .featured-vip
+  .job-title {
+  font-size: 21px;
+  line-height: 1.5;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .featured-vip
+  .job-company {
+  margin-top: 8px;
+  gap: 12px;
+}
+.board-shell.refined-board .featured-vip .company-identity {
+  font-size: 14px;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .featured-vip
+  .job-company
+  .company-avatar {
+  top: 30px;
+  left: 28px;
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .featured-vip
+  .job-meta {
+  margin-top: 18px;
+  gap: 8px 16px;
+  font-size: 13px;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .featured-vip
+  .category-tag {
+  font-size: 13px;
+}
+.board-shell.editorial-board.crafted-board.refined-board .featured-vip .salary {
+  font-size: 17px;
+}
+.board-shell.refined-board .featured-vip .job-conditions {
+  gap: 12px;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .featured-vip
+  .job-when {
+  font-size: 12px;
+}
+@media (min-width: 761px) and (max-width: 1000px) {
+  .board-shell.refined-board .featured-vip .job-conditions {
+    padding-left: 72px;
+  }
+}
+@media (min-width: 1001px) {
+  .board-shell.editorial-board.crafted-board.refined-board
+    .featured-vip
+    .job-card[data-long-pay]
+    .job-conditions {
+    padding-left: 72px;
+  }
+}
 @media (max-width: 760px) {
   .board-shell.refined-board .featured-vacancies {
     margin-bottom: 12px;
@@ -100,6 +186,56 @@
   }
   .company-fallback-initial {
     font-size: 14px;
+  }
+  .board-shell.refined-board .featured-vip {
+    margin-bottom: 20px;
+  }
+  .board-shell.refined-board .featured-vip > header {
+    margin-bottom: 12px;
+  }
+  .board-shell.refined-board .featured-vip h3 {
+    font-size: 15px;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .featured-vip
+    .job-card {
+    min-height: 260px;
+    padding: 24px 20px;
+    gap: 18px 8px;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .featured-vip
+    .job-info {
+    padding-left: 0;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .featured-vip
+    .job-title {
+    font-size: 18px;
+    line-height: 1.65;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .featured-vip
+    .job-company {
+    margin-top: 12px;
+    gap: 8px;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .featured-vip
+    .job-company
+    .company-avatar {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .featured-vip
+    .salary {
+    font-size: 16px;
+  }
+  .board-shell.refined-board .featured-vip .job-conditions {
+    padding: 14px 0 0;
+    border-top: 1px solid var(--featured-border);
   }
 }
 :root[data-theme='dark'] .board-shell.refined-board .featured-vacancies {
