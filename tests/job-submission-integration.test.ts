@@ -108,6 +108,7 @@ void test(
         [ids[0]],
       );
       assert.ok(queued.jobs[0].submitted_at);
+      assert.equal(queued.jobs[0].vip_available, true);
       assert.ok(queued.counts.submissions >= 1);
       assert.equal((await adminJobs('submissions-all', key)).total, 1);
       assert.equal((await adminJobs('submissions-published', key)).total, 0);
@@ -170,6 +171,14 @@ void test(
         key,
       );
       ids.push(second.id);
+      const secondQueued = await adminJobs('submissions', key + ' SECOND');
+      assert.equal(secondQueued.jobs[0].vip_available, false);
+      const firstAgain = await adminJobs('submissions-published', key);
+      assert.equal(
+        firstAgain.jobs.find((j) => j.id === ids[0])?.vip_available,
+        true,
+        'the vacancy holding the VIP still counts as eligible for it',
+      );
       await assert.rejects(
         mutateJob({
           id: second.id,

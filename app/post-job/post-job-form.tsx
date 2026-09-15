@@ -32,7 +32,7 @@ import {
 
 const draftKey = 'jobx-post-job-draft-v2';
 const initial = {
-  placement: 'standard',
+  placement: 'vip',
   title: '',
   company: '',
   logo: '',

@@ -730,3 +730,20 @@
     min-height: 44px;
   }
 }
+.placement-choice label {
+  display: block;
+  margin-top: 10px;
+  font-weight: 600;
+}
+.placement-choice select {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  min-height: 42px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid #d6c79a;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+}

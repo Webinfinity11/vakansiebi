@@ -112,6 +112,14 @@ async function request(url: string, body?: unknown) {
   if (!r.ok) throw Error(d.error || 'ოპერაცია ვერ შესრულდა');
   return d;
 }
+/* An active promotion keeps its tier and a paid request stays premium; otherwise an employer's
+   vacancy is offered the free VIP whenever the company has not used it yet. */
+function defaultPlacement(j: AdminJob): PlacementTier {
+  if (j.placement_expires_at) return j.placement_tier;
+  if (j.requested_placement === 'premium') return 'premium';
+  if (j.submitted_at) return j.vip_available ? 'vip' : 'standard';
+  return j.requested_placement || 'standard';
+}
 /* JOBX's own vacancies, sent through the posting form, kept apart from the imported catalogue. */
 const submissionViews = [
   ['submissions', 'დადასტურებას ელოდება'],
@@ -148,7 +156,7 @@ function SubmissionSummary({ job, draft }: { job: AdminJob; draft: Vacancy }) {
     ['ანაზღაურება', draft.salary],
     ['ბოლო ვადა', draft.deadline],
     [
-      'განთავსება',
+      'მოთხოვნილი განთავსება',
       job.requested_placement ? placementLabels[job.requested_placement] : '',
     ],
     ['გაგზავნდა', time(job.submitted_at || job.created_at)],
@@ -370,11 +378,7 @@ export default function AdminPanel() {
   const openJob = (j: AdminJob) => {
     setSelected(j);
     setDraft(j.draft);
-    setPlacement(
-      j.placement_expires_at
-        ? j.placement_tier
-        : j.requested_placement || 'standard',
-    );
+    setPlacement(defaultPlacement(j));
     setError('');
   };
   const submission = !!selected?.submitted_at;
@@ -1241,57 +1245,48 @@ export default function AdminPanel() {
           {selected && draft && (
             <div className="edit-body">
               {submission && <SubmissionSummary job={selected} draft={draft} />}
-              {/* A standard request has nothing to decide here; only a requested or active
-                  VIP/premium placement needs the tier choice. */}
-              {selected.requested_placement &&
-                (selected.requested_placement !== 'standard' ||
-                  selected.placement_expires_at) && (
-                  <section className="notice">
-                    <h3>
-                      დამსაქმებლის განცხადება ·{' '}
-                      {placementLabels[selected.requested_placement]}
-                    </h3>
-                    <p>
-                      {selected.requested_placement === 'premium'
-                        ? 'პრემიუმი — 20 ₾ / 14 დღე, აქტიურდება ჩარიცხვის დადასტურების შემდეგ.'
-                        : 'პირველი VIP უფასოა 14 დღით — ერთხელ თითო კომპანიაზე.'}{' '}
-                      გადაამოწმე დამსაქმებლის ვინაობა და მისი უფლებამოსილება;
-                      განსხვავებული სახელით განმეორებითი საჩუქარი არ დაუშვა.
-                    </p>
-                    <label htmlFor="admin-placement">
-                      განთავსება დამტკიცებისას
-                    </label>
-                    <select
-                      id="admin-placement"
-                      value={placement}
-                      disabled={busy}
-                      onChange={(e) =>
-                        setPlacement(e.target.value as PlacementTier)
-                      }
-                    >
-                      {placementTiers
-                        .filter(
-                          (t) =>
-                            placementTiers.indexOf(t) <=
-                            placementTiers.indexOf(
-                              selected.requested_placement || 'standard',
-                            ),
-                        )
-                        .map((t) => (
-                          <option key={t} value={t}>
-                            {placementLabels[t]}
-                          </option>
-                        ))}
-                    </select>
-                    {selected.placement_expires_at && (
-                      <p>
-                        გამოკვეთის ბოლო ვადა:{' '}
-                        {time(selected.placement_expires_at)}. რედაქტირება ვადას
-                        არ გააგრძელებს.
-                      </p>
-                    )}
-                  </section>
-                )}
+              {submission && (
+                <section className="notice placement-choice">
+                  <h3>განთავსება</h3>
+                  <p>
+                    {selected.placement_expires_at
+                      ? `${placementLabels[selected.placement_tier]} აქტიურია ${time(selected.placement_expires_at)}-მდე. ხელახლა დადასტურება ვადას არ გააგრძელებს.`
+                      : selected.vip_available
+                        ? 'ამ კომპანიას უფასო VIP (14 დღე) ჯერ არ გამოუყენებია — VIP წინასწარ მოინიშნა. დაადასტურე, ან აირჩიე სტანდარტული.'
+                        : 'ამ კომპანიას უფასო VIP უკვე გამოყენებული აქვს, ასე რომ სტანდარტული მოინიშნა.'}
+                    {selected.requested_placement === 'premium' &&
+                      ' დამსაქმებელმა პრემიუმი მოითხოვა — 20 ₾ / 14 დღე, აქტიურდება ჩარიცხვის დადასტურების შემდეგ.'}
+                  </p>
+                  <label htmlFor="admin-placement">
+                    განთავსება დამტკიცებისას
+                  </label>
+                  <select
+                    id="admin-placement"
+                    value={placement}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setPlacement(e.target.value as PlacementTier)
+                    }
+                  >
+                    {placementTiers
+                      .filter(
+                        (t) =>
+                          t === 'standard' ||
+                          t === placement ||
+                          (t === 'vip' && selected.vip_available) ||
+                          (t === 'premium' && !!selected.invoice),
+                      )
+                      .map((t) => (
+                        <option key={t} value={t}>
+                          {placementLabels[t]}
+                          {t === 'vip' && !selected.placement_expires_at
+                            ? ' · უფასოდ 14 დღე'
+                            : ''}
+                        </option>
+                      ))}
+                  </select>
+                </section>
+              )}
               {selected.invoice && (
                 <section className="notice">
                   <h3>ინვოისი · {invoiceStatuses[selected.invoice.status]}</h3>

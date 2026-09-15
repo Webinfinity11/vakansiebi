@@ -4,6 +4,10 @@ import { ApiError } from './auth';
 import { companyKey } from '../company-key';
 import { introductoryDays, type PlacementTier } from '../placement';
 
+/** The free VIP is counted once per company under this normalised name. */
+export const bonusCompanyKey = (company: string) =>
+  companyKey(company).replace(/^(?:შპს|სს|llc|ltd)(?=.{3})/u, '');
+
 /** Called inside the moderation transaction, after the vacancy has passed publication checks. */
 export async function approvePlacement(
   c: PoolClient,
@@ -82,7 +86,7 @@ export async function approvePlacement(
       'ამ განცხადების საჩუქარი უკვე გამოყენებულია. ხელახლა გააქტიურება არ ხდება.',
     );
   }
-  const key = companyKey(company).replace(/^(?:შპს|სს|llc|ltd)(?=.{3})/u, '');
+  const key = bonusCompanyKey(company);
   if (key.length < 2) throw new ApiError('მიუთითე კომპანიის სრული სახელი');
   await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
     `placement-company:${key}`,

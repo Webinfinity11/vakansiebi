@@ -1,5 +1,6 @@
 import { confirmInvoice, cancelUnusedInvoice } from './billing';
 import { placementTiers } from '../placement';
+import { bonusCompanyKey } from './job-placement';
 import { approvePlacement } from './job-placement';
 import { employerlessSources, privateListingLabel } from '../types';
 import { z } from 'zod';
@@ -28,7 +29,8 @@ import { resolveCompanyLogos } from './company-logos';
 import { employerPages, employerPagesIfReady } from './employers';
 import { createPublicJobsCache, publicJobsCacheKey } from './jobs-cache';
 
-const publicResponses = createPublicJobsCache<Awaited<ReturnType<typeof loadPublicJobs>>>();
+const publicResponses =
+  createPublicJobsCache<Awaited<ReturnType<typeof loadPublicJobs>>>();
 // Benchmarks and snapshot-write integration tests can explicitly measure a miss.
 export function clearPublicJobsCache() {
   publicResponses.clear();
@@ -335,6 +337,30 @@ export async function adminJobs(
       FROM jobs`,
     )
   ).rows[0];
+  // An employer's vacancy is offered the free VIP by default, so the editor needs to know
+  // up front whether this company has already used it.
+  const keys = rows
+    .filter((r) => r.submitted_at)
+    .map((r) => bonusCompanyKey(r.draft.company || ''));
+  const used = new Set(
+    keys.length
+      ? (
+          await db().query(
+            'SELECT job_id,bonus_company_key FROM job_submissions WHERE bonus_company_key=ANY($1)',
+            [keys],
+          )
+        ).rows.map((r) => r.bonus_company_key + '|' + r.job_id)
+      : [],
+  );
+  for (const r of rows)
+    if (r.submitted_at) {
+      const key = bonusCompanyKey(r.draft.company || '');
+      r.vip_available =
+        key.length >= 2 &&
+        ![...used].some(
+          (u) => u.startsWith(key + '|') && !u.endsWith('|' + r.id),
+        );
+    }
   return { jobs: rows, total, counts };
 }
 export async function bulkPublishCandidates() {
