@@ -1,0 +1,9 @@
+@media print {
+  :root[data-theme='dark'] .invoice-page,
+  :root[data-theme='dark'] .invoice-paper,
+  :root[data-theme='dark'] .invoice-paper * {
+    color: #19253c !important;
+    background: #fff !important;
+    border-color: #ccd4e2 !important;
+  }
+}

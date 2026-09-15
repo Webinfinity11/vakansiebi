@@ -26,7 +26,6 @@ import {
   listLinks,
   parseDetail,
   additionalListing,
-  sourceLockIds,
   UnavailableVacancy,
   type ListedLink,
 } from './adapters';
@@ -37,6 +36,11 @@ import {
   deferredSourceFailure,
 } from './http';
 import { discoverItems, stageVacancy } from './importer';
+import {
+  acquireSourceLease,
+  releaseSourceLease,
+  startLeaseHeartbeat,
+} from './source-lease';
 /** Wall-clock budget for one source run; the workflow's job timeout must stay above it. */
 export function runBudgetMs() {
   const minutes = Number(process.env.SCRAPE_BUDGET_MINUTES);
@@ -58,8 +62,9 @@ export async function runSource(
   const activeConfig = getSourceConfig(source);
   const startedAt = Date.now();
   const budgetMs = runBudgetMs();
-  const lock = await db().connect();
-  const lockId = sourceLockIds[source];
+  const ttlMs = budgetMs + 5 * 60_000;
+  const owner = randomUUID();
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
   limit = Math.max(1, Math.min(1000, Math.floor(limit) || 20));
   let locked = false;
   const runId = randomUUID();
@@ -74,10 +79,9 @@ export async function runSource(
     qualityHeld = 0,
     budgetExhausted = false;
   try {
-    locked = (
-      await lock.query('SELECT pg_try_advisory_lock($1) AS locked', [lockId])
-    ).rows[0].locked;
+    locked = await acquireSourceLease(source, owner, ttlMs);
     if (!locked) return { skipped: true };
+    heartbeat = startLeaseHeartbeat(source, owner, ttlMs);
     const config = (
       await db().query('SELECT * FROM sources WHERE id=$1', [source])
     ).rows[0];
@@ -531,7 +535,7 @@ export async function runSource(
     }
     return { source, error, deferred, consecutiveFailures };
   } finally {
-    if (locked) await lock.query('SELECT pg_advisory_unlock($1)', [lockId]);
-    lock.release();
+    clearInterval(heartbeat);
+    if (locked) await releaseSourceLease(source, owner);
   }
 }

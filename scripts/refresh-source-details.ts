@@ -1,10 +1,17 @@
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import { completeDescription } from '../worker/linked-description';
 import { db } from '../lib/server/db';
-import { configs, parseDetail, sourceLockIds } from '../worker/adapters';
+import { configs, parseDetail } from '../worker/adapters';
 import { sourceFetch } from '../worker/http';
 import { stageVacancy } from '../worker/importer';
 import type { SourceId } from '../lib/types';
+import { runBudgetMs } from '../worker/run';
+import {
+  acquireSourceLease,
+  releaseSourceLease,
+  startLeaseHeartbeat,
+} from '../worker/source-lease';
 // Explicit bounded maintenance: update source snapshots only, never editorial or published fields.
 const limit = Math.max(
   1,
@@ -25,20 +32,19 @@ try {
   for (const source of (requested
     ? [requested]
     : Object.keys(configs)) as SourceId[]) {
-    const client = await db().connect();
+    const ttlMs = runBudgetMs() + 5 * 60_000;
+    const owner = randomUUID();
+    let heartbeat: ReturnType<typeof setInterval> | undefined;
     let locked = false;
     try {
-      locked = (
-        await client.query('SELECT pg_try_advisory_lock($1) AS locked', [
-          sourceLockIds[source],
-        ])
-      ).rows[0].locked;
+      locked = await acquireSourceLease(source, owner, ttlMs);
       if (!locked) {
         console.log(JSON.stringify({ source, skipped: 'worker is active' }));
         continue;
       }
+      heartbeat = startLeaseHeartbeat(source, owner, ttlMs);
       const items = (
-        await client.query(
+        await db().query(
           'SELECT id,url,raw,failures FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND ($3::uuid IS NULL OR job_id=$3::uuid) ORDER BY last_checked_at NULLS FIRST,id LIMIT $2',
           [source, limit, jobId || null],
         )
@@ -65,11 +71,8 @@ try {
         }
       }
     } finally {
-      if (locked)
-        await client.query('SELECT pg_advisory_unlock($1)', [
-          sourceLockIds[source],
-        ]);
-      client.release();
+      clearInterval(heartbeat);
+      if (locked) await releaseSourceLease(source, owner);
     }
   }
 } finally {

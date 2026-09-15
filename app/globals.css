@@ -1450,20 +1450,47 @@ footer > span:last-child {
 }
 
 /* Together: Georgian type, quiet surfaces, forest-green identity. */
+/* Complementary ranges keep the full font available without downloading it
+   for Georgian, Latin, Cyrillic and the common symbols in the small subset. */
 @font-face {
   font-family: 'FiraGO';
   src: url('/fonts/FiraGO-Regular.woff2') format('woff2');
   font-style: normal;
   font-weight: 400;
   font-display: swap;
+  unicode-range: U+0250-03FF, U+0460-109F, U+1100-1C8F, U+1CC0-1FFF,
+    U+2070-209F, U+20D0-2115, U+2117-218F, U+2200-2211, U+2213-221D, U+221F-25B7,
+    U+25B9-25BB, U+25BD, U+25BF-2CFF, U+2D30-10FFFF;
 }
-
+@font-face {
+  font-family: 'FiraGO';
+  src: url('/fonts/FiraGO-Regular-subset.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0000-024F, U+0400-045F, U+10A0-10FF, U+1C90-1CBF,
+    U+2000-206F, U+20A0-20CF, U+2116, U+2190-21FF, U+2212, U+221E, U+25B8,
+    U+25BC, U+25BE, U+2D00-2D2F;
+}
 @font-face {
   font-family: 'FiraGO';
   src: url('/fonts/FiraGO-SemiBold.woff2') format('woff2');
   font-style: normal;
   font-weight: 600;
   font-display: swap;
+  unicode-range: U+0250-03FF, U+0460-109F, U+1100-1C8F, U+1CC0-1FFF,
+    U+2070-209F, U+20D0-2115, U+2117-218F, U+2200-2211, U+2213-221D, U+221F-25B7,
+    U+25B9-25BB, U+25BD, U+25BF-2CFF, U+2D30-10FFFF;
+}
+@font-face {
+  font-family: 'FiraGO';
+  src: url('/fonts/FiraGO-SemiBold-subset.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  unicode-range: U+0000-024F, U+0400-045F, U+10A0-10FF, U+1C90-1CBF,
+    U+2000-206F, U+20A0-20CF, U+2116, U+2190-21FF, U+2212, U+221E, U+25B8,
+    U+25BC, U+25BE, U+2D00-2D2F;
 }
 @font-face {
   font-family: 'FiraGO';
@@ -1471,6 +1498,31 @@ footer > span:last-child {
   font-style: normal;
   font-weight: 700;
   font-display: swap;
+  unicode-range: U+0250-03FF, U+0460-109F, U+1100-1C8F, U+1CC0-1FFF,
+    U+2070-209F, U+20D0-2115, U+2117-218F, U+2200-2211, U+2213-221D, U+221F-25B7,
+    U+25B9-25BB, U+25BD, U+25BF-2CFF, U+2D30-10FFFF;
+}
+@font-face {
+  font-family: 'FiraGO';
+  src: url('/fonts/FiraGO-Bold-subset.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0000-024F, U+0400-045F, U+10A0-10FF, U+1C90-1CBF,
+    U+2000-206F, U+20A0-20CF, U+2116, U+2190-21FF, U+2212, U+221E, U+25B8,
+    U+25BC, U+25BE, U+2D00-2D2F;
+}
+/* Calculated from FiraGO/Arial x-height and FiraGO hhea metrics.
+   Reproduce with scripts/subset-fonts.sh. */
+@font-face {
+  font-family: 'FiraGO Fallback';
+  src: local('Arial');
+  font-style: normal;
+  font-weight: 400 700;
+  size-adjust: 101.6286%;
+  ascent-override: 92.0016%;
+  descent-override: 26.0753%;
+  line-gap-override: 0%;
 }
 
 :root {
@@ -1480,11 +1532,11 @@ footer > span:last-child {
   --border: #e4e4e5;
   --background: #f9f9f9;
   --foreground: #27292c;
-  --font-geist-sans: 'FiraGO';
+  --font-geist-sans: 'FiraGO', 'FiraGO Fallback';
   --font-geist-mono: monospace;
 }
 body {
-  font-family: 'FiraGO', Arial, sans-serif;
+  font-family: 'FiraGO', 'FiraGO Fallback', Arial, sans-serif;
   color: #2c2e33;
   background: #f9f9f9;
 }
@@ -3604,7 +3656,7 @@ button,
 .secondary-button,
 .masthead nav a,
 .saved-nav {
-  font-family: 'FiraGO', Arial, sans-serif;
+  font-family: 'FiraGO', 'FiraGO Fallback', Arial, sans-serif;
   font-feature-settings: 'case' on;
 }
 

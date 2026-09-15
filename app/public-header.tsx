@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState, type MouseEvent } from 'react';
-import { Bookmark, Search } from 'lucide-react';
+import { Bookmark, Search, Plus } from 'lucide-react';
 import { Brand } from './brand';
 import { ThemeToggle } from './theme-toggle';
 
@@ -98,6 +98,16 @@ export function PublicHeader({
             <b>{savedCount ?? storedCount}</b>
           </Link>
 
+          <Link
+            href="/post-job"
+            prefetch={false}
+            className="header-post-job"
+            aria-label="განცხადების დამატება"
+            title="განცხადების დამატება"
+          >
+            <Plus size={19} />
+            <span>განცხადების დამატება</span>
+          </Link>
           <ThemeToggle />
         </div>
       </div>

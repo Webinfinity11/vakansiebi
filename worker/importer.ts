@@ -14,6 +14,8 @@ import { assessVacancy } from './quality';
 export function hashVacancy(v: Vacancy) {
   return createHash('sha256').update(JSON.stringify(v)).digest('hex');
 }
+const clearedQualitySql = `quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,
+  quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0`;
 export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
   return transaction(async (c) => {
     const item = (
@@ -60,11 +62,6 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
       }
       return 'quality_held';
     }
-    await c.query(
-      `UPDATE source_items SET quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,
-      quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0 WHERE id=$1`,
-      [itemId],
-    );
     // A catalogue refresh explicitly requests current source text, including older paused snapshots.
     // A newer editor change wins over the queued refresh request.
     if (
@@ -92,7 +89,9 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
     const hash = hashVacancy(v);
     if (!item.job_id && v.deadline && v.deadline < tbilisiDate()) {
       await c.query(
-        "UPDATE source_items SET raw=$2,content_hash=$3,last_checked_at=now(),next_check_at=now()+interval '7 days',error=NULL,failures=0 WHERE id=$1",
+        `UPDATE source_items SET raw=CASE WHEN raw IS DISTINCT FROM $2::jsonb THEN $2::jsonb ELSE raw END,
+        content_hash=$3,last_checked_at=now(),next_check_at=now()+interval '7 days',error=NULL,failures=0,
+        ${clearedQualitySql} WHERE id=$1`,
         [itemId, v, hash],
       );
       return 'expired';
@@ -141,9 +140,14 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
       );
       outcome = 'changed';
     }
+    // Clear recovered quality state in the necessary freshness update, saving a
+    // query and tuple version. Reuse unchanged raw's TOAST value instead of
+    // storing another copy of a large description on every successful recheck.
     // Existing editorial draft and published snapshot are never overwritten by crawling.
     await c.query(
-      "UPDATE source_items SET job_id=$2,raw=$3,content_hash=$4,last_checked_at=now(),last_verified_at=now(),refresh_completed_at=CASE WHEN refresh_requested_at IS NOT NULL THEN now() ELSE refresh_completed_at END,next_check_at=now()+($5*interval '1 hour'),error=NULL,failures=0 WHERE id=$1",
+      `UPDATE source_items SET job_id=$2,raw=CASE WHEN raw IS DISTINCT FROM $3::jsonb THEN $3::jsonb ELSE raw END,
+      content_hash=$4,last_checked_at=now(),last_verified_at=now(),refresh_completed_at=CASE WHEN refresh_requested_at IS NOT NULL THEN now() ELSE refresh_completed_at END,
+      next_check_at=now()+($5*interval '1 hour'),error=NULL,failures=0,${clearedQualitySql} WHERE id=$1`,
       [itemId, jobId, v, hash, hours],
     );
     if (outcome !== 'unchanged')

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readSearch, searchParams } from '../lib/search-state';
-import { subcategoryFor } from '../lib/subcategories';
+import { subcategories, subcategoryFor } from '../lib/subcategories';
 import {
   rememberBoard,
   takeBoard,
@@ -35,6 +35,21 @@ void test('subcategory survives sharing but cannot escape its parent category', 
   assert.doesNotMatch('ოფის მენეჯერი', new RegExp(rule.pattern, 'i'));
 });
 
+void test('every taxonomy child survives a shared URL and is cleared for another parent', () => {
+  for (const item of subcategories) {
+    const params = new URLSearchParams({
+      category: item.category,
+      subcategory: item.id,
+    });
+    assert.equal(
+      readSearch(searchParams(readSearch(params))).subcategory,
+      item.id,
+    );
+    params.set('category', 'სხვა');
+    assert.equal(readSearch(params).subcategory, undefined);
+  }
+});
+
 void test('return snapshot is bounded, expires and never crosses search contexts', () => {
   const snapshot = {
     key: 'sales',
@@ -45,11 +60,14 @@ void test('return snapshot is bounded, expires and never crosses search contexts
     total: 60,
     pages: 3,
     search: null,
+    companyLinksPending: false,
   };
   rememberBoard(snapshot, 1000);
   assert.equal(takeBoard('different', 1, 2000), null);
   assert.equal(takeBoard('sales', 2, 2000), null);
-  assert.equal(takeBoard('sales', 1, 2000)?.through, 3);
+  const restored = takeBoard('sales', 1, 2000);
+  assert.equal(restored?.through, 3);
+  assert.equal(restored?.companyLinksPending, false);
   assert.equal(takeBoard('sales', 1, 2000), null);
   rememberBoard(snapshot, 1000);
   assert.equal(takeBoard('sales', 1, 121001), null);

@@ -1,5 +1,6 @@
+import { z } from 'zod';
 import { adminJobs, mutateJob } from '@/lib/server/jobs';
-import { sourceNames } from '@/lib/types';
+import { listingSourceNames } from '@/lib/types';
 import {
   apiError,
   requireAdmin,
@@ -16,9 +17,10 @@ export async function GET(req: Request) {
         p.get('status') || 'review',
         (p.get('q') || '').slice(0, 200),
         Math.max(1, Math.min(10000, Number(p.get('page')) || 1)),
-        p.get('source') && p.get('source')! in sourceNames
+        p.get('source') && p.get('source')! in listingSourceNames
           ? p.get('source')!
           : '',
+        z.uuid().safeParse(p.get('id')).success ? p.get('id') : null,
       ),
     );
   } catch (e) {

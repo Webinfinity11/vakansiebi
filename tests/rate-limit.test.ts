@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   clientKey,
   rateLimit,
+  rateLimitSize,
   resetConcurrency,
   resetRateLimits,
   withLimitedConcurrency,
@@ -49,6 +50,61 @@ void test('the retry hint counts down inside one window', () => {
   const late = rateLimit('a', { limit: 1, windowMs: 10_000, now: at + 9_000 });
   assert.equal(early.retryAfterSeconds, 9);
   assert.equal(late.retryAfterSeconds, 1);
+});
+
+void test('a periodic sweep removes expired keys and preserves each live window', () => {
+  resetRateLimits();
+  const at = 3_500_000;
+  rateLimit('expired', { limit: 1, windowMs: 1000, now: at });
+  rateLimit('also-expired', { limit: 1, windowMs: 500, now: at });
+  rateLimit('long-lived', { limit: 1, windowMs: 60_000, now: at });
+  for (let hit = 0; hit < 252; hit += 1)
+    rateLimit('active', { limit: 1, windowMs: 1000, now: at + 1000 });
+  assert.equal(rateLimitSize(), 4, 'expired keys remain until the sweep');
+  assert.equal(
+    rateLimit('active', { limit: 1, windowMs: 1000, now: at + 1000 }).allowed,
+    false,
+  );
+  assert.equal(rateLimitSize(), 2, 'both expired keys are deleted at the boundary');
+  assert.deepEqual(
+    rateLimit('long-lived', { limit: 1, windowMs: 60_000, now: at + 1000 }),
+    { allowed: false, retryAfterSeconds: 59 },
+  );
+});
+
+void test('the sweep uses the latest window duration even after a refused request', () => {
+  resetRateLimits();
+  const at = 3_600_000;
+  rateLimit('extended', { limit: 1, windowMs: 1000, now: at });
+  rateLimit('shortened', { limit: 1, windowMs: 60_000, now: at });
+  assert.equal(
+    rateLimit('extended', { limit: 1, windowMs: 60_000, now: at + 100 }).allowed,
+    false,
+  );
+  assert.equal(
+    rateLimit('shortened', { limit: 1, windowMs: 1000, now: at + 100 }).allowed,
+    false,
+  );
+  for (let hit = 0; hit < 252; hit += 1)
+    rateLimit('active', { limit: 1, windowMs: 1000, now: at + 1000 });
+  assert.equal(rateLimitSize(), 2, 'only the shortened window expired');
+  assert.deepEqual(
+    rateLimit('extended', { limit: 1, windowMs: 60_000, now: at + 1000 }),
+    { allowed: false, retryAfterSeconds: 59 },
+  );
+});
+
+void test('a request on the sweep call keeps its count when its window is extended', () => {
+  resetRateLimits();
+  const at = 3_700_000;
+  rateLimit('client', { limit: 1, windowMs: 1000, now: at });
+  for (let hit = 0; hit < 254; hit += 1)
+    rateLimit('active', { limit: 1, windowMs: 1000, now: at });
+  assert.deepEqual(
+    rateLimit('client', { limit: 1, windowMs: 60_000, now: at + 1000 }),
+    { allowed: false, retryAfterSeconds: 59 },
+  );
+  assert.equal(rateLimitSize(), 1, 'the expired background key was removed');
 });
 
 void test('a stream of distinct clients cannot grow the table without end', () => {

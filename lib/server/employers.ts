@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { db, transaction } from './db';
+import { publicRead } from './search-plan';
 import { ApiError } from './auth';
 import {
   candidatePairs,
@@ -128,8 +129,8 @@ export const employerRowsSql = `SELECT name,logo,city,sources,array_agg(id ORDER
 
 async function buildEmployerPages() {
   const [{ rows }, decisions] = await Promise.all([
-    db().query(employerRowsSql),
-    db().query("SELECT a,b FROM employer_decisions WHERE decision='merge'"),
+    publicRead(employerRowsSql),
+    publicRead("SELECT a,b FROM employer_decisions WHERE decision='merge'"),
   ]);
   const root = mergedIdentities(decisions.rows.map((d) => [d.a, d.b] as const));
   type Group = {

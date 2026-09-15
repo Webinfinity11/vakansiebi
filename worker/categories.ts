@@ -155,17 +155,46 @@ export function classify(
  * Generic manager, operator, designer and specialist titles still use the source. */
 export function explicitRoleCategory(title: string): Category | '' {
   const t = title.normalize('NFKC').toLowerCase();
-  const roles: [RegExp, Category][] = [
-    [
-      /(?<!\p{L})(?:hr|human resources)(?!\p{L})|ადამიანური რესურს|რეკრუტერ|recruiter/u,
-      'ადმინისტრაცია',
-    ],
-    [/ბუღალტერ|(?<!\p{L})accountant(?!\p{L})/u, 'ფინანსები'],
-    [
-      /პროგრამისტ|პროგრამული უზრუნველყოფის (?:ინჟინერ|დეველოპერ)|(?:software|frontend|backend|full[ -]?stack|java|python|react|web) (?:developer|engineer)/u,
-      'ტექნოლოგიები',
-    ],
-  ];
+  const roles: [RegExp, Category][] =
+    /(?<!\p{L})(?:მასწავლებ|ტრენერ|ინსტრუქტორ)|(?<!\p{L})(?:teacher|trainer|instructor)(?!\p{L})/u.test(
+      t,
+    )
+      ? []
+      : [
+          [
+            /(?<!\p{L})(?:hr|human resources)(?!\p{L})|ადამიანური რესურს|რეკრუტერ|recruiter/u,
+            'ადმინისტრაცია',
+          ],
+          [/ბუღალტერ|(?<!\p{L})accountant(?!\p{L})/u, 'ფინანსები'],
+          [
+            /პროგრამისტ|პროგრამული უზრუნველყოფის (?:ინჟინერ|დეველოპერ)|(?:software|frontend|backend|full[ -]?stack|java|python|react|web) (?:developer|engineer)/u,
+            'ტექნოლოგიები',
+          ],
+          [
+            /^(?!.*(?<!\p{L})(?:სამედიცინო წარმომადგენ|medical representative|ექიმის ვიზიტორ|ადმინისტრატორ|რეგისტრატორ|ოპერატორ|(?:administrator|registrar|operator)(?!\p{L}))).*(?<!\p{L})(?:ექთან|ექთნის ასისტენტ|(?:ექიმ|სტომატოლოგ|ფარმაცევტ|თერაპევტ|პედიატრ|ქირურგ|ანესთეზიოლოგ|რენტგენოლოგ|ფიზიოთერაპ(?:ევტ|ისტ))(?:ი|ის|ები|ების|თა)?(?!\p{L})|(?:nurse|doctor|physician|dentist|pharmacist|therapist|pediatrician|paediatrician|surgeon|anesthesiologist|anaesthesiologist|radiologist|physiotherapist)(?!\p{L}))/u,
+            'სამედიცინო',
+          ],
+          [
+            /^(?!.*(?<!\p{L})(?:დიზაინერ|მოლარე|გამყიდველ|გაყიდვ|კონსულტანტ|(?:designer|cashier|seller|sales|consultant)(?!\p{L}))).*(?<!\p{L})(?:კონდიტერ|მეხინკლე|მზარეულ|მცხობელ|(?:chef|pastry|cook|baker|confectioner)(?!\p{L}))/u,
+            'მომსახურება',
+          ],
+          [
+            /^(?!.*(?<!\p{L})(?:გაყიდვ|კონსულტანტ|შემსყიდველ|(?:sales|consultant|buyer|data warehouse)(?!\p{L}))).*(?<!\p{L})(?:საწყობის (?:მენეჯერ|უფროს|თანამშრომელ|მუშა|ოპერატორ|მეთვალყურე)|warehouse(?!\p{L}))/u,
+            'ლოჯისტიკა',
+          ],
+          [
+            /(?<!\p{L})(?:საკრედიტო (?:ოფიცერ|ექსპერტ|სპეციალისტ|მენეჯერ)|დაკრედიტებ|(?:credit officer|loan officer)(?!\p{L}))/u,
+            'ფინანსები',
+          ],
+          [
+            /(?<!\p{L})(?:სოციალური მედიის|(?:social media|smm)(?!\p{L}))/u,
+            'მარკეტინგი',
+          ],
+          [
+            /^(?!.*(?<!\p{L})(?:საკრედიტო ადმინისტრატორ|credit administrator)).*(?<!\p{L})(?:იურისტ|ადვოკატ|(?:lawyer|attorney)(?!\p{L}))/u,
+            'იურიდიული',
+          ],
+        ];
   const matches = [
     ...new Set(
       roles

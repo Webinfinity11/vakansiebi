@@ -19,6 +19,8 @@ const sources = [
   'app/search-features.css',
   'app/refined-board.css',
   'app/public-header.css',
+  'app/post-job.css',
+  'app/invoices.css',
 ];
 const output = 'app/theme-dark.css';
 
@@ -55,6 +57,14 @@ const mastheadOwn = [
 
 /* Literals whose mapping is a decision rather than a calculation. */
 const fixed: Record<string, string> = {
+  '#ffedbd': '#4d3b14',
+  '#805000': '#ffd277',
+  '#fffbf2': '#1c1d22',
+  '#fff8e9': '#282319',
+  '#e7c277': '#6b5226',
+  '#bd861e': '#c99331',
+  '#986809': '#e0ad48',
+  '#fff1ce': '#342b18',
   '#f8f7f3': '#0e1523',
   '#fff': '#131b2c',
   '#ffffff': '#131b2c',

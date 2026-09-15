@@ -120,7 +120,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
         target="_blank"
         rel="noopener noreferrer"
       >
-        განაცხადის შევსება <ArrowUpRight size={17} />
+        განაცხადი კომპანიის საიტზე <ArrowUpRight size={17} />
       </a>
     );
   if (!contacts.emails.length && contacts.phones.length === 1)
@@ -147,6 +147,140 @@ function ApplyAction({ job }: { job: PublicJob }) {
     );
   return null;
 }
+function JobReportForm({ jobId }: { jobId: string }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const success = useRef<HTMLOutputElement>(null);
+  useEffect(() => {
+    if (!sent) return;
+    success.current?.focus();
+    success.current?.scrollIntoView({ block: 'center' });
+  }, [sent]);
+  return (
+    <div style={{ marginTop: 12, maxWidth: 520 }}>
+      {!sent && (
+        <button
+          type="button"
+          className="secondary-button"
+          style={{ minHeight: 44 }}
+          aria-expanded={open}
+          aria-controls="job-report-form"
+          disabled={busy}
+          onClick={() => setOpen((value) => !value)}
+        >
+          შეცდომის შეტყობინება
+        </button>
+      )}
+      {open && !sent && (
+        <form
+          id="job-report-form"
+          aria-label="ვაკანსიის პრობლემის შეტყობინება"
+          style={{ display: 'grid', gap: 12, marginTop: 12 }}
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (busy) return;
+            setBusy(true);
+            setError('');
+            try {
+              const response = await fetch(`/api/jobs/${jobId}/report`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason, note }),
+              });
+              const body = await response.json();
+              if (!response.ok)
+                throw Error(
+                  body.error || 'გაგზავნა ვერ მოხერხდა. სცადე ხელახლა.',
+                );
+              setSent(true);
+            } catch (e) {
+              setError(
+                e instanceof Error ? e.message : 'გაგზავნა ვერ მოხერხდა.',
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <fieldset
+            disabled={busy}
+            style={{ minWidth: 0, margin: 0, padding: 0, border: 0 }}
+          >
+            <legend>რა პრობლემაა?</legend>
+            {[
+              ['expired', 'ვადაგასულია'],
+              ['wrong', 'არასწორი ინფორმაცია'],
+              ['duplicate', 'დუბლიკატია'],
+              ['other', 'სხვა'],
+            ].map(([value, label]) => (
+              <label
+                key={value}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  minHeight: 44,
+                }}
+              >
+                <input
+                  type="radio"
+                  name="report-reason"
+                  value={value}
+                  checked={reason === value}
+                  onChange={() => setReason(value)}
+                  required
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+          <label htmlFor="job-report-note">შენიშვნა (არასავალდებულო)</label>
+          <textarea
+            id="job-report-note"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            disabled={busy}
+            maxLength={300}
+            rows={3}
+            aria-describedby="job-report-note-hint"
+            style={{
+              width: '100%',
+              minWidth: 0,
+              boxSizing: 'border-box',
+              resize: 'vertical',
+              padding: 12,
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              background: 'var(--background)',
+              color: 'inherit',
+              fontSize: 16,
+            }}
+          />
+          <small id="job-report-note-hint">
+            {note.length}/300 · პირად მონაცემებს ნუ მიუთითებ.
+          </small>
+          {error && <p role="alert">{error}</p>}
+          <button
+            className="primary"
+            type="submit"
+            disabled={busy}
+            style={{ minHeight: 44, justifySelf: 'start' }}
+          >
+            {busy ? 'იგზავნება…' : 'გაგზავნა'}
+          </button>
+        </form>
+      )}
+      <output ref={success} tabIndex={-1} style={{ display: 'block' }}>
+        {sent ? 'მადლობა — გადავამოწმებთ.' : ''}
+      </output>
+    </div>
+  );
+}
+
 export default function VacancyPage({
   job,
   preview,
@@ -372,6 +506,13 @@ export default function VacancyPage({
             </div>
             {job.category !== 'სხვა' && (
               <span className="category-tag">{job.category}</span>
+            )}
+            {job.placement && (
+              <span
+                className={`placement-badge placement-badge-${job.placement.tier}`}
+              >
+                {job.placement.tier === 'premium' ? 'პრემიუმი' : 'VIP'}
+              </span>
             )}
             <h1 id="vacancy-title" className="detail-title">
               {job.title}
@@ -606,20 +747,30 @@ export default function VacancyPage({
             id="vacancy-source"
             aria-label="განცხადების წყარო"
           >
-            <span>ორიგინალი: </span>
-            {(job.sources.length
-              ? job.sources
-              : [{ source: job.source, url: job.url }]
-            ).map((source, index) => (
-              <span key={source.url}>
-                {index > 0 && ', '}
-                <a href={source.url} target="_blank" rel="noopener noreferrer">
-                  {source.source}
-                </a>
-              </span>
-            ))}
-            <span> · </span>
-            <SourceStatus job={job} />
+            {job.source === 'JOBX' ? (
+              <span>განცხადება დამსაქმებელმა JOBX-ზე დაამატა.</span>
+            ) : (
+              <>
+                <span>ორიგინალი: </span>
+                {(job.sources.length
+                  ? job.sources
+                  : [{ source: job.source, url: job.url }]
+                ).map((source, index) => (
+                  <span key={source.url}>
+                    {index > 0 && ', '}
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {source.source}
+                    </a>
+                  </span>
+                ))}
+                <span> · </span>
+                <SourceStatus job={job} />
+              </>
+            )}
             {job.fullTextUrl && (
               <>
                 {' '}
@@ -639,6 +790,7 @@ export default function VacancyPage({
                 · წყაროზე პირობები შეიცვალა — გადაამოწმე განაცხადის გაგზავნამდე.
               </span>
             )}
+            {!preview && <JobReportForm key={job.id} jobId={job.id} />}
           </footer>
           {!preview && <SimilarVacancies id={job.id} returnTo={returnTo} />}
         </article>

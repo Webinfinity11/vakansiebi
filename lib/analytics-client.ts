@@ -1,6 +1,8 @@
-/* Sends one anonymous event. Nothing identifying goes with it: no id, no cookie is set, and the
-   body is only the kind and the value. sendBeacon survives the page being left, which is exactly
+/* Sends an event without adding a tracking id or setting a cookie; the body is only the kind
+   and the value. sendBeacon survives the page being left, which is exactly
    when an outbound click happens; fetch with keepalive is the fallback where it is missing.
+   The fallback omits credentials. sendBeacon has no credentials option, so it may include
+   existing same-origin cookies.
 
    Only production builds send, so a developer's local server — which may point at the real
    database — cannot pollute the counts. Failures are ignored: analytics must never break or
@@ -24,6 +26,7 @@ export function track(kind: TrackedKind, value: string) {
         body,
         headers: { 'Content-Type': 'application/json' },
         keepalive: true,
+        credentials: 'omit',
       }).catch(() => {});
   } catch {}
 }

@@ -2,6 +2,10 @@
    swipe actions on cards. Phone rules stay inside the 760px query. */
 
 /* ---------- Load more ---------- */
+.board-shell.editorial-board.crafted-board.refined-board .hero-copy,
+.board-shell.editorial-board.crafted-board.refined-board .hero-brand-art {
+  animation: none;
+}
 .board-shell .load-more-row {
   display: grid;
   gap: 8px;
@@ -118,6 +122,51 @@
 /* ---------- Swipe (touch only; the reveal layers exist only on phones) ---------- */
 .board-shell .swipe-shell {
   position: relative;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .board-shell .job-list .swipe-shell {
+    animation: vacancy-arrive 220ms ease-out backwards;
+    animation-delay: var(--vacancy-delay, 0ms);
+  }
+  .results-updating[data-active] .results-loading-track::after {
+    animation: vacancy-progress 1300ms ease-in-out infinite;
+  }
+}
+@keyframes vacancy-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* A return snapshot restores an exact scroll anchor. Replaying its 8px entrance
+   would move the focused vacancy after that position had already been restored. */
+.board-shell .job-list[data-restored] .swipe-shell {
+  animation: none;
+}
+@keyframes vacancy-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(390%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-shell.refined-board .job-list,
+  .board-shell .results-updating {
+    transition: none;
+  }
+  .board-shell .job-list .swipe-shell,
+  .results-updating .results-loading-track::after {
+    animation: none;
+  }
+  .results-updating .results-loading-track::after {
+    transform: none;
+  }
 }
 .board-shell .swipe-reveal {
   display: none;
@@ -467,7 +516,9 @@
   }
 }
 @media (max-width: 360px) {
-  .board-shell.editorial-board.crafted-board .discovery-shortcut > .shortcut-3d {
+  .board-shell.editorial-board.crafted-board
+    .discovery-shortcut
+    > .shortcut-3d {
     display: none;
   }
 }

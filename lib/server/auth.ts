@@ -78,9 +78,10 @@ export function checkOrigin(request: Request) {
 export async function setSession(token: string) {
   (await cookies()).set(cookieName, token, {
     httpOnly: true,
+    // A missing or misconfigured APP_URL must never disable Secure in production.
     secure:
-      process.env.APP_URL?.startsWith('https://') ??
-      process.env.NODE_ENV === 'production',
+      process.env.NODE_ENV === 'production' ||
+      (process.env.APP_URL?.startsWith('https://') ?? false),
     sameSite: 'strict',
     path: '/',
     maxAge: 12 * 3600,

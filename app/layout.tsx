@@ -8,6 +8,7 @@ import './board-features.css';
 /* Last, so its `:root[data-theme='dark']` rules restate the light ones above. */
 import './refined-board.css';
 import './public-header.css';
+import './post-job.css';
 import './theme-dark.css';
 import { themeScript } from '@/lib/theme';
 export const viewport: Viewport = {
@@ -41,6 +42,20 @@ export default function RootLayout({
   return (
     <html lang="ka" suppressHydrationWarning>
       <head>
+        <link
+          rel="preload"
+          href="/fonts/FiraGO-Regular-subset.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preload"
+          href="/fonts/FiraGO-SemiBold-subset.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         {/* Before the first paint: a themed page never flashes the other theme. */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

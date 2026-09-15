@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { db, transaction } from './db';
 import { ApiError } from './auth';
 import { companyKey } from '../company-key';
-import { safeExternalUrl } from '../vacancy-media';
+import { isLocalLogoUrl, safeExternalUrl } from '../vacancy-media';
 
 const external = z
   .string()
@@ -10,7 +10,10 @@ const external = z
   .refine((v) => !v || safeExternalUrl(v) === v);
 export const companySchema = z.object({
   name: z.string().trim().min(2).max(300),
-  logoUrl: external,
+  logoUrl: z
+    .string()
+    .max(2000)
+    .refine((v) => !v || isLocalLogoUrl(v) || safeExternalUrl(v) === v),
   website: external,
   description: z.string().trim().max(3000),
   version: z.number().int().nonnegative(),
@@ -39,6 +42,18 @@ export async function saveCompany(input: unknown) {
     await c.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
       'company:' + key,
     ]);
+    if (
+      isLocalLogoUrl(data.logoUrl) &&
+      !(
+        await c.query(
+          'SELECT 1 FROM submission_logos WHERE hash=$1 AND approved_at IS NOT NULL',
+          [data.logoUrl.slice('/api/logos/'.length)],
+        )
+      ).rowCount
+    )
+      throw new ApiError(
+        'ატვირთული ლოგო ჯერ განცხადების გამოქვეყნებისას დაადასტურე.',
+      );
     const current = (
       await c.query(
         'SELECT * FROM company_profiles WHERE company_key=$1 FOR UPDATE',

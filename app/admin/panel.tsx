@@ -1,4 +1,11 @@
 'use client';
+import { BillingSettings } from './billing-settings';
+import { invoiceNumber, invoiceStatuses } from '@/lib/billing';
+import {
+  placementLabels,
+  placementTiers,
+  type PlacementTier,
+} from '@/lib/placement';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -32,10 +39,11 @@ import { Brand, Choice } from '../job-board';
 import { CompanyLogo } from '../company-logo';
 import { CompanyEditor } from './company-editor';
 import type { AdminJob, Source, Vacancy, SourceRun } from '@/lib/types';
-import { categories, sourceNames } from '@/lib/types';
+import { categories, listingSourceNames } from '@/lib/types';
 import { sourceHealth } from '@/lib/scraper-status';
 import { EmployersPanel } from './employers';
 import { AnalyticsPanel } from './analytics';
+import { ReportsSection } from './reports';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
 type AdminSource = Source & { removed_count?: number };
 const names: Record<string, string> = {
@@ -52,6 +60,7 @@ const names: Record<string, string> = {
   interrupted: 'შეწყდა',
 };
 const automationReasons: Record<string, string> = {
+  employer_submission: 'დამსაქმებლის განცხადება — ელოდება განხილვას',
   expired: 'ბოლო ვადა გასულია',
   removed: 'წყაროზე აღარ არსებობს',
   unverified: 'დიდი ხანია ვერ მოწმდება',
@@ -129,7 +138,9 @@ export default function AdminPanel() {
     [error, setError] = useState(''),
     [message, setMessage] = useState(''),
     [busy, setBusy] = useState(false),
+    [billingVersion, setBillingVersion] = useState(0),
     [selected, setSelected] = useState<AdminJob | null>(null),
+    [placement, setPlacement] = useState<PlacementTier>('standard'),
     [draft, setDraft] = useState<Vacancy | null>(null),
     [confirm, setConfirm] = useState<{
       action: string;
@@ -186,9 +197,13 @@ export default function AdminPanel() {
         version: selected.version,
         action,
         ...(['save', 'publish'].includes(action) ? { draft } : {}),
+        ...(action === 'publish' && selected.requested_placement
+          ? { placement }
+          : {}),
         ...extras,
       });
       setSelected(null);
+      setBillingVersion((v) => v + 1);
       setConfirm(null);
       setMessage(
         action === 'publish'
@@ -351,6 +366,7 @@ export default function AdminPanel() {
         <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
           <TabsList variant="line" className="admin-tabs">
             <TabsTrigger value="vacancies">ვაკანსიები</TabsTrigger>
+            <TabsTrigger value="billing">ინვოისები</TabsTrigger>
             <TabsTrigger value="sources">წყაროები და განახლება</TabsTrigger>
             <TabsTrigger value="runs">შემოტანის ისტორია</TabsTrigger>
             <TabsTrigger value="analytics">ანალიტიკა</TabsTrigger>
@@ -396,18 +412,20 @@ export default function AdminPanel() {
                 label="წყარო"
                 value={
                   sourceFilter
-                    ? sourceNames[sourceFilter as keyof typeof sourceNames] ||
-                      sourceFilter
+                    ? listingSourceNames[
+                        sourceFilter as keyof typeof listingSourceNames
+                      ] || sourceFilter
                     : 'ყველა'
                 }
                 onChange={(v) => {
                   setPage(1);
                   setSourceFilter(
-                    Object.entries(sourceNames).find(([, n]) => n === v)?.[0] ||
-                      '',
+                    Object.entries(listingSourceNames).find(
+                      ([, n]) => n === v,
+                    )?.[0] || '',
                   );
                 }}
-                options={Object.values(sourceNames)}
+                options={Object.values(listingSourceNames)}
               />
               <button
                 className="icon-button"
@@ -436,6 +454,11 @@ export default function AdminPanel() {
                     onClick={() => {
                       setSelected(j);
                       setDraft(j.draft);
+                      setPlacement(
+                        j.placement_expires_at
+                          ? j.placement_tier
+                          : j.requested_placement || 'standard',
+                      );
                       setError('');
                     }}
                   >
@@ -497,7 +520,35 @@ export default function AdminPanel() {
               </button>
             </div>
           </TabsContent>
+          <TabsContent value="billing">
+            {tab === 'billing' && (
+              <BillingSettings
+                key={billingVersion}
+                onReview={async (id) => {
+                  try {
+                    const data = await request(
+                      `/api/admin/jobs?status=all&id=${id}`,
+                    );
+                    const j = data.jobs[0] as AdminJob | undefined;
+                    if (!j) throw Error('განცხადება ვერ მოიძებნა');
+                    setSelected(j);
+                    setDraft(j.draft);
+                    setPlacement(
+                      j.placement_expires_at
+                        ? j.placement_tier
+                        : j.requested_placement || 'standard',
+                    );
+                  } catch (e) {
+                    setError(
+                      e instanceof Error ? e.message : 'ჩატვირთვა ვერ მოხერხდა',
+                    );
+                  }
+                }}
+              />
+            )}
+          </TabsContent>
           <TabsContent value="sources">
+            {tab === 'sources' && <ReportsSection />}
             <section className="scraper-overview" aria-label="სკრაპერის მართვა">
               <div>
                 <span className="scraper-eyebrow">ავტომატური განახლება</span>
@@ -968,8 +1019,9 @@ export default function AdminPanel() {
               {runs.map((r) => (
                 <div className="run-row" key={r.id}>
                   <strong>
-                    {sourceNames[r.source_id as keyof typeof sourceNames] ||
-                      r.source_id}
+                    {listingSourceNames[
+                      r.source_id as keyof typeof listingSourceNames
+                    ] || r.source_id}
                   </strong>
                   <span className={`status status-${r.status}`}>
                     {names[r.status] || r.status}
@@ -1007,12 +1059,98 @@ export default function AdminPanel() {
           </SheetHeader>
           {selected && draft && (
             <div className="edit-body">
+              {selected.requested_placement && (
+                <section className="notice">
+                  <h3>
+                    დამსაქმებლის განცხადება ·{' '}
+                    {placementLabels[selected.requested_placement]}
+                  </h3>
+                  <p>
+                    პირველი VIP უფასოა 14 დღით. პრემიუმი — 20 ₾ / 14 დღე.
+                    გადაამოწმე დამსაქმებლის ვინაობა და მისი უფლებამოსილება;
+                    განსხვავებული სახელით განმეორებითი საჩუქარი არ დაუშვა.
+                  </p>
+                  <label htmlFor="admin-placement">
+                    განთავსება დამტკიცებისას
+                  </label>
+                  <select
+                    id="admin-placement"
+                    value={placement}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setPlacement(e.target.value as PlacementTier)
+                    }
+                  >
+                    {placementTiers.map((t) => (
+                      <option key={t} value={t}>
+                        {placementLabels[t]}
+                      </option>
+                    ))}
+                  </select>
+                  {selected.placement_expires_at && (
+                    <p>
+                      გამოკვეთის ბოლო ვადა:{' '}
+                      {time(selected.placement_expires_at)}. რედაქტირება ვადას
+                      არ გააგრძელებს.
+                    </p>
+                  )}
+                </section>
+              )}
+              {selected.invoice && (
+                <section className="notice">
+                  <h3>ინვოისი · {invoiceStatuses[selected.invoice.status]}</h3>
+                  <a
+                    href={`/invoices/${selected.invoice.token}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {invoiceNumber(
+                      selected.invoice.number,
+                      selected.invoice.created_at,
+                    )}{' '}
+                    · {selected.invoice.amount_gel} ₾
+                  </a>
+                  {selected.invoice.status === 'pending' && (
+                    <button
+                      className="secondary-button"
+                      disabled={busy}
+                      onClick={() => setConfirm({ action: 'confirm-payment' })}
+                    >
+                      ჩარიცხვის დადასტურება
+                    </button>
+                  )}
+                  {selected.invoice.status === 'refund_required' && (
+                    <button
+                      className="secondary-button"
+                      disabled={busy}
+                      onClick={() => setConfirm({ action: 'confirm-refund' })}
+                    >
+                      დაბრუნების დადასტურება
+                    </button>
+                  )}
+                </section>
+              )}
               <div className="editor-logo-row">
                 <CompanyLogo company={draft.company} url={draft.logoUrl} />
                 <div>
                   <strong>{draft.company}</strong>
-                  <p>ლოგო პირველწყაროდან · გამოქვეყნებამდე გადაამოწმე</p>
+                  <p>
+                    {selected.requested_placement
+                      ? 'ატვირთული ლოგო'
+                      : 'ლოგო პირველწყაროდან'}{' '}
+                    · გამოქვეყნებამდე გადაამოწმე
+                  </p>
                 </div>
+                {draft.logoUrl && (
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => change('logoUrl', '')}
+                  >
+                    ლოგოს მოცილება
+                  </button>
+                )}
               </div>
               <div
                 className={
@@ -1041,16 +1179,19 @@ export default function AdminPanel() {
                   ბოლო ავტომატური შემოწმება:{' '}
                   {time(selected.automation_checked_at)}
                 </small>
-                {(selected.automation_paused ||
-                  !selected.automation_managed) && (
-                  <button
-                    className="secondary-button"
-                    disabled={busy}
-                    onClick={() => setConfirm({ action: 'resume-automation' })}
-                  >
-                    ავტომატურ მართვას დაბრუნება
-                  </button>
-                )}
+                {!selected.items.some((i) => i.source_id === 'jobx') &&
+                  (selected.automation_paused ||
+                    !selected.automation_managed) && (
+                    <button
+                      className="secondary-button"
+                      disabled={busy}
+                      onClick={() =>
+                        setConfirm({ action: 'resume-automation' })
+                      }
+                    >
+                      ავტომატურ მართვას დაბრუნება
+                    </button>
+                  )}
               </div>
               {!!draft.warnings?.length && (
                 <div className="notice">
@@ -1079,8 +1220,9 @@ export default function AdminPanel() {
                     rel="noopener noreferrer"
                   >
                     <ExternalLink size={14} />
-                    {sourceNames[i.source_id as keyof typeof sourceNames] ||
-                      i.source_id}
+                    {listingSourceNames[
+                      i.source_id as keyof typeof listingSourceNames
+                    ] || i.source_id}
                   </a>
                 ))}
               </div>
@@ -1166,7 +1308,7 @@ export default function AdminPanel() {
                   />
                 </label>
                 <label htmlFor="edit-period">
-                  ანაზღაურების პერიოდი
+                  ანაზღაურების სიხშირე
                   <Choice
                     id="edit-period"
                     label="არ არის მითითებული"
@@ -1300,8 +1442,9 @@ export default function AdminPanel() {
                 {selected.items.map((i) => (
                   <div key={i.id}>
                     <p>
-                      {sourceNames[i.source_id as keyof typeof sourceNames] ||
-                        i.source_id}{' '}
+                      {listingSourceNames[
+                        i.source_id as keyof typeof listingSourceNames
+                      ] || i.source_id}{' '}
                       · შემოწმდა {time(i.last_checked_at)} · შემდეგი{' '}
                       {time(i.next_check_at)}
                       {i.failures ? ` · წარუმატებელი ცდა: ${i.failures}` : ''}
@@ -1465,17 +1608,21 @@ export default function AdminPanel() {
                       : 'დაადასტურე ცვლილება'}
             </DialogTitle>
             <DialogDescription>
-              {confirm?.action === 'bulk-publish'
-                ? 'გამოქვეყნდება ყველა მოლოდინში მყოფი ვაკანსიის შენახული რედაქცია, ყველა გვერდიდან და ფილტრის მიუხედავად. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
-                : confirm?.action === 'publish'
-                  ? 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
-                  : confirm?.action === 'apply-source'
-                    ? 'წყაროს ტექსტი შენახულ რედაქციას ჩაანაცვლებს. საჯარო ვერსია უცვლელი დარჩება.'
-                    : confirm?.action === 'merge'
-                      ? 'არჩეული ვაკანსიის რედაქცია დარჩება, ამ ჩანაწერის წყაროები კი მას მიემატება.'
-                      : confirm?.action === 'resume-automation'
-                        ? 'წყაროს ბოლო შემოწმებული ვერსია ჩაანაცვლებს შენს რედაქციას და შემდგომ ცვლილებებსაც ავტომატურად გამოაქვეყნებს. ვადაგასული ან მოხსნილი ჩანაწერი არქივში გადავა.'
-                        : 'ჩანაწერი საჯარო სიაში აღარ გამოჩნდება. აღდგენა ადმინიდან შეგიძლია.'}
+              {confirm?.action === 'confirm-payment'
+                ? 'დაადასტურე მხოლოდ მაშინ, თუ ინვოისის სრული თანხა უკვე ჩაირიცხა ანგარიშზე. ეს ღილაკი ბანკიდან მონაცემებს არ ამოწმებს.'
+                : confirm?.action === 'confirm-refund'
+                  ? 'დაადასტურე მხოლოდ უკვე შესრულებული საბანკო დაბრუნება. ღილაკი თანხას არ რიცხავს.'
+                  : confirm?.action === 'bulk-publish'
+                    ? 'გამოქვეყნდება ყველა მოლოდინში მყოფი ვაკანსიის შენახული რედაქცია, ყველა გვერდიდან და ფილტრის მიუხედავად. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
+                    : confirm?.action === 'publish'
+                      ? 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
+                      : confirm?.action === 'apply-source'
+                        ? 'წყაროს ტექსტი შენახულ რედაქციას ჩაანაცვლებს. საჯარო ვერსია უცვლელი დარჩება.'
+                        : confirm?.action === 'merge'
+                          ? 'არჩეული ვაკანსიის რედაქცია დარჩება, ამ ჩანაწერის წყაროები კი მას მიემატება.'
+                          : confirm?.action === 'resume-automation'
+                            ? 'წყაროს ბოლო შემოწმებული ვერსია ჩაანაცვლებს შენს რედაქციას და შემდგომ ცვლილებებსაც ავტომატურად გამოაქვეყნებს. ვადაგასული ან მოხსნილი ჩანაწერი არქივში გადავა.'
+                            : 'ჩანაწერი საჯარო სიაში აღარ გამოჩნდება. აღდგენა ადმინიდან შეგიძლია.'}
             </DialogDescription>
           </DialogHeader>
           <div className="confirm-actions">

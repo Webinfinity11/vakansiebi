@@ -573,6 +573,19 @@
   .mobile-filters-sheet .filters h3 small {
     font-size: 12px;
   }
+  .mobile-filters-sheet .filter-subcategory {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mobile-filters-sheet .filter-subcategory select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    height: 48px;
+    padding: 10px 36px 10px 12px;
+    font-size: 16px;
+  }
   .mobile-filters-sheet .check-row {
     min-height: 48px;
     font-size: 14px;
@@ -941,5 +954,86 @@
   }
   .board-shell .theme-toggle + .saved-nav {
     margin-left: 0;
+  }
+}
+
+/* ---------- Post-job form ---------- */
+@media (max-width: 760px) {
+  .post-job-shell .post-job-main {
+    padding: 16px 14px 32px;
+  }
+  .post-job-shell .post-intro {
+    margin: 16px 0 24px;
+    padding-right: 48px;
+  }
+  .post-job-shell .post-brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+  .post-job-shell .post-intro h1 {
+    font-size: 23px;
+  }
+  .post-job-shell .post-section {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+  .post-job-shell .post-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .post-job-shell .post-field input,
+  .post-job-shell .post-field select,
+  .post-job-shell .post-field textarea {
+    font-size: 16px;
+  }
+  .post-job-shell .post-field small,
+  .post-job-shell .post-plan-note,
+  .post-job-shell .post-draft-note {
+    font-size: 12px;
+  }
+  .post-job-shell .post-details > summary {
+    min-height: 44px;
+    align-content: center;
+  }
+  .post-job-shell .post-plan-pills {
+    flex-direction: column;
+  }
+  .post-job-shell .post-plan-pills > label {
+    width: 100%;
+    border-radius: 10px;
+  }
+  .post-job-shell .post-actions {
+    flex-direction: column;
+  }
+  .post-job-shell .post-primary,
+  .post-job-shell .post-secondary {
+    width: 100%;
+  }
+  .post-job-shell .post-success {
+    padding: 24px 20px;
+    margin: 28px auto;
+  }
+}
+/* Loading placeholders share the normal card's minimum height. The first eight
+   production cards measured 167–220px at 390px; text can still grow naturally. */
+@media (max-width: 760px) {
+  /* The sheet backdrop is portaled outside the board shell. */
+  [data-slot='sheet-overlay'] {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  /* Only the placeholder reserves the taller phone height; a real card keeps its natural
+     size (target 110–140px) so short vacancies never carry empty space. */
+  .board-shell.editorial-board.crafted-board.refined-board .job-skeleton {
+    padding: 16px;
+    gap: 12px;
+    min-height: 220px;
+    height: 220px;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board .job-card {
+    min-height: 0;
+  }
+  .board-shell .results-updating {
+    font-size: 11px;
   }
 }

@@ -10,10 +10,6 @@ export function SalaryFilter({
   onChange: (value: AdvancedFilters) => void;
   prefix: string;
 }) {
-  const invalid =
-    value.salaryFrom !== null &&
-    value.salaryTo !== null &&
-    value.salaryFrom > value.salaryTo;
   const change = <K extends keyof AdvancedFilters>(
     key: K,
     next: AdvancedFilters[K],
@@ -45,7 +41,7 @@ export function SalaryFilter({
           null,
           ...(value.salaryPeriod === 'day'
             ? [50, 100, 150, 200]
-            : [500, 1000, 1500, 2000]),
+            : [500, 1000, 1500, 2000, 3000]),
         ].map((amount) => (
           <button
             type="button"
@@ -67,50 +63,6 @@ export function SalaryFilter({
           </button>
         ))}
       </fieldset>
-      <details
-        className="salary-custom"
-        open={value.salaryTo !== null || undefined}
-      >
-        <summary>სხვა თანხა / დიაპაზონი</summary>
-        <div className="salary-range">
-          {(['salaryFrom', 'salaryTo'] as const).map((key, index) => (
-            <label key={key} htmlFor={`${prefix}-${key}`}>
-              {index ? 'მაქსიმუმ' : 'მინიმუმ'}
-              <input
-                id={`${prefix}-${key}`}
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={100000000}
-                step={1}
-                placeholder={index ? '∞' : '0'}
-                value={value[key] ?? ''}
-                aria-invalid={invalid}
-                aria-describedby={`${prefix}-salary-help`}
-                onChange={(e) => {
-                  const amount =
-                    e.target.value === '' ? null : Number(e.target.value);
-                  if (
-                    amount === null ||
-                    (Number.isInteger(amount) &&
-                      amount >= 0 &&
-                      amount <= 100000000)
-                  )
-                    change(key, amount);
-                }}
-              />
-            </label>
-          ))}
-        </div>
-      </details>
-      <p
-        id={`${prefix}-salary-help`}
-        className={invalid ? 'filter-error' : 'filter-help'}
-      >
-        {invalid
-          ? 'მინიმუმი მაქსიმუმზე მეტი არ უნდა იყოს.'
-          : 'მითითებული საწყისი თანხა, ბონუსის გარეშე.'}
-      </p>
     </fieldset>
   );
 }

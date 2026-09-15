@@ -287,12 +287,43 @@
   margin: -3px 0 0;
   border-radius: 8px;
 }
+.results-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .results-updating {
-  padding: 10px 14px;
-  background: #edf2ff;
+  display: block;
+  position: relative;
+  height: 26px;
+  width: 100px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 0 7px;
   color: #2457e6;
-  border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 18px;
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+}
+.results-updating[data-active] {
+  opacity: 1;
+}
+.results-loading-track {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  border-radius: 2px;
+  background: #d1dfff;
+  overflow: hidden;
+}
+.results-loading-track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 35%;
+  background: currentColor;
+  transform: translateX(-100%);
 }
 .refined-board .filters h3,
 .mobile-filters-sheet .filters h3 {
@@ -891,11 +922,26 @@
 .board-shell.editorial-board.crafted-board.refined-board .job-skeleton {
   border-color: #dbe5f7;
   background: #fff;
+  padding: 20px;
+  gap: 14px;
+  min-height: var(--vacancy-min-height);
+  height: var(--vacancy-min-height);
+}
+.board-shell.editorial-board.crafted-board.refined-board {
+  --vacancy-min-height: 120px;
+}
+.board-shell.editorial-board.crafted-board.refined-board .job-card {
+  min-height: var(--vacancy-min-height);
+}
+.board-shell.editorial-board.crafted-board.refined-board .job-skeleton i {
+  margin: 3px 0 11px;
 }
 .board-shell.editorial-board.crafted-board.refined-board .job-skeleton > span {
   background: url('/brand/jobx-mark.png') center / 34px no-repeat #edf3ff;
   border-radius: 10px;
   animation: none;
+  width: 38px;
+  height: 38px;
 }
 @media (prefers-reduced-motion: no-preference) {
   .refined-board .hero-brand-art {
@@ -1020,7 +1066,7 @@
 .filter-subcategory {
   display: grid;
   gap: 8px;
-  margin: 0 0 20px;
+  margin: 12px 0 0;
   font-size: 13px;
   font-weight: 600;
 }
@@ -1028,12 +1074,24 @@
   width: 100%;
   min-width: 0;
   min-height: 44px;
+  height: 44px;
   padding: 8px;
   border: 1px solid #dce2ec;
   border-radius: 8px;
   color: #34435b;
   background: #fff;
   font: inherit;
+}
+.filter-subcategory select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.filter-subcategory-help {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
 }
 .unavailable-saved {
   border: 1px solid #dce2ec;

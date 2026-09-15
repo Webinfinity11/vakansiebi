@@ -345,10 +345,10 @@
 }
 .board-shell .job-list {
   gap: 12px;
+  transition: opacity 180ms ease-out;
 }
-.board-shell .results[aria-busy='true'] .job-list {
-  opacity: 0.6;
-  transition: opacity 0.15s;
+.board-shell .job-list[data-updating] {
+  opacity: 0.55;
 }
 .board-shell .job-card {
   display: grid;

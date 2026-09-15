@@ -1,4 +1,4 @@
-import { db } from './db';
+import { publicRead } from './search-plan';
 import { logoCompanyKey, officialCompanyLogo } from '../company-logo-identity';
 import { safeLogoUrl } from '../vacancy-media';
 export type ResolvedLogo = { logoUrl: string; origin: string };
@@ -18,7 +18,7 @@ export async function resolveCompanyLogos(names: string[]) {
   if (!missing.size) return resolved;
   const key = keySql("j.published->>'company'");
   const rows = (
-    await db().query(
+    await publicRead(
       `SELECT DISTINCT ON (${key}) ${key} company_key,j.published->>'company' company,i.raw->>'company' raw_company,j.published->>'logoUrl' logo_url,i.url origin
     FROM jobs j JOIN source_items i ON i.job_id=j.id JOIN sources s ON s.id=i.source_id
     WHERE j.status='published' AND j.published IS NOT NULL AND s.enabled AND NOT s.retired

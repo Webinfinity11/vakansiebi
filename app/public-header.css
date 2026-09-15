@@ -29,6 +29,15 @@
   margin: 0;
   object-fit: contain;
 }
+.board-shell .topbar.public-header .jobx-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.board-shell .topbar.public-header :is(a, button):focus-visible {
+  outline: 2px solid #2457e6;
+  outline-offset: 3px;
+}
 .board-shell .topbar.public-header nav {
   display: flex;
   margin: 0;
@@ -38,6 +47,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  min-width: 44px;
   height: auto;
   padding: 0;
   color: #2457e6;
@@ -65,6 +75,7 @@
   justify-content: center;
   gap: 7px;
   min-height: 44px;
+  min-width: 44px;
   width: auto;
   padding: 8px 12px;
   margin: 0;
@@ -155,12 +166,39 @@
     gap: 4px;
   }
   .board-shell .topbar.public-header .personal-nav {
-    width: 40px;
+    width: 44px;
     padding: 0;
   }
   .board-shell .topbar.public-header .theme-toggle {
-    width: 40px;
-    min-width: 40px;
-    flex-basis: 40px;
+    width: 44px;
+    min-width: 44px;
+    flex-basis: 44px;
+  }
+}
+
+.board-shell .topbar.public-header .header-post-job {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 12px;
+  flex: 0 0 auto;
+  color: #fff;
+  background: #2457e6;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .board-shell .topbar.public-header .header-post-job {
+    width: 44px;
+    padding: 0;
+  }
+  .board-shell .topbar.public-header .header-post-job span {
+    display: none;
   }
 }

@@ -4,6 +4,7 @@ import {
   titleCategory,
   sourceCategory,
   classify,
+  explicitRoleCategory,
   jobsCategories,
 } from '../worker/categories';
 import { categories } from '../lib/types';
@@ -130,4 +131,195 @@ void test('profession and employer industry are not confused', () => {
   assert.equal(classify('მენეჯერი', 'ლოჯისტიკა'), 'ლოჯისტიკა');
   assert.equal(classify('ოპერატორი', 'ფინანსები'), 'ფინანსები');
   assert.equal(classify('HR / ბუღალტერი', 'ფინანსები'), 'ფინანსები');
+});
+
+const addedRoles = [
+  {
+    category: 'სამედიცინო',
+    positive: [
+      'ექთნის ასისტენტი',
+      'Senior Nurse',
+      'ექიმის ასისტენტი',
+      'Dentist',
+    ],
+    negative: [
+      'სამედიცინო წარმომადგენელი',
+      'Medical Representative',
+      'ექიმის ვიზიტორი',
+    ],
+  },
+  {
+    category: 'მომსახურება',
+    positive: ['კონდიტერი', 'მეხინკლე', 'Pastry Chef', 'Baker'],
+    negative: ['მზარეულობის მასწავლებელი', 'კონდიტერ-დიზაინერი'],
+  },
+  {
+    category: 'ლოჯისტიკა',
+    positive: ['საწყობის თანამშრომელი', 'Warehouse Manager'],
+    negative: ['საწყობის მაღაზიის კონსულტანტი', 'Warehouse Sales Consultant'],
+  },
+  {
+    category: 'ფინანსები',
+    positive: [
+      'საკრედიტო ოფიცერი',
+      'ბიზნეს დაკრედიტების ექსპერტის ასისტენტი',
+      'Loan Officer',
+      'Credit Officer',
+    ],
+    negative: ['საკრედიტო პროდუქტების გაყიდვების კონსულტანტი'],
+  },
+  {
+    category: 'მარკეტინგი',
+    positive: [
+      'სოციალური მედიის მენეჯერი',
+      'SMM სპეციალისტი',
+      'Social Media Manager',
+    ],
+    negative: ['სოციალური მედიის ტრენერი'],
+  },
+  {
+    category: 'იურიდიული',
+    positive: ['იურისტი', 'ადვოკატის თანაშემწე', 'Senior Lawyer', 'Attorney'],
+    negative: ['იურისტი (საკრედიტო ადმინისტრატორი) - რეზერვი'],
+  },
+] as const;
+
+for (const { category, positive, negative } of addedRoles) {
+  void test(`explicit ${category} professions override industries and reject unrelated roles`, () => {
+    for (const title of positive) {
+      assert.equal(explicitRoleCategory(title), category, title);
+      assert.equal(classify(title, 'წარმოება'), category, title);
+    }
+    for (const title of negative) {
+      assert.equal(explicitRoleCategory(title), '', title);
+      assert.equal(classify(title, 'გაყიდვები'), 'გაყიდვები', title);
+    }
+  });
+}
+
+void test('medical occupation names do not turn an employer sector into a profession', () => {
+  for (const title of [
+    'დღის ექთანი',
+    'ფარმაცევტი',
+    'თერაპევტის ასისტენტი',
+    'პედიატრის ასისტენტი',
+    'ქირურგი',
+    'ანესთეზიოლოგი',
+    'რენტგენოლოგი',
+    'ფიზიოთერაპევტი',
+    'ფიზიოთერაპისტი',
+    'Doctor',
+    'Physician',
+    'Pharmacist',
+    'Therapist',
+    'Pediatrician',
+    'Paediatrician',
+    'Surgeon',
+    'Anesthesiologist',
+    'Anaesthesiologist',
+    'Radiologist',
+    'Physiotherapist',
+  ])
+    assert.equal(explicitRoleCategory(title), 'სამედიცინო', title);
+  for (const title of [
+    'ფარმაცევტული პროდუქტის შესყიდვების მენეჯერი',
+    'დამლაგებელი სტომატოლოგიურ კლინიკაში ორი დღე კვირაში',
+    'სტომატოლოგიური კლინიკის მენეჯერი',
+    'ქირურგიული განყოფილების დამლაგებელი',
+    'ოჯახის ექიმების სამსახურის ოპერატორი',
+    'ადმინისტრატორი, ექიმი-ორთოპედი, ასისტენტი',
+    'მორიგე ექთან-რეგისტრატორი',
+    'ფარმაცევტი / სამედიცინო წარმომადგენელი',
+    'Doctor / Medical Representative',
+  ])
+    assert.equal(explicitRoleCategory(title), '', title);
+  assert.equal(
+    classify('ფარმაცევტული საწყობის ოპერატორი', 'სამედიცინო'),
+    'ლოჯისტიკა',
+  );
+});
+
+void test('kitchen and warehouse roles retain mixed sales and design categories', () => {
+  for (const title of ['მზარეული', 'მცხობელი', 'Cook', 'Confectioner'])
+    assert.equal(explicitRoleCategory(title), 'მომსახურება', title);
+  for (const title of [
+    'საწყობის მენეჯერი',
+    'საწყობის უფროსი',
+    'საწყობის მუშა',
+    'საწყობის ოპერატორი',
+    'საწყობის მეთვალყურე',
+  ])
+    assert.equal(explicitRoleCategory(title), 'ლოჯისტიკა', title);
+  for (const title of [
+    'კონსულტანტი, საწყობის თანამშრომელი, მიმღები ზონის სპეციალისტ',
+    'გაყიდვების კონსულტანტი, საწყობის თანამშრომელი',
+    'საწყობის თანამშრომელი / შემსყიდველი',
+    'მიმტანი, მოლარე, მზარეულის დამხმარე, სომელიე',
+    'Pastry Designer',
+    'Data Warehouse Engineer',
+  ])
+    assert.equal(explicitRoleCategory(title), '', title);
+});
+
+void test('every explicit role abstains when an education signal appears before or after it', () => {
+  const professions = [
+    'HR მენეჯერი',
+    'ბუღალტერი',
+    'Java Developer',
+    ...addedRoles.flatMap((r) => r.positive),
+  ];
+  for (const title of professions) {
+    for (const education of [
+      'მასწავლებელი',
+      'ტრენერი',
+      'ინსტრუქტორი',
+      'Teacher',
+      'Trainer',
+      'Instructor',
+    ]) {
+      for (const combined of [
+        `${title} / ${education}`,
+        `${education} / ${title}`,
+      ]) {
+        assert.equal(explicitRoleCategory(combined), '', combined);
+        assert.equal(classify(combined, 'განათლება'), 'განათლება', combined);
+      }
+    }
+  }
+});
+
+void test('different explicit categories remain ambiguous and same-category roles agree', () => {
+  for (const title of [
+    'HR / ექთანი',
+    'იურისტი / საკრედიტო ოფიცერი',
+    'მზარეული / საწყობის მენეჯერი',
+    'Nurse / Social Media Manager',
+  ]) {
+    assert.equal(explicitRoleCategory(title), '', title);
+    assert.equal(classify(title, 'ადმინისტრაცია'), 'ადმინისტრაცია', title);
+  }
+  assert.equal(
+    explicitRoleCategory('ბუღალტერი / საკრედიტო ოფიცერი'),
+    'ფინანსები',
+  );
+  assert.equal(explicitRoleCategory('ექიმი / ექთანი'), 'სამედიცინო');
+});
+
+void test('new Latin role names use Unicode letter boundaries and normalize case', () => {
+  for (const title of [
+    'განurse',
+    'nurseა',
+    'მზარchef',
+    'chefა',
+    'asmm',
+    'smmა',
+    'lawyerა',
+    'lawyering',
+    'warehouseა',
+    'credit officerა',
+  ])
+    assert.equal(explicitRoleCategory(title), '', title);
+  assert.equal(explicitRoleCategory('ＳＭＭ სპეციალისტი'), 'მარკეტინგი');
+  assert.equal(explicitRoleCategory('ᲔᲥᲗᲐᲜᲘ'), 'სამედიცინო');
+  assert.equal(explicitRoleCategory('Chef-de-partie'), 'მომსახურება');
 });

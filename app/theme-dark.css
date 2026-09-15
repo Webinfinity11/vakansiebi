@@ -2363,8 +2363,13 @@
   color: #e4b6a0;
 }
 :root[data-theme='dark'] .results-updating {
-  background: #1c2745;
   color: #6f93ff;
+}
+:root[data-theme='dark'] .results-loading-track {
+  background: #1c2845;
+}
+:root[data-theme='dark'] .results-loading-track::after {
+  background: currentColor;
 }
 :root[data-theme='dark'] .filter-extra {
   border-top: 1px solid #2a313f;
@@ -2526,6 +2531,10 @@
   border-bottom: 1px solid #2a313f;
   box-shadow: none;
 }
+:root[data-theme='dark'] .board-shell .topbar.public-header :is(a,
+:root[data-theme='dark'] button):focus-visible {
+  outline: 2px solid #6f93ff;
+}
 :root[data-theme='dark'] .board-shell .topbar.public-header .all-vacancies-link {
   color: #6f93ff;
   border: 0;
@@ -2548,5 +2557,238 @@
 :root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav b {
   color: inherit;
   background: transparent;
+}
+:root[data-theme='dark'] .board-shell .topbar.public-header .header-post-job {
+  color: #131b2c;
+  background: #6f93ff;
+}
+
+/* ── from app/post-job.css ── */
+:root[data-theme='dark'] .post-job-shell {
+  background: #0e1523;
+  color: #afbcd5;
+}
+:root[data-theme='dark'] .post-back {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .post-eyebrow {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .post-intro > p:last-child {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .post-section {
+  background: #131b2c;
+  border: 1px solid #2a313f;
+}
+:root[data-theme='dark'] .post-section h2 > span {
+  color: #6f93ff;
+  background: #1c2745;
+}
+:root[data-theme='dark'] .post-section-note {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .post-field input,
+:root[data-theme='dark'] .post-field select,
+:root[data-theme='dark'] .post-field textarea {
+  border: 1px solid #343f51;
+  background: #131b2c;
+  color: #afbcd5;
+}
+:root[data-theme='dark'] .post-field input::placeholder,
+:root[data-theme='dark'] .post-field textarea::placeholder {
+  color: #969ca6;
+}
+:root[data-theme='dark'] .post-job-main :is(input,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] button,
+:root[data-theme='dark'] a,
+:root[data-theme='dark'] summary):focus-visible {
+  outline: 2px solid #6f93ff;
+}
+:root[data-theme='dark'] .post-field [aria-invalid='true'] {
+  border-color: #e4818c;
+}
+:root[data-theme='dark'] .post-field small {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .post-job-main .post-field-error {
+  color: #e4818c;
+}
+:root[data-theme='dark'] .post-consent input {
+  accent-color: #6f93ff;
+}
+:root[data-theme='dark'] .post-primary {
+  color: #131b2c;
+  background: #6f93ff;
+  border: 1px solid #6f93ff;
+}
+:root[data-theme='dark'] .post-secondary {
+  color: #9ca5b5;
+  background: #131b2c;
+  border: 1px solid #343f51;
+}
+:root[data-theme='dark'] .post-draft-note {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .post-message {
+  color: #e4818c;
+  background: #131b2c;
+  border: 1px solid #e4818c;
+}
+:root[data-theme='dark'] .post-success {
+  background: #131b2c;
+  border: 1px solid #2a313f;
+}
+:root[data-theme='dark'] .post-success > svg {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .post-success > small {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .post-plan-note {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .board-shell .job-card.placement-vip {
+  border-color: #6b5226;
+  border-left: 3px solid #c99331;
+  background: #1c1d22;
+}
+:root[data-theme='dark'] .board-shell .job-card.placement-premium {
+  border-color: #b5c4ed;
+  border-left: 3px solid #6f93ff;
+  background: #1c2845;
+}
+:root[data-theme='dark'] .placement-badge {
+  color: #6f93ff;
+  background: #1c2745;
+}
+:root[data-theme='dark'] .placement-badge-premium {
+  color: #131b2c;
+  background: #6f93ff;
+}
+:root[data-theme='dark'] .placement-badge-vip {
+  color: #ffd277;
+  background: #4d3b14;
+}
+:root[data-theme='dark'] .post-intro {
+  border-bottom: 1px solid #242c3d;
+}
+:root[data-theme='dark'] .post-intro::after {
+  background: linear-gradient(90deg, #6f93ff, #5fc6de);
+}
+:root[data-theme='dark'] .post-plans {
+  border-color: #242c3d;
+  background: linear-gradient(135deg, #131b2c 70%, #1c2a45);
+}
+:root[data-theme='dark'] .post-invoice-callout {
+  background: #1c2745;
+  border: 1px solid #acc1f6;
+}
+:root[data-theme='dark'] .featured-vacancies {
+  border: 1px solid #adc2f5;
+  background: #1c2745;
+}
+:root[data-theme='dark'] .featured-vacancies h3,
+:root[data-theme='dark'] .regular-vacancies > h3 {
+  color: #afbcd5;
+}
+:root[data-theme='dark'] .featured-vacancies > header > span {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .featured-vip {
+  background: #282319;
+  border-color: #6b5226;
+}
+:root[data-theme='dark'] .featured-vip h3 {
+  color: #ffd277;
+}
+:root[data-theme='dark'] .featured-premium h3 {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .post-plan-pills > label {
+  border: 1px solid #343f51;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .post-plan-pills > label.is-selected {
+  border-color: #6f93ff;
+  background: #1c2745;
+  box-shadow: inset 0 0 0 1px #6f93ff;
+}
+:root[data-theme='dark'] .post-plan-pills input {
+  accent-color: #6f93ff;
+}
+:root[data-theme='dark'] .post-vip-note {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .post-logo-preview {
+  border: 1px solid #343f51;
+  background: #0e1523;
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .post-logo-choose:focus-within {
+  outline: 2px solid #6f93ff;
+}
+
+/* ── from app/invoices.css ── */
+:root[data-theme='dark'] .invoice-page {
+  color: #afbcd5;
+}
+:root[data-theme='dark'] .invoice-toolbar a {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .invoice-actions button {
+  border: 1px solid #343f51;
+  background: #131b2c;
+}
+:root[data-theme='dark'] .invoice-paper {
+  background: #131b2c;
+  border: 1px solid #2a313f;
+  border-top: 4px solid #6f93ff;
+}
+:root[data-theme='dark'] .invoice-heading p {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .invoice-meta {
+  border-bottom: 1px solid #2a313f;
+}
+:root[data-theme='dark'] .invoice-status {
+  color: #ffd277;
+}
+:root[data-theme='dark'] .invoice-status-paid {
+  color: #a4e0c0;
+}
+:root[data-theme='dark'] .invoice-paper h2 {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .invoice-paper th {
+  background: #1c2745;
+}
+:root[data-theme='dark'] .invoice-paper th,
+:root[data-theme='dark'] .invoice-paper td {
+  border-bottom: 1px solid #2a313f;
+}
+:root[data-theme='dark'] .invoice-payment {
+  border: 1px solid #343f51;
+}
+:root[data-theme='dark'] .invoice-paper footer {
+  color: #9ca5b5;
+}
+@media print {
+  :root[data-theme='dark'] .invoice-paper {
+    border: 0;
+  }
+}
+@media print {
+  :root[data-theme='dark'] .invoice-paper,
+:root[data-theme='dark'] .invoice-page {
+    background: #131b2c !important;
+    color: #afbcd5 !important;
+  }
+}
+:root[data-theme='dark'] .invoice-test-notice {
+  color: #ffd277;
+  background: #342b18;
 }
 

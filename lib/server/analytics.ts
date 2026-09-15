@@ -1,8 +1,9 @@
 import { db } from './db';
 
-/* Anonymous usage counts. What is stored is only ever a kind, a value and a time — never an IP
-   address, a cookie, a session or a user agent — so a row cannot be traced back to a person.
-   The rate limiter in the route keys on the address in memory to stop abuse, and discards it. */
+/* Usage counts store a kind, a value and a time, without an IP address, cookie, session or
+   user agent. Filtering obvious contacts from searches reduces their storage but does not
+   guarantee anonymity: names and other identifying text can still pass. The route's rate
+   limiter separately keeps address-based keys in memory and periodically removes expired ones. */
 export const eventKinds = [
   'search',
   'search_empty',
@@ -12,6 +13,9 @@ export const eventKinds = [
 export type EventKind = (typeof eventKinds)[number];
 
 const uuid = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i;
+const email = /[^\s@]+@[^\s@]+\.[^\s@]+/;
+// Seven or more digits, including separated phone numbers and unseparated 11+ digit numbers.
+const phoneLike = /\d(?:[ ()+.-]*\d){6}/;
 
 /* Returns the value as it will be stored, or null when the event should not be recorded.
    A search is folded to lower case with its spacing collapsed, so "Მოლარე " and "მოლარე" count
@@ -35,6 +39,7 @@ export function normalizeEvent(
     .replace(/\s+/g, ' ')
     .toLowerCase();
   if (query.length < 2 || query.length > 80) return null;
+  if (email.test(query) || phoneLike.test(query)) return null;
   return { kind: kind as EventKind, value: query };
 }
 

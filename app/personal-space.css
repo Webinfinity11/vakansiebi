@@ -34,6 +34,37 @@
 .applicant-form {
   display: block;
 }
+/* Keep long saved search text and form actions inside the sheet when zoomed. */
+.personal-body,
+.personal-save-dialog form {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.personal-actions {
+  flex-wrap: wrap;
+}
+.personal-sheet[data-slot='sheet-content'] :is(a, button, input, select, textarea),
+.personal-save-dialog[data-slot='dialog-content'] :is(a, button, input, select, textarea) {
+  min-width: 44px;
+  min-height: 44px;
+}
+.personal-actions > :is(a, button),
+.applicant-actions > button {
+  max-width: 100%;
+  white-space: normal;
+}
+.personal-sheet > [data-slot='sheet-header'],
+.personal-save-dialog > [data-slot='dialog-header'] {
+  padding-right: 44px;
+}
+/* This component stylesheet is not an input to the dark-theme generator.
+   Limit colour overrides to the light theme; retain the existing dark palette. */
+:root:not([data-theme='dark'])
+  :is(.personal-sheet, .personal-save-dialog, .personal-tools, .application-control)
+  :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid #2457e6;
+  outline-offset: 3px;
+}
 .applicant-form .applicant-note {
   margin: 0 0 16px;
   padding: 10px 12px;

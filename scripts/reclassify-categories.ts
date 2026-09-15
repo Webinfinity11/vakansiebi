@@ -34,7 +34,7 @@ type Row = {
 try {
   const rows: Row[] = (
     await db().query(
-      `SELECT i.id item_id,i.raw,i.listing_hints,i.source_id,j.id job_id,j.version
+      `SELECT i.id item_id,${apply ? 'i.raw' : "jsonb_build_object('title',i.raw->>'title','category',i.raw->>'category')"} AS raw,i.listing_hints,i.source_id,j.id job_id,j.version
       FROM jobs j JOIN source_items i ON i.job_id=j.id AND i.url=j.draft->>'url'
       JOIN sources s ON s.id=i.source_id
       WHERE j.status IN ('pending','published') AND j.automation_managed AND NOT j.automation_paused

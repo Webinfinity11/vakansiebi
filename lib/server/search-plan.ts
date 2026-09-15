@@ -6,6 +6,41 @@ import { searchGroups } from '../search-language';
 import { escapeRegex, termPattern } from '../job-intelligence';
 import { requiredExperiencePattern } from '../experience';
 import { cities, cityStem, otherCity } from '../cities';
+import { db } from './db';
+import { ApiError } from './auth';
+
+// Bound server work without changing pooled sessions used by the importer/admin.
+// SET LOCAL is restored on both success and cancellation; a broken connection
+// is discarded if rollback cannot restore it.
+export async function publicRead(statement: string, args: unknown[] = []) {
+  const client = await db().connect();
+  let discard: Error | undefined;
+  try {
+    await client.query("BEGIN READ ONLY; SET LOCAL statement_timeout='12s'");
+    const result = await client.query(statement, args);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      discard =
+        rollbackError instanceof Error
+          ? rollbackError
+          : new Error('Public read rollback failed');
+    }
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === '57014'
+    )
+      throw new ApiError('მოთხოვნა დაგვიანდა. სცადე ხელახლა.', 503);
+    throw error;
+  } finally {
+    client.release(discard);
+  }
+}
 
 export const filterLabels = {
   query: 'საძიებო სიტყვა',
@@ -87,10 +122,9 @@ export function searchPlan(
     filters.salaryTo !== null ||
     filters.salaryPeriod === 'day' ||
     params.get('sort') === 'salary';
-  // Every ->> on the large snapshot detoasts it again, so each scalar the plan
-  // needs is pulled out exactly once behind an optimizer fence (OFFSET 0), the
-  // snapshot is the only jsonb the CTE carries, and derived columns are only
-  // computed for the filters, facets and orderings actually in play.
+  // Published scalars are maintained by migration 020 when the snapshot changes.
+  // Draft preview unpacks its live snapshot once with a lateral record. Separate
+  // ->> expressions each detoast the same large JSON again, even behind OFFSET 0.
   const extracted = [
     'title',
     'company',
@@ -102,8 +136,18 @@ export function searchPlan(
     ...(pricing ? ['salaryPeriod', 'currency'] : []),
     ...(pricing || filters.paid ? ['salary'] : []),
   ];
+  const promotionRank = (alias: string) =>
+    `CASE WHEN ${alias}.placement_expires_at>now() THEN CASE ${alias}.placement_tier WHEN 'premium' THEN 2 WHEN 'vip' THEN 1 ELSE 0 END ELSE 0 END`;
+  const scalar = (alias: string, key: string) =>
+    preview
+      ? `scalars."${key}"`
+      : `${alias}.search_${key.replace(/[A-Z]/g, (letter) => '_' + letter.toLowerCase())}`;
   const extraction = (alias: string) =>
-    `SELECT ${alias}.id,${alias}.${snapshot.slice(2)},${alias}.created_at,${alias}.published_at,${alias}.needs_review,${alias}.fingerprint,${extracted.map((key) => `${alias}.${snapshot.slice(2)}->>'${key}' AS p_${key}`).join(',')}${pricing ? `,${alias}.${snapshot.slice(2)}->'salaryMin' AS p_salaryMin` : ''}`;
+    `SELECT ${alias}.id,${alias}.${snapshot.slice(2)},${alias}.created_at,${alias}.published_at,${alias}.needs_review,${alias}.fingerprint,${alias}.placement_tier,${alias}.placement_expires_at,${extracted.map((key) => `${scalar(alias, key)} AS p_${key}`).join(',')}${pricing ? `,${scalar(alias, 'salaryMin')} AS p_salaryMin` : ''}`;
+  const scalarRecord = (alias: string) =>
+    preview
+      ? `CROSS JOIN LATERAL jsonb_to_record(${alias}.${snapshot.slice(2)}) AS scalars(${extracted.map((key) => `"${key}" text`).join(',')}${pricing ? ',"salaryMin" jsonb' : ''})`
+      : '';
   const p = (key: string) => `j.p_${key}`;
   /* A vacancy is grouped with another only when its employer name identifies someone. A blank
      name never did; neither does a placeholder or a kind of business. Two cooks in Tbilisi under
@@ -114,7 +158,9 @@ export function searchPlan(
   const genericEmployers = [...genericCompanyKeys]
     .map((key) => `'${key.replace(/'/g, "''")}'`)
     .join(',');
-  const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' OR length(${employerKey}) < 2 OR ${employerKey} IN (${genericEmployers}) THEN j.id::text ELSE regexp_replace(${normalized(`concat_ws('|',${p('title')},${p('company')},${p('city')})`)},'[^[:alnum:]|]','','g') END`;
+  // C locales classify Georgian letters as non-alphanumeric. Keep them explicitly
+  // or unrelated Georgian titles/employers/cities all collapse into the key "||".
+  const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' OR length(${employerKey}) < 2 OR ${employerKey} IN (${genericEmployers}) THEN j.id::text ELSE regexp_replace(${normalized(`concat_ws('|',${p('title')},${p('company')},${p('city')})`)},'[^[:alnum:]ა-ჰ|]','','g') END`;
   const numericSalary = `jsonb_typeof(${p('salaryMin')})='number'`;
   const monthlyFloor = 100;
   const monthlyCeiling = 50000;
@@ -122,8 +168,15 @@ export function searchPlan(
   const salaryAmount = `(${p('salaryMin')}#>>'{}')::numeric`;
   const unless = (needed: boolean, sql: string, empty = "''::text") =>
     needed ? sql : empty;
+  const groupPosition = `row_number() OVER (PARTITION BY ${groupKey} ORDER BY ${promotionRank('j')} DESC,${posted} DESC NULLS LAST,j.id)`;
+  const searchDocument = normalized(
+    `concat_ws(' ',${p('title')},${p('company')},${p('city')},${field('description')})`,
+  );
   const columns = [
-    `${unless(searching, normalized(`concat_ws(' ',${p('title')},${p('company')},${p('city')},${field('description')})`))} AS search_document`,
+    `${promotionRank('j')} AS promotion_rank`,
+    // Filters and relevance only inspect a group's representative. Members need
+    // the group key and sources, so avoid normalizing their duplicate descriptions.
+    `${unless(searching, grouped ? `CASE WHEN ${groupPosition}=1 THEN ${searchDocument} ELSE '' END` : searchDocument)} AS search_document`,
     `${unless(searching || filters.remote, normalized(p('title')))} AS title_norm`,
     `${unless(searching, normalized(p('company')))} AS company_norm`,
     `${unless(filters.city !== 'ყველა', normalized(p('city')))} AS city_norm`,
@@ -226,15 +279,15 @@ export function searchPlan(
         .slice(0, 100),
     )}::text[]))`;
   const groupRank = grouped
-    ? `,row_number() OVER (PARTITION BY ${groupKey} ORDER BY ${posted} DESC NULLS LAST,j.id) AS group_rank`
+    ? `,${groupPosition} AS group_rank`
     : ',1::bigint AS group_rank';
   // Members of every group present in the result. A lookup by id must also see
   // duplicates outside its restricted set; the indexed import fingerprint (the
   // same three fields, taken from the draft) narrows that scan to candidates.
   const members = params.has('ids')
-    ? `SELECT j.id,${groupKey} AS group_key,${posted} AS posted_at FROM (${extraction('j')} FROM jobs j WHERE ${visible} AND j.fingerprint IN (SELECT fingerprint FROM searchable) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
+    ? `SELECT j.id,${groupKey} AS group_key,${posted} AS posted_at FROM (${extraction('j')} FROM jobs j ${scalarRecord('j')} WHERE ${visible} AND j.fingerprint IN (SELECT fingerprint FROM searchable) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
     : `SELECT j.id,j.group_key,${posted} AS posted_at FROM searchable j`;
-  const cte = `WITH searchable AS MATERIALIZED (SELECT j.*,${columns.join(',')}${groupRank} FROM (${extraction('j')} FROM jobs j WHERE ${base} OFFSET 0) j WHERE ${current}), members AS MATERIALIZED (${members})`;
+  const cte = `WITH searchable AS MATERIALIZED (SELECT j.*,${columns.join(',')}${groupRank} FROM (${extraction('j')} FROM jobs j ${scalarRecord('j')} WHERE ${base} OFFSET 0) j WHERE ${current}), members AS MATERIALIZED (${members})`;
   const kept = grouped ? 'j.group_rank=1' : 'true';
   const keys = Object.keys(conditions) as FilterKey[];
   // searchable already satisfies the base predicate; only the grouping and the

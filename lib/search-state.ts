@@ -1,6 +1,6 @@
 import { subcategoryFor } from './subcategories';
 import type { SearchFilters } from './personal-space';
-import { categories, sourceNames } from './types';
+import { categories, listingSourceNames } from './types';
 export const sortKeys: Record<string, string> = {
   შესაბამისობა: 'relevance',
   უახლესი: 'new',
@@ -31,7 +31,9 @@ export function readSearch(params: URLSearchParams): SearchFilters {
     )
       ? params.get('category')!
       : 'ყველა',
-    source: Object.values(sourceNames).includes(params.get('source') || '')
+    source: Object.values(listingSourceNames).includes(
+      params.get('source') || '',
+    )
       ? params.get('source')!
       : 'ყველა',
     paid: params.get('paid') === 'true',
@@ -77,4 +79,36 @@ export function searchParams(filters: SearchFilters) {
   if (filters.sort !== 'შესაბამისობა')
     result.set('sort', sortKeys[filters.sort] || 'relevance');
   return result;
+}
+
+// The server seed, live filters and return snapshot must identify the same list.
+// Page stays separate: changing a filter resets pagination, appending does not.
+export function boardSearchKey(
+  filters: SearchFilters,
+  {
+    savedOnly = false,
+    saved = [],
+    excluded = '',
+    preview = false,
+  }: {
+    savedOnly?: boolean;
+    saved?: readonly string[];
+    excluded?: string;
+    preview?: boolean;
+  } = {},
+) {
+  return JSON.stringify([
+    searchParams(filters).toString(),
+    savedOnly,
+    savedOnly ? [...saved].sort() : [],
+    excluded.split(',').filter(Boolean).sort(),
+    preview,
+  ]);
+}
+
+export function readSearchPage(params: Pick<URLSearchParams, 'get'>) {
+  return Math.max(
+    1,
+    Math.min(10000, Math.floor(Number(params.get('page'))) || 1),
+  );
 }

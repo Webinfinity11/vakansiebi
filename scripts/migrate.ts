@@ -1,6 +1,13 @@
 import 'dotenv/config';
 import fs from 'node:fs/promises';
 import { db } from '../lib/server/db';
+if (
+  process.env.DATABASE_URL &&
+  new URL(process.env.DATABASE_URL).hostname.includes('-pooler')
+)
+  console.warn(
+    'გაფრთხილება: სესიური pg_advisory_lock(917400) transaction pooler-ზე მიგრაციების ურთიერთგამორიცხვის გარანტიას არ იძლევა; მიგრაციისთვის სასურველია direct endpoint.',
+  );
 const client = await db().connect();
 try {
   await client.query('SELECT pg_advisory_lock(917400)');

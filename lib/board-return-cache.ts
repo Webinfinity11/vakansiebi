@@ -10,6 +10,13 @@ type Snapshot = {
   total: number;
   pages: number;
   search: SearchMeta | null;
+  companyLinksPending?: boolean;
+};
+export type BoardInitial = Omit<
+  Snapshot,
+  'through' | 'path' | 'companyLinksPending'
+> & {
+  companyLinksPending: boolean;
 };
 // One short-lived snapshot in memory, never a growing browser-storage archive.
 let cached: { at: number; value: Snapshot } | null = null;

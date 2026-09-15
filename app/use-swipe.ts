@@ -1,5 +1,11 @@
 'use client';
-import { useCallback, useRef, useState, type PointerEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+} from 'react';
 /* Horizontal swipe on a touch pointer only. The gesture locks to horizontal after the finger
    has moved 10px more sideways than vertically, so ordinary scrolling is never captured, and
    it releases the offset back to zero after firing. */
@@ -16,17 +22,26 @@ export function useSwipe({
   const [dragging, setDragging] = useState(false);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const locked = useRef<'horizontal' | 'vertical' | null>(null);
+  const latestMoveX = useRef(0);
+  const frame = useRef<number | null>(null);
   const suppressUntil = useRef(0);
+  const cancelFrame = useCallback(() => {
+    if (frame.current === null) return;
+    cancelAnimationFrame(frame.current);
+    frame.current = null;
+  }, []);
+  useEffect(() => cancelFrame, [cancelFrame]);
   const suppressClick = useCallback(
     () => Date.now() < suppressUntil.current,
     [],
   );
   const reset = useCallback(() => {
+    cancelFrame();
     start.current = null;
     locked.current = null;
     setDragging(false);
     setDx(0);
-  }, []);
+  }, [cancelFrame]);
   const onPointerDown = useCallback((event: PointerEvent<HTMLElement>) => {
     suppressUntil.current = 0;
     if (event.pointerType !== 'touch') return;
@@ -50,7 +65,12 @@ export function useSwipe({
       }
     }
     if (locked.current !== 'horizontal') return;
-    setDx(Math.max(-120, Math.min(120, moveX)));
+    latestMoveX.current = moveX;
+    if (frame.current === null)
+      frame.current = requestAnimationFrame(() => {
+        frame.current = null;
+        setDx(Math.max(-120, Math.min(120, latestMoveX.current)));
+      });
   }, []);
   const onPointerUp = useCallback(
     (event: PointerEvent<HTMLElement>) => {

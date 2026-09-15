@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import { useState } from 'react';
-import { safeExternalUrl } from '@/lib/vacancy-media';
+import { isLocalLogoUrl, safeExternalUrl } from '@/lib/vacancy-media';
 
 export function CompanyLogo({
   company,
@@ -15,7 +15,7 @@ export function CompanyLogo({
 }) {
   const [failed, setFailed] = useState('');
   const [loaded, setLoaded] = useState('');
-  const src = safeExternalUrl(url || '');
+  const src = isLocalLogoUrl(url) ? url : safeExternalUrl(url || '');
   const showLogo = Boolean(src && failed !== src);
   return (
     <span

@@ -4,7 +4,6 @@ import {
   configs,
   detailRequestUrl,
   parseDetail,
-  sourceLockIds,
   UnavailableVacancy,
 } from './adapters';
 import { stageVacancy, audit } from './importer';
@@ -12,13 +11,20 @@ import { completeDescription } from './linked-description';
 import { sourceFetch, SourceHttpError } from './http';
 import { reconcileJob } from './automation';
 import type { ActiveSourceId } from '../lib/types';
+import {
+  acquireSourceLease,
+  releaseSourceLease,
+  startLeaseHeartbeat,
+} from './source-lease';
 export async function refreshDescriptions(
   source: ActiveSourceId,
   limit = 100,
   timeBudgetMs = 18 * 60_000,
 ) {
   if (!(source in configs)) throw Error('Unsupported source');
-  const c = await db().connect();
+  const ttlMs = timeBudgetMs + 5 * 60_000;
+  const owner = randomUUID();
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
   let locked = false;
   const started = Date.now();
   const runId = randomUUID();
@@ -29,11 +35,7 @@ export async function refreshDescriptions(
     failed = 0,
     removed = 0;
   try {
-    locked = (
-      await c.query('SELECT pg_try_advisory_lock($1) locked', [
-        sourceLockIds[source],
-      ])
-    ).rows[0].locked;
+    locked = await acquireSourceLease(source, owner, ttlMs);
     if (!locked)
       return {
         source,
@@ -44,8 +46,9 @@ export async function refreshDescriptions(
         removed,
         remaining: 0,
       };
+    heartbeat = startLeaseHeartbeat(source, owner, ttlMs);
     const removedItems = (
-      await c.query(
+      await db().query(
         `SELECT i.id FROM source_items i JOIN jobs j ON j.id=i.job_id
       WHERE i.source_id=$1 AND i.refresh_requested_at IS NOT NULL AND j.status='published'
       AND i.error IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410')
@@ -55,14 +58,14 @@ export async function refreshDescriptions(
     ).rows;
     for (const item of removedItems) await reconcileRemovedRefresh(item.id);
     const items = (
-      await c.query(
+      await db().query(
         `SELECT i.id,i.url,i.raw,i.failures,i.listing_hints FROM source_items i JOIN sources s ON s.id=i.source_id WHERE i.source_id=$1 AND s.enabled AND NOT s.retired AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at) AND i.next_check_at<=now()
         ORDER BY CASE WHEN length(COALESCE(i.raw->>'description',''))<700 AND jsonb_array_length(COALESCE(i.raw->'applicationLinks','[]'::jsonb))>0 THEN 0 ELSE 1 END,i.next_check_at,i.id LIMIT $2`,
         [source, Math.max(1, Math.min(1000, limit))],
       )
     ).rows;
     if (items.length) {
-      await c.query('INSERT INTO source_runs(id,source_id) VALUES($1,$2)', [
+      await db().query('INSERT INTO source_runs(id,source_id) VALUES($1,$2)', [
         runId,
         source,
       ]);
@@ -94,7 +97,7 @@ export async function refreshDescriptions(
         const gone =
           e instanceof UnavailableVacancy ||
           (e instanceof SourceHttpError && [404, 410].includes(e.status));
-        await c.query(
+        await db().query(
           `UPDATE source_items SET last_checked_at=now(),error=$2,failures=failures+1,
           next_check_at=now()+(LEAST(1440,30*power(2,LEAST(failures,5)))*interval '1 minute'),
           refresh_completed_at=CASE WHEN $3 THEN now() ELSE refresh_completed_at END WHERE id=$1`,
@@ -103,7 +106,7 @@ export async function refreshDescriptions(
         if (gone) {
           removed++;
           const row = (
-            await c.query('SELECT job_id FROM source_items WHERE id=$1', [
+            await db().query('SELECT job_id FROM source_items WHERE id=$1', [
               item.id,
             ])
           ).rows[0];
@@ -125,14 +128,14 @@ export async function refreshDescriptions(
     }
     const remaining = Number(
       (
-        await c.query(
+        await db().query(
           'SELECT count(*) FROM source_items WHERE source_id=$1 AND refresh_requested_at IS NOT NULL AND (refresh_completed_at IS NULL OR refresh_requested_at>refresh_completed_at)',
           [source],
         )
       ).rows[0].count,
     );
     if (runStarted)
-      await c.query(
+      await db().query(
         'UPDATE source_runs SET status=$2,finished_at=now(),changed=$3,failed=$4,error=$5 WHERE id=$1',
         [
           runId,
@@ -146,9 +149,8 @@ export async function refreshDescriptions(
       );
     return { source, refreshed, held, failed, removed, remaining };
   } finally {
-    if (locked)
-      await c.query('SELECT pg_advisory_unlock($1)', [sourceLockIds[source]]);
-    c.release();
+    clearInterval(heartbeat);
+    if (locked) await releaseSourceLease(source, owner);
   }
 }
 

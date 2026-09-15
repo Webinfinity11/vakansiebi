@@ -31,8 +31,41 @@ void test('a view or an outbound click must name a vacancy', () => {
     kind: 'outbound',
     value: id,
   });
+  const numericId = '12345678-1234-1234-1234-123456789012';
+  for (const kind of ['view', 'outbound'])
+    assert.deepEqual(normalizeEvent(kind, numericId), {
+      kind,
+      value: numericId,
+    });
   assert.equal(normalizeEvent('view', 'not-an-id'), null);
   assert.equal(normalizeEvent('outbound', 'https://evil.example'), null);
+});
+
+void test('searches containing obvious contacts or long numbers are refused after normalization', () => {
+  for (const kind of ['search', 'search_empty'])
+    for (const query of [
+      'მოლარე JOBS@EXAMPLE.GE თბილისი',
+      'მოლარე jobs＠example．ge',
+      'მოლარე 599 12 34 56',
+      'მოლარე +995 (599) 12-34.56',
+      'მოლარე 1+2(3)4.5-6 7',
+      'მოლარე 1234567',
+      'მოლარე 12345678901',
+      'მოლარე 123456789012',
+      'მოლარე ５９９\t１２\n３４\u00a0５６',
+    ])
+      assert.equal(normalizeEvent(kind, query), null, `${kind}: ${query}`);
+});
+
+void test('ordinary searches with short numbers remain valid', () => {
+  for (const kind of ['search', 'search_empty'])
+    for (const query of [
+      'ბუღალტერი 2 წლიანი',
+      '1c 8.3',
+      'კოდი 123456',
+      'კოდი 12 34 56',
+    ])
+      assert.deepEqual(normalizeEvent(kind, query), { kind, value: query });
 });
 
 void test('only the four kinds exist; nothing identifying can be passed as a kind', () => {

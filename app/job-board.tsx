@@ -1,5 +1,6 @@
 'use client';
 import './board-features.css';
+import { VacancySections } from './vacancy-sections';
 import { VacancyStatus } from './vacancy-status';
 import { useSwipe } from './use-swipe';
 import { RecentVacancies } from './recent-vacancies';
@@ -12,7 +13,11 @@ import {
   vacancyCardLocation,
 } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
-import { rememberBoard, takeBoard } from '@/lib/board-return-cache';
+import {
+  rememberBoard,
+  takeBoard,
+  type BoardInitial,
+} from '@/lib/board-return-cache';
 import { subcategories, subcategoryFor } from '@/lib/subcategories';
 import { SalaryFilter } from './salary-filter';
 import AdvancedFilterControls, {
@@ -41,7 +46,12 @@ import {
   rememberSearch,
   restoreSearch,
 } from '@/lib/vacancy-navigation';
-import { readSearch, searchParams } from '@/lib/search-state';
+import {
+  boardSearchKey,
+  readSearch,
+  readSearchPage,
+  searchParams,
+} from '@/lib/search-state';
 import { shareLink } from '@/lib/share';
 import { track } from '@/lib/analytics-client';
 import {
@@ -97,7 +107,7 @@ import { useVacancyActivity } from './use-vacancy-activity';
 import { usePersonalSpace } from './personal-space';
 import type { SearchFilters } from '@/lib/personal-space';
 import type { PublicJob as Job } from '@/lib/types';
-import { categories, sourceNames } from '@/lib/types';
+import { categories, listingSourceNames } from '@/lib/types';
 import { cityOptions } from '@/lib/cities';
 
 const categoryIcons = {
@@ -183,6 +193,7 @@ function isNew(datePosted?: string) {
    reveal layers behind it name the action before the finger lifts. */
 const JobCard = memo(function JobCard({
   job: j,
+  index,
   demo,
   saved,
   seen,
@@ -193,6 +204,7 @@ const JobCard = memo(function JobCard({
   onHide,
 }: {
   job: Job;
+  index: number;
   demo: boolean;
   saved: boolean;
   seen: boolean;
@@ -221,6 +233,11 @@ const JobCard = memo(function JobCard({
   return (
     <div
       className="swipe-shell"
+      style={
+        {
+          '--vacancy-delay': `${index < 8 ? index * 40 : 0}ms`,
+        } as CSSProperties
+      }
       data-dir={swipe.dx > 0 ? 'right' : swipe.dx < 0 ? 'left' : undefined}
     >
       <div className="swipe-reveal swipe-reveal-right" aria-hidden="true">
@@ -232,7 +249,7 @@ const JobCard = memo(function JobCard({
         </div>
       )}
       <article
-        className="job-card swipe-card"
+        className={`job-card swipe-card${j.placement ? ` placement-${j.placement.tier}` : ''}`}
         data-long-pay={salary.length > 80 || undefined}
         data-has-pay={Boolean(salary) || undefined}
         style={style}
@@ -257,6 +274,14 @@ const JobCard = memo(function JobCard({
             >
               {cardTitle}
             </Link>
+            {j.placement && (
+              <span
+                className={`placement-badge placement-badge-${j.placement.tier}`}
+                title="გამორჩეული განთავსება"
+              >
+                {j.placement.tier === 'premium' ? 'პრემიუმი' : 'VIP'}
+              </span>
+            )}
             {isNew(j.datePosted) && <span className="job-new">ახალი</span>}
           </div>
           <div className="job-company">
@@ -341,10 +366,28 @@ function VacancySkeletons({ count }: { count: number }) {
   ));
 }
 
-export default function JobBoard() {
+export default function JobBoard({
+  initial,
+  pendingInitial = false,
+}: {
+  initial?: BoardInitial;
+  pendingInitial?: boolean;
+} = {}) {
   const [allCategoriesVisible, setAllCategoriesVisible] = useState(false);
   const params = useSearchParams();
   const demo = params.get('preview') === '1';
+  const [initialSearch] = useState(() =>
+    readSearch(new URLSearchParams(params.toString())),
+  );
+  const [seed] = useState(() =>
+    initial?.key ===
+      boardSearchKey(initialSearch, {
+        preview: demo,
+        savedOnly: params.get('saved') === '1',
+      }) && initial.page === readSearchPage(params)
+      ? initial
+      : null,
+  );
   const activity = useVacancyActivity();
   const excluded = demo ? '' : activity.hidden.map((item) => item.id).join(',');
   const personal = usePersonalSpace();
@@ -359,16 +402,22 @@ export default function JobBoard() {
     [personal.records],
   );
   const [loadedResult, setLoadedResult] = useState({
-    key: '',
-    page: 0,
-    path: '',
+    key: seed?.key || '',
+    page: seed?.page || 0,
+    path: seed ? searchReturnPath(initialSearch, seed.page) : '',
   });
-  const [jobs, setJobs] = useState<Job[]>([]),
-    [loading, setLoading] = useState(true),
+  const [jobs, setJobs] = useState<Job[]>(seed?.jobs || []),
+    [loading, setLoading] = useState(!seed),
     [error, setError] = useState('');
-  const [initialSearch] = useState(() =>
-    readSearch(new URLSearchParams(params.toString())),
+  const settledRequest = useRef(
+    seed ? JSON.stringify([seed.key, seed.page, 0]) : '',
   );
+  const [restoreReady, setRestoreReady] = useState(false);
+  const [restoredSnapshot, setRestoredSnapshot] = useState(false);
+  const visibleJobs = useMemo(() => {
+    const hidden = new Set(excluded.split(','));
+    return excluded ? jobs.filter((job) => !hidden.has(job.id)) : jobs;
+  }, [jobs, excluded]);
   const lastRequestedQuery = useRef(initialSearch.query);
   const [query, setQuery] = useState(initialSearch.query),
     [city, setCity] = useState(initialSearch.city),
@@ -404,8 +453,12 @@ export default function JobBoard() {
     sort,
     ...advanced,
   };
-  const [searchMeta, setSearchMeta] = useState<SearchMeta | null>(null);
-  const [companyLinksPending, setCompanyLinksPending] = useState(false);
+  const [searchMeta, setSearchMeta] = useState<SearchMeta | null>(
+    seed?.search || null,
+  );
+  const [companyLinksPending, setCompanyLinksPending] = useState(
+    seed?.companyLinksPending || false,
+  );
   const [filtersOpen, setFiltersOpen] = useState(false),
     [savedOnly, setSavedOnly] = useState(params.get('saved') === '1'),
     [saved, setSaved] = useState<string[]>([]),
@@ -418,50 +471,27 @@ export default function JobBoard() {
   const [mobileDraft, setMobileDraft] = useState<SearchFilters | null>(null);
   const mobileKey = mobileDraft ? searchParams(mobileDraft).toString() : '';
   const [pageState, setPageState] = useState(() => ({
-      key: JSON.stringify([
-        initialSearch.query,
-        initialSearch.city,
-        initialSearch.category,
-        initialSearch.subcategory || '',
-        initialSearch.source,
-        initialSearch.paid,
-        initialSearch.remote,
-        initialSearch.sort,
-        advanced,
-        false,
-        [],
-        '',
-        demo,
-      ]),
-      page: Math.max(
-        1,
-        Math.min(10000, Math.floor(Number(params.get('page'))) || 1),
-      ),
+      key: boardSearchKey(initialSearch, { savedOnly, preview: demo }),
+      page: readSearchPage(params),
     })),
-    [total, setTotal] = useState(0),
-    [pages, setPages] = useState(0);
+    [total, setTotal] = useState(seed?.total || 0),
+    [pages, setPages] = useState(seed?.pages || 0);
   /* "მეტის ჩვენება" appends pages after the one in the URL; `through` is the last one shown. */
-  const [loadedState, setLoadedState] = useState({ key: '', through: 0 });
+  const [loadedState, setLoadedState] = useState({
+    key: seed?.key || '',
+    through: seed?.page || 0,
+  });
   const [appendPage, setAppendPage] = useState<{
     key: string;
     page: number;
   } | null>(null);
   const [appendError, setAppendError] = useState('');
-  const filterKey = JSON.stringify([
-    query,
-    city,
-    category,
-    subcategory,
-    source,
-    paid,
-    remote,
-    sort,
-    advanced,
+  const filterKey = `${boardSearchKey(currentSearch, {
     savedOnly,
-    savedOnly ? saved : [],
+    saved,
     excluded,
-    demo,
-  ]);
+    preview: demo,
+  })}`;
   const page = pageState.key === filterKey ? pageState.page : 1;
   const loadedThrough =
     loadedState.key === filterKey ? Math.max(page, loadedState.through) : page;
@@ -503,10 +533,13 @@ export default function JobBoard() {
     return () => clearTimeout(timer);
   }, []);
   useEffect(() => {
-    if (!activity.ready || (savedOnly && !storageReady)) return;
+    if (pendingInitial || !activity.ready || (savedOnly && !storageReady))
+      return;
     const controller = new AbortController();
+    const requestKey = JSON.stringify([filterKey, page, retry]);
     const timer = setTimeout(
       () => {
+        setRestoreReady(true);
         lastRequestedQuery.current = query;
         setLoading(true);
         setError('');
@@ -550,8 +583,13 @@ export default function JobBoard() {
             ? takeBoard(filterKey, page)
             : null;
         if (cached) {
+          setRestoredSnapshot(true);
+          settledRequest.current = requestKey;
           setJobs(cached.jobs);
-          setCompanyLinksPending(cached.jobs.some((job) => !job.companyPath));
+          setCompanyLinksPending(
+            cached.companyLinksPending ??
+              cached.jobs.some((job) => !job.companyPath),
+          );
           setTotal(cached.total);
           setPages(cached.pages);
           setSearchMeta(cached.search);
@@ -559,6 +597,12 @@ export default function JobBoard() {
           setLoadedState({ key: filterKey, through: cached.through });
           setAppendPage(null);
           setAppendError('');
+          setLoading(false);
+          return;
+        }
+        // Storage readiness can rerun this effect. A matching SSR seed (or a
+        // completed request) already supplies this page; hidden IDs change the key.
+        if (settledRequest.current === requestKey) {
           setLoading(false);
           return;
         }
@@ -570,6 +614,8 @@ export default function JobBoard() {
           })
           .then((d) => {
             if (!controller.signal.aborted) {
+              setRestoredSnapshot(false);
+              settledRequest.current = requestKey;
               setJobs(d.jobs);
               setCompanyLinksPending(d.companyLinksPending === true);
               setSearchMeta(d.search);
@@ -638,6 +684,7 @@ export default function JobBoard() {
     retry,
     excluded,
     activity.ready,
+    pendingInitial,
   ]);
   useEffect(() => {
     if (!appendPage || appendPage.key !== filterKey || resultsPending) return;
@@ -762,6 +809,7 @@ export default function JobBoard() {
     // Start one page before the reader reaches the end. Errors require an explicit retry;
     // opening a filter sheet must not trigger background pagination.
     if (
+      !restoreReady ||
       appending ||
       resultsPending ||
       error ||
@@ -784,6 +832,7 @@ export default function JobBoard() {
     observer.observe(target);
     return () => observer.disconnect();
   }, [
+    restoreReady,
     appending,
     resultsPending,
     error,
@@ -936,14 +985,15 @@ export default function JobBoard() {
     if (!storageReady || !activity.ready || initialPageRestored.current) return;
     const timer = setTimeout(() => {
       initialPageRestored.current = true;
-      const initialPage = Math.max(
-        1,
-        Math.min(10000, Math.floor(Number(params.get('page'))) || 1),
-      );
+      const requestedPage = readSearchPage(params);
+      const initialPage =
+        seed?.key === filterKey && seed.pages > 0
+          ? Math.min(requestedPage, seed.pages)
+          : requestedPage;
       if (initialPage > 1) setPageState({ key: filterKey, page: initialPage });
     }, 0);
     return () => clearTimeout(timer);
-  }, [storageReady, activity.ready, filterKey, params]);
+  }, [storageReady, activity.ready, filterKey, params, seed]);
   const returnPath = searchReturnPath(currentSearch, page, savedOnly, demo);
   const markSeen = activity.markSeen;
   const hideVacancy = activity.hide;
@@ -954,6 +1004,7 @@ export default function JobBoard() {
     total,
     pages,
     searchMeta,
+    companyLinksPending,
   });
   useEffect(() => {
     openContext.current = {
@@ -963,8 +1014,17 @@ export default function JobBoard() {
       total,
       pages,
       searchMeta,
+      companyLinksPending,
     };
-  }, [loadedResult, loadedState, jobs, total, pages, searchMeta]);
+  }, [
+    loadedResult,
+    loadedState,
+    jobs,
+    total,
+    pages,
+    searchMeta,
+    companyLinksPending,
+  ]);
   const openJob = useCallback(
     (job: Job) => {
       const context = openContext.current;
@@ -977,6 +1037,7 @@ export default function JobBoard() {
         total: context.total,
         pages: context.pages,
         search: context.searchMeta,
+        companyLinksPending: context.companyLinksPending,
       });
       rememberSearch(
         context.loadedResult.path,
@@ -1000,7 +1061,13 @@ export default function JobBoard() {
   );
   const searchRestored = useRef(false);
   useEffect(() => {
-    if (resultsPending || error || !storageReady || searchRestored.current)
+    if (
+      !restoreReady ||
+      resultsPending ||
+      error ||
+      !storageReady ||
+      searchRestored.current
+    )
       return;
     const position = restoreSearch(returnPath);
     if (!position) return;
@@ -1035,6 +1102,7 @@ export default function JobBoard() {
     });
     return () => cancelAnimationFrame(frame);
   }, [
+    restoreReady,
     resultsPending,
     error,
     storageReady,
@@ -1205,11 +1273,12 @@ export default function JobBoard() {
             </button>
           </>
         )}
-        <div className="filter-divider" />
         {subcategories.some((item) => item.category === draft.category) && (
-          <label className="filter-subcategory">
-            <span>ქვემიმართულება</span>
+          <div className="filter-subcategory">
+            <label htmlFor={`${prefix}-subcategory`}>ქვემიმართულება</label>
             <select
+              id={`${prefix}-subcategory`}
+              aria-describedby={`${prefix}-subcategory-help`}
               value={draft.subcategory || ''}
               onChange={(event) => {
                 if (prefix === 'mobile')
@@ -1229,8 +1298,15 @@ export default function JobBoard() {
                   </option>
                 ))}
             </select>
-          </label>
+            <p
+              className="filter-subcategory-help"
+              id={`${prefix}-subcategory-help`}
+            >
+              დაუზუსტებელი ვაკანსიებიც ჩანს „ყველა“-ში.
+            </p>
+          </div>
         )}
+        <div className="filter-divider" />
         <h3>სამუშაო პირობები</h3>
         <label className="check-row" htmlFor={`${prefix}-remote`}>
           <Checkbox
@@ -1294,7 +1370,7 @@ export default function JobBoard() {
             label="ყველა წყარო"
             value={draft.source}
             onChange={changeSource}
-            options={Object.values(sourceNames)}
+            options={Object.values(listingSourceNames)}
           />
         </details>
         <div className="source-note">
@@ -1513,12 +1589,32 @@ export default function JobBoard() {
               <div className="results-toolbar">
                 <div className="results-head">
                   <div>
-                    <h2>
-                      {savedOnly ? 'შენახული ვაკანსიები' : 'ვაკანსიები'}
-                      <span className="result-count">
-                        {resultsPending ? '…' : total}
-                      </span>
-                    </h2>
+                    <div className="results-title-row">
+                      <h2>
+                        {savedOnly ? 'შენახული ვაკანსიები' : 'ვაკანსიები'}
+                        <span className="result-count">
+                          {resultsPending ? '…' : total}
+                        </span>
+                      </h2>
+                      <output
+                        className="results-updating"
+                        data-active={resultsPending || undefined}
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >
+                        <span>
+                          {resultsPending
+                            ? visibleJobs.length
+                              ? 'ახლდება…'
+                              : 'იტვირთება…'
+                            : ''}
+                        </span>
+                        <span
+                          className="results-loading-track"
+                          aria-hidden="true"
+                        />
+                      </output>
+                    </div>
                     <p aria-live="polite">
                       {resultsPending
                         ? 'ვაკანსიებს ვეძებთ…'
@@ -1745,44 +1841,38 @@ export default function JobBoard() {
                   </button>
                 </div>
               ) : (
-                <div className="job-list">
-                  {resultsPending && jobs.length === 0 && (
-                    <output className="brand-loading">
-                      <span className="brand-loading-mark" aria-hidden="true" />
-                      <span>შენს შემდეგ შესაძლებლობას ვეძებთ…</span>
-                      <span
-                        className="brand-loading-track"
-                        aria-hidden="true"
-                      />
-                    </output>
-                  )}
-                  {resultsPending && jobs.length > 0 && (
-                    <output className="results-updating">
-                      შედეგები ახლდება — მანამდე წინა ვაკანსიების ნახვა
-                      შეგიძლია.
-                    </output>
-                  )}
-                  {resultsPending && jobs.length === 0 ? (
+                <div
+                  className="job-list"
+                  data-restored={restoredSnapshot || undefined}
+                  data-updating={
+                    (resultsPending && visibleJobs.length > 0) || undefined
+                  }
+                >
+                  {resultsPending && visibleJobs.length === 0 ? (
                     <VacancySkeletons count={4} />
                   ) : (
-                    jobs.map((j) => (
-                      <JobCard
-                        key={j.id}
-                        job={j}
-                        demo={demo}
-                        saved={savedSet.has(j.id)}
-                        seen={seenSet.has(j.id)}
-                        status={applicationsById.get(j.id)}
-                        returnPath={loadedResult.path}
-                        onToggleSave={toggleSave}
-                        onOpen={openJob}
-                        onHide={hideJob}
-                      />
-                    ))
+                    <VacancySections
+                      jobs={visibleJobs}
+                      renderCard={(j, index) => (
+                        <JobCard
+                          key={`${loadedResult.key}:${loadedResult.page}:${j.id}`}
+                          index={index}
+                          job={j}
+                          demo={demo}
+                          saved={savedSet.has(j.id)}
+                          seen={seenSet.has(j.id)}
+                          status={applicationsById.get(j.id)}
+                          returnPath={loadedResult.path}
+                          onToggleSave={toggleSave}
+                          onOpen={openJob}
+                          onHide={hideJob}
+                        />
+                      )}
+                    />
                   )}
                 </div>
               )}
-              {!resultsPending && !error && !jobs.length && (
+              {!resultsPending && !error && !visibleJobs.length && (
                 <div className="empty">
                   <div className="empty-icon">
                     {savedOnly ? <Bookmark size={28} /> : <Search size={28} />}
@@ -1878,8 +1968,8 @@ export default function JobBoard() {
                 <div className="results-progress">
                   <output>
                     ნაჩვენებია {(page - 1) * 20 + 1}–
-                    {Math.min((page - 1) * 20 + jobs.length, total)} / {total}{' '}
-                    ვაკანსია
+                    {Math.min((page - 1) * 20 + visibleJobs.length, total)} /{' '}
+                    {total} ვაკანსია
                   </output>
                   {page > 1 && (
                     <button
@@ -1893,7 +1983,7 @@ export default function JobBoard() {
               )}
               <div className="results-foot">
                 <ShieldCheck size={16} />
-                <span>ყოველ ვაკანსიას ახლავს პირველწყაროს ბმული</span>
+                <span>ვაკანსიები დამსაქმებლებისა და სამუშაოს საიტებიდან</span>
               </div>
             </section>
           </div>
@@ -1918,7 +2008,10 @@ export default function JobBoard() {
           <p>
             მოძებნე ვაკანსია, გაეცანი პირობებს და განაცხადისთვის გადადი
             პირველწყაროზე. შენახული ვაკანსიები ამ ბრაუზერში რჩება და სხვა
-            მოწყობილობაზე ავტომატურად არ გადადის.
+            მოწყობილობაზე ავტომატურად არ გადადის. თემას, შენახულ ვაკანსიებსა და
+            შენ მიერ შენახულ კონტაქტებს ამ ბრაუზერში ვინახავთ; ძიებებისა და
+            მოქმედებების ანონიმური სტატისტიკა სერვერზე ინახება, ზოგი ლოგო კი გარე
+            საიტიდან იტვირთება.
           </p>
         </details>
         <div className="footer-meta">

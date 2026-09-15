@@ -11,11 +11,12 @@
    several instances and each keeps its own counters, so the effective ceiling is the limit
    times the number of instances. Anything stricter needs shared state, and the endpoint is
    not worth that: it reads public data and is cacheable at the edge. */
-type Window = { started: number; hits: number };
+type Window = { started: number; hits: number; windowMs: number };
 const windows = new Map<string, Window>();
 /* Bounded so a stream of distinct keys cannot grow the map without end; the oldest entry goes
-   first, and an entry is only ever a counter and a timestamp. */
+   first, and an entry holds a counter, a timestamp and its latest window duration. */
 const maxKeys = 5000;
+let callsSinceSweep = 0;
 
 export type RateLimit = { allowed: boolean; retryAfterSeconds: number };
 
@@ -28,13 +29,21 @@ export function rateLimit(
   }: { limit: number; windowMs: number; now?: number },
 ): RateLimit {
   const existing = windows.get(key);
+  if (existing) existing.windowMs = windowMs;
+  // Cleanup is driven by requests, using each key's duration rather than the caller's.
+  callsSinceSweep += 1;
+  if (callsSinceSweep >= 256) {
+    for (const [storedKey, window] of windows)
+      if (now - window.started >= window.windowMs) windows.delete(storedKey);
+    callsSinceSweep = 0;
+  }
   if (!existing || now - existing.started >= windowMs) {
     if (windows.size >= maxKeys) {
       const oldest = windows.keys().next();
       if (!oldest.done) windows.delete(oldest.value);
     }
     windows.delete(key);
-    windows.set(key, { started: now, hits: 1 });
+    windows.set(key, { started: now, hits: 1, windowMs });
     return { allowed: true, retryAfterSeconds: 0 };
   }
   existing.hits += 1;
@@ -51,6 +60,12 @@ export function rateLimit(
 /* Only for tests: the module keeps its state for the life of the instance. */
 export function resetRateLimits() {
   windows.clear();
+  callsSinceSweep = 0;
+}
+
+/* Only for tests: observe cleanup without exposing address-based keys. */
+export function rateLimitSize() {
+  return windows.size;
 }
 
 /* Vercel and every proxy in front of it set x-forwarded-for; the first entry is the client.

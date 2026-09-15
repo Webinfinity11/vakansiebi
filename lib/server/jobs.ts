@@ -1,3 +1,6 @@
+import { confirmInvoice, cancelUnusedInvoice } from './billing';
+import { placementTiers } from '../placement';
+import { approvePlacement } from './job-placement';
 import { employerlessSources, privateListingLabel } from '../types';
 import { z } from 'zod';
 import type { QueryResultRow } from 'pg';
@@ -14,6 +17,7 @@ import { contactAsCompany } from '../employer-identity';
 import { sourceHealth } from '../job-intelligence';
 import {
   searchPlan,
+  publicRead,
   filterLabels,
   type FilterKey,
   type SearchMeta,
@@ -22,7 +26,24 @@ import { suggestSearch } from '../search-language';
 import { logoCompanyKey } from '../company-logo-identity';
 import { resolveCompanyLogos } from './company-logos';
 import { employerPages, employerPagesIfReady } from './employers';
-export async function publicJobs(
+import { createPublicJobsCache, publicJobsCacheKey } from './jobs-cache';
+
+const publicResponses = createPublicJobsCache<Awaited<ReturnType<typeof loadPublicJobs>>>();
+// Benchmarks and snapshot-write integration tests can explicitly measure a miss.
+export function clearPublicJobsCache() {
+  publicResponses.clear();
+}
+export function publicJobs(
+  params: URLSearchParams,
+  preview = false,
+  options: { jobIds?: readonly string[] } = {},
+) {
+  return publicResponses.get(
+    publicJobsCacheKey(params, preview, options.jobIds),
+    () => loadPublicJobs(params, preview, options),
+  );
+}
+async function loadPublicJobs(
   params: URLSearchParams,
   preview = false,
   options: { jobIds?: readonly string[] } = {},
@@ -48,14 +69,29 @@ export async function publicJobs(
   const cut = metrics.indexOf(
     '\n    SELECT (SELECT count(*)::int FROM matches',
   );
+  const boosted =
+    !preview &&
+    !params.has('ids') &&
+    !['salary', 'new', 'deadline'].includes(params.get('sort') || '');
+  const priority = boosted
+    ? 'CASE WHEN j.promotion_position<=3 THEN j.promotion_rank ELSE 0 END DESC,'
+    : '';
+  const eligible = boosted
+    ? `, eligible AS (SELECT j.*,row_number() OVER (PARTITION BY j.promotion_rank ORDER BY CASE WHEN j.promotion_rank>0 THEN md5(j.id::text || to_char(now() AT TIME ZONE 'UTC','YYYY-MM-DD-HH24')) ELSE '' END,${ordering},j.id) AS promotion_position FROM searchable j WHERE ${where})`
+    : '';
+  // A card needs one recent link per source; detail retains every original link.
+  const sources = summary
+    ? `COALESCE((SELECT jsonb_agg(jsonb_build_object('source',recent.source,'url',recent.url,'checkedAt',recent.checked_at,'error',recent.error) ORDER BY recent.posted_at DESC NULLS LAST,recent.source,recent.url) FROM (SELECT * FROM (SELECT DISTINCT ON (s.name) s.name AS source,si.url,CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END AS checked_at,si.error,m.posted_at FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired ORDER BY s.name,m.posted_at DESC NULLS LAST,si.last_checked_at DESC NULLS LAST,si.url) per_source ORDER BY posted_at DESC NULLS LAST,source,url LIMIT 6) recent),'[]'::jsonb)`
+    : `COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error) ORDER BY (m.id=j.id) DESC,m.posted_at DESC,s.name,si.url) FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired),'[]'::jsonb)`;
   const statement = countsOnly
     ? metrics
     : metrics.slice(0, cut) +
-      `, ranked AS (SELECT j.id,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error) ORDER BY (m.id=j.id) DESC,m.posted_at DESC,s.name,si.url) FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired),'[]'::jsonb) AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id, row_number() OVER (ORDER BY ${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT * FROM ranked WHERE ord > $${args.length + 2} AND ord <= $${args.length + 2} + $${args.length + 1})` +
+      eligible +
+      `, ranked AS (SELECT j.id,j.promotion_rank,j.placement_expires_at,${boosted ? '(j.promotion_rank>0 AND j.promotion_position<=3)' : 'false'} AS priority_placement,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,${sources} AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id, row_number() OVER (ORDER BY ${priority}${ordering},j.id) AS ord FROM ${boosted ? 'eligible' : 'searchable'} j WHERE ${boosted ? 'true' : where}), page AS (SELECT * FROM ranked WHERE ord > $${args.length + 2} AND ord <= $${args.length + 2} + $${args.length + 1})` +
       metrics.slice(cut) +
       `, (SELECT COALESCE(jsonb_agg(to_jsonb(pg) - 'ord' ORDER BY pg.ord),'[]'::jsonb) FROM page pg) AS page_rows`;
   const measured = (
-    await db().query(
+    await publicRead(
       statement,
       countsOnly ? args : [...args, limit, (page - 1) * limit],
     )
@@ -77,7 +113,7 @@ export async function publicJobs(
     corrected.set('q', correction);
     const plan = searchPlan(corrected, preview, { grouped: true });
     const n = (
-      await db().query(
+      await publicRead(
         `${plan.cte} SELECT count(*)::int count FROM searchable j WHERE ${plan.where}`,
         plan.args,
       )
@@ -93,10 +129,8 @@ export async function publicJobs(
       page: 1,
       pages: Math.ceil(count / limit),
     };
-  /* One statement, not two. `searchable` is the expensive part (about 700ms warm) and a CTE
-     does not outlive its statement, so running the counts and the page separately built it
-     twice. Measured on the remote filter: 1546ms as two queries, 740ms as one, same ids and
-     total. The page is numbered by the same ordering it is limited by, so the aggregate keeps
+  /* Counts and page share the expensive searchable CTE in one statement. The page
+     is numbered by the same ordering it is limited by, so the aggregate keeps
      the order without relying on the planner. */
   // Rows arrive as JSON; the timestamp is restored so the response shape is unchanged.
   const pageRows: QueryResultRow[] = measured.page_rows || [];
@@ -107,7 +141,7 @@ export async function publicJobs(
   ];
   const [profilesResult, sharedLogos, employers] = await Promise.all([
     companyKeys.length
-      ? db().query(
+      ? publicRead(
           `SELECT company_key,logo_url${summary ? '' : ',website,description'} FROM company_profiles WHERE company_key=ANY($1::text[])`,
           [companyKeys],
         )
@@ -153,6 +187,15 @@ export async function publicJobs(
         ? { company: privateListingLabel }
         : {}),
       id: r.id,
+      ...(r.promotion_rank > 0 && r.placement_expires_at
+        ? {
+            placement: {
+              tier: r.promotion_rank === 2 ? 'premium' : 'vip',
+              expiresAt: r.placement_expires_at,
+              priority: !!r.priority_placement,
+            },
+          }
+        : {}),
       ...(!summary ? { canonicalId: r.canonical_id || r.id } : {}),
       companyPath: employers?.byJob.has(r.id)
         ? `/companies/${encodeURIComponent(employers.byJob.get(r.id)!)}`
@@ -209,7 +252,7 @@ async function savedAvailability(raw: string) {
     ...new Set(raw.split(',').filter((id) => z.uuid().safeParse(id).success)),
   ].slice(0, 100);
   const plan = searchPlan(new URLSearchParams({ ids: ids.join(',') }), false);
-  const { rows } = await db().query(
+  const { rows } = await publicRead(
     `${plan.cte} SELECT j.id::text AS id FROM searchable j WHERE ${plan.where}`,
     plan.args,
   );
@@ -218,7 +261,7 @@ async function savedAvailability(raw: string) {
   const missing = ids.filter((id) => !live.has(id));
   const ended = missing.length
     ? (
-        await db().query(
+        await publicRead(
           `SELECT id::text, published->>'title' AS title, published->>'company' AS company,
       COALESCE(published->>'deadline','')<>'' AND published->>'deadline'<to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD') AS expired
       FROM jobs WHERE id=ANY($1::uuid[]) AND status IN ('published','archived') AND published IS NOT NULL`,
@@ -245,30 +288,32 @@ export async function adminJobs(
   q: string,
   page = 1,
   source = '',
+  jobId: string | null = null,
 ) {
   // `paused` and `manual` are automation states rather than record statuses: with automatic
   // publication on, the records an editor has to look at are the ones automation stopped
   // managing, not the whole catalogue.
   // The source parameter is numbered differently in the page and count queries, so the
   // predicate is built once and given the placeholder each one uses.
-  const where = (sourceParam: string) => `j.status<>'merged'
+  const where = (sourceParam: string, idParam: string) => `j.status<>'merged'
     AND ($1='all' OR ($1='review' AND j.needs_review=true)
       OR ($1='paused' AND j.automation_paused AND j.status<>'rejected')
       OR ($1='manual' AND NOT j.automation_managed AND j.status<>'rejected')
       OR ($1='blocked' AND j.automation_reason IS NOT NULL AND j.status<>'published')
       OR j.status=$1)
     AND ($2='' OR strpos(lower(concat_ws(' ',j.draft->>'title',j.draft->>'company')),lower($2))>0)
+    AND (${idParam}::uuid IS NULL OR j.id=${idParam}::uuid)
     AND (${sourceParam}='' OR EXISTS (SELECT 1 FROM source_items f WHERE f.job_id=j.id AND f.source_id=${sourceParam}))`;
   const rows = (
     await db().query(
-      `SELECT j.*,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where('$4')} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
-      [status, q, (page - 1) * 30, source],
+      `SELECT j.*,(SELECT requested_placement FROM job_submissions sub WHERE sub.job_id=j.id) AS requested_placement,(SELECT jsonb_build_object('status',inv.status,'number',inv.number,'created_at',inv.created_at,'token',inv.token,'amount_gel',inv.amount_gel) FROM job_invoices inv WHERE inv.job_id=j.id) AS invoice,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where('$4', '$5')} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
+      [status, q, (page - 1) * 30, source, jobId],
     )
   ).rows;
   const total = (
     await db().query(
-      `SELECT count(*)::int count FROM jobs j WHERE ${where('$3')}`,
-      [status, q, source],
+      `SELECT count(*)::int count FROM jobs j WHERE ${where('$3', '$4')}`,
+      [status, q, source, jobId],
     )
   ).rows[0].count;
   const counts = (
@@ -288,7 +333,7 @@ export async function adminJobs(
 export async function bulkPublishCandidates() {
   return (
     await db().query(`SELECT j.id,j.version FROM jobs j
-    WHERE j.status='pending' AND EXISTS (SELECT 1 FROM source_items i
+    WHERE j.status='pending' AND NOT EXISTS(SELECT 1 FROM job_submissions sub WHERE sub.job_id=j.id) AND EXISTS (SELECT 1 FROM source_items i
     JOIN sources s ON s.id=i.source_id WHERE i.job_id=j.id AND NOT s.retired)
     ORDER BY j.created_at,j.id`)
   ).rows as { id: string; version: number }[];
@@ -337,8 +382,11 @@ export async function mutateJob(input: unknown) {
         'dismiss-update',
         'merge',
         'resume-automation',
+        'confirm-payment',
+        'confirm-refund',
       ]),
       draft: vacancySchema.optional(),
+      placement: z.enum(placementTiers).optional(),
       itemId: z.uuid().optional(),
       targetId: z.uuid().optional(),
     })
@@ -359,6 +407,15 @@ export async function mutateJob(input: unknown) {
         'ჩანაწერი შეიცვალა. განაახლე სია და სცადე ხელახლა.',
         409,
       );
+    if (data.action === 'confirm-payment' || data.action === 'confirm-refund') {
+      if (
+        data.action === 'confirm-payment' &&
+        ['rejected', 'archived', 'merged'].includes(job.status)
+      )
+        throw new ApiError('ეს განცხადება გაუქმებულია');
+      await confirmInvoice(c, job.id, data.action);
+      return { ok: true };
+    }
     if (data.pendingOnly) {
       const active = (
         await c.query(
@@ -366,7 +423,15 @@ export async function mutateJob(input: unknown) {
           [job.id],
         )
       ).rowCount;
-      if (job.status !== 'pending' || !active)
+      if (
+        job.status !== 'pending' ||
+        !active ||
+        (
+          await c.query('SELECT 1 FROM job_submissions WHERE job_id=$1', [
+            job.id,
+          ])
+        ).rowCount
+      )
         throw new ApiError('ჩანაწერი აღარ არის დასადასტურებელი', 409);
     }
     if (job.status === 'merged')
@@ -374,6 +439,17 @@ export async function mutateJob(input: unknown) {
     // Handing a record back to automation is the one action that must not pause it again.
     // The source snapshot then decides what the record becomes, exactly as for a new import.
     if (data.action === 'resume-automation') {
+      if (
+        (
+          await c.query(
+            "SELECT 1 FROM source_items WHERE job_id=$1 AND source_id='jobx'",
+            [job.id],
+          )
+        ).rowCount
+      )
+        throw new ApiError(
+          'JOBX-ზე დამატებულ განცხადებას ადმინისტრატორი მართავს',
+        );
       await c.query(
         `UPDATE jobs SET automation_managed=true,automation_paused=false,needs_review=false,
          version=version+1,updated_at=now() WHERE id=$1`,
@@ -410,10 +486,29 @@ export async function mutateJob(input: unknown) {
       )
         throw new ApiError('ვაკანსიის ბოლო ვადა გასულია');
       if (!draft.company) throw new ApiError('მიუთითე კომპანია');
+      const submission = (
+        await c.query(
+          'SELECT requested_placement FROM job_submissions WHERE job_id=$1',
+          [job.id],
+        )
+      ).rows[0];
+      const placement =
+        data.placement ||
+        (submission
+          ? job.placement_expires_at
+            ? job.placement_tier
+            : submission.requested_placement
+          : undefined);
+      if (placement) {
+        await approvePlacement(c, job, draft.company, placement);
+        if (placement !== 'premium') await cancelUnusedInvoice(c, job.id);
+      }
       published = draft;
       status = 'published';
       review = false;
     }
+    if (['archive', 'reject', 'merge'].includes(data.action))
+      await cancelUnusedInvoice(c, job.id);
     if (data.action === 'archive') {
       status = 'archived';
       review = false;

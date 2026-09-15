@@ -1,3 +1,5 @@
+import type { JobInvoice } from './billing';
+import type { PlacementTier } from './placement';
 export type SourceId =
   | 'hr'
   | 'samushao'
@@ -17,6 +19,8 @@ export const sourceNames: Record<ActiveSourceId, string> = {
   worknet: 'worknet.moh.gov.ge',
   myjobs: 'myjobs.ge',
 };
+// Native submissions share the catalogue, but are never crawler targets.
+export const listingSourceNames = { ...sourceNames, jobx: 'JOBX' };
 /** Sources whose postings carry no employer entity, only a private contact. */
 export const employerlessSources: readonly string[] = ['gancxadebebi.ge'];
 export const privateListingLabel = 'კერძო განცხადება';
@@ -43,6 +47,11 @@ export type Vacancy = {
   datePosted: string;
 };
 export type PublicJob = Vacancy & {
+  placement?: {
+    tier: Exclude<PlacementTier, 'standard'>;
+    expiresAt: string;
+    priority?: boolean;
+  };
   canonicalId?: string;
   companyPath?: string;
   logoOrigin?: string;
@@ -59,6 +68,13 @@ export type PublicJob = Vacancy & {
   }[];
 };
 export type AdminJob = {
+  invoice?: Pick<
+    JobInvoice,
+    'status' | 'number' | 'created_at' | 'token' | 'amount_gel'
+  > | null;
+  requested_placement?: PlacementTier;
+  placement_tier: PlacementTier;
+  placement_expires_at: string | null;
   id: string;
   draft: Vacancy;
   published: Vacancy | null;
@@ -75,7 +91,7 @@ export type AdminJob = {
   automation_checked_at: string | null;
   items: {
     id: string;
-    source_id: SourceId;
+    source_id: SourceId | 'jobx';
     url: string;
     raw: Vacancy;
     last_checked_at: string;

@@ -52,7 +52,7 @@ export function QuickApply({
           target="_blank"
           rel="noopener noreferrer"
         >
-          განაცხადის შევსება <ArrowUpRight size={16} />
+          განაცხადი კომპანიის საიტზე <ArrowUpRight size={16} />
         </a>
       )}
       <div className="contact-options">

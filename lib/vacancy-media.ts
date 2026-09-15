@@ -10,7 +10,16 @@ const logoHosts = new Set([
   'c.smartrecruiters.com',
 ]);
 
+export function isLocalLogoUrl(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length === 75 &&
+    /^\/api\/logos\/[a-f0-9]{64}$/.test(value)
+  );
+}
+
 export function safeLogoUrl(value: unknown, base?: string): string {
+  if (isLocalLogoUrl(value)) return value;
   if (typeof value !== 'string' || !value.trim()) return '';
   try {
     const url = new URL(value, base);

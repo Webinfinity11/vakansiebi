@@ -33,7 +33,7 @@ export async function GET() {
         (SELECT count(*)::int FROM source_runs r WHERE r.source_id=s.id AND r.status='deferred' AND r.started_at>now()-interval '3 days') deferred_runs,
         (SELECT count(DISTINCT j.id)::int FROM source_items i JOIN jobs j ON j.id=i.job_id WHERE i.source_id=s.id AND j.status='published' AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))) published_count,
         (SELECT count(*)::int FROM source_discovery_pages p WHERE p.source_id=s.id AND p.observed_at>now()-interval '24 hours') observed_pages
-        FROM sources s WHERE NOT s.retired ORDER BY s.id`,
+        FROM sources s WHERE NOT s.retired AND s.id<>'jobx' ORDER BY s.id`,
       )
     ).rows;
     const runs = (
@@ -137,7 +137,7 @@ export async function POST(req: Request) {
        next_run_at=CASE WHEN $7::timestamptz IS NOT NULL THEN
          CASE WHEN consecutive_failures>0 THEN GREATEST(next_run_at,$7::timestamptz) ELSE $7::timestamptz END
          WHEN $3=true AND NOT auto_enabled THEN now() ELSE next_run_at END
-       WHERE ($1='all' OR id=$1) AND NOT retired`,
+       WHERE ($1='all' OR id=$1) AND NOT retired AND id<>'jobx'`,
       [
         data.id,
         data.enabled,
