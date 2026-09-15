@@ -22,6 +22,9 @@ export const viewport: Viewport = {
 };
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  verification: {
+    google: 'HEArO7D4Prjvkmq7ovhmlyOGpzZD9_SOZ_TETGDI6Fw',
+  },
   openGraph: {
     siteName: 'JOBX',
     locale: 'ka_GE',
