@@ -958,13 +958,13 @@
     transform: rotate(-12deg);
   }
 }
+/* The heading only rises into place: it never starts invisible, so it paints at once and still
+   counts as the page's main content for load-speed measurement. */
 @keyframes jobx-copy-arrive {
   from {
-    opacity: 0;
     transform: translateY(12px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }

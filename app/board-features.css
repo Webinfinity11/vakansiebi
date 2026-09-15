@@ -2,10 +2,6 @@
    swipe actions on cards. Phone rules stay inside the 760px query. */
 
 /* ---------- Load more ---------- */
-.board-shell.editorial-board.crafted-board.refined-board .hero-copy,
-.board-shell.editorial-board.crafted-board.refined-board .hero-brand-art {
-  animation: none;
-}
 .board-shell .load-more-row {
   display: grid;
   gap: 8px;
