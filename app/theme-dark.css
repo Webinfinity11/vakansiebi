@@ -2527,6 +2527,20 @@
 :root[data-theme='dark'] select):focus-visible {
   outline: 2px solid #6f93ff;
 }
+:root[data-theme='dark'] .vacancy-page
+  .vacancy-layout:has(> .vacancy-description-panel)
+  > .vacancy-overview {
+  border-bottom: 0;
+}
+:root[data-theme='dark'] .vacancy-page .vacancy-layout > .vacancy-description-panel {
+  border-top: 0;
+}
+:root[data-theme='dark'] .vacancy-page .vacancy-layout > .vacancy-description-panel::before {
+  border-top: 1px solid #272f3a;
+}
+:root[data-theme='dark'] .vacancy-page .extra-facts {
+  border: 0;
+}
 
 /* ── from app/public-header.css ── */
 :root[data-theme='dark'] .board-shell .topbar.public-header {

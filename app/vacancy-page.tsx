@@ -419,6 +419,14 @@ export default function VacancyPage({
     extraFacts.length = 0;
   }
   const contacts = vacancyContacts(job);
+  // The contact column already offers these; listing them again below reads as a second box.
+  const contactValues = [
+    ...contacts.emails.map((c) => c.email),
+    ...contacts.phones.flatMap((c) => [c.number, c.display]),
+  ];
+  for (let i = extraFacts.length - 1; i >= 0; i--)
+    if (contactValues.some((v) => v && extraFacts[i].value.includes(v)))
+      extraFacts.splice(i, 1);
   const hasContact = Boolean(contacts.emails.length || contacts.phones.length);
   const hasAction = hasContact || Boolean(applicationDestination(job));
   const hasDescriptionContent = Boolean(
@@ -471,7 +479,7 @@ export default function VacancyPage({
       onAuxClickCapture={(event) => {
         if (event.button === 1) recordContactOpen(event);
       }}
-      className={`board-shell vacancy-page has-personal-progress ${hasAction ? 'has-contact' : ''}`}
+      className="board-shell vacancy-page has-personal-progress has-contact"
     >
       <PublicHeader savedCount={saved.length} />
       <main className="vacancy-page-main">
@@ -796,14 +804,24 @@ export default function VacancyPage({
           {!preview && <SimilarVacancies id={job.id} returnTo={returnTo} />}
         </article>
       </main>
-      {hasAction && (
-        <section
-          className="vacancy-mobile-action"
-          aria-label="დამსაქმებელთან დაკავშირება"
-        >
+      {/* On a phone the contact column sits below the vacancy, so the way to apply stays in reach here. */}
+      <section
+        className="vacancy-mobile-action"
+        aria-label="დამსაქმებელთან დაკავშირება"
+      >
+        {hasAction ? (
           <ApplyAction job={job} />
-        </section>
-      )}
+        ) : (
+          <a
+            className="primary"
+            href={job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            განაცხადის გაგზავნა <ArrowUpRight size={16} />
+          </a>
+        )}
+      </section>
       {feedback && (
         <output className="feedback-toast">
           <Check size={16} />

@@ -1293,7 +1293,9 @@
 
 /* Narrow cards read position → company → pay → place/schedule → deadline; wide cards
    keep pay in its own right-hand column. */
-.board-shell.editorial-board.crafted-board.refined-board .job-card .card-pay-inline {
+.board-shell.editorial-board.crafted-board.refined-board
+  .job-card
+  .card-pay-inline {
   display: none;
 }
 @media (max-width: 1000px) {
@@ -1307,5 +1309,69 @@
     .job-card
     .card-pay-column {
     display: none;
+  }
+}
+
+/* The vacancy reads as one card: overview, description and extra details share a single
+   surface, divided by a rule, and the contact column sits beside it (below it on a phone). */
+.vacancy-page .vacancy-layout:has(> .vacancy-description-panel) {
+  row-gap: 0;
+}
+.vacancy-page
+  .vacancy-layout:has(> .vacancy-description-panel)
+  > .vacancy-overview {
+  border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.vacancy-page .vacancy-layout > .vacancy-description-panel {
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  padding-top: 0;
+}
+.vacancy-page .vacancy-layout > .vacancy-description-panel::before {
+  content: '';
+  display: block;
+  margin-bottom: 28px;
+  border-top: 1px solid #e6eaf0;
+}
+.vacancy-page
+  .vacancy-layout:has(> .vacancy-description-panel)
+  > .vacancy-source,
+.vacancy-page
+  .vacancy-layout:has(> .vacancy-description-panel)
+  > .similar-vacancies {
+  margin-top: 24px;
+}
+.vacancy-page .extra-facts {
+  margin-top: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+@media (max-width: 760px) {
+  .vacancy-page .vacancy-layout:has(> .vacancy-description-panel) > * {
+    order: 3;
+  }
+  .vacancy-page
+    .vacancy-layout:has(> .vacancy-description-panel)
+    > .vacancy-overview {
+    order: 1;
+  }
+  .vacancy-page .vacancy-layout > .vacancy-description-panel {
+    order: 2;
+    margin-top: -16px;
+  }
+  .vacancy-page .vacancy-layout > .vacancy-description-panel::before {
+    margin-bottom: 22px;
+  }
+  .vacancy-page
+    .vacancy-layout:has(> .vacancy-description-panel)
+    > .vacancy-source,
+  .vacancy-page
+    .vacancy-layout:has(> .vacancy-description-panel)
+    > .similar-vacancies {
+    margin-top: 0;
   }
 }
