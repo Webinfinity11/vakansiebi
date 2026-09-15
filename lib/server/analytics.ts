@@ -9,6 +9,10 @@ export const eventKinds = [
   'search_empty',
   'view',
   'outbound',
+  'filter',
+  'save',
+  'saved_search',
+  'application',
 ] as const;
 export type EventKind = (typeof eventKinds)[number];
 
@@ -31,8 +35,11 @@ export function normalizeEvent(
   if (typeof kind !== 'string' || !eventKinds.includes(kind as EventKind))
     return null;
   if (typeof value !== 'string') return null;
-  if (kind === 'view' || kind === 'outbound')
+  if (kind === 'view' || kind === 'outbound' || kind === 'save')
     return uuid.test(value) ? { kind, value: value.toLowerCase() } : null;
+  // Which filter was used or which stage was chosen: a short code name, never reader text.
+  if (kind === 'filter' || kind === 'application' || kind === 'saved_search')
+    return /^[a-zA-Z_]{2,24}$/.test(value) ? { kind, value } : null;
   const query = value
     .normalize('NFKC')
     .trim()

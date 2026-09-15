@@ -7,7 +7,15 @@
    Only production builds send, so a developer's local server — which may point at the real
    database — cannot pollute the counts. Failures are ignored: analytics must never break or
    slow down the page it measures. */
-export type TrackedKind = 'search' | 'search_empty' | 'view' | 'outbound';
+export type TrackedKind =
+  | 'search'
+  | 'search_empty'
+  | 'view'
+  | 'outbound'
+  | 'filter'
+  | 'save'
+  | 'saved_search'
+  | 'application';
 
 export function track(kind: TrackedKind, value: string) {
   if (process.env.NODE_ENV !== 'production') return;

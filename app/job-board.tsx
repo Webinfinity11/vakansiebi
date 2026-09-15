@@ -295,6 +295,11 @@ const JobCard = memo(function JobCard({
             />
             {!demo && <VacancyStatus seen={seen} status={status} />}
           </div>
+          {salary && (
+            <span className="salary card-pay-inline" title={salary}>
+              {salary}
+            </span>
+          )}
           <div className="job-meta">
             {j.category !== 'სხვა' && (
               <span className="category-tag">{j.category}</span>
@@ -323,7 +328,7 @@ const JobCard = memo(function JobCard({
         </div>
         <div className="job-conditions">
           {salary && (
-            <span className="salary" title={salary}>
+            <span className="salary card-pay-column" title={salary}>
               {salary}
             </span>
           )}
@@ -928,6 +933,7 @@ export default function JobBoard({
       try {
         localStorage.setItem('ertad-saved', JSON.stringify(next));
         setSaved(next);
+        if (!wasSaved) track('save', id);
         setFeedback('');
         setSaveNotice({
           id,
@@ -981,6 +987,22 @@ export default function JobBoard({
     }, 1500);
     return () => clearTimeout(timer);
   }, [query, total, resultsPending, demo, savedOnly]);
+  /* Counts which filter the reader changed — only its name, once it has settled — so the admin
+     can see which filters are actually used. The values chosen are not sent. */
+  const filterSnapshot = JSON.stringify({ ...currentSearch, query: '' });
+  const trackedFilters = useRef(filterSnapshot);
+  useEffect(() => {
+    if (demo || trackedFilters.current === filterSnapshot) return;
+    const timer = setTimeout(() => {
+      const before = JSON.parse(trackedFilters.current) as Record<string, unknown>;
+      const after = JSON.parse(filterSnapshot) as Record<string, unknown>;
+      trackedFilters.current = filterSnapshot;
+      for (const key of Object.keys(after))
+        if (JSON.stringify(before[key]) !== JSON.stringify(after[key]))
+          track('filter', key);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [filterSnapshot, demo]);
   const initialPageRestored = useRef(false);
   useEffect(() => {
     if (!storageReady || !activity.ready || initialPageRestored.current) return;

@@ -1301,3 +1301,22 @@
     font-size: 16px;
   }
 }
+
+/* Narrow cards read position → company → pay → place/schedule → deadline; wide cards
+   keep pay in its own right-hand column. */
+.board-shell.editorial-board.crafted-board.refined-board .job-card .card-pay-inline {
+  display: none;
+}
+@media (max-width: 1000px) {
+  .board-shell.editorial-board.crafted-board.refined-board
+    .job-card
+    .card-pay-inline {
+    display: block;
+    margin-top: 2px;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .job-card
+    .card-pay-column {
+    display: none;
+  }
+}

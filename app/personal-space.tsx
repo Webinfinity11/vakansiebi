@@ -1,5 +1,6 @@
 'use client';
 import './personal-space.css';
+import { track as trackEvent } from '@/lib/analytics-client';
 import { useCallback, useEffect, useRef, useState, useId } from 'react';
 import {
   FolderHeart,
@@ -97,6 +98,7 @@ export function usePersonalSpace() {
     }
   }
   function track(job: PublicJob, status: Application['status']) {
+    trackEvent('application', status);
     return act(() => {
       putPersonal(localStorage, {
         version: 1,
@@ -175,7 +177,8 @@ export function usePersonalSpace() {
     save: (name: string, filters: SearchFilters) =>
       act(() => {
         saveSearch(localStorage, name, filters);
-      }, 'ძიება შენახულია. შეტყობინებები არ ჩაირთო.'),
+        trackEvent('saved_search', 'saved');
+      },'ძიება შენახულია. შეტყობინებები არ ჩაირთო.'),
   };
 }
 export type PersonalController = ReturnType<typeof usePersonalSpace>;
