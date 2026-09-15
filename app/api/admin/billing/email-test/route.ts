@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { invoiceContact } from '@/lib/billing';
-import { emailLayout, emailButton, emailOrigin } from '@/lib/email-layout';
+import { invoiceEmail } from '@/lib/invoice-email';
+import { getInvoice } from '@/lib/server/billing';
 import {
   apiError,
   ApiError,
@@ -18,10 +18,11 @@ export async function POST(request: Request) {
   try {
     await requireAdmin();
     checkOrigin(request);
-    const { email, requestId } = z
+    const { email, requestId, invoiceToken } = z
       .object({
         email: z.email().max(254),
         requestId: z.uuid(),
+        invoiceToken: z.string().regex(/^[a-f0-9]{64}$/),
       })
       .parse(await readBody(request));
     if (
@@ -39,8 +40,15 @@ export async function POST(request: Request) {
         'ელფოსტის გაგზავნის სერვისი ჯერ არ არის დაკავშირებული.',
         503,
       );
-    const text = `JOBX — ელფოსტის გაგზავნის შემოწმება\n\nეს სატესტო წერილია და გადახდას არ საჭიროებს.\nინვოისები გამოიგზავნება მისამართიდან ${invoiceContact.email}.\n\nინვოისთან ან გადახდასთან დაკავშირებით დაგვიკავშირდით: ${invoiceContact.phone}.\nhttps://jobx.ge`;
-    const origin = emailOrigin(process.env.APP_URL || 'https://jobx.ge');
+    const invoice = await getInvoice(invoiceToken);
+    if (!invoice) throw new ApiError('ინვოისი ვერ მოიძებნა.', 404);
+    const payload = invoiceEmail(
+      invoice,
+      email,
+      process.env.APP_URL || 'https://jobx.ge',
+      email,
+      true,
+    );
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -48,23 +56,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
         'Idempotency-Key': `jobx-invoice-test/${requestId}`,
       },
-      body: JSON.stringify({
-        from: `JOBX <${invoiceContact.email}>`,
-        to: [email],
-        reply_to: invoiceContact.email,
-        subject: 'JOBX — სატესტო წერილი',
-        text,
-        html: emailLayout(
-          origin,
-          'JOBX-ის წერილის ახალი ფორმა',
-          'JOBX-ის ლოგო, ინვოისის დეტალები და დახმარების ნომერი — ერთ წერილში.',
-          `
-<p style="margin:0 0 22px;font-size:14px;line-height:25px;color:#536078">გამარჯობა. ასე გამოიყურება JOBX-ის განახლებული წერილი — საიტის ლოგოთი და მარტივად წასაკითხი დეტალებით.</p>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f2f6ff" style="border:1px solid #dce6fa;border-radius:6px"><tr><td style="padding:20px"><strong style="font-size:15px;line-height:24px;color:#202b3d">სატესტო წერილი</strong><p style="margin:8px 0 0;font-size:13px;line-height:23px;color:#536078">ინვოისის წერილში გამოჩნდება ექვსციფრიანი კოდი, თანხა, ვაკანსია და საბანკო რეკვიზიტები. ეს ტესტი გადახდას არ საჭიროებს.</p></td></tr></table>
-${emailButton(origin, 'JOBX-ზე გადასვლა')}
-<p style="margin:0;font-size:12px;line-height:22px;color:#667287">წერილის გამგზავნი: ${invoiceContact.email}</p>`,
-        ),
-      }),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(8000),
     });
     const result = await response.json().catch(() => ({}));

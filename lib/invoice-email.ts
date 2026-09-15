@@ -21,6 +21,7 @@ export function invoiceEmail(
   recipient: string,
   appUrl: string,
   copyTo = invoiceContact.email as string,
+  testCopy = false,
 ): InvoiceEmail {
   const email = safeEmail(recipient);
   const copy = safeEmail(copyTo);
@@ -30,6 +31,7 @@ export function invoiceEmail(
     throw new Error('Invalid invoice token');
   const url = new URL(`/invoices/${invoice.token}`, origin).href;
   const number = invoiceNumber(invoice.number, invoice.created_at);
+  const title = testCopy ? 'ინვოისის სატესტო ასლი' : 'თქვენი ინვოისი მზად არის';
   const rows: [string, string | number][] = [
     ['ინვოისი', number],
     ['კომპანია', invoice.payer_name],
@@ -47,9 +49,9 @@ export function invoiceEmail(
     to: [email],
     ...(copy.toLowerCase() !== email.toLowerCase() ? { bcc: [copy] } : {}),
     reply_to: invoiceContact.email,
-    subject: `JOBX — ინვოისი ${number}`,
+    subject: `${testCopy ? '[ტესტი] ' : ''}JOBX — ინვოისი ${number}`,
     text: [
-      'თქვენი ინვოისი მზად არის.',
+      `${title}.`,
       ...rows.map(([label, value]) => `${label}: ${value}`),
       `ინვოისის ნახვა და მიმდინარე სტატუსი: ${url}`,
       'გადახდამდე გადაამოწმეთ ინვოისის მიმდინარე სტატუსი. პრემიუმი გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ.',
@@ -58,10 +60,10 @@ export function invoiceEmail(
     ].join('\n\n'),
     html: emailLayout(
       origin,
-      'თქვენი ინვოისი მზად არის',
+      title,
       `ინვოისი ${number} · ${invoice.amount_gel} ₾ · პრემიუმ განთავსება JOBX-ზე`,
       `
-<p style="margin:0 0 22px;font-size:14px;line-height:24px;color:#536078">გმადლობთ, რომ JOBX აირჩიეთ. თქვენი პრემიუმ განთავსების დეტალები:</p>
+<p style="margin:0 0 22px;font-size:14px;line-height:24px;color:#536078">${testCopy ? 'არჩეული ინვოისის ასლი. დეტალებისა და მიმდინარე სტატუსის სანახავად გახსენით ინვოისი ქვემოთ მოცემული ღილაკით.' : 'გმადლობთ, რომ JOBX აირჩიეთ. თქვენი პრემიუმ განთავსების დეტალები:'}</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f2f6ff" style="margin-bottom:24px;border:1px solid #dce6fa;border-radius:6px"><tr>
 <td width="58%" style="padding:18px 16px;vertical-align:top"><p style="margin:0 0 6px;font-size:12px;line-height:20px;color:#536078">ინვოისის კოდი</p><strong style="font-size:${number.length > 6 ? 17 : 25}px;line-height:32px;color:#202b3d;word-break:break-word">${escapeHtml(number)}</strong></td>
 <td width="42%" style="padding:18px 16px;vertical-align:top;text-align:right"><p style="margin:0 0 6px;font-size:12px;line-height:20px;color:#536078">გადასახდელი</p><strong style="font-size:25px;line-height:32px;white-space:nowrap;color:#202b3d">${escapeHtml(invoice.amount_gel)} ₾</strong></td></tr></table>

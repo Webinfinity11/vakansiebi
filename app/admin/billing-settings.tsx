@@ -67,7 +67,7 @@ export function BillingSettings({
   }
   return (
     <>
-      <InvoiceEmailTest />
+      <InvoiceEmailTest invoices={invoices} />
       <section className="billing-invoices">
         <h2>ინვოისები</h2>
         {invoices.map((inv) => (

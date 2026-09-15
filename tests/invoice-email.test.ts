@@ -60,6 +60,26 @@ void test('mail does not duplicate the owner address and rejects malformed desti
     ),
   );
 });
+void test('test copies use the selected invoice button and only the test recipient', () => {
+  const mail = invoiceEmail(
+    invoice,
+    'owner@example.com',
+    'https://jobx.ge',
+    'owner@example.com',
+    true,
+  );
+  assert.deepEqual(mail.to, ['owner@example.com']);
+  assert.equal(mail.bcc, undefined);
+  assert.match(mail.subject, /^\[ტესტი\]/);
+  assert.match(
+    mail.html,
+    new RegExp(
+      `<a href="https://jobx.ge/invoices/${invoice.token}"[^>]*>ინვოისის ნახვა</a>`,
+    ),
+  );
+  assert.doesNotMatch(mail.html, /JOBX-ზე გადასვლა/);
+  assert.ok(mail.text.includes(`https://jobx.ge/invoices/${invoice.token}`));
+});
 void test('invoice delivery endpoint fails closed without the correct cron secret', async () => {
   assert.equal(
     (await GET(new Request('https://jobx.ge/api/cron/invoice-email'))).status,

@@ -1,8 +1,10 @@
 'use client';
 import { useState, type SubmitEvent } from 'react';
+import { invoiceNumber, type JobInvoice } from '@/lib/billing';
 
-export function InvoiceEmailTest() {
+export function InvoiceEmailTest({ invoices }: { invoices: JobInvoice[] }) {
   const [email, setEmail] = useState('');
+  const [invoiceToken, setInvoiceToken] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   async function send(event: SubmitEvent<HTMLFormElement>) {
@@ -16,6 +18,7 @@ export function InvoiceEmailTest() {
         body: JSON.stringify({
           email: email.trim(),
           requestId: crypto.randomUUID(),
+          invoiceToken,
         }),
       });
       const result = await response.json();
@@ -35,8 +38,25 @@ export function InvoiceEmailTest() {
     <form className="billing-settings notice" onSubmit={send}>
       <h2>ელფოსტის გაგზავნის შემოწმება</h2>
       <p>
-        სატესტო წერილი გაიგზავნება invoice@jobx.ge-დან. ინვოისი არ შეიქმნება.
+        აირჩიე ინვოისი — წერილში მისი დეტალები და პირდაპირი ბმული გაიგზავნება.
       </p>
+      <label>
+        სატესტო ინვოისი
+        <select
+          value={invoiceToken}
+          onChange={(event) => setInvoiceToken(event.target.value)}
+          required
+          disabled={busy || !invoices.length}
+        >
+          <option value="">აირჩიე ინვოისი</option>
+          {invoices.map((invoice) => (
+            <option key={invoice.token} value={invoice.token}>
+              {invoiceNumber(invoice.number, invoice.created_at)} ·{' '}
+              {invoice.payer_name} · {invoice.vacancy_title}
+            </option>
+          ))}
+        </select>
+      </label>
       <label>
         მიმღების ელფოსტა
         <input
@@ -48,7 +68,12 @@ export function InvoiceEmailTest() {
           disabled={busy}
         />
       </label>
-      <button className="primary" disabled={busy}>
+      <button
+        className="primary"
+        disabled={
+          busy || !invoices.some((invoice) => invoice.token === invoiceToken)
+        }
+      >
         {busy ? 'იგზავნება…' : 'სატესტო წერილის გაგზავნა'}
       </button>
       {message && <output>{message}</output>}
