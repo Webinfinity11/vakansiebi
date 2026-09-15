@@ -6,11 +6,16 @@ import { db } from '../lib/server/db';
 import { submitJob } from '../lib/server/job-submissions';
 import { mutateJob, publicJobs } from '../lib/server/jobs';
 import { getInvoice } from '../lib/server/billing';
+import { deliverInvoiceEmails } from '../lib/server/invoice-email';
 import { submissionDate } from '../lib/job-submission';
 import { validGeorgianIban, invoiceNumber } from '../lib/billing';
 
 void test('invoice numbers and Georgian account checks reject broken details', () => {
   assert.equal(invoiceNumber(4, '2026-09-15'), 'JOBX-2026-000004');
+  assert.equal(invoiceNumber(4, '2026-09-15T14:15:47Z'), '000004');
+  assert.equal(invoiceNumber(123, '2027-01-01'), '000123');
+  assert.equal(invoiceNumber(999999, '2027-01-01'), '999999');
+  assert.equal(invoiceNumber(1000000, '2027-01-01'), '1000000');
   assert.equal(validGeorgianIban('GE00ZZ0000000000000000'), false);
   assert.equal(validGeorgianIban('invalid'), false);
 });
@@ -49,6 +54,7 @@ void test(
       description:
         'This is an isolated test vacancy for verifying bank transfer invoices and moderation. No actual job, customer or payment is involved.',
       contact: 'hr@example.com',
+      billingEmail: 'billing@example.com',
       consent: true,
       fax: '',
     };
@@ -82,6 +88,89 @@ void test(
       assert.equal(inv.amount_gel, 20);
       assert.equal(inv.service_days, 14);
       assert.equal(inv.status, 'pending');
+      const queued = (
+        await db().query(
+          'SELECT * FROM invoice_email_delivery WHERE invoice_id=$1',
+          [inv.id],
+        )
+      ).rows[0];
+      assert.deepEqual(queued.payload.to, ['billing@example.com']);
+      assert.deepEqual(queued.payload.bcc, ['invoice@jobx.ge']);
+      assert.equal(queued.status, 'pending');
+      const oldFetch = globalThis.fetch;
+      const oldToken = process.env.RESEND_API_KEY;
+      const oldEnabled = process.env.INVOICE_EMAIL_ENABLED;
+      const keys: string[] = [];
+      try {
+        globalThis.fetch = async (url, init) => {
+          assert.equal(url, 'https://api.resend.com/emails');
+          keys.push(new Headers(init?.headers).get('Idempotency-Key')!);
+          if (keys.length === 1) throw new Error('simulated timeout');
+          assert.equal(typeof init?.body, 'string');
+          assert.deepEqual(JSON.parse(init!.body as string), queued.payload);
+          return Response.json({ id: 'test-provider-id' });
+        };
+        process.env.RESEND_API_KEY = 'test-only';
+        process.env.INVOICE_EMAIL_ENABLED = 'true';
+        assert.equal((await deliverInvoiceEmails(received.id)).failed, 1);
+        assert.equal(
+          (await deliverInvoiceEmails(received.id)).sent,
+          0,
+          'backoff prevents immediate retries',
+        );
+        await db().query(
+          'UPDATE invoice_email_delivery SET next_attempt_at=now() WHERE invoice_id=$1',
+          [inv.id],
+        );
+        const attempts = await Promise.all([
+          deliverInvoiceEmails(received.id),
+          deliverInvoiceEmails(received.id),
+        ]);
+        assert.equal(
+          attempts.reduce((sum, result) => sum + result.sent, 0),
+          1,
+        );
+        assert.equal(keys.length, 2, 'only one sender claims a retry');
+        assert.equal(
+          keys[0],
+          keys[1],
+          'provider deduplicates an uncertain first attempt',
+        );
+        assert.equal(
+          (await deliverInvoiceEmails(received.id)).sent,
+          0,
+          'sent messages stay sent',
+        );
+        const delivered = (
+          await db().query(
+            'SELECT * FROM invoice_email_delivery WHERE invoice_id=$1',
+            [inv.id],
+          )
+        ).rows[0];
+        assert.equal(delivered.status, 'sent');
+        assert.equal(delivered.provider_id, 'test-provider-id');
+        const changedRecipient = await submitJob(
+          { ...payload, billingEmail: 'another@example.com' },
+          key,
+        );
+        assert.equal(changedRecipient.id, received.id);
+        assert.deepEqual(
+          (
+            await db().query(
+              'SELECT payload FROM invoice_email_delivery WHERE invoice_id=$1',
+              [inv.id],
+            )
+          ).rows[0].payload.to,
+          ['billing@example.com'],
+        );
+      } finally {
+        globalThis.fetch = oldFetch;
+        if (oldToken === undefined) delete process.env.RESEND_API_KEY;
+        else process.env.RESEND_API_KEY = oldToken;
+        if (oldEnabled === undefined) delete process.env.INVOICE_EMAIL_ENABLED;
+        else process.env.INVOICE_EMAIL_ENABLED = oldEnabled;
+      }
+
       assert.equal(await getInvoice(received.id), null);
       await db().query(
         "UPDATE billing_settings SET payee_name='CHANGED recipient'",

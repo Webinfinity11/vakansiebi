@@ -193,7 +193,28 @@ Records live only in this browser and origin, with limits of 20 searches and 200
 
 ## Application contact shortcuts
 
-Vacancy details extract and display email addresses from the approved description, with a draft-email link and copy action. Recruitment context is distinguished from generic contact addresses. Mailto links inside source descriptions retain their recipient when converted to plain text; hidden cc/bcc/subject parameters from the source are not imported. The generated draft uses the position title and an editable Georgian body, with the applicant details saved in the personal workspace filled in when there are any. It opens the visitor's email client, which is where the visitor attaches the CV and sends it. No mail provider is configured and there is no direct site upload/send flow.
+Vacancy details extract and display email addresses from the approved description, with a draft-email link and copy action. Recruitment context is distinguished from generic contact addresses. Mailto links inside source descriptions retain their recipient when converted to plain text; hidden cc/bcc/subject parameters from the source are not imported. The generated draft uses the position title and an editable Georgian body, with the applicant details saved in the personal workspace filled in when there are any. It opens the visitor's email client, which is where the visitor attaches the CV and sends it. CV applications do not use the invoice mail provider and there is no direct site CV upload/send flow.
+
+## Invoice email
+
+Invoices issued from 2026-09-15 14:15:47 UTC use the sequential six-digit payment code (for example `000123`), consistently on the invoice page, email and admin screen. Older invoices retain their `JOBX-year-number` reference. The sequence does not reset each year and is never truncated; beyond 999999 it grows to prevent duplicate payment references. The private invoice URL still uses its random 64-character token.
+
+Premium submissions require a separate, private `billingEmail`. The invoice and an immutable email payload are saved in the same database transaction (`026_invoice_email_delivery.sql`). The address is excluded from the public vacancy. Resend sends the invoice details and private invoice link to that address, with a BCC to `invoice@jobx.ge`; replies go to the same domain address. The email and invoice page include support number **579 53 53 20**. The domain inbox is intended to forward through ImprovMX to the owner's Gmail.
+
+Configure production only after the sending domain and receiving address are verified:
+
+- `APP_URL=https://jobx.ge`
+- `RESEND_API_KEY`: sending-only key for `jobx.ge`, stored as a server secret.
+- `INVOICE_EMAIL_ENABLED=true`: without this flag and the key, invoices are queued but no mail is sent.
+- `CRON_SECRET`: a random secret of at least 32 characters for the authenticated retry endpoint.
+
+Apply the migration before deploying the new invoice writer. Redeploy after changing Vercel variables. Correct billing payee/bank/IBAN settings are still required to offer Premium; email configuration does not enable Premium by itself.
+
+The submission route starts delivery with Next.js `after()`. An atomic two-minute lease prevents concurrent sends. Retries reuse the unchanged payload and `jobx-invoice/<invoice UUID>` idempotency key. The Vercel cron (`/api/cron/invoice-email`, every ten minutes, up to five queued messages) recovers deferred work; this frequency uses the project's existing Pro plan. If moving to Hobby, use an external scheduler or adjust the schedule to that plan's limit. Immediate submission retries can also recover due messages. Failed calls back off and stop after six attempts; permanent provider rejection stops immediately. `sent` means Resend accepted the message, not that it reached the inbox: inspect Resend delivery events for bounces.
+
+Operations: inspect `invoice_email_delivery` status, attempts, next attempt, provider ID and error code without exposing its private `payload`. Resend retains idempotency keys for 24 hours. An ambiguous send older than 23 hours stops with `idempotency_window_expired`; inspect Resend logs before manually resolving it, because clearing that protection could send a duplicate. A known rejection on the first attempt clears the ambiguity clock. Cancelled/refunded invoices are not sent. Existing invoices are not retroactively emailed because they have no verified billing recipient.
+
+References: [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys), [Vercel cron limits](https://vercel.com/docs/cron-jobs/usage-and-pricing), [ImprovMX free forwarding](https://improvmx.com/pricing/).
 
 English-dominant descriptions offer an explicitly labelled external Google Translate website link. Original text remains available; this is not an in-site or human-verified Georgian translation. No private CV data is sent to translation services.
 

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, type SubmitEvent } from 'react';
+import { InvoiceEmailTest } from './invoice-email-test';
 import {
   billingSettingsSchema,
   invoiceNumber,
@@ -66,6 +67,7 @@ export function BillingSettings({
   }
   return (
     <>
+      <InvoiceEmailTest />
       <section className="billing-invoices">
         <h2>ინვოისები</h2>
         {invoices.map((inv) => (

@@ -116,6 +116,7 @@ export async function submitJob(
             id,
             company: draft.company,
             title: draft.title,
+            billingEmail: data.billingEmail,
           })
         : undefined;
     return { id, received: true, ...(invoiceUrl ? { invoiceUrl } : {}) };

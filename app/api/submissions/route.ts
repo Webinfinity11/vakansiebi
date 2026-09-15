@@ -3,6 +3,8 @@ import { clientKey, rateLimit } from '@/lib/server/rate-limit';
 import { priorSubmission, submitJob } from '@/lib/server/job-submissions';
 import { submissionSchema } from '@/lib/job-submission';
 import { z } from 'zod';
+import { after } from 'next/server';
+import { deliverInvoiceEmails } from '@/lib/server/invoice-email';
 import { maxSubmissionBytes } from '@/lib/submission-logo';
 import {
   readSubmissionLogo,
@@ -62,7 +64,10 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       if (
         parsed.error.issues.length > 0 &&
-        parsed.error.issues.every((issue) => issue.path[0] === 'deadline')
+        parsed.error.issues.every(
+          (issue) =>
+            issue.path[0] === 'deadline' || issue.path[0] === 'billingEmail',
+        )
       ) {
         const requestId = z
           .uuid()
@@ -80,11 +85,20 @@ export async function POST(req: Request) {
           // A retry can fail time-dependent deadline rules the next day even
           // though the submission was created: return the accepted version.
           const prior = await priorSubmission(requestId.data);
-          if (prior)
+          if (prior) {
+            if (prior.invoiceUrl)
+              after(() =>
+                deliverInvoiceEmails(prior.id)
+                  .then(() => {})
+                  .catch(() => {
+                    console.error('Invoice email delivery deferred');
+                  }),
+              );
             return Response.json(prior, {
               status: 200,
               headers: { 'Cache-Control': 'no-store' },
             });
+          }
         }
       }
       return Response.json(
@@ -98,6 +112,14 @@ export async function POST(req: Request) {
       );
     }
     const result = await submitJob(parsed.data, client);
+    if (result.invoiceUrl)
+      after(() =>
+        deliverInvoiceEmails(result.id)
+          .then(() => {})
+          .catch(() => {
+            console.error('Invoice email delivery deferred');
+          }),
+      );
     return Response.json(result, {
       status: 'alreadyReceived' in result && result.alreadyReceived ? 200 : 201,
       headers: { 'Cache-Control': 'no-store' },

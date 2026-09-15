@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
-import { premiumDays, premiumPriceGEL } from '@/lib/billing';
+import { invoiceContact, premiumDays, premiumPriceGEL } from '@/lib/billing';
 import {
   placementTiers,
   placementLabels,
@@ -35,6 +35,7 @@ const initial = {
   placement: 'vip',
   title: '',
   company: '',
+  billingEmail: '',
   logo: '',
   category: '',
   city: 'თბილისი',
@@ -489,6 +490,14 @@ export function PostJobForm() {
               <Link className="post-primary" href={invoiceUrl}>
                 ინვოისის ნახვა
               </Link>
+              <p>
+                ინვოისის ასლი ავტომატურად იგზავნება განაცხადში მითითებულ
+                ელფოსტაზე. დახმარებისთვის დარეკე:{' '}
+                <a href={`tel:${invoiceContact.telephone}`}>
+                  {invoiceContact.phone}
+                </a>
+                .
+              </p>
             </div>
           )}
           <small>განაცხადის ნომერი: {receipt}</small>
@@ -828,6 +837,23 @@ export function PostJobForm() {
                 პირველი VIP {introductoryDays} დღით უფასოა — ერთხელ თითო
                 კომპანიაზე; ელიგიბელობა შემოწმებისას დადგინდება.
               </p>
+            )}
+            {values.placement === 'premium' && (
+              <Field
+                name="billingEmail"
+                label="ელფოსტა ინვოისისთვის *"
+                error={errors.billingEmail}
+                hint="ინვოისს ამ მისამართზე გამოგიგზავნით. ელფოსტა ვაკანსიაში საჯაროდ არ გამოჩნდება."
+                wide
+              >
+                <input
+                  {...props('billingEmail')}
+                  type="email"
+                  autoComplete="email"
+                  maxLength={254}
+                  required
+                />
+              </Field>
             )}
             <details className="post-plan-note">
               <summary>შეთავაზების პირობები</summary>

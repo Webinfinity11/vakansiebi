@@ -1,6 +1,11 @@
 import { z } from 'zod';
 export const premiumPriceGEL = 20;
 export const premiumDays = 14;
+export const invoiceContact = {
+  email: 'invoice@jobx.ge',
+  phone: '579 53 53 20',
+  telephone: '+995579535320',
+} as const;
 export const invoiceStatuses = {
   pending: 'გადახდის მოლოდინში',
   paid: 'გადახდილია',
@@ -31,7 +36,13 @@ export const billingSettingsSchema = z.object({
     .refine(validGeorgianIban, 'შეამოწმე ქართული IBAN-ის სისწორე'),
 });
 export function invoiceNumber(number: string | number, date: string | Date) {
-  return `JOBX-${new Date(date).getUTCFullYear()}-${String(number).padStart(6, '0')}`;
+  const issuedAt = new Date(date);
+  const code = String(number).padStart(6, '0');
+  // Keep the payment references on invoices issued before this format change.
+  if (issuedAt < new Date('2026-09-15T14:15:47Z'))
+    return `JOBX-${issuedAt.getUTCFullYear()}-${code}`;
+  // The database sequence never resets; do not truncate or reuse a code.
+  return code;
 }
 export type JobInvoice = {
   id: string;

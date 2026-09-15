@@ -18,6 +18,7 @@ export function validSubmission() {
   return {
     requestId: randomUUID(),
     placement: 'premium',
+    billingEmail: 'billing@example.com',
     title: 'გაყიდვების კონსულტანტი',
     company: 'საცდელი კომპანია',
     category: 'გაყიდვები',
@@ -44,6 +45,9 @@ void test('submission validates ranges, contacts, dates and removes client publi
     { salaryFrom: '' },
     { salaryFrom: '-100' },
     { contact: '' },
+    { billingEmail: '' },
+    { billingEmail: 'wrong' },
+    { billingEmail: 'a@example.com\r\nBcc: other@example.com' },
     { contact: 'not-email' },
     { contact: '123456' },
     { contact: 'javascript:alert(1)' },
@@ -68,6 +72,7 @@ void test('submission validates ranges, contacts, dates and removes client publi
     );
   for (const valid of [
     { fax: 'spam' },
+    { placement: 'vip', billingEmail: '' },
     { city: '', mode: 'დისტანციური' },
     { category: '' },
     { description: 'ა'.repeat(30) },
@@ -94,6 +99,7 @@ void test('submission validates ranges, contacts, dates and removes client publi
   assert.equal('status' in parsed, false);
   assert.equal('placement_expires_at' in parsed, false);
   const job = submissionVacancy(parsed, randomUUID());
+  assert.equal(JSON.stringify(job).includes(data.billingEmail), false);
   assert.equal(job.source, 'JOBX');
   assert.equal(job.salaryMin, 1000);
   assert.match(job.salary, /ხელზე/);

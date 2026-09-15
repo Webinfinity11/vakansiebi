@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { db } from './db';
 import { ApiError } from './auth';
+import { queueInvoiceEmail } from './invoice-email';
 import {
   billingSettingsSchema,
   premiumDays,
@@ -18,7 +19,7 @@ export async function billingSettings() {
 }
 export async function createInvoice(
   c: PoolClient,
-  job: { id: string; company: string; title: string },
+  job: { id: string; company: string; title: string; billingEmail: string },
 ) {
   const settings = (
     await c.query(
@@ -31,22 +32,25 @@ export async function createInvoice(
       503,
     );
   const token = randomBytes(32).toString('hex');
-  await c.query(
-    `INSERT INTO job_invoices(id,token,job_id,amount_gel,service_days,payer_name,vacancy_title,payee_name,bank_name,iban)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-    [
-      randomUUID(),
-      token,
-      job.id,
-      premiumPriceGEL,
-      premiumDays,
-      job.company,
-      job.title,
-      settings.payee_name,
-      settings.bank_name,
-      settings.iban,
-    ],
-  );
+  const invoice = (
+    await c.query(
+      `INSERT INTO job_invoices(id,token,job_id,amount_gel,service_days,payer_name,vacancy_title,payee_name,bank_name,iban)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [
+        randomUUID(),
+        token,
+        job.id,
+        premiumPriceGEL,
+        premiumDays,
+        job.company,
+        job.title,
+        settings.payee_name,
+        settings.bank_name,
+        settings.iban,
+      ],
+    )
+  ).rows[0];
+  await queueInvoiceEmail(c, invoice, job.billingEmail);
   return `/invoices/${token}`;
 }
 export async function getInvoice(token: string) {

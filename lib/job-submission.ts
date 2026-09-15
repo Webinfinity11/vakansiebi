@@ -77,6 +77,7 @@ export const submissionSchema = z
       .default('standard'),
     title: text(3, 120),
     company: text(2, 160),
+    billingEmail: z.string().trim().max(254).default(''),
     logo: submissionLogoSchema,
     category: z.enum(categories).or(z.literal('')).default(''),
     city: text(0, 100),
@@ -108,6 +109,12 @@ export const submissionSchema = z
     fax: z.string().max(200).default(''),
   })
   .superRefine((v, ctx) => {
+    if (v.placement === 'premium' && !safeEmail(v.billingEmail))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['billingEmail'],
+        message: 'მიუთითე ელფოსტა ინვოისის მისაღებად',
+      });
     if (!contactDestination(v.contact))
       ctx.addIssue({
         code: 'custom',

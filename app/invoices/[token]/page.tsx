@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getInvoice } from '@/lib/server/billing';
-import { invoiceNumber, invoiceStatuses } from '@/lib/billing';
+import { invoiceContact, invoiceNumber, invoiceStatuses } from '@/lib/billing';
 import { InvoiceActions } from './print-actions';
 import '../../invoices.css';
 import '../../invoices-print.css';
@@ -123,7 +123,11 @@ export default async function InvoicePage({
         {invoice.status === 'refunded' && (
           <p className="invoice-payment">თანხის დაბრუნება დადასტურებულია.</p>
         )}
-        <footer>JOBX · jobx.ge</footer>
+        <footer>
+          <p>ინვოისთან ან გადახდასთან დაკავშირებით დაგვიკავშირდით:</p>
+          <a href={`tel:${invoiceContact.telephone}`}>{invoiceContact.phone}</a>
+          <p>JOBX · jobx.ge</p>
+        </footer>
       </article>
     </main>
   );
