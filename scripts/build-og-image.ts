@@ -29,7 +29,7 @@ const background = Buffer.from(
 const logo = await sharp('public/brand/jobx.png')
   .resize({ width: logoWidth })
   .toBuffer();
-const { height: logoHeight = 0 } = await sharp(logo).metadata();
+const { height: logoHeight } = await sharp(logo).metadata();
 await sharp(background)
   .composite([
     {
