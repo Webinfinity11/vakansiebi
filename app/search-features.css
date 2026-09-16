@@ -51,11 +51,6 @@
   color: #2457e6;
   font-weight: 700;
 }
-.search-suggest .suggest-meta {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: #6b7688;
-}
 @media (max-width: 760px) {
   .search-suggest {
     margin-top: 4px;

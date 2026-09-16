@@ -165,7 +165,7 @@ export function SearchSuggest({
             id={`${listId}-${i}`}
             role="option"
             aria-selected={i === active}
-            aria-label={`${s.value} — ${s.kind === 'company' ? 'კომპანია' : 'პოზიცია'}, ${s.count}`}
+            aria-label={`${s.value} — ${s.kind === 'company' ? 'კომპანია' : 'პოზიცია'}`}
             type="button"
             tabIndex={-1}
             onPointerDown={(e) => e.preventDefault()}
@@ -175,10 +175,11 @@ export function SearchSuggest({
               setActive(-1);
             }}
           >
+            {/* The frequency of a title in the catalogue is not the number of
+                vacancies the suggestion leads to — a search for it also matches
+                longer titles — so the count was read as a promise the results
+                page then broke. The list stays a list of words. */}
             <span className="suggest-value">{highlight(s.value, trimmed)}</span>
-            <small className="suggest-meta">
-              {s.kind === 'company' ? 'კომპანია' : 'პოზიცია'} · {s.count}
-            </small>
           </button>
         ))}
       </div>

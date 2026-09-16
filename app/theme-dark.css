@@ -2267,9 +2267,6 @@
   background: transparent;
   color: #6f93ff;
 }
-:root[data-theme='dark'] .search-suggest .suggest-meta {
-  color: #969ca6;
-}
 :root[data-theme='dark'] .board-shell .search-query-field {
   border: 1px solid #282f39;
   background: #0e1523;

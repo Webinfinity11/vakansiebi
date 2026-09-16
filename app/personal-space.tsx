@@ -432,7 +432,7 @@ export function PersonalSpace({
       {showTrigger && (
         <button className="secondary-button" onClick={() => setOpen(true)}>
           <FolderHeart size={17} />
-          ჩემი სივრცე <span>{searches.length + applications.length}</span>
+          ჩემი სივრცე
         </button>
       )}
       {!open && !saving && (space.error || space.message) && (
