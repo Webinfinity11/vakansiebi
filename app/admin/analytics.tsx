@@ -130,7 +130,7 @@ export function AnalyticsPanel() {
             <Tile
               label="ჩართულობა"
               value={totals!.save + totals!.saved_search + totals!.application}
-              note={`შენახვა ${whole.format(totals!.save)} · ძებნა ${whole.format(totals!.saved_search)} · განაცხადი ${whole.format(totals!.application)}`}
+              note={`შენახული ვაკანსია ${whole.format(totals!.save)} · შენახული ძებნა ${whole.format(totals!.saved_search)} · განაცხადი ${whole.format(totals!.application)}`}
             />
           </dl>
           <Activity points={data!.activity} unit={data!.unit} />
@@ -195,11 +195,12 @@ const box = {
   bottom: 24,
   left: 38,
 };
-/** The plotted top: the highest count rounded up to something a person reads. */
+/** The plotted top: the highest count rounded up to something a person reads,
+    and no further — a curve that peaks at 57 is drawn against 60, not 100. */
 function ceiling(highest: number) {
   if (highest <= 4) return 4;
   const size = Math.pow(10, Math.floor(Math.log10(highest)));
-  for (const step of [1, 2, 2.5, 5, 10])
+  for (const step of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10])
     if (highest <= size * step) return size * step;
   return size * 10;
 }
@@ -230,17 +231,18 @@ function Activity({
       : (index / (points.length - 1)) * plot.width);
   const y = (value: number) =>
     box.top + plot.height - (value / top) * plot.height;
-  // Names sit at the end of their own line, nudged apart when two lines finish together.
-  const ends = measures
-    .map((measure) => ({
-      measure,
-      y: y(points.at(-1)?.[measure.key] ?? 0),
-    }))
-    .sort((a, b) => a.y - b.y)
-    .map((end, index, all) => ({
-      ...end,
-      y: index === 0 ? end.y : Math.max(end.y, all[index - 1].y + 13),
-    }));
+  /* A name sits at the end of its own line, but only where it can be read: when
+     two lines finish together the legend and the crosshair say which is which,
+     and stacked labels over the curve would say it worse. */
+  const finishes = measures
+    .map((measure) => ({ measure, y: y(points.at(-1)?.[measure.key] ?? 0) }))
+    .sort((a, b) => a.y - b.y);
+  const ends = finishes.filter((end, index) =>
+    finishes.every(
+      (other, position) =>
+        position === index || Math.abs(other.y - end.y) >= 16,
+    ),
+  );
   const ticks = points.length
     ? [0, Math.floor((points.length - 1) / 2), points.length - 1].filter(
         (index, position, all) => all.indexOf(index) === position,
