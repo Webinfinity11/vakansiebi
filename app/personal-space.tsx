@@ -3,7 +3,6 @@ import './personal-space.css';
 import { track as trackEvent } from '@/lib/analytics-client';
 import { useCallback, useEffect, useRef, useState, useId } from 'react';
 import {
-  FolderHeart,
   Search,
   Trash2,
   ArrowUpRight,
@@ -300,7 +299,6 @@ export function PersonalSpace({
   disabled,
   open,
   setOpen,
-  showTrigger = true,
 }: {
   space: PersonalController;
   filters: SearchFilters;
@@ -308,8 +306,9 @@ export function PersonalSpace({
   active: boolean;
   disabled: boolean;
   open: boolean;
+  /* The sheet has no trigger of its own any more: the results toolbar carried
+     one and it was taken out. Whatever opens it next passes this. */
   setOpen: (open: boolean) => void;
-  showTrigger?: boolean;
 }) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
@@ -429,12 +428,6 @@ export function PersonalSpace({
         <Search size={16} />
         ძიების შენახვა
       </button>
-      {showTrigger && (
-        <button className="secondary-button" onClick={() => setOpen(true)}>
-          <FolderHeart size={17} />
-          ჩემი სივრცე
-        </button>
-      )}
       {!open && !saving && (space.error || space.message) && (
         <Feedback space={space} />
       )}
