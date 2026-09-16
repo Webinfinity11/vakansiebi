@@ -815,6 +815,14 @@
 .board-shell.editorial-board.crafted-board.refined-board {
   background-image: none;
 }
+/* The hero isolates its own decorative layers, which also traps the suggestion
+   list inside them: at the page's own level, the shortcuts and the result list
+   painted after the hero covered the list instead of the other way round. While a
+   list is open the hero rises above them, and stays below the masthead. */
+.board-shell.editorial-board.crafted-board.refined-board
+  .discovery-hero:has(.search-suggest) {
+  z-index: 21;
+}
 .board-shell.editorial-board.crafted-board.refined-board .discovery-hero {
   position: relative;
   z-index: 0;
