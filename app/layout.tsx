@@ -1,4 +1,4 @@
-import { siteUrl } from '@/lib/seo';
+import { siteUrl, shareImage } from '@/lib/seo';
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { GoogleAnalytics } from './google-analytics';
@@ -31,9 +31,9 @@ export const metadata: Metadata = {
     siteName: 'JOBX',
     locale: 'ka_GE',
     type: 'website',
-    images: [{ url: '/brand/jobx.png', alt: 'JOBX' }],
+    images: [shareImage],
   },
-  twitter: { card: 'summary', images: ['/brand/jobx.png'] },
+  twitter: { card: 'summary_large_image', images: [shareImage.url] },
   title: 'JOBX — ვაკანსიები ერთ სივრცეში',
   description:
     'მოძებნე ვაკანსიები სხვადასხვა წყაროდან. შეადარე პირობები და გადადი პირველწყაროზე.',

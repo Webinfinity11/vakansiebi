@@ -5,6 +5,16 @@ import { safeExternalUrl } from './vacancy-media';
 import { genericCompanyKeys, logoCompanyKey } from './company-logo-identity';
 
 export const siteUrl = 'https://jobx.ge';
+/* The picture a messenger shows for any page of the site, built by
+   scripts/build-og-image.ts. Every page that writes its own openGraph block has
+   to name it: a page-level block replaces the layout's, images and all, which is
+   how vacancy and company links came to be shared with no picture at all. */
+export const shareImage = {
+  url: '/brand/og.png',
+  width: 1200,
+  height: 630,
+  alt: 'JOBX',
+} as const;
 export const vacancyUrl = (job: Pick<PublicJob, 'id' | 'canonicalId'>) =>
   `${siteUrl}/vacancies/${job.canonicalId || job.id}`;
 export const jsonLd = (value: unknown) =>

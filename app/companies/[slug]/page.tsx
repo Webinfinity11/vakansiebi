@@ -20,7 +20,7 @@ type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-import { siteUrl as site } from '@/lib/seo';
+import { shareImage, siteUrl as site } from '@/lib/seo';
 
 const load = cache(async (rawSlug: string, rawPage: string) => {
   let slug = rawSlug;
@@ -98,6 +98,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     description,
     alternates: { canonical },
     openGraph: {
+      images: [shareImage],
       title,
       description,
       url: canonical,

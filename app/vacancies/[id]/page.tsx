@@ -1,5 +1,5 @@
 import { compactSalary } from '@/lib/vacancy-presentation';
-import { vacancyUrl, jobPosting, jsonLd } from '@/lib/seo';
+import { jobPosting, jsonLd, shareImage, vacancyUrl } from '@/lib/seo';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { isAdmin } from '@/lib/server/auth';
@@ -48,6 +48,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     alternates: { canonical },
     robots: preview ? { index: false, follow: false } : undefined,
     openGraph: {
+      images: [shareImage],
       title,
       description,
       url: canonical,
