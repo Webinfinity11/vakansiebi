@@ -72,6 +72,10 @@ export type SearchMeta = {
   categoryTotal: number;
   relaxations: { key: FilterKey; label: string; count: number }[];
   suggestion: SearchSuggestion | null;
+  /** How many the same words would find if the descriptions were searched too. */
+  wider?: number;
+  /** Set when nothing was found without the descriptions, so they were searched. */
+  widened?: boolean;
 };
 export type SearchPlanOptions = {
   /**
@@ -101,9 +105,9 @@ type MatchGroup = {
       a non-Georgian one, and whether the reader typed this form themselves. */
   a: { t: string; p: string | null; o?: 1 }[];
 };
-function matchGroups(query: string): MatchGroup[] {
+function matchGroups(query: string, deep = false): MatchGroup[] {
   return searchMatchGroups(query).map((group) => ({
-    s: termScope(group.all[0]),
+    s: deep ? termScope(group.all[0]) : 'head',
     a: group.all.map((term) => ({
       t: term,
       p: termPattern(term),
@@ -124,12 +128,16 @@ const documentText = (alias: string, preview: boolean, guarded = true) =>
     : guarded
       ? `COALESCE(${alias}.search_document,'')`
       : `${alias}.search_document`;
-const headlineText = (alias: string, preview: boolean) =>
-  normalized(
-    preview
-      ? `concat_ws(' ',${alias}.draft->>'title',${alias}.draft->>'company')`
-      : `concat_ws(' ',${alias}.search_title,${alias}.search_company)`,
-  );
+/* Maintained by migration 029 and read bare, for the same reason as the document:
+   COALESCE would hide it from its index. A draft preview builds it live. */
+const headlineText = (alias: string, preview: boolean, guarded = true) =>
+  preview
+    ? normalized(
+        `concat_ws(' ',${alias}.draft->>'title',${alias}.draft->>'company',${alias}.draft->>'city')`,
+      )
+    : guarded
+      ? `COALESCE(${alias}.search_headline,'')`
+      : `${alias}.search_headline`;
 const likeText = (term: string) =>
   '%' + term.replace(/[\\%_]/g, (character) => '\\' + character) + '%';
 /* The vacancies a query can match at all. Each alternative becomes a LIKE over
@@ -149,7 +157,7 @@ const candidatePredicate = (
     .map((group) => {
       const text =
         group.s === 'head'
-          ? headlineText(alias, preview)
+          ? headlineText(alias, preview, false)
           : documentText(alias, preview, false);
       return `(${group.a
         .map(
@@ -185,7 +193,18 @@ export function searchPlan(
      bounded regex that confirms the match. "s" is where the group may match:
      a very short word names a role rather than describing one, so it is kept out
      of the descriptions. Parameters stay bound; user text never enters the SQL. */
-  const groups = matchGroups(filters.query);
+  /* What a vacancy calls itself — its title, employer and city — is where a
+     query word is looked for. Measured on the catalogue, a description match is
+     noise far more often than not: of 1,966 vacancies whose text contains
+     "დაცვა", 33 are security jobs and the rest observe rules, keep hygiene or
+     protect data; "excel" reaches 992 and names 2. The descriptions stay one
+     click away, and a search that finds nothing without them widens itself. */
+  const groups = matchGroups(filters.query, filters.deep);
+  // The same words against the descriptions, to count what that click would add.
+  const deeper =
+    !filters.deep && groups.some((group) => group.s === 'head')
+      ? matchGroups(filters.query, true)
+      : null;
   const queryTerms = groups.map((group) => group.a[0].t);
   const searching = groups.length > 0;
   /* What relevance needs from the reader travels as one bound value: the groups
@@ -283,6 +302,9 @@ export function searchPlan(
   const answers = (alias: string) =>
     [
       searching ? `(${alias}.id IN (SELECT id FROM hits)) AS q_match` : '',
+      searching && deeper
+        ? `(${alias}.id IN (SELECT id FROM deeper)) AS q_deep`
+        : '',
       // A posting without a city field often names the city in its own text.
       cityStemPattern
         ? `(CASE WHEN ${normalized(scalar(alias, 'city'))}='' THEN ${document(alias)} ~ ${cityStemPattern} ELSE false END) AS city_text`
@@ -442,7 +464,9 @@ export function searchPlan(
   /* Candidates first, so the rest of the plan only asks whether a row is in that
      set. The visibility a candidate needs is its own — retired sources, deadlines
      and grouping are decided on the page, where they are decided for every row. */
-  const hits = searching ? `${hitsCte('hits', groups, preview, bind)}, ` : '';
+  const hits = searching
+    ? `${hitsCte('hits', groups, preview, bind)}, ${deeper ? `${hitsCte('deeper', deeper, preview, bind)}, ` : ''}`
+    : '';
   const cte = `WITH ${hits}searchable AS MATERIALIZED (SELECT j.*,${columns.join(',')}${groupRank} FROM (${extraction('j')} FROM jobs j ${scalarRecord('j')} WHERE ${base} OFFSET 0) j WHERE ${current}), members AS MATERIALIZED (${members})`;
   const kept = grouped ? 'j.group_rank=1' : 'true';
   const keys = Object.keys(conditions) as FilterKey[];
@@ -459,11 +483,15 @@ export function searchPlan(
       )
       .map((key) => `"${key}"`)
       .join(' AND ');
-  const metrics = `${cte}, matches AS MATERIALIZED (SELECT ${p('category')} AS category_name,${keys.map((key) => `COALESCE((${conditions[key]}),false) AS "${key}"`).join(',')} FROM searchable j WHERE ${kept})
+  const widened =
+    searching && deeper
+      ? `,(SELECT count(*)::int FROM matches WHERE q_deep AND ${all('query')}) deep_total`
+      : '';
+  const metrics = `${cte}, matches AS MATERIALIZED (SELECT ${p('category')} AS category_name,${searching && deeper ? 'j.q_deep,' : ''}${keys.map((key) => `COALESCE((${conditions[key]}),false) AS "${key}"`).join(',')} FROM searchable j WHERE ${kept})
     SELECT (SELECT count(*)::int FROM matches WHERE ${all()}) total,
     (SELECT count(*)::int FROM matches WHERE ${all('category')}) category_total,
     COALESCE((SELECT jsonb_agg(c) FROM (SELECT category_name name,count(*)::int count FROM matches WHERE ${all('category')} GROUP BY category_name) c),'[]'::jsonb) categories,
-    jsonb_build_object(${keys.map((key) => `'${key}',(SELECT count(*)::int FROM matches WHERE ${all(key)})`).join(',')}) relaxed`;
+    jsonb_build_object(${keys.map((key) => `'${key}',(SELECT count(*)::int FROM matches WHERE ${all(key)})`).join(',')}) relaxed${widened}`;
   // One canonical "newest" order: the posting date the filter uses, then our
   // own publication time, and finally the id so pages never overlap.
   const newest = `j.posted_on DESC,${posted} DESC`;

@@ -47,6 +47,7 @@ const filters: SearchFilters = {
   salaryTo: null,
   employment: 'all',
   entryLevel: false,
+  deep: false,
   postedWithin: 0,
 };
 const application = (): Application => ({

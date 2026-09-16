@@ -155,3 +155,18 @@
   border: 0;
   box-shadow: none;
 }
+
+/* Where the words were looked for, and the way into the descriptions. */
+.board-shell .results-head p.search-scope:empty {
+  display: none;
+}
+.board-shell .results-head p.search-scope button {
+  font: inherit;
+  color: #2457e6;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+}

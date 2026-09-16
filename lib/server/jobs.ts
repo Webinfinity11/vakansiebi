@@ -36,15 +36,26 @@ const publicResponses =
 export function clearPublicJobsCache() {
   publicResponses.clear();
 }
-export function publicJobs(
+export async function publicJobs(
   params: URLSearchParams,
   preview = false,
   options: { jobIds?: readonly string[] } = {},
 ) {
-  return publicResponses.get(
+  const answer = await publicResponses.get(
     publicJobsCacheKey(params, preview, options.jobIds),
     () => loadPublicJobs(params, preview, options),
   );
+  /* Nothing under the titles, and the descriptions hold something: the reader
+     gets those rather than an empty page — a word like "wordpress" never appears
+     in a title. The page says so, and the search stays narrow next time. */
+  if (answer.total > 0 || !answer.search.wider) return answer;
+  const wider = new URLSearchParams(params);
+  wider.set('deep', 'true');
+  const widened = await publicResponses.get(
+    publicJobsCacheKey(wider, preview, options.jobIds),
+    () => loadPublicJobs(wider, preview, options),
+  );
+  return { ...widened, search: { ...widened.search, widened: true } };
 }
 async function loadPublicJobs(
   params: URLSearchParams,
@@ -108,6 +119,11 @@ async function loadPublicJobs(
       .slice(0, 3),
     suggestion: null,
   };
+  /* The descriptions are one click away, and the click is offered with its own
+     number. When the narrow search finds nothing at all, it is taken for the
+     reader instead: a word like "wordpress" lives only in descriptions. */
+  const deepTotal = Number(measured.deep_total ?? 0);
+  if (deepTotal > count) search.wider = deepTotal;
   const correction = count === 0 ? suggestSearch(filters.query) : null;
   if (correction) {
     const corrected = new URLSearchParams(params);

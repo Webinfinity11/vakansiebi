@@ -900,6 +900,7 @@ export default function JobBoard({
       employment: filters.employment,
       entryLevel: filters.entryLevel,
       postedWithin: filters.postedWithin,
+      deep: filters.deep,
     });
     setSavedOnly(false);
     document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
@@ -1684,6 +1685,32 @@ export default function JobBoard({
                             ? 'შედეგები შენ მიერ არჩეული პირობებით'
                             : 'იპოვე პოზიცია, რომელიც შენს გეგმებს ერგება'}
                     </p>
+                    {/* A word is looked for in what a vacancy calls itself. The
+                        descriptions are one line away, with the number they add. */}
+                    {!resultsPending && !savedOnly && !!query.trim() && (
+                      <p className="search-scope">
+                        {searchMeta?.widened ? (
+                          'სათაურებში ვერ მოიძებნა — ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.'
+                        ) : advanced.deep ? (
+                          <button
+                            onClick={() =>
+                              setAdvanced({ ...advanced, deep: false })
+                            }
+                          >
+                            აღწერებშიც ვეძებთ — მხოლოდ სათაურებზე დაბრუნება
+                          </button>
+                        ) : searchMeta?.wider && searchMeta.wider > total ? (
+                          <button
+                            onClick={() =>
+                              setAdvanced({ ...advanced, deep: true })
+                            }
+                          >
+                            აღწერებშიც მოძებნე — კიდევ{' '}
+                            {searchMeta.wider - total} ვაკანსია
+                          </button>
+                        ) : null}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="results-tools">

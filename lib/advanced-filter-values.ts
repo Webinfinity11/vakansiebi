@@ -13,6 +13,7 @@ export function advancedValues(
         | 'employment'
         | 'entryLevel'
         | 'postedWithin'
+        | 'deep'
       >,
 ) {
   return {
@@ -22,5 +23,6 @@ export function advancedValues(
     employment: value.employment,
     entryLevel: value.entryLevel,
     postedWithin: value.postedWithin,
+    deep: value.deep,
   };
 }

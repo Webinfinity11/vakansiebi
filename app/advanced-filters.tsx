@@ -10,6 +10,7 @@ export type AdvancedFilters = Pick<
   | 'employment'
   | 'entryLevel'
   | 'postedWithin'
+  | 'deep'
 >;
 export const advancedDefaults: AdvancedFilters = {
   salaryPeriod: 'month',
@@ -18,6 +19,7 @@ export const advancedDefaults: AdvancedFilters = {
   employment: 'all',
   entryLevel: false,
   postedWithin: 0,
+  deep: false,
 };
 export const employmentLabels = {
   all: 'ყველა განაკვეთი',

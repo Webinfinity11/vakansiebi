@@ -101,6 +101,9 @@ export const filtersSchema = z.object({
     .enum(['all', 'part-time', 'internship', 'daily'])
     .default('all'),
   entryLevel: z.boolean().default(false),
+  /* Whether the words are looked for in the descriptions too. Off by default:
+     a saved search made before this existed keeps the narrow reading. */
+  deep: z.boolean().default(false),
   postedWithin: z
     .union([
       z.literal(0),

@@ -50,6 +50,7 @@ export function readSearch(params: URLSearchParams): SearchFilters {
             ? 'daily'
             : 'all',
     entryLevel: params.get('entryLevel') === 'true',
+    deep: params.get('deep') === 'true',
     postedWithin: ([1, 3, 7, 30].includes(Number(params.get('postedWithin')))
       ? Number(params.get('postedWithin'))
       : 0) as SearchFilters['postedWithin'],
@@ -74,6 +75,7 @@ export function searchParams(filters: SearchFilters) {
   if (filters.employment !== 'all')
     result.set('employment', filters.employment);
   if (filters.entryLevel) result.set('entryLevel', 'true');
+  if (filters.deep) result.set('deep', 'true');
   if (filters.postedWithin)
     result.set('postedWithin', String(filters.postedWithin));
   if (filters.sort !== 'შესაბამისობა')
