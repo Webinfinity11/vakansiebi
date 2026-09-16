@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { siteUrl } from '@/lib/seo';
+import { shareImage, siteUrl } from '@/lib/seo';
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import JobBoard from './job-board';
@@ -61,7 +61,7 @@ export async function generateMetadata({
       siteName: 'JOBX',
       locale: 'ka_GE',
       type: 'website',
-      images: ['/brand/jobx.png'],
+      images: [shareImage],
     },
   };
 }
