@@ -13,6 +13,12 @@ export const eventKinds = [
   'save',
   'saved_search',
   'application',
+  /* What a reader does with a vacancy beyond reading it, by vacancy id. */
+  'call',
+  'cv',
+  'apply',
+  /* How far an employer got in the posting form, by step name. */
+  'post',
 ] as const;
 export type EventKind = (typeof eventKinds)[number];
 
@@ -35,10 +41,23 @@ export function normalizeEvent(
   if (typeof kind !== 'string' || !eventKinds.includes(kind as EventKind))
     return null;
   if (typeof value !== 'string') return null;
-  if (kind === 'view' || kind === 'outbound' || kind === 'save')
+  if (
+    kind === 'view' ||
+    kind === 'outbound' ||
+    kind === 'save' ||
+    kind === 'call' ||
+    kind === 'cv' ||
+    kind === 'apply'
+  )
     return uuid.test(value) ? { kind, value: value.toLowerCase() } : null;
-  // Which filter was used or which stage was chosen: a short code name, never reader text.
-  if (kind === 'filter' || kind === 'application' || kind === 'saved_search')
+  // Which filter was used, which stage was chosen, how far the posting form got:
+  // a short code name, never reader text.
+  if (
+    kind === 'filter' ||
+    kind === 'application' ||
+    kind === 'saved_search' ||
+    kind === 'post'
+  )
     return /^[a-zA-Z_]{2,24}$/.test(value) ? { kind, value } : null;
   const query = value
     .normalize('NFKC')
@@ -78,6 +97,8 @@ export type AnalyticsSummary = {
   to: string;
   totals: Record<EventKind, number>;
   activity: ActivityPoint[];
+  /** How far the posting form got, by step name. */
+  steps: Ranked[];
   searches: Ranked[];
   emptySearches: Ranked[];
   views: Ranked[];
@@ -160,6 +181,7 @@ export async function analyticsSummary(
     to: activity.at(-1)?.bucket ?? '',
     totals: byKind,
     activity,
+    steps: await ranked('post', false),
     searches: await ranked('search', false),
     emptySearches: await ranked('search_empty', false),
     views: await ranked('view', true),

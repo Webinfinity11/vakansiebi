@@ -135,6 +135,39 @@ export function AnalyticsPanel() {
           </dl>
           <Activity points={data!.activity} unit={data!.unit} />
           <div className="admin-analytics-lists">
+            <section className="admin-analytics-list">
+              <h3>დაკავშირება</h3>
+              <p className="admin-analytics-hint">
+                რამდენჯერ დააჭირეს — არა ვინ. წილი ნახვებთან.
+              </p>
+              <dl className="admin-analytics-steps">
+                {(
+                  [
+                    ['დარეკვა', totals!.call],
+                    ['CV-ის გაგზავნა', totals!.cv],
+                    ['განაცხადი კომპანიის საიტზე', totals!.apply],
+                    ['პირველწყაროზე გადასვლა', totals!.outbound],
+                  ] as const
+                ).map(([label, count]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>
+                      <span
+                        style={{
+                          width: `${Math.min(100, totals!.view ? (count / totals!.view) * 100 : 0)}%`,
+                        }}
+                        aria-hidden="true"
+                      />
+                      <b>{whole.format(count)}</b>
+                      <small>{share(count, totals!.view)}</small>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+            <Funnel steps={data!.steps} />
+          </div>
+          <div className="admin-analytics-lists">
             <RankedList
               title="ყველაზე ხშირი ძებნა"
               rows={data!.searches}
@@ -417,6 +450,74 @@ function Activity({
         </tbody>
       </table>
     </figure>
+  );
+}
+
+/* The posting form, step by step. The share is of the people who opened it, so
+   the row where the number falls away is the step that loses them; what the form
+   refused and where they left it are listed under their own headings, because
+   those are not stages of the same ladder. */
+const stepLabels: Record<string, string> = {
+  opened: 'ფორმა გაიხსნა',
+  started: 'შევსება დაიწყო',
+  details: 'დეტალებამდე მივიდა',
+  plans: 'განთავსების არჩევამდე',
+  submitted: 'გაგზავნას დააჭირა',
+  done: 'გაიგზავნა',
+};
+function Funnel({ steps }: { steps: Ranked[] }) {
+  const count = (name: string) =>
+    steps.find((step) => step.value === name)?.count || 0;
+  const opened = count('opened') || 1;
+  const left = steps.filter((step) => step.value.startsWith('left_'));
+  const refused = steps.filter((step) => step.value.startsWith('invalid_'));
+  return (
+    <section className="admin-analytics-list">
+      <h3>განცხადების დამატება</h3>
+      {!steps.length ? (
+        <p className="admin-analytics-empty">ამ პერიოდში ფორმა არ გაუხსნიათ.</p>
+      ) : (
+        <>
+          <dl className="admin-analytics-steps">
+            {Object.entries(stepLabels).map(([name, label]) => (
+              <div key={name}>
+                <dt>{label}</dt>
+                <dd>
+                  <span
+                    style={{ width: `${(count(name) / opened) * 100}%` }}
+                    aria-hidden="true"
+                  />
+                  <b>{whole.format(count(name))}</b>
+                  <small>{share(count(name), opened)}</small>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {!!left.length && (
+            <p className="admin-analytics-hint">
+              შეწყვიტა:{' '}
+              {left
+                .map(
+                  (step) =>
+                    `${stepLabels[step.value.slice(5)] || step.value.slice(5)} — ${whole.format(step.count)}`,
+                )
+                .join(' · ')}
+            </p>
+          )}
+          {!!refused.length && (
+            <p className="admin-analytics-hint">
+              ფორმამ არ მიიღო:{' '}
+              {refused
+                .map(
+                  (step) =>
+                    `${step.value.slice(8)} — ${whole.format(step.count)}`,
+                )
+                .join(' · ')}
+            </p>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 

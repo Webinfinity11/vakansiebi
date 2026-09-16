@@ -13,6 +13,7 @@ import {
   vacancyContacts,
 } from '@/lib/vacancy-details';
 import type { PublicJob } from '@/lib/types';
+import { track } from '@/lib/analytics-client';
 
 export function QuickApply({
   job,
@@ -24,6 +25,10 @@ export function QuickApply({
   children?: ReactNode;
 }) {
   const { emails, phones } = vacancyContacts(job);
+  /* Pressing call, opening a letter with a CV or leaving for the employer's own
+     form is where reading turns into applying, and until now none of the three
+     was counted. Only the vacancy is recorded, once per press. */
+  const reached = (kind: 'call' | 'cv' | 'apply') => () => track(kind, job.id);
   const application = applicationDestination(job);
   const [message, setMessage] = useState('');
   /* Read after mount: localStorage does not exist while the server renders this. The details
@@ -51,6 +56,7 @@ export function QuickApply({
           href={application.url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={reached('apply')}
         >
           განაცხადი კომპანიის საიტზე <ArrowUpRight size={16} />
         </a>
@@ -61,6 +67,7 @@ export function QuickApply({
             className="contact-phone"
             key={phone.number}
             href={`tel:${phone.number}`}
+            onClick={reached('call')}
           >
             <Phone size={18} />
             <span>
@@ -89,6 +96,7 @@ export function QuickApply({
                     applicant,
                   ),
                 )}
+                onClick={reached('cv')}
               >
                 <Mail size={16} />
                 {contact.application ? 'CV-ის გაგზავნა' : 'წერილის გახსნა'}

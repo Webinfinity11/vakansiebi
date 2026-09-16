@@ -22,6 +22,29 @@ void test('a search is stored folded, and noise is refused rather than trimmed',
   assert.equal(normalizeEvent('search', 42), null);
 });
 
+void test('the process events keep their two shapes: a vacancy, or a step name', () => {
+  for (const kind of ['call', 'cv', 'apply'] as const) {
+    assert.deepEqual(normalizeEvent(kind, id), { kind, value: id });
+    assert.equal(
+      normalizeEvent(kind, 'დარეკვა'),
+      null,
+      'a contact event names the vacancy, never the reader',
+    );
+  }
+  assert.deepEqual(normalizeEvent('post', 'left_details'), {
+    kind: 'post',
+    value: 'left_details',
+  });
+  assert.deepEqual(normalizeEvent('post', 'invalid_salaryFrom'), {
+    kind: 'post',
+    value: 'invalid_salaryFrom',
+  });
+  assert.equal(
+    normalizeEvent('post', 'რეზიუმე ჩემი'),
+    null,
+    'a step is a code name, so no typed text can arrive as one',
+  );
+});
 void test('a view or an outbound click must name a vacancy', () => {
   assert.deepEqual(normalizeEvent('view', id.toUpperCase()), {
     kind: 'view',

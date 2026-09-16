@@ -7,9 +7,11 @@ import {
   placementLabels,
   introductoryDays,
 } from '@/lib/placement';
+import { track } from '@/lib/analytics-client';
 import {
   useEffect,
   useRef,
+  useCallback,
   useState,
   type SubmitEvent,
   type ReactNode,
@@ -53,6 +55,9 @@ const initial = {
 };
 type Values = typeof initial;
 type FieldName = keyof Values;
+/* The ladder the posting form is climbed by, in order. */
+const stages = ['opened', 'started', 'details', 'plans', 'done'] as const;
+type PostStage = (typeof stages)[number];
 const detailFields: FieldName[] = [
   'logo',
   'salaryFrom',
@@ -254,8 +259,31 @@ export function PostJobForm() {
     errorFocus.current = '';
   }, [errors, busy, sent]);
 
+  /* How far this form gets, in step names and nothing else. The counts say
+     which step loses people and when they left it; no session, id or text of
+     theirs is sent, so a single person is never followed from one step to the
+     next — only the steps are counted. */
+  const stage = useRef<PostStage>('opened');
+  const reached = useCallback((step: PostStage) => {
+    if (stages.indexOf(step) <= stages.indexOf(stage.current)) return;
+    stage.current = step;
+    track('post', step);
+  }, []);
+  useEffect(() => {
+    track('post', 'opened');
+    // Leaving with the form started and unsent is the drop-off worth knowing.
+    const leave = () => {
+      if (stage.current === 'opened' || stage.current === 'done') return;
+      track('post', `left_${stage.current}`);
+      stage.current = 'done';
+    };
+    window.addEventListener('pagehide', leave);
+    return () => window.removeEventListener('pagehide', leave);
+  }, []);
+
   function change(name: FieldName, value: string) {
     if (busy || sent) return;
+    reached(detailFields.includes(name) ? 'details' : 'started');
     setValues((v) => ({
       ...v,
       [name]: value,
@@ -346,6 +374,8 @@ export function PostJobForm() {
     );
     errorFocus.current =
       firstInvalid?.id.slice(5) || Object.keys(mapped)[0] || '';
+    // The field that stopped it, so a form people cannot finish can be found.
+    if (errorFocus.current) track('post', `invalid_${errorFocus.current}`);
     setErrors(mapped);
   }
   function validate() {
@@ -383,9 +413,11 @@ export function PostJobForm() {
     setMessage('');
     return result.data;
   }
+  const choosePlan = () => reached('plans');
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (inFlight.current || logoWorking.current) return;
+    track('post', 'submitted');
     const data = sent || validate();
     if (!data) return;
     inFlight.current = true;
@@ -436,6 +468,7 @@ export function PostJobForm() {
         throw new Error(retryMessage);
       }
       const received = result as SubmissionReceipt;
+      reached('done');
       setReceipt(received.id);
       setAlreadyReceived(received.alreadyReceived === true);
       setInvoiceUrl(
@@ -821,7 +854,10 @@ export function PostJobForm() {
                     name="placement"
                     value={t}
                     checked={values.placement === t}
-                    onChange={() => change('placement', t)}
+                    onChange={() => {
+                      choosePlan();
+                      change('placement', t);
+                    }}
                     disabled={locked || (t === 'premium' && !premiumAvailable)}
                   />
                   <span>
@@ -898,6 +934,7 @@ export function PostJobForm() {
                   errors.consent ? 'post-consent-error' : undefined
                 }
                 onChange={(e) => {
+                  choosePlan();
                   setConsent(e.target.checked);
                   setErrors((v) => ({ ...v, consent: '' }));
                 }}

@@ -15,7 +15,11 @@ export type TrackedKind =
   | 'filter'
   | 'save'
   | 'saved_search'
-  | 'application';
+  | 'application'
+  | 'call'
+  | 'cv'
+  | 'apply'
+  | 'post';
 
 export function track(kind: TrackedKind, value: string) {
   if (process.env.NODE_ENV !== 'production') return;
