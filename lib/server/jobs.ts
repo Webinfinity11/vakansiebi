@@ -18,6 +18,7 @@ import { contactAsCompany } from '../employer-identity';
 import { sourceHealth } from '../job-intelligence';
 import {
   searchPlan,
+  shorterSearches,
   publicRead,
   filterLabels,
   type FilterKey,
@@ -63,10 +64,12 @@ async function loadPublicJobs(
     { grouped: true, jobIds: options.jobIds },
   );
   const summary = params.get('summary') === '1';
-  const snapshot = preview ? 'j.draft' : 'j.published';
+  /* The snapshot itself is read from the table, for the twenty rows of this page
+     only. Carrying it through the search would detoast every visible vacancy. */
+  const record = preview ? 'record.draft' : 'record.published';
   const projection = summary
-    ? `(${snapshot} - ARRAY['description','facts','applicationLinks','warnings','fullTextUrl'])`
-    : snapshot;
+    ? `(${record} - ARRAY['description','facts','applicationLinks','warnings','fullTextUrl'])`
+    : record;
   const countsOnly = params.get('countsOnly') === '1';
   const cut = metrics.indexOf(
     '\n    SELECT (SELECT count(*)::int FROM matches',
@@ -85,7 +88,7 @@ async function loadPublicJobs(
   const statement = countsOnly
     ? metrics
     : metrics.slice(0, cut) +
-      `, ranked AS (SELECT j.id,j.promotion_rank,j.placement_expires_at,${boosted ? 'j.promotion_rank>0' : 'false'} AS priority_placement,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,${sources} AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id, row_number() OVER (ORDER BY ${priority}${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT * FROM ranked WHERE ord > $${args.length + 2} AND ord <= $${args.length + 2} + $${args.length + 1})` +
+      `, ranked AS (SELECT j.id, row_number() OVER (ORDER BY ${priority}${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT r.ord,j.id,j.promotion_rank,j.placement_expires_at,${boosted ? 'j.promotion_rank>0' : 'false'} AS priority_placement,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,${sources} AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id FROM ranked r JOIN searchable j ON j.id=r.id JOIN jobs record ON record.id=r.id WHERE r.ord > $${args.length + 2} AND r.ord <= $${args.length + 2} + $${args.length + 1})` +
       metrics.slice(cut) +
       `, (SELECT COALESCE(jsonb_agg(to_jsonb(pg) - 'ord' ORDER BY pg.ord),'[]'::jsonb) FROM page pg) AS page_rows`;
   const measured = (
@@ -116,7 +119,30 @@ async function loadPublicJobs(
         plan.args,
       )
     ).rows[0].count;
-    if (n > 0) search.suggestion = { query: correction, count: n };
+    if (n > 0)
+      search.suggestion = { query: correction, count: n, kind: 'spelling' };
+  }
+  /* Nothing found and no misspelling to blame: one of the words is the reason.
+     Ask what the others would find and offer that, instead of leaving the reader
+     with nothing but "remove the search word". */
+  const shorter =
+    count === 0 && !search.suggestion ? shorterSearches(params, preview) : null;
+  if (shorter) {
+    const counts = (await publicRead(shorter.statement, shorter.args)).rows[0]
+      .dropped as Record<string, number>;
+    const [best] = Object.entries(counts)
+      .map(([index, n]) => ({ index: Number(index), count: Number(n) || 0 }))
+      .filter((item) => item.count > 0)
+      .sort((a, b) => b.count - a.count || a.index - b.index);
+    const words = best
+      ? shorter.queryTerms.filter((_, index) => index !== best.index)
+      : [];
+    if (best && words.length)
+      search.suggestion = {
+        query: words.join(' '),
+        count: best.count,
+        kind: 'fewer-words',
+      };
   }
   if (params.get('countsOnly') === '1')
     return {

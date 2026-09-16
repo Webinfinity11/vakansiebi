@@ -23,12 +23,12 @@ export async function similarVacancies(
   const city = bind(job.city);
   const category = bind(job.category);
   const id = bind(job.id);
-  const overlap = `(SELECT count(*) FROM unnest(${terms}::text[]) term WHERE strpos(lower(normalize(j.published->>'title',NFKC)),term)>0)`;
-  const sameCity = `lower(j.published->>'city')=lower(${city}) AND ${city} NOT IN ('','სხვა','საქართველო')`;
-  const sameCategory = `j.published->>'category'=${category} AND ${category} NOT IN ('','სხვა')`;
+  const overlap = `(SELECT count(*) FROM unnest(${terms}::text[]) term WHERE strpos(lower(normalize(COALESCE(j.p_title,''),NFKC)),term)>0)`;
+  const sameCity = `lower(COALESCE(j.p_city,''))=lower(${city}) AND ${city} NOT IN ('','სხვა','საქართველო')`;
+  const sameCategory = `j.p_category=${category} AND ${category} NOT IN ('','სხვა')`;
   const rows = (
     await db().query(
-      `${plan.cte} SELECT j.id,j.published FROM searchable j WHERE ${plan.where} AND j.id<>${id}::uuid AND (${overlap}>0 OR (${sameCity} AND ${sameCategory})) ORDER BY ${overlap} DESC,(${sameCity}) DESC,j.published_at DESC,j.id LIMIT 40`,
+      `${plan.cte} SELECT j.id,record.published FROM searchable j JOIN jobs record ON record.id=j.id WHERE ${plan.where} AND j.id<>${id}::uuid AND (${overlap}>0 OR (${sameCity} AND ${sameCategory})) ORDER BY ${overlap} DESC,(${sameCity}) DESC,j.published_at DESC,j.id LIMIT 40`,
       args,
     )
   ).rows;

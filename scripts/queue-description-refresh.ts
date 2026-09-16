@@ -19,7 +19,7 @@ try {
       const plan = searchPlan(new URLSearchParams());
       const rows = (
         await c.query(
-          `${plan.cte} SELECT i.id,i.source_id FROM searchable j JOIN source_items i ON i.job_id=j.id WHERE ${plan.where} AND i.url=j.published->>'url'`,
+          `${plan.cte} SELECT i.id,i.source_id FROM searchable j JOIN source_items i ON i.job_id=j.id JOIN jobs record ON record.id=j.id WHERE ${plan.where} AND i.url=record.published->>'url'`,
           plan.args,
         )
       ).rows;

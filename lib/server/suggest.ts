@@ -43,11 +43,11 @@ export async function suggestTerms(
   const norm = (sql: string) =>
     `lower(CASE WHEN ${sql} IS NFKC NORMALIZED THEN ${sql} ELSE normalize(${sql},NFKC) END)`;
   const { rows } = await db().query(
-    `${plan.cte}, visible AS MATERIALIZED (SELECT j.id,j.published FROM searchable j WHERE ${plan.where}),
+    `${plan.cte}, visible AS MATERIALIZED (SELECT j.p_title AS title,j.p_company AS company FROM searchable j WHERE ${plan.where}),
      candidates AS (
-       SELECT btrim(published->>'title') AS value,'title' AS kind,${norm(`btrim(published->>'title')`)} AS norm FROM visible WHERE COALESCE(published->>'title','')<>''
+       SELECT btrim(title) AS value,'title' AS kind,${norm('btrim(title)')} AS norm FROM visible WHERE COALESCE(title,'')<>''
        UNION ALL
-       SELECT btrim(published->>'company') AS value,'company' AS kind,${norm(`btrim(published->>'company')`)} AS norm FROM visible WHERE COALESCE(published->>'company','')<>''
+       SELECT btrim(company) AS value,'company' AS kind,${norm('btrim(company)')} AS norm FROM visible WHERE COALESCE(company,'')<>''
      ),
      ranked AS (
        SELECT min(value) AS value,kind,count(*)::int AS count FROM candidates

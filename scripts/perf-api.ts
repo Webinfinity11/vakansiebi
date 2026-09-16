@@ -153,7 +153,7 @@ try {
       result = await publicJobs(params);
       const elapsed = performance.now() - start;
       statement = observations.find((item) =>
-        item.sql.startsWith('WITH searchable AS'),
+        item.sql.includes('searchable AS MATERIALIZED'),
       );
       assert.ok(statement, 'publicJobs must execute its database statement');
       if (n >= 0) {
@@ -197,7 +197,9 @@ try {
       observations = [];
       phase.cacheHit = await measure(() => publicJobs(params));
       assert.ok(
-        !observations.some((item) => item.sql.startsWith('WITH searchable AS')),
+        !observations.some((item) =>
+          item.sql.includes('searchable AS MATERIALIZED'),
+        ),
         'A warm public response must not rebuild the SQL statement',
       );
       observations = null;
@@ -262,6 +264,9 @@ try {
         // Keep unused parameter types inferable when the extraction owns a bind (exclude).
         // pg accepts unused positional binds only when their types are specified.
         const parameterTypes = (sql: string, args: unknown[]) => {
+          // A filterless plan now binds nothing at all, and an empty cast list
+          // would leave "NOT ()" behind.
+          if (!args.length) return sql;
           const casts = args
             .map(
               (arg, i) =>

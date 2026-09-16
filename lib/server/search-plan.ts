@@ -2,8 +2,13 @@ import { subcategoryFor } from '../subcategories';
 import { z } from 'zod';
 import { genericCompanyKeys } from '../company-logo-identity';
 import { readSearch } from '../search-state';
-import { searchGroups } from '../search-language';
-import { escapeRegex, termPattern } from '../job-intelligence';
+import { searchMatchGroups } from '../search-language';
+import {
+  escapeRegex,
+  searchTerms,
+  termPattern,
+  termScope,
+} from '../job-intelligence';
 import { requiredExperiencePattern } from '../experience';
 import { cities, cityStem, otherCity } from '../cities';
 import { db } from './db';
@@ -56,11 +61,17 @@ export const filterLabels = {
   postedWithin: 'გამოქვეყნების თარიღი',
 };
 export type FilterKey = keyof typeof filterLabels;
+/** A correction of the typed word, or the same search with one word taken off. */
+export type SearchSuggestion = {
+  query: string;
+  count: number;
+  kind: 'spelling' | 'fewer-words';
+};
 export type SearchMeta = {
   categories: { name: string; count: number }[];
   categoryTotal: number;
   relaxations: { key: FilterKey; label: string; count: number }[];
-  suggestion: { query: string; count: number } | null;
+  suggestion: SearchSuggestion | null;
 };
 export type SearchPlanOptions = {
   /**
@@ -83,6 +94,78 @@ export type SearchPlanOptions = {
 const normalized = (sql: string) =>
   `lower(CASE WHEN COALESCE(${sql},'') IS NFKC NORMALIZED THEN COALESCE(${sql},'') ELSE normalize(COALESCE(${sql},''),NFKC) END)`;
 const today = "to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')";
+type MatchGroup = {
+  /** Where the group may match: a very short word names a role, so it stays out of descriptions. */
+  s: 'head' | 'document';
+  /** Its alternatives: the text a document must contain, the regex that confirms
+      a non-Georgian one, and whether the reader typed this form themselves. */
+  a: { t: string; p: string | null; o?: 1 }[];
+};
+function matchGroups(query: string): MatchGroup[] {
+  return searchMatchGroups(query).map((group) => ({
+    s: termScope(group.all[0]),
+    a: group.all.map((term) => ({
+      t: term,
+      p: termPattern(term),
+      ...(group.own.includes(term) ? { o: 1 as const } : {}),
+    })),
+  }));
+}
+/* The maintained column as the index knows it. Wrapping it in COALESCE would
+   describe a different expression and quietly cost a sequential scan, so the
+   candidate search reads it bare — a row without a snapshot simply matches
+   nothing — and only the filters that need a false rather than an unknown take
+   the guarded form. */
+const documentText = (alias: string, preview: boolean, guarded = true) =>
+  preview
+    ? normalized(
+        `concat_ws(' ',${alias}.draft->>'title',${alias}.draft->>'company',${alias}.draft->>'city',${alias}.draft->>'description')`,
+      )
+    : guarded
+      ? `COALESCE(${alias}.search_document,'')`
+      : `${alias}.search_document`;
+const headlineText = (alias: string, preview: boolean) =>
+  normalized(
+    preview
+      ? `concat_ws(' ',${alias}.draft->>'title',${alias}.draft->>'company')`
+      : `concat_ws(' ',${alias}.search_title,${alias}.search_company)`,
+  );
+const likeText = (term: string) =>
+  '%' + term.replace(/[\\%_]/g, (character) => '\\' + character) + '%';
+/* The vacancies a query can match at all. Each alternative becomes a LIKE over
+   the maintained document, which is what the trigram index of migration 028
+   answers — three milliseconds instead of reading every description in the
+   catalogue. LIKE with an escaped pattern is the same test as strpos, and the
+   bounded regex still confirms a non-Georgian alternative. A group that reads
+   the title and employer only has no index to use, and needs none: those columns
+   are small enough to scan. */
+const candidatePredicate = (
+  groups: MatchGroup[],
+  alias: string,
+  preview: boolean,
+  bind: (value: unknown) => string,
+) =>
+  groups
+    .map((group) => {
+      const text =
+        group.s === 'head'
+          ? headlineText(alias, preview)
+          : documentText(alias, preview, false);
+      return `(${group.a
+        .map(
+          ({ t, p }) =>
+            `(${text} LIKE ${bind(likeText(t))}${p ? ` AND ${text} ~ ${bind(p)}` : ''})`,
+        )
+        .join(' OR ')})`;
+    })
+    .join(' AND ');
+const hitsCte = (
+  name: string,
+  groups: MatchGroup[],
+  preview: boolean,
+  bind: (value: unknown) => string,
+) =>
+  `${name} AS MATERIALIZED (SELECT j.id FROM jobs j WHERE ${preview ? "j.status IN ('pending','published')" : "j.status='published'"} AND j.${preview ? 'draft' : 'published'} IS NOT NULL AND ${candidatePredicate(groups, 'j', preview, bind)})`;
 export function searchPlan(
   params: URLSearchParams,
   preview = false,
@@ -95,25 +178,40 @@ export function searchPlan(
     args.push(value);
     return `$${args.length}`;
   };
-  // Every alternative carries the literal text a document must contain (cheap
-  // strpos prefilter) and, unless it is a Georgian stem, the bounded regex that
-  // confirms the match. Parameters stay bound; user text never enters the SQL.
-  const groups = bind(
-    JSON.stringify(
-      searchGroups(filters.query).map((group) =>
-        group.map((term) => ({ t: term, p: termPattern(term) })),
-      ),
-    ),
-  );
-  const field = (key: string) => `${snapshot}->>'${key}'`;
+  /* One group per typed word, each holding the alternatives that satisfy it: the
+     Georgian stem first — the word the reader actually typed — then the reviewed
+     equivalents. Every alternative carries the literal text a document must
+     contain (cheap strpos prefilter) and, unless it is a Georgian stem, the
+     bounded regex that confirms the match. "s" is where the group may match:
+     a very short word names a role rather than describing one, so it is kept out
+     of the descriptions. Parameters stay bound; user text never enters the SQL. */
+  const groups = matchGroups(filters.query);
+  const queryTerms = groups.map((group) => group.a[0].t);
+  const searching = groups.length > 0;
+  /* What relevance needs from the reader travels as one bound value: the groups
+     and the adjacency pattern. It is bound the first time it is mentioned and no
+     sooner — the same plan also builds statements that only count, and a driver
+     rejects a parameter the statement never names. */
+  const adjacent =
+    groups.length > 1 && groups.length <= 4
+      ? queryTerms
+          .map((term) => escapeRegex(term))
+          .join('[^[:space:]]*[[:space:]]+')
+      : null;
+  const payload = searching
+    ? `${bind(JSON.stringify({ g: groups, j: adjacent }))}::jsonb`
+    : `'{}'::jsonb`;
   const posted = preview
     ? 'j.created_at'
     : 'COALESCE(j.published_at,j.created_at)';
-  const termMatch = (text: string) =>
-    `EXISTS(SELECT 1 FROM jsonb_array_elements(terms) term WHERE strpos(${text},term->>'t')>0 AND (term->>'p' IS NULL OR ${text} ~ (term->>'p')))`;
-  const queryMatch = (text: string) =>
-    `NOT EXISTS(SELECT 1 FROM jsonb_array_elements(${groups}::jsonb) terms WHERE NOT ${termMatch(text)})`;
-  const searching = Boolean(filters.query.trim());
+  // One alternative against one text, and any alternative of a group against it.
+  const oneTerm = (text: string, term: string) =>
+    `strpos(${text},${term}->>'t')>0 AND (${term}->>'p' IS NULL OR ${text} ~ (${term}->>'p'))`;
+  // Any alternative of a group, or only the ones the reader actually typed.
+  const anyTerm = (text: string, group: string, own = false) =>
+    `EXISTS(SELECT 1 FROM jsonb_array_elements(${group}->'a') term WHERE ${own ? "term->>'o'='1' AND " : ''}${oneTerm(text, 'term')})`;
+  const opensWith = (text: string, group: string) =>
+    `EXISTS(SELECT 1 FROM jsonb_array_elements(${group}->'a') term WHERE term->>'o'='1' AND strpos(${text},term->>'t')=1)`;
   const grouped = Boolean(options.grouped) && !params.has('ids');
   const folding = grouped || params.has('ids');
   const pricing =
@@ -122,9 +220,10 @@ export function searchPlan(
     filters.salaryTo !== null ||
     filters.salaryPeriod === 'day' ||
     params.get('sort') === 'salary';
-  // Published scalars are maintained by migration 020 when the snapshot changes.
-  // Draft preview unpacks its live snapshot once with a lateral record. Separate
-  // ->> expressions each detoast the same large JSON again, even behind OFFSET 0.
+  // Published scalars are maintained by migrations 020 and 027 when the snapshot
+  // changes. Draft preview unpacks its live snapshot once with a lateral record.
+  // Separate ->> expressions each detoast the same large JSON again, even behind
+  // OFFSET 0, which is why no text is rebuilt per request here.
   const extracted = [
     'title',
     'company',
@@ -142,8 +241,64 @@ export function searchPlan(
     preview
       ? `scalars."${key}"`
       : `${alias}.search_${key.replace(/[A-Z]/g, (letter) => '_' + letter.toLowerCase())}`;
-  const extraction = (alias: string) =>
-    `SELECT ${alias}.id,${alias}.${snapshot.slice(2)},${alias}.created_at,${alias}.published_at,${alias}.needs_review,${alias}.fingerprint,${alias}.placement_tier,${alias}.placement_expires_at,${extracted.map((key) => `${scalar(alias, key)} AS p_${key}`).join(',')}${pricing ? `,${scalar(alias, 'salaryMin')} AS p_salaryMin` : ''}`;
+  /* Texts only the row itself can supply, so they are read inside the extraction
+     scan and leave it as a yes/no answer. Carrying a description through the
+     materialized CTE is what used to spill tens of megabytes to disk per search. */
+  const document = (alias: string) => documentText(alias, preview);
+  const factsText = (alias: string) =>
+    preview
+      ? normalized(`${alias}.draft->>'facts'`)
+      : `COALESCE(${alias}.search_facts,'')`;
+  const experienceText = (alias: string) =>
+    `(${document(alias)} || ' ' || ${factsText(alias)})`;
+  const employmentText = (alias: string) =>
+    normalized(
+      `concat_ws(' ',${preview ? `${alias}.draft->>'employmentType'` : `${alias}.search_employment_type`},${scalar(alias, 'title')})`,
+    );
+  const cityStemPattern =
+    filters.city !== 'ყველა' && filters.city !== otherCity
+      ? bind('\\m' + escapeRegex(cityStem(filters.city)))
+      : null;
+  const employmentPattern =
+    filters.employment === 'all'
+      ? null
+      : bind(
+          filters.employment === 'daily'
+            ? '(^|[^ა-ჰa-z])(დღიური|ერთდღიანი|ერთჯერადი)[[:space:]-]+(სამუშაო|სამსახური|დასაქმება)|one[ -]day[[:space:]]+(job|work)|day[ -]labou?r'
+            : filters.employment === 'part-time'
+              ? '(ნახევარი?|არასრული?|ნაწილობრივი?)[[:space:]]+განაკვეთ|part[ -]?time'
+              : 'სტაჟიორ|სტაჟირებ|\\mintern(ship)?\\M',
+        );
+  const entryLevelPattern = filters.entryLevel
+    ? bind(
+        'გამოცდილების[[:space:]]+გარეშე|გამოცდილება[[:space:]:–-]+(არ[[:space:]]+(არის[[:space:]]+)?(სავალდებულო|აუცილებელი|საჭირო)|არ[[:space:]]+მოითხოვება)|no[[:space:]]+(previous[[:space:]]+|prior[[:space:]]+)?experience[[:space:]]+(is[[:space:]]+)?(required|needed|necessary)|experience[[:space:]]+(is[[:space:]]+)?not[[:space:]]+(required|needed|necessary)',
+      )
+    : null;
+  const requiredExperience = filters.entryLevel
+    ? bind(requiredExperiencePattern)
+    : null;
+  /* Answers the extraction scan gives once per row, so the filters, the facet
+     counts and the relaxed counts can all read a boolean instead of a document.
+     Each one appears only while its filter is switched on. */
+  const answers = (alias: string) =>
+    [
+      searching ? `(${alias}.id IN (SELECT id FROM hits)) AS q_match` : '',
+      // A posting without a city field often names the city in its own text.
+      cityStemPattern
+        ? `(CASE WHEN ${normalized(scalar(alias, 'city'))}='' THEN ${document(alias)} ~ ${cityStemPattern} ELSE false END) AS city_text`
+        : '',
+      entryLevelPattern
+        ? `(${experienceText(alias)} ~ ${entryLevelPattern} AND NOT (${experienceText(alias)} ~ ${requiredExperience})) AS entry_level`
+        : '',
+      employmentPattern
+        ? `(${filters.employment === 'daily' ? `(${employmentText(alias)} || ' ' || ${document(alias)})` : employmentText(alias)} ~ ${employmentPattern}) AS employment_match`
+        : '',
+    ]
+      .filter(Boolean)
+      .map((column) => ',' + column)
+      .join('');
+  const extraction = (alias: string, matching = true) =>
+    `SELECT ${alias}.id,${alias}.created_at,${alias}.published_at,${alias}.needs_review,${alias}.fingerprint,${alias}.placement_tier,${alias}.placement_expires_at,${extracted.map((key) => `${scalar(alias, key)} AS p_${key}`).join(',')}${pricing ? `,${scalar(alias, 'salaryMin')} AS p_salaryMin` : ''}${matching ? answers(alias) : ''}`;
   const scalarRecord = (alias: string) =>
     preview
       ? `CROSS JOIN LATERAL jsonb_to_record(${alias}.${snapshot.slice(2)}) AS scalars(${extracted.map((key) => `"${key}" text`).join(',')}${pricing ? ',"salaryMin" jsonb' : ''})`
@@ -169,16 +324,24 @@ export function searchPlan(
   const unless = (needed: boolean, sql: string, empty = "''::text") =>
     needed ? sql : empty;
   const groupPosition = `row_number() OVER (PARTITION BY ${groupKey} ORDER BY ${promotionRank('j')} DESC,${posted} DESC NULLS LAST,j.id)`;
-  const searchDocument = normalized(
-    `concat_ws(' ',${p('title')},${p('company')},${p('city')},${field('description')})`,
-  );
+  /* Relevance, read off the title and the employer only, and only for the rows a
+     search returns. The word the reader typed outranks a reviewed equivalent, a
+     title that opens with it outranks one that mentions it later, and — for a
+     search of two to four words — a title carrying them in the typed order
+     outranks one that merely contains them all, which is what separates
+     "ოფისის მენეჯერი" from a manager at a head office. */
+  const titleNorm = normalized(p('title'));
+  const companyNorm = normalized(p('company'));
+  const relevance = `((SELECT COALESCE(sum(
+      CASE WHEN ${anyTerm(titleNorm, 'grp.value', true)} THEN 5 WHEN ${anyTerm(titleNorm, 'grp.value')} THEN 3 ELSE 0 END
+      + CASE WHEN ${opensWith(titleNorm, 'grp.value')} THEN 2 ELSE 0 END
+      + CASE WHEN ${anyTerm(companyNorm, 'grp.value')} THEN 2 ELSE 0 END),0)
+    FROM jsonb_array_elements(${payload}->'g') grp)${adjacent ? ` + CASE WHEN ${titleNorm} ~ (${payload}->>'j') THEN 6 ELSE 0 END` : ''})`;
   const columns = [
     `${promotionRank('j')} AS promotion_rank`,
-    // Filters and relevance only inspect a group's representative. Members need
-    // the group key and sources, so avoid normalizing their duplicate descriptions.
-    `${unless(searching, grouped ? `CASE WHEN ${groupPosition}=1 THEN ${searchDocument} ELSE '' END` : searchDocument)} AS search_document`,
-    `${unless(searching || filters.remote, normalized(p('title')))} AS title_norm`,
-    `${unless(searching, normalized(p('company')))} AS company_norm`,
+    `${unless(searching || filters.remote, titleNorm)} AS title_norm`,
+    `${searching ? `CASE WHEN j.q_match THEN ${relevance} ELSE 0 END` : '0'} AS relevance`,
+    `${unless(searching, companyNorm)} AS company_norm`,
     `${unless(filters.city !== 'ყველა', normalized(p('city')))} AS city_norm`,
     // A source date is trusted only when it is a real calendar date; ss.ge
     // sends 0001-01-01 and hr.gov.ge nothing, both fall back to our publication day.
@@ -202,22 +365,15 @@ export function searchPlan(
   ];
   const salary =
     filters.salaryPeriod === 'day' ? 'j.salary_day' : 'j.salary_month';
-  const employmentText = normalized(
-    `concat_ws(' ',${field('employmentType')},${field('title')})`,
-  );
-  const experienceText = normalized(
-    `concat_ws(' ',${field('description')},${snapshot}->>'facts')`,
-  );
   const cityCondition = () => {
     if (filters.city === 'ყველა') return 'true';
     if (filters.city === otherCity)
       return `j.city_norm<>'' AND NOT EXISTS(SELECT 1 FROM unnest(${bind([...cities])}::text[]) known WHERE strpos(j.city_norm,lower(known))>0)`;
-    // A posting without a city field often names the city in its text; the
-    // stem is matched at a word start so გორი never means კატეგორია.
-    return `CASE WHEN strpos(j.city_norm,${bind(filters.city.normalize('NFKC').toLowerCase())})>0 THEN true WHEN j.city_norm='' THEN ${normalized(`concat_ws(' ',${p('title')},${field('description')})`)} ~ ${bind('\\m' + escapeRegex(cityStem(filters.city)))} ELSE false END`;
+    // The stem was matched at a word start so გორი never means კატეგორია.
+    return `CASE WHEN strpos(j.city_norm,${bind(filters.city.normalize('NFKC').toLowerCase())})>0 THEN true WHEN j.city_norm='' THEN j.city_text ELSE false END`;
   };
   const conditions: Record<FilterKey, string> = {
-    query: queryMatch('j.search_document'),
+    query: searching ? 'j.q_match' : 'true',
     city: cityCondition(),
     category:
       filters.category === 'ყველა'
@@ -245,13 +401,8 @@ export function searchPlan(
         ? `${salary}<=${bind(filters.salaryTo)}`
         : 'true',
     ].join(' AND '),
-    employment:
-      filters.employment === 'all'
-        ? 'true'
-        : `${filters.employment === 'daily' ? normalized(`concat_ws(' ',${field('employmentType')},${field('title')},${field('description')})`) : employmentText} ~ ${bind(filters.employment === 'daily' ? '(^|[^ა-ჰa-z])(დღიური|ერთდღიანი|ერთჯერადი)[[:space:]-]+(სამუშაო|სამსახური|დასაქმება)|one[ -]day[[:space:]]+(job|work)|day[ -]labou?r' : filters.employment === 'part-time' ? '(ნახევარი?|არასრული?|ნაწილობრივი?)[[:space:]]+განაკვეთ|part[ -]?time' : 'სტაჟიორ|სტაჟირებ|\\mintern(ship)?\\M')}`,
-    entryLevel: filters.entryLevel
-      ? `${experienceText} ~ ${bind('გამოცდილების[[:space:]]+გარეშე|გამოცდილება[[:space:]:–-]+(არ[[:space:]]+(არის[[:space:]]+)?(სავალდებულო|აუცილებელი|საჭირო)|არ[[:space:]]+მოითხოვება)|no[[:space:]]+(previous[[:space:]]+|prior[[:space:]]+)?experience[[:space:]]+(is[[:space:]]+)?(required|needed|necessary)|experience[[:space:]]+(is[[:space:]]+)?not[[:space:]]+(required|needed|necessary)')}`
-      : 'true',
+    employment: employmentPattern ? 'j.employment_match' : 'true',
+    entryLevel: entryLevelPattern ? 'j.entry_level' : 'true',
     postedWithin: filters.postedWithin
       ? `j.posted_on BETWEEN to_char((now() AT TIME ZONE 'Asia/Tbilisi')::date-(${bind(filters.postedWithin)}::int-1),'YYYY-MM-DD') AND ${today}`
       : 'true',
@@ -262,8 +413,6 @@ export function searchPlan(
   let base = `${preview ? "j.status IN ('pending','published')" : "j.status='published'"} AND ${snapshot} IS NOT NULL AND EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired)`;
   const visible = base;
   const current = `(COALESCE(${p('deadline')},'')='' OR ${p('deadline')}>=${today}) AND NOT (lower(${p('title')}) ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]])')`;
-  if (filters.entryLevel)
-    conditions.entryLevel += ` AND NOT (${experienceText} ~ ${bind(requiredExperiencePattern)})`;
   if (params.has('ids'))
     base += ` AND j.id::text=ANY(${bind(
       (params.get('ids') || '')
@@ -286,10 +435,15 @@ export function searchPlan(
   // Members of every group present in the result. A lookup by id must also see
   // duplicates outside its restricted set; the indexed import fingerprint (the
   // same three fields, taken from the draft) narrows that scan to candidates.
+  // Membership needs no filter answers, only the key.
   const members = params.has('ids')
-    ? `SELECT j.id,${groupKey} AS group_key,${posted} AS posted_at FROM (${extraction('j')} FROM jobs j ${scalarRecord('j')} WHERE ${visible} AND j.fingerprint IN (SELECT fingerprint FROM searchable) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
+    ? `SELECT j.id,${groupKey} AS group_key,${posted} AS posted_at FROM (${extraction('j', false)} FROM jobs j ${scalarRecord('j')} WHERE ${visible} AND j.fingerprint IN (SELECT fingerprint FROM searchable) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
     : `SELECT j.id,j.group_key,${posted} AS posted_at FROM searchable j`;
-  const cte = `WITH searchable AS MATERIALIZED (SELECT j.*,${columns.join(',')}${groupRank} FROM (${extraction('j')} FROM jobs j ${scalarRecord('j')} WHERE ${base} OFFSET 0) j WHERE ${current}), members AS MATERIALIZED (${members})`;
+  /* Candidates first, so the rest of the plan only asks whether a row is in that
+     set. The visibility a candidate needs is its own — retired sources, deadlines
+     and grouping are decided on the page, where they are decided for every row. */
+  const hits = searching ? `${hitsCte('hits', groups, preview, bind)}, ` : '';
+  const cte = `WITH ${hits}searchable AS MATERIALIZED (SELECT j.*,${columns.join(',')}${groupRank} FROM (${extraction('j')} FROM jobs j ${scalarRecord('j')} WHERE ${base} OFFSET 0) j WHERE ${current}), members AS MATERIALIZED (${members})`;
   const kept = grouped ? 'j.group_rank=1' : 'true';
   const keys = Object.keys(conditions) as FilterKey[];
   // searchable already satisfies the base predicate; only the grouping and the
@@ -322,6 +476,51 @@ export function searchPlan(
     searching &&
     !['salary', 'new', 'deadline'].includes(params.get('sort') || '')
   )
-    ordering = `(SELECT COALESCE(sum(CASE WHEN ${termMatch('j.title_norm')} THEN 5 ELSE 0 END + CASE WHEN ${termMatch('j.company_norm')} THEN 2 ELSE 0 END),0) FROM jsonb_array_elements(${groups}::jsonb) terms) DESC,${newest}`;
-  return { where, args, ordering, metrics, filters, cte, grouped };
+    ordering = `j.relevance DESC,${newest}`;
+  return {
+    where,
+    args,
+    ordering,
+    metrics,
+    filters,
+    cte,
+    grouped,
+    queryTerms,
+  };
+}
+/* What the same search would find with one of its words taken off. Asked only
+   when nothing was found at all, so the ordinary search never pays for it: each
+   candidate set is one more index lookup, and the visible rows are already
+   gathered by the plan the other filters describe. */
+export function shorterSearches(params: URLSearchParams, preview = false) {
+  const query = readSearch(params).query;
+  const groups = matchGroups(query);
+  if (groups.length < 2) return null;
+  // Offered back in the reader's own words, not in the stems the search uses.
+  const typed = searchTerms(query);
+  const withoutQuery = new URLSearchParams(params);
+  withoutQuery.delete('q');
+  const plan = searchPlan(withoutQuery, preview, { grouped: true });
+  const args = [...plan.args];
+  const bind = (value: unknown) => {
+    args.push(value);
+    return `$${args.length}`;
+  };
+  const kept = groups.map((_, index) =>
+    groups.filter((_group, position) => position !== index),
+  );
+  const statement =
+    'WITH ' +
+    kept
+      .map((rest, index) => hitsCte(`kept${index}`, rest, preview, bind))
+      .join(',') +
+    ',' +
+    plan.cte.slice('WITH '.length) +
+    ` SELECT jsonb_build_object(${kept
+      .map(
+        (_rest, index) =>
+          `'${index}',(SELECT count(*)::int FROM searchable j WHERE ${plan.where} AND j.id IN (SELECT id FROM kept${index}))`,
+      )
+      .join(',')}) dropped`;
+  return { statement, args, queryTerms: typed };
 }

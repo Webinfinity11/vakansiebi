@@ -1945,7 +1945,10 @@ export default function JobBoard({
                       className="secondary-button"
                       onClick={() => setQuery(searchMeta.suggestion!.query)}
                     >
-                      ხომ არ გულისხმობდი „{searchMeta.suggestion.query}“? (
+                      {searchMeta.suggestion.kind === 'fewer-words'
+                        ? 'ვცადოთ '
+                        : 'ხომ არ გულისხმობდი '}
+                      „{searchMeta.suggestion.query}“? (
                       {searchMeta.suggestion.count})
                     </button>
                   )}

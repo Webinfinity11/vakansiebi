@@ -4,6 +4,7 @@ import {
   searchGroups,
   stemGeorgian,
   suggestSearch,
+  syncopeVariant,
 } from '../lib/search-language';
 import { readSearch, searchParams } from '../lib/search-state';
 import { filtersSchema } from '../lib/personal-space';
@@ -12,11 +13,33 @@ void test('reviewed role equivalents preserve all query terms and technical punc
   assert.ok(searchGroups('დეველოპერი')[0].includes('developer'));
   assert.deepEqual(searchGroups('C++ C#'), [['c++'], ['c#']]);
   assert.equal(searchGroups('senior დეველოპერი').length, 2);
+  const alternatives = (query: string) =>
+    searchGroups(query).map((group) => [...group].sort());
   assert.deepEqual(
-    searchGroups('ბუღალტრის')[0],
-    ['ბუღალტრ'],
-    'a case ending is stripped, but no general Georgian morphology is pretended',
+    alternatives('ბუღალტრის'),
+    alternatives('ბუღალტერი'),
+    'the two written forms of one word search for the same thing',
   );
+  assert.deepEqual(
+    searchGroups('ბუღალტერი')[0].filter((term) => term.startsWith('ბუღალტერ')),
+    ['ბუღალტერ'],
+    'an alternative a shorter Georgian stem already covers is not searched twice',
+  );
+});
+void test('a dropped vowel is the same word, and only where Georgian drops one', () => {
+  assert.equal(syncopeVariant('ბუღალტერ'), 'ბუღალტრ');
+  assert.equal(syncopeVariant('ბუღალტრ'), 'ბუღალტერ');
+  assert.equal(syncopeVariant('მასწავლებელ'), 'მასწავლებლ');
+  assert.equal(syncopeVariant('მასწავლებლ'), 'მასწავლებელ');
+  assert.equal(
+    syncopeVariant('კურიერ'),
+    null,
+    'a vowel before the ე keeps the syllable: კურიერის, not კურირის',
+  );
+  assert.equal(syncopeVariant('მცველ'), null, 'short stems are left alone');
+  assert.equal(syncopeVariant('მძღოლ'), null);
+  assert.equal(syncopeVariant('developer'), null);
+  assert.ok(searchGroups('მასწავლებლის')[0].includes('teacher'));
 });
 void test('a light suffix stripper turns a query word into the stem the texts share', () => {
   assert.equal(stemGeorgian('თბილისში'), 'თბილის');
@@ -28,7 +51,7 @@ void test('a light suffix stripper turns a query word into the stem the texts sh
   assert.equal(stemGeorgian('developer'), 'developer');
   assert.deepEqual(searchGroups('თბილისში მენეჯერი'), [
     ['თბილის'],
-    ['მენეჯერ', 'მენეჯერი', 'manager', 'менеджер'],
+    ['მენეჯერ', 'მენეჯრ', 'manager', 'менеджер'],
   ]);
 });
 void test('Russian role names reach the same reviewed group, including inflected forms', () => {
@@ -46,6 +69,12 @@ void test('Russian role names reach the same reviewed group, including inflected
 void test('typo suggestions are bounded, explicit and never rewrite short skills or arbitrary names', () => {
   assert.equal(suggestSearch('develoepr'), 'developer');
   assert.equal(suggestSearch('ბუღალტეირ'), 'ბუღალტერი');
+  assert.equal(
+    suggestSearch('მალარე'),
+    'მოლარე',
+    'the Georgian word of a group is the one people mistype, so it is offered',
+  );
+  assert.equal(suggestSearch('ადმინისტრატრი'), 'ადმინისტრატორი');
   assert.equal(suggestSearch('C++'), null);
   assert.equal(suggestSearch('someuniquecompanyname'), null);
   assert.equal(suggestSearch('developer'), null);

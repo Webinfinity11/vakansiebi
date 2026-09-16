@@ -33,7 +33,7 @@ export const salaryContext = cache(
          percentile_cont(0.5) WITHIN GROUP (ORDER BY ${column}) AS median,
          percentile_cont(0.75) WITHIN GROUP (ORDER BY ${column}) AS p75
        FROM searchable j
-       WHERE ${plan.where} AND j.published->>'category'=$${args.length} AND ${column} IS NOT NULL AND ${column}>0`,
+       WHERE ${plan.where} AND j.p_category=$${args.length} AND ${column} IS NOT NULL AND ${column}>0`,
       args,
     );
     const row = rows[0];
