@@ -41,3 +41,4 @@ next-env.d.ts
 *.tsbuildinfo
 /docs/prototype-config/
 /.next-production/
+/.claude/settings.local.json
