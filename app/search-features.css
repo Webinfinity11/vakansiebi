@@ -156,8 +156,22 @@
   box-shadow: none;
 }
 
-/* Where the words were looked for, and the way into the descriptions. */
-.board-shell .results-head p.search-scope:empty {
+/* Where the words were looked for, and the way into the descriptions. The board
+   keeps the heading's own paragraph for screen readers only; this one has to be
+   read, so it takes back the room that rule gives up. */
+.board-shell.editorial-board.crafted-board .results-head p.search-scope {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #5a6478;
+}
+.board-shell .results-head p.search-scope:empty,
+.board-shell.editorial-board.crafted-board .results-head p.search-scope:empty {
   display: none;
 }
 .board-shell .results-head p.search-scope button {

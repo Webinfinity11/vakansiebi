@@ -2294,6 +2294,9 @@
   border: 0;
   box-shadow: none;
 }
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board .results-head p.search-scope {
+  color: #9ba2b0;
+}
 :root[data-theme='dark'] .board-shell .results-head p.search-scope button {
   color: #6f93ff;
   background: none;
