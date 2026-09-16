@@ -7,7 +7,7 @@ import {
   takeBoard,
   clearBoard,
 } from '../lib/board-return-cache';
-import { jobPosting, jsonLd, vacancyUrl } from '../lib/seo';
+import { breadcrumbs, jobPosting, jsonLd, vacancyUrl } from '../lib/seo';
 import type { PublicJob } from '../lib/types';
 
 void test('subcategory survives sharing but cannot escape its parent category', () => {
@@ -115,6 +115,22 @@ void test('structured vacancies use the real domain and only supported public fa
     { description: '' },
   ])
     assert.equal(jobPosting({ ...job, ...patch }, '2026-09-14'), null);
+});
+void test('the trail a reader walked is published as it is shown', () => {
+  const trail = breadcrumbs([
+    { name: 'ვაკანსიები', path: '/' },
+    { name: 'Example', path: '/companies/example' },
+    { name: 'დეველოპერი', path: '/vacancies/a' },
+  ]);
+  assert.equal(trail['@type'], 'BreadcrumbList');
+  assert.deepEqual(
+    trail.itemListElement.map((step) => [step.position, step.item]),
+    [
+      [1, 'https://jobx.ge/'],
+      [2, 'https://jobx.ge/companies/example'],
+      [3, 'https://jobx.ge/vacancies/a'],
+    ],
+  );
 });
 void test('a vacancy without a city of its own still says where the work is', () => {
   type Posting = {

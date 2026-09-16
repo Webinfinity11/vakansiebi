@@ -1,5 +1,11 @@
 import { compactSalary } from '@/lib/vacancy-presentation';
-import { jobPosting, jsonLd, shareImage, vacancyUrl } from '@/lib/seo';
+import {
+  breadcrumbs,
+  jobPosting,
+  jsonLd,
+  shareImage,
+  vacancyUrl,
+} from '@/lib/seo';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { isAdmin } from '@/lib/server/auth';
@@ -60,12 +66,27 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function Page(props: Props) {
   const { job, preview, from, companyPath } = await load(props);
   const structured = preview ? null : jobPosting(job);
+  const trail = preview
+    ? null
+    : breadcrumbs([
+        { name: 'ვაკანსიები', path: '/' },
+        ...(companyPath && job.company
+          ? [{ name: job.company, path: companyPath }]
+          : []),
+        { name: job.title, path: `/vacancies/${job.canonicalId || job.id}` },
+      ]);
   return (
     <>
       {structured && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLd(structured) }}
+        />
+      )}
+      {trail && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLd(trail) }}
         />
       )}
       <VacancyPage

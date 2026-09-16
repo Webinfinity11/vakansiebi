@@ -20,6 +20,22 @@ export const vacancyUrl = (job: Pick<PublicJob, 'id' | 'canonicalId'>) =>
 export const jsonLd = (value: unknown) =>
   JSON.stringify(value).replace(/</g, '\\u003c');
 
+/* The path a reader would have walked to reach this page. Google draws it in
+   place of the bare URL, which on a vacancy is a uuid nobody can read. Only
+   pages that exist are named: the employer step appears when the employer has a
+   page of its own. */
+export function breadcrumbs(trail: readonly { name: string; path: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map((step, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: step.name,
+      item: `${siteUrl}${step.path}`,
+    })),
+  };
+}
 function calendarDate(value: string) {
   return (
     /^\d{4}-\d{2}-\d{2}$/.test(value) &&
