@@ -1,10 +1,12 @@
 import { siteUrl } from '@/lib/seo';
+import { urlsetResponse } from '@/lib/sitemap';
 
 export const dynamic = 'force-static';
 
+/* The pages that exist without a vacancy behind them. Posting a vacancy is how
+   an employer arrives, and it was missing from every sitemap. */
+const paths = ['/', '/post-job'];
+
 export function GET() {
-  return new Response(
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${siteUrl}/</loc></url>\n</urlset>\n`,
-    { headers: { 'Content-Type': 'application/xml; charset=utf-8' } },
-  );
+  return urlsetResponse(paths.map((path) => ({ url: `${siteUrl}${path}` })));
 }

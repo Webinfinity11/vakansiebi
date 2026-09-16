@@ -1,6 +1,6 @@
 import type { PublicJob } from './types';
 import { privateListingLabel } from './types';
-import { cities } from './cities';
+import { cities, cityStem } from './cities';
 import { safeExternalUrl } from './vacancy-media';
 import { genericCompanyKeys, logoCompanyKey } from './company-logo-identity';
 
@@ -22,12 +22,37 @@ const htmlText = (text: string) =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /* Only publish supported, visible facts. A private advertiser is not an invented
-   hiring organization; a missing city is not silently assumed to be Tbilisi. */
+   hiring organization, and no vacancy is silently moved to Tbilisi.
+   Where the city field names no city — a third of the catalogue: an empty field,
+   a region, a village — the text is read for one, and exactly one: two different
+   cities in the same posting is not a location, it is a guess, and the posting
+   falls back to the country it was published in. Before this, those postings
+   carried no structured data at all and could not appear in a job search. */
+const namedCity = (job: PublicJob) =>
+  cities.filter((c) => job.city.includes(c));
+const remote = (job: PublicJob) =>
+  /დისტანციურ|სამუშაო სახლიდან|remote/i.test(`${job.mode} ${job.title}`);
+function citiesInText(job: PublicJob) {
+  const text = `${job.title} ${job.description}`
+    .normalize('NFKC')
+    .toLowerCase();
+  const found = cities.filter((city) =>
+    new RegExp(`(^|[^ა-ჰa-z])${cityStem(city)}`).test(text),
+  );
+  return found.length === 1 ? found : [];
+}
+const place = (city: string) => ({
+  '@type': 'Place',
+  address: {
+    '@type': 'PostalAddress',
+    ...(city ? { addressLocality: city } : {}),
+    addressCountry: 'GE',
+  },
+});
 export function jobPosting(
   job: PublicJob,
   today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tbilisi' }),
 ) {
-  const locations = cities.filter((city) => job.city.includes(city));
   if (
     !job.title.trim() ||
     !job.description.trim() ||
@@ -36,13 +61,16 @@ export function jobPosting(
     !job.company.trim() ||
     job.company === privateListingLabel ||
     genericCompanyKeys.has(logoCompanyKey(job.company)) ||
-    locations.length === 0 ||
     (job.deadline && (!calendarDate(job.deadline) || job.deadline < today))
   )
     return null;
-  // Country restrictions for fully remote roles are not available in our source model.
-  if (/დისტანციურ|სამუშაო სახლიდან|remote/i.test(job.mode + ' ' + job.title))
-    return null;
+  const located = namedCity(job);
+  const working = located.length ? located : citiesInText(job);
+  /* A remote vacancy on a Georgian board is open to people in Georgia; that is
+     the one requirement the source does support, and without it Google refuses
+     a telecommute posting outright. An office city, where the posting names one,
+     stays alongside it: those are the hybrid roles. */
+  const telecommute = remote(job);
   const website = safeExternalUrl(job.companyProfile?.website || '');
   const logo = safeExternalUrl(job.logoUrl || '');
   const employment = (
@@ -69,14 +97,16 @@ export function jobPosting(
       ...(website ? { sameAs: website } : {}),
       ...(logo ? { logo } : {}),
     },
-    jobLocation: locations.map((city) => ({
-      '@type': 'Place',
-      address: {
-        '@type': 'PostalAddress',
-        addressLocality: city,
-        addressCountry: 'GE',
-      },
-    })),
+    ...(telecommute
+      ? {
+          jobLocationType: 'TELECOMMUTE',
+          applicantLocationRequirements: {
+            '@type': 'Country',
+            name: 'Georgia',
+          },
+          ...(located.length ? { jobLocation: located.map(place) } : {}),
+        }
+      : { jobLocation: (working.length ? working : ['']).map(place) }),
     ...(employment ? { employmentType: employment } : {}),
     url: vacancyUrl(job),
     directApply: false,

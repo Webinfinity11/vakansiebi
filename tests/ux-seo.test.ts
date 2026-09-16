@@ -109,14 +109,57 @@ void test('structured vacancies use the real domain and only supported public fa
   );
   for (const patch of [
     { company: 'კერძო განცხადება' },
-    { city: '' },
     { datePosted: '0001-01-01' },
     { datePosted: '2026-02-30' },
     { deadline: '2026-09-13' },
-    { mode: 'დისტანციური' },
     { description: '' },
   ])
     assert.equal(jobPosting({ ...job, ...patch }, '2026-09-14'), null);
+});
+void test('a vacancy without a city of its own still says where the work is', () => {
+  type Posting = {
+    jobLocation?: { address: Record<string, string> }[];
+    jobLocationType?: string;
+    applicantLocationRequirements?: unknown;
+  };
+  const at = (patch: Partial<PublicJob>) =>
+    jobPosting({ ...job, ...patch }, '2026-09-14') as Posting;
+  const address = (posting: Posting) =>
+    (posting.jobLocation || []).map(
+      (place) => place.address.addressLocality || place.address.addressCountry,
+    );
+  assert.deepEqual(address(at({ city: 'თბილისი' })), ['თბილისი']);
+  assert.deepEqual(
+    address(at({ city: '', description: 'სამუშაო ადგილი ბათუმში.' })),
+    ['ბათუმი'],
+    'the one city the text names is the location',
+  );
+  assert.deepEqual(
+    address(at({ city: '', description: 'ოფისი თბილისში, ფილიალი ბათუმში.' })),
+    ['GE'],
+    'two cities in one text is a guess, so only the country is published',
+  );
+  assert.deepEqual(
+    address(at({ city: 'სოფელი შრომა', description: 'სამუშაო.' })),
+    ['GE'],
+    'a village outside the list keeps the posting, at country level',
+  );
+  const home = at({ mode: 'დისტანციური' });
+  assert.equal(home.jobLocationType, 'TELECOMMUTE');
+  assert.deepEqual(home.applicantLocationRequirements, {
+    '@type': 'Country',
+    name: 'Georgia',
+  });
+  assert.deepEqual(
+    address(home),
+    ['თბილისი'],
+    'a remote role with an office keeps the office',
+  );
+  assert.equal(
+    at({ mode: 'დისტანციური', city: '' }).jobLocation,
+    undefined,
+    'a fully remote role names no place at all',
+  );
   assert.ok(
     !jsonLd({ description: '</script><script>alert(1)</script>' }).includes(
       '<',
