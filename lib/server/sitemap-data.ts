@@ -4,6 +4,11 @@ import { searchPlan } from './search-plan';
 export type DatedVacancy = { id: string; lastModified: Date };
 
 let held: { at: number; value: Promise<DatedVacancy[]> } | null = null;
+/* The last list that was actually built. A crawler that asks while the database
+   is unreachable is better served yesterday's addresses than a 503: Search
+   Console remembers a failed fetch for days and retries on its own schedule,
+   and every URL in the list is still one the crawler should see. */
+let lastGood: DatedVacancy[] | null = null;
 
 /* Every public vacancy with the time its record last changed. The vacancy and company
    sitemaps share this list, so a server builds it once every five minutes. */
@@ -22,11 +27,25 @@ export function publicVacancyDates(now = Date.now()) {
       })),
     );
   held = { at: now, value };
-  // A failed build is not held, so the next crawler request tries again.
-  value.catch(() => {
-    if (held?.value === value) held = null;
-  });
+  value.then(
+    (rows) => {
+      if (rows.length) lastGood = rows;
+    },
+    // A failed build is not held, so the next crawler request tries again.
+    () => {
+      if (held?.value === value) held = null;
+    },
+  );
   return value;
+}
+/** The list, or the last one that was built, or nothing at all. */
+export async function publicVacancyDatesOrLast(now = Date.now()) {
+  try {
+    return await publicVacancyDates(now);
+  } catch (error) {
+    if (lastGood) return lastGood;
+    throw error;
+  }
 }
 
 export function newest(dates: Iterable<Date>) {

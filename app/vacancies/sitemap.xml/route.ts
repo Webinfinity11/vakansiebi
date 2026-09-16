@@ -1,4 +1,4 @@
-import { publicVacancyDates } from '@/lib/server/sitemap-data';
+import { publicVacancyDatesOrLast } from '@/lib/server/sitemap-data';
 import { siteUrl } from '@/lib/seo';
 import { sitemapUnavailable, urlsetResponse } from '@/lib/sitemap';
 
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const vacancies = await publicVacancyDates();
+    const vacancies = await publicVacancyDatesOrLast();
     return urlsetResponse(
       vacancies.map(({ id, lastModified }) => ({
         url: `${siteUrl}/vacancies/${id}`,

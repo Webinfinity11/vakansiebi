@@ -1,5 +1,5 @@
 import { employerPages } from '@/lib/server/employers';
-import { newest, publicVacancyDates } from '@/lib/server/sitemap-data';
+import { newest, publicVacancyDatesOrLast } from '@/lib/server/sitemap-data';
 import { siteUrl } from '@/lib/seo';
 import { sitemapUnavailable, urlsetResponse } from '@/lib/sitemap';
 
@@ -10,7 +10,7 @@ export async function GET() {
   try {
     const [employers, vacancies] = await Promise.all([
       employerPages(),
-      publicVacancyDates(),
+      publicVacancyDatesOrLast(),
     ]);
     // A company page changes when one of its vacancies does.
     const changed = new Map(vacancies.map((v) => [v.id, v.lastModified]));
