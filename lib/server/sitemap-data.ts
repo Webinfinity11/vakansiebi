@@ -5,8 +5,8 @@ export type DatedVacancy = { id: string; lastModified: Date };
 
 let held: { at: number; value: Promise<DatedVacancy[]> } | null = null;
 
-/* Every public vacancy with the time its record last changed. The vacancy, company and index
-   sitemaps all need this one list, so a server builds it once every five minutes. */
+/* Every public vacancy with the time its record last changed. The vacancy and company
+   sitemaps share this list, so a server builds it once every five minutes. */
 export function publicVacancyDates(now = Date.now()) {
   if (held && now - held.at < 300_000) return held.value;
   const plan = searchPlan(new URLSearchParams(), false, { grouped: true });

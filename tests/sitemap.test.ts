@@ -1,11 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { GET as indexGET } from '../app/sitemap-index.xml/route';
+import { GET as legacyIndexGET } from '../app/sitemap.xml/route';
 import {
   sitemapCacheControl,
   sitemapIndexResponse,
   sitemapUnavailable,
   urlsetResponse,
 } from '../lib/sitemap';
+
+void test('both discovery URLs remain available without a configured database', async () => {
+  const previous = process.env.DATABASE_URL;
+  delete process.env.DATABASE_URL;
+  try {
+    const bodies: string[] = [];
+    for (const get of [indexGET, legacyIndexGET]) {
+      const response = get();
+      assert.equal(response.status, 200);
+      const body = await response.text();
+      assert.equal(body.match(/<sitemap>/g)?.length, 3);
+      for (const path of [
+        '/sitemap-pages.xml',
+        '/vacancies/sitemap.xml',
+        '/companies/sitemap.xml',
+      ])
+        assert.ok(body.includes(`<loc>https://jobx.ge${path}</loc>`));
+      bodies.push(body);
+    }
+    assert.equal(bodies[0], bodies[1]);
+  } finally {
+    if (previous === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous;
+  }
+});
 
 void test('a vacancy or company sitemap is held at the edge and its URLs are escaped', async () => {
   const response = urlsetResponse([

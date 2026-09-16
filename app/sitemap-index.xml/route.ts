@@ -1,5 +1,9 @@
-import { datedSitemapIndex } from '@/lib/server/sitemap-index';
+import { sitemapIndexResponse } from '@/lib/sitemap';
 
-// Built on request and held at the edge, so the section dates stay current.
-export const dynamic = 'force-dynamic';
-export const GET = datedSitemapIndex;
+// The three section URLs are fixed. Serve discovery from the CDN even if the
+// database is unavailable; individual URL dates live in the section sitemaps.
+export const dynamic = 'force-static';
+
+export function GET() {
+  return sitemapIndexResponse();
+}

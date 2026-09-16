@@ -132,7 +132,7 @@ GitHub schedules may be delayed. In public repositories, schedules disable after
 
 Search Console-ის property: `https://jobx.ge/`. საკუთრებას ადასტურებს root metadata-ს `google-site-verification`; მისი წაშლა ვერიფიკაციას გააუქმებს. Sitemap ინდექსი: `https://jobx.ge/sitemap-index.xml`; ძველი `/sitemap.xml` მისამართიც იმავე ინდექსს აბრუნებს გადამისამართების გარეშე.
 
-ინდექსი მონაცემთა ბაზის გარეშე მზადდება და შეიცავს სამ დამოუკიდებელ ფაილს: `/sitemap-pages.xml`, `/vacancies/sitemap.xml` და `/companies/sitemap.xml`. ვაკანსიებისა და კომპანიების XML-ს Next.js-ის sitemap მექანიზმი ქმნის, 5-წუთიანი განახლების ინტერვალით. ინდექსის გაგზავნის შემდეგ Search Console-ში შეამოწმეთ როგორც ინდექსის, ისე ორივე დინამიკური ნაწილის წაკითხვის შედეგი.
+ორივე ინდექსი (`/sitemap-index.xml` და `/sitemap.xml`) build-ის დროს მონაცემთა ბაზის გარეშე მზადდება და CDN-დან გაიცემა. შეიცავს სამ დამოუკიდებელ ფაილს: `/sitemap-pages.xml`, `/vacancies/sitemap.xml` და `/companies/sitemap.xml`. ვაკანსიებისა და კომპანიების XML-ს Route Handler-ები ქმნის; მონაცემები სერვერზე 5 წუთით, წარმატებული პასუხები კი CDN-ზე 1 საათით ინახება. ცალკეული URL-ების `lastmod` ამ დინამიკურ ფაილებში რჩება. ბაზის შეფერხება ძირითადი ინდექსის ჩამოტვირთვას ვეღარ აფერხებს. ინდექსის გაგზავნის შემდეგ Search Console-ში შეამოწმეთ როგორც ინდექსის, ისე ორივე დინამიკური ნაწილის წაკითხვის შედეგი.
 
 `app/google-analytics.tsx` ტვირთავს Google tag-ს მხოლოდ production `https://jobx.ge`-ის საჯარო გვერდებზე. `page_view` იგზავნება ერთხელ თითო გვერდზე, Next.js-ის ნავიგაციის დროსაც. URL-ის query/hash და referrer-ის კერძო გზები იშლება. ადმინი, ინვოისები და preview გამორიცხულია; ფორმების ველები, აპლიკანტის კონტაქტები და შიდა ძიების ტექსტი არ იგზავნება. სარეკლამო პერსონალიზაცია და Google signals გამორთულია.
 
