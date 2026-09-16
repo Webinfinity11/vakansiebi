@@ -76,6 +76,8 @@ export type SearchMeta = {
   wider?: number;
   /** Set when nothing was found without the descriptions, so they were searched. */
   widened?: boolean;
+  /** Set when the typed word found nothing and its correction was searched instead. */
+  corrected?: { from: string; to: string };
 };
 export type SearchPlanOptions = {
   /**

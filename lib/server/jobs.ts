@@ -6,6 +6,7 @@ import { employerlessSources, privateListingLabel } from '../types';
 import { z } from 'zod';
 import type { QueryResultRow } from 'pg';
 import { db, transaction } from './db';
+import { readSearch } from '../search-state';
 import { ApiError } from './auth';
 import { audit } from '../../worker/importer';
 import { reconcileJob } from '../../worker/automation';
@@ -45,16 +46,42 @@ export async function publicJobs(
     publicJobsCacheKey(params, preview, options.jobIds),
     () => loadPublicJobs(params, preview, options),
   );
+  if (answer.total > 0) return answer;
+  const again = (changed: URLSearchParams) =>
+    publicResponses.get(
+      publicJobsCacheKey(changed, preview, options.jobIds),
+      () => loadPublicJobs(changed, preview, options),
+    );
+  /* A misspelt word is worth more than an empty page with a button on it: the
+     correction is searched at once and the page says which word it answered,
+     the way a search engine does. The reader's own text stays in the field. */
+  const correction =
+    answer.search.suggestion?.kind === 'spelling'
+      ? answer.search.suggestion
+      : null;
+  if (correction) {
+    const corrected = new URLSearchParams(params);
+    corrected.set('q', correction.query);
+    const fixed = await again(corrected);
+    if (fixed.total > 0)
+      return {
+        ...fixed,
+        search: {
+          ...fixed.search,
+          corrected: {
+            from: readSearch(params).query.trim(),
+            to: correction.query,
+          },
+        },
+      };
+  }
   /* Nothing under the titles, and the descriptions hold something: the reader
      gets those rather than an empty page — a word like "wordpress" never appears
      in a title. The page says so, and the search stays narrow next time. */
-  if (answer.total > 0 || !answer.search.wider) return answer;
+  if (!answer.search.wider) return answer;
   const wider = new URLSearchParams(params);
   wider.set('deep', 'true');
-  const widened = await publicResponses.get(
-    publicJobsCacheKey(wider, preview, options.jobIds),
-    () => loadPublicJobs(wider, preview, options),
-  );
+  const widened = await again(wider);
   return { ...widened, search: { ...widened.search, widened: true } };
 }
 async function loadPublicJobs(

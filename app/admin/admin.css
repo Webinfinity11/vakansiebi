@@ -237,11 +237,22 @@
 }
 .admin-analytics-note,
 .admin-analytics-hint,
-.admin-analytics-empty {
+.admin-analytics-empty,
+.admin-analytics-range {
   color: #626467;
   font-size: 13px;
   line-height: 1.7;
   margin: 0;
+}
+.admin-analytics-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.admin-analytics-range {
+  font-variant-numeric: tabular-nums;
 }
 .admin-analytics-windows {
   display: flex;
@@ -280,6 +291,96 @@
   margin: 4px 0 0;
   font-size: 22px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.admin-analytics-totals p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #74767a;
+  line-height: 1.5;
+}
+/* The activity curve: three counts of the same kind of thing, so one axis. */
+.admin-activity {
+  margin: 0;
+  border: 1px solid #e4e4e5;
+  border-radius: 10px;
+  padding: 14px 16px 10px;
+  background: #fff;
+}
+.admin-activity figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.admin-activity-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #626467;
+}
+.admin-activity-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.admin-activity-legend i,
+.admin-activity-readout i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.admin-activity-plot {
+  position: relative;
+  margin-top: 6px;
+}
+.admin-activity svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+.admin-activity text {
+  font-size: 11px;
+  fill: #74767a;
+  font-variant-numeric: tabular-nums;
+}
+.admin-activity .admin-activity-name {
+  font-size: 11px;
+  fill: #4b4d51;
+}
+.admin-activity .admin-activity-guide {
+  stroke: #c9ccd2;
+  stroke-dasharray: 3 3;
+}
+.admin-activity-readout {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #e4e4e5;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 20px #1720301f;
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.admin-activity-readout span {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: #626467;
+}
+.admin-activity-readout b {
+  font-variant-numeric: tabular-nums;
 }
 .admin-analytics-lists {
   display: grid;
@@ -303,26 +404,39 @@
   list-style: none;
 }
 .admin-analytics-list li {
+  position: relative;
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 6px 0;
-  border-top: 1px solid #f0f1f2;
+  padding: 7px 8px;
+  border-radius: 6px;
   font-size: 13px;
 }
-.admin-analytics-list li:first-child {
-  border-top: 0;
+/* The share of the busiest row, behind the text rather than beside it. */
+.admin-analytics-list .admin-analytics-bar {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 6px;
+  background: #eef3fd;
 }
-.admin-analytics-list li > span {
+.admin-analytics-label,
+.admin-analytics-list li > b {
+  position: relative;
+}
+.admin-analytics-label {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.admin-analytics-list li > b {
+  font-variant-numeric: tabular-nums;
 }
 .admin-analytics-gone {
   color: #8a8c90;
 }
 @media (max-width: 760px) {
-  .admin-analytics-totals,
-  .admin-analytics-lists {
+  .admin-analytics-totals {
     grid-template-columns: 1fr 1fr;
   }
   .admin-analytics-lists {

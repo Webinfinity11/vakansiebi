@@ -35,6 +35,31 @@ void test(
       'a 45-day-old event is outside 30 days',
     );
 
+    /* The curve keeps one point per bucket across the whole window, empty ones
+       included, and adds up to the totals it is drawn beside. */
+    const day = await analyticsSummary(1);
+    assert.equal(day.unit, 'hour');
+    assert.equal(day.activity.length, 24, 'a day is read hour by hour');
+    assert.equal(
+      day.activity.reduce((n, point) => n + point.search, 0),
+      day.totals.search,
+      'the curve and the total count the same events',
+    );
+    assert.equal(
+      day.to.slice(0, 13),
+      new Date()
+        .toLocaleString('sv-SE', { timeZone: 'Asia/Tbilisi' })
+        .slice(0, 13)
+        .replace(' ', 'T'),
+      'the last point is the hour now running in Tbilisi',
+    );
+    assert.equal((await analyticsSummary(7)).unit, 'day');
+    assert.equal(
+      (await analyticsSummary(365)).unit,
+      'week',
+      'a year is read week by week',
+    );
+
     assert.equal(
       await rollupAnalytics(db()),
       1,

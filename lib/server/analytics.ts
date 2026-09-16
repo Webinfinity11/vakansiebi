@@ -63,14 +63,31 @@ export type Ranked = {
   title?: string;
   company?: string;
 };
+/** One point of the activity curve: the bucket's start, in Tbilisi time. */
+export type ActivityPoint = {
+  bucket: string;
+  search: number;
+  view: number;
+  outbound: number;
+};
 export type AnalyticsSummary = {
   days: number;
+  /** How wide one point of the curve is; a day of activity is read by the hour. */
+  unit: 'hour' | 'day' | 'week';
+  from: string;
+  to: string;
   totals: Record<EventKind, number>;
+  activity: ActivityPoint[];
   searches: Ranked[];
   emptySearches: Ranked[];
   views: Ranked[];
   outbound: Ranked[];
 };
+/* A window of one day is read hour by hour; a year, week by week. Everything in
+   between is a day, which is also the grain the rollup keeps, so a long window
+   still adds up the same events. */
+const grainOf = (days: number): AnalyticsSummary['unit'] =>
+  days <= 1 ? 'hour' : days > 180 ? 'week' : 'day';
 
 /* Raw events cover the last 30 days and daily totals cover what is older, so a window reads
    both and adds them. The two never overlap: the rollup moves an event from one table to the
@@ -111,9 +128,38 @@ export async function analyticsSummary(
     number
   >;
   for (const row of totals) byKind[row.kind as EventKind] = row.n;
+  /* The curve keeps its empty buckets: a quiet Sunday is a reading, and a line
+     that skips it would draw the week shorter than it was. The grain is chosen
+     here, never taken from the request, so it can be written into the statement. */
+  const unit = grainOf(days);
+  const step = { hour: '1 hour', day: '1 day', week: '1 week' }[unit];
+  const counts = `(SELECT date_trunc('${unit}',created_at AT TIME ZONE 'Asia/Tbilisi') AS bucket,kind,count(*)::int n
+       FROM analytics_events WHERE created_at >= ${since} GROUP BY 1,2
+     UNION ALL
+     SELECT date_trunc('${unit}',day::timestamp),kind,sum(count)::int
+       FROM analytics_daily WHERE day >= ((${since}) AT TIME ZONE 'Asia/Tbilisi')::date GROUP BY 1,2)`;
+  const activity = (
+    await db().query(
+      `WITH edge AS (SELECT date_trunc('${unit}',now() AT TIME ZONE 'Asia/Tbilisi') AS last_bucket),
+         buckets AS (SELECT generate_series(
+           (SELECT last_bucket FROM edge) - ($1::int * interval '1 day') + interval '${step}',
+           (SELECT last_bucket FROM edge), interval '${step}') AS bucket)
+       SELECT to_char(b.bucket,'YYYY-MM-DD"T"HH24:MI') AS bucket,
+         COALESCE(sum(c.n) FILTER (WHERE c.kind='search'),0)::int AS search,
+         COALESCE(sum(c.n) FILTER (WHERE c.kind='view'),0)::int AS view,
+         COALESCE(sum(c.n) FILTER (WHERE c.kind='outbound'),0)::int AS outbound
+       FROM buckets b LEFT JOIN ${counts} c ON c.bucket=b.bucket
+       GROUP BY b.bucket ORDER BY b.bucket`,
+      [days],
+    )
+  ).rows as ActivityPoint[];
   return {
     days,
+    unit,
+    from: activity[0]?.bucket ?? '',
+    to: activity.at(-1)?.bucket ?? '',
     totals: byKind,
+    activity,
     searches: await ranked('search', false),
     emptySearches: await ranked('search_empty', false),
     views: await ranked('view', true),

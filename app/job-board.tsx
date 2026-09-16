@@ -1689,7 +1689,9 @@ export default function JobBoard({
                         descriptions are one line away, with the number they add. */}
                     {!resultsPending && !savedOnly && !!query.trim() && (
                       <p className="search-scope">
-                        {searchMeta?.widened ? (
+                        {searchMeta?.corrected ? (
+                          `„${searchMeta.corrected.from}“ ვერ მოიძებნა — ნაჩვენებია „${searchMeta.corrected.to}“.`
+                        ) : searchMeta?.widened ? (
                           'სათაურებში ვერ მოიძებნა — ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.'
                         ) : advanced.deep ? (
                           <button
