@@ -21,7 +21,13 @@ type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-import { shareImage, siteUrl as site } from '@/lib/seo';
+import {
+  breadcrumbs,
+  employerPage,
+  jsonLd,
+  shareImage,
+  siteUrl as site,
+} from '@/lib/seo';
 
 const load = cache(async (rawSlug: string, rawPage: string) => {
   let slug = rawSlug;
@@ -116,6 +122,27 @@ export default async function CompanyPage(props: Props) {
   const website = profile?.website ? safeExternalUrl(profile.website) : '';
   return (
     <div className="board-shell vacancy-page company-page">
+      {/* The employer, and what it is hiring for. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLd([
+            ...employerPage({
+              name: employer.name,
+              path: here,
+              website,
+              logoUrl,
+              cities: employer.cities.map((c) => c.name),
+              jobs: result.jobs,
+              total: result.total,
+            }),
+            breadcrumbs([
+              { name: 'ვაკანსიები', path: '/' },
+              { name: employer.name, path: here },
+            ]),
+          ]),
+        }}
+      />
       <PublicHeader />
       <main className="vacancy-page-main">
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">

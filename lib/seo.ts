@@ -4,6 +4,7 @@ import { cities, cityStem } from './cities';
 import { safeExternalUrl } from './vacancy-media';
 import { genericCompanyKeys, logoCompanyKey } from './company-logo-identity';
 import { vacancySegment } from './vacancy-navigation';
+import { salaryFacts } from './salary-summary';
 
 export const siteUrl = 'https://jobx.ge';
 /* The picture a messenger shows for any page of the site, built by
@@ -106,6 +107,7 @@ export function jobPosting(
   const telecommute = remote(job);
   const website = safeExternalUrl(job.companyProfile?.website || '');
   const logo = safeExternalUrl(job.logoUrl || '');
+  const pay = salaryFacts(job.salary || '', job.salaryPeriod || '');
   const employment = (
     {
       'სრული განაკვეთი': 'FULL_TIME',
@@ -141,7 +143,107 @@ export function jobPosting(
         }
       : { jobLocation: (working.length ? working : ['']).map(place) }),
     ...(employment ? { employmentType: employment } : {}),
+    /* Google prints the pay beside a job result when the posting publishes it,
+       and thousands here do. Only what the board itself shows is published: one
+       price, one period, read back from the label the reader sees, with
+       estimates and implausible rates refused. */
+    ...(pay
+      ? {
+          baseSalary: {
+            '@type': 'MonetaryAmount',
+            currency: pay.currency,
+            value: {
+              '@type': 'QuantitativeValue',
+              ...(pay.value !== undefined ? { value: pay.value } : {}),
+              ...(pay.min !== undefined ? { minValue: pay.min } : {}),
+              ...(pay.max !== undefined ? { maxValue: pay.max } : {}),
+              unitText: pay.unit,
+            },
+          },
+        }
+      : {}),
     url: vacancyUrl(job),
     directApply: false,
   };
+}
+
+/* What the site is, said once, on its front page. Without it a search engine
+   has a list of pages and no name to attach them to; with it the brand and the
+   site's own search are things it can show. */
+export function siteIdentity() {
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'JOBX',
+      alternateName: 'jobx.ge',
+      url: siteUrl + '/',
+      inLanguage: 'ka-GE',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `${siteUrl}/?q={search_term_string}`,
+        },
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'JOBX',
+      url: siteUrl + '/',
+      logo: siteUrl + '/brand/jobx-mark.png',
+      areaServed: { '@type': 'Country', name: 'Georgia' },
+    },
+  ];
+}
+
+/* An employer's page, as an employer and as the list of what it is hiring for.
+   Three thousand of these pages carried no structured data at all: to a search
+   engine they were text, and the vacancies on them belonged to nobody. */
+export function employerPage(employer: {
+  name: string;
+  path: string;
+  website?: string | null;
+  logoUrl?: string | null;
+  cities?: readonly string[];
+  jobs: readonly { id: string; title: string; canonicalId?: string }[];
+  total: number;
+}) {
+  const website = safeExternalUrl(employer.website || '');
+  const logo = safeExternalUrl(employer.logoUrl || '');
+  const url = siteUrl + employer.path;
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: employer.name,
+      url,
+      ...(website ? { sameAs: [website] } : {}),
+      ...(logo ? { logo } : {}),
+      ...(employer.cities?.length
+        ? {
+            address: employer.cities.slice(0, 5).map((city) => ({
+              '@type': 'PostalAddress',
+              addressLocality: city,
+              addressCountry: 'GE',
+            })),
+          }
+        : {}),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: `${employer.name} — ვაკანსიები`,
+      url,
+      numberOfItems: employer.total,
+      itemListElement: employer.jobs.slice(0, 30).map((job, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: job.title,
+        url: vacancyUrl(job),
+      })),
+    },
+  ];
 }

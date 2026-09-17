@@ -106,6 +106,7 @@ void test('structured vacancies use the real domain and only supported public fa
     'https://jobx.ge/vacancies/დეველოპერი-a',
   );
   assert.equal(data.validThrough, '2026-09-30T23:59:59+04:00');
+  // This fixture publishes no pay, so none is claimed.
   assert.equal('baseSalary' in data, false);
   assert.equal(
     decodeURIComponent(vacancyUrl({ ...job, canonicalId: 'b' })),
@@ -185,4 +186,52 @@ void test('a vacancy without a city of its own still says where the work is', ()
       '<',
     ),
   );
+});
+
+/* A salary printed beside a job result is a promise, so only what the board
+   itself shows is published: one price, one period, nothing estimated. */
+void test('pay is published as numbers only where the posting states it', () => {
+  const pay = (salary: string, salaryPeriod = '') =>
+    (
+      jobPosting({ ...job, salary, salaryPeriod }, '2026-09-14') as {
+        baseSalary?: {
+          currency: string;
+          value: Record<string, string | number>;
+        };
+      }
+    ).baseSalary;
+  assert.deepEqual(pay('1200 ლარი')?.value, {
+    '@type': 'QuantitativeValue',
+    value: 1200,
+    unitText: 'MONTH',
+  });
+  assert.deepEqual(pay('900-1200 ლარი')?.value, {
+    '@type': 'QuantitativeValue',
+    minValue: 900,
+    maxValue: 1200,
+    unitText: 'MONTH',
+  });
+  assert.deepEqual(pay('60–80 ₾ / დღე', 'დღე')?.value, {
+    '@type': 'QuantitativeValue',
+    minValue: 60,
+    maxValue: 80,
+    unitText: 'DAY',
+  });
+  // An hour is a period the schema knows; a dollar figure with no period is not.
+  assert.deepEqual(pay('10 ლარი საათში')?.value, {
+    '@type': 'QuantitativeValue',
+    value: 10,
+    unitText: 'HOUR',
+  });
+  assert.equal(pay('$700')?.currency, undefined, 'no period, no claim');
+  for (const unstated of [
+    'შეთანხმებით',
+    'დაახლოებით 1000 ლარი',
+    '',
+    // A monthly wage of 35 GEL is not one, whoever wrote it.
+    '35 ₾ / თვე',
+    // Priced by the piece or by the square metre — not a wage for a period.
+    '5 ლარი ცალზე',
+  ])
+    assert.equal(pay(unstated), undefined, unstated);
 });

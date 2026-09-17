@@ -171,3 +171,72 @@ export function salaryDetails(input: string, period = '') {
   );
   return /\p{L}/u.test(rest) ? input.trim() : '';
 }
+
+/* The same label, read back as numbers. Google shows a salary beside a job
+   result when the posting publishes one, and this catalogue holds thousands
+   that do — but only the label is trustworthy: it is what the site itself
+   shows, built from one price and one period, with everything ambiguous
+   already refused. Approximations are refused here too: "დაახლოებით 1000 ₾" is
+   an estimate, and an estimate published as a wage is a promise the employer
+   never made. */
+export type SalaryFacts = {
+  value?: number;
+  min?: number;
+  max?: number;
+  currency: 'GEL' | 'USD' | 'EUR';
+  unit: 'HOUR' | 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
+};
+const currencies: Record<string, SalaryFacts['currency']> = {
+  '₾': 'GEL',
+  $: 'USD',
+  '€': 'EUR',
+};
+const units: Record<string, SalaryFacts['unit']> = {
+  სთ: 'HOUR',
+  დღე: 'DAY',
+  კვირა: 'WEEK',
+  თვე: 'MONTH',
+  წელი: 'YEAR',
+};
+/* A period the posting never states. The board already reads an unqualified
+   lari figure as monthly — see the salary_month column — and only where the
+   text names no other rate. What counts as naming one is narrower here: the
+   forms that price work ("საათში", "დღიურად", "ცალზე"), never the bare stems.
+   "09:00 საათიდან 16:00 საათამდე, შაბათ-კვირას დასვენება" is a working week,
+   and reading it as an hourly wage refused hundreds of the salaries this
+   catalogue does publish. The price's own neighbourhood has already been read
+   for a rate by the summary above; this only catches one stated further off. */
+const namesAnotherRate =
+  /საათში|საათობრივ|დღეში|დღიურ|კვირაში|კვირეულ|ცვლაში|ცვლაზე|hourly|daily|weekly|per\s+(?:hour|day|week)|მ²|მ2|კვ\.?\s*მ|ცალზე|კგ-?ზე|ტონა?ზე|%|პროცენტ/iu;
+const digits = (text: string) => Number(text.replace(/[\s ]/g, ''));
+export function salaryFacts(input: string, period = ''): SalaryFacts | null {
+  const label = salarySummary(input, period);
+  const read =
+    /^(≈ )?(≤ )?([\d\s ]+?)(?:–([\d\s ]+?))?(\+)? (₾|\$|€)(?: \/ (.+))?$/u.exec(
+      label,
+    );
+  if (!read) return null;
+  const [, approximate, atMost, low, high, andUp, symbol, rate] = read;
+  if (approximate) return null;
+  const currency = currencies[symbol];
+  const unit = rate
+    ? units[rate]
+    : currency === 'GEL' && !namesAnotherRate.test(input)
+      ? 'MONTH'
+      : undefined;
+  if (!currency || !unit) return null;
+  const from = digits(low);
+  const to = high ? digits(high) : undefined;
+  if (!Number.isFinite(from) || from <= 0) return null;
+  if (to !== undefined && (!Number.isFinite(to) || to < from)) return null;
+  /* The bands the board already trusts for its own salary filter (search-plan:
+     monthlyFloor, monthlyCeiling, dailyCeiling). A "35 ₾ / თვე" is not a
+     monthly wage, whoever wrote it, and publishing it as one in structured data
+     puts a figure beside our name in a search result that no employer pays. */
+  if (unit === 'MONTH' && (from < 100 || from > 50000)) return null;
+  if (unit === 'DAY' && from > 500) return null;
+  if (atMost) return { max: to ?? from, currency, unit };
+  if (to !== undefined) return { min: from, max: to, currency, unit };
+  if (andUp) return { min: from, currency, unit };
+  return { value: from, currency, unit };
+}

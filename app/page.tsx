@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { shareImage, siteUrl } from '@/lib/seo';
+import { jsonLd, shareImage, siteIdentity, siteUrl } from '@/lib/seo';
 import {
   landingDescription,
   landingFor,
@@ -119,6 +119,14 @@ export default async function Home({
   }
   return (
     <>
+      {/* Said once, on the front page: what this site is and how it is
+          searched. A landing page is a list, not the site itself. */}
+      {!params.size && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLd(siteIdentity()) }}
+        />
+      )}
       {/* The headings use 700 (also synthesized for 800). Load it alongside
           the layout's 400/600 faces so the count and progress track stay put. */}
       <link
