@@ -152,9 +152,10 @@ export function landingFor(params: URLSearchParams): Landing | null {
     return null;
   // "სხვა" names everything the categories could not place; it describes no search.
   if (category === 'სხვა') return null;
-  // A condition narrows one dimension, never both: the pages left over would be
-  // near-empty and say the same thing as the ones above them.
-  if (trait && category && city) return null;
+  /* A field, a city and a condition together is the shape ss.ge publishes most
+     of — "ლოჯისტიკის ვაკანსიები დღიური ანაზღაურებით ბათუმში" is a search, not a
+     stray combination. What keeps it honest is the sitemap, which counts each
+     one and lists only those a reader would find something on. */
   /* A profession already names the work; a field on top of it is a narrower way
      of saying the same thing, and a condition on top of that empties the page. */
   if (role && (category || trait)) return null;
@@ -260,6 +261,100 @@ export const linkedRoles = [
   'მიმტანი',
   'დამლაგებელი',
 ] as const;
+/* Which professions belong to which field. A field is an abstraction — a reader
+   searches for "მძღოლი", not for "ლოჯისტიკა" — so every field's page offers the
+   words people actually type, and every profession's page offers the cities.
+   The pairing is written out rather than counted: a profession that merely
+   appears in a field's listings is not what that field is about. */
+const fieldRoles: Record<string, readonly string[]> = {
+  ტექნოლოგიები: ['დეველოპერი', 'დიზაინერი', 'ანალიტიკოსი', 'ტექნიკოსი'],
+  გაყიდვები: ['გამყიდველი', 'კონსულტანტი', 'მოლარე', 'მენეჯერი'],
+  მარკეტინგი: ['მარკეტინგი', 'კოპირაიტერი', 'დიზაინერი', 'ჟურნალისტი'],
+  ადმინისტრაცია: ['ადმინისტრატორი', 'ასისტენტი', 'ოპერატორი', 'რეკრუტერი'],
+  ფინანსები: ['ბუღალტერი', 'ანალიტიკოსი', 'კონსულტანტი', 'მენეჯერი'],
+  ლოჯისტიკა: ['მძღოლი', 'კურიერი', 'მტვირთავი', 'დისპეჩერი'],
+  მომსახურება: ['მიმტანი', 'ბარისტა', 'მზარეული', 'ბარმენი', 'დამლაგებელი'],
+  სამედიცინო: ['ექიმი', 'ექთანი', 'ფარმაცევტი', 'მასაჟისტი'],
+  განათლება: ['მასწავლებელი', 'მთარგმნელი'],
+  მშენებლობა: ['ელექტრიკოსი', 'შემდუღებელი', 'ინჟინერი', 'ტექნიკოსი'],
+  დაცვა: ['მცველი'],
+  წარმოება: ['მკერავი', 'კონდიტერი', 'შემდუღებელი', 'მტვირთავი'],
+  იურიდიული: ['იურისტი'],
+  სილამაზე: ['დალაქი', 'მასაჟისტი'],
+};
+/* Where this page can lead next — the same search narrowed one more way, or the
+   professions the field is made of. It is the difference between a page that
+   ends and a site that goes on, for a reader and for a crawler alike. */
+export function relatedLandings(landing: Landing) {
+  const nearby: Choice[] = [];
+  if (landing.role && !landing.city)
+    nearby.push(
+      ...linkedCities.map((city) => ({
+        category: null,
+        city,
+        trait: null,
+        role: landing.role,
+      })),
+    );
+  if (landing.role && landing.city)
+    nearby.push({
+      category: null,
+      city: null,
+      trait: null,
+      role: landing.role,
+    });
+  if (landing.category)
+    nearby.push(
+      ...(fieldRoles[landing.category] ?? []).map((role) => ({
+        category: null,
+        city: landing.city,
+        trait: null,
+        role,
+      })),
+      ...(landing.city
+        ? [{ category: landing.category, city: null, trait: null, role: null }]
+        : linkedCities.slice(0, 4).map((city) => ({
+            category: landing.category,
+            city,
+            trait: null,
+            role: null,
+          }))),
+    );
+  if (landing.city && !landing.category && !landing.role)
+    nearby.push(
+      ...linkedRoles.slice(0, 6).map((role) => ({
+        category: null,
+        city: landing.city,
+        trait: null,
+        role,
+      })),
+    );
+  if (landing.trait)
+    nearby.push(
+      ...(landing.city
+        ? [{ category: null, city: null, trait: landing.trait, role: null }]
+        : linkedCities.slice(0, 4).map((city) => ({
+            category: null,
+            city,
+            trait: landing.trait,
+            role: null,
+          }))),
+    );
+  const seen = new Set([landing.path]);
+  return nearby
+    .filter((choice) => {
+      const path = landingPath(choice);
+      if (seen.has(path) || !landingFor(new URLSearchParams(path.slice(2))))
+        return false;
+      seen.add(path);
+      return true;
+    })
+    .map((choice) => ({
+      path: landingPath(choice),
+      label: landingHeading(choice).replace(' საქართველოში', ''),
+    }))
+    .slice(0, 10);
+}
 export function landingLinks() {
   const links: Choice[] = [
     ...categories

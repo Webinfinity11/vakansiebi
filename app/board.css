@@ -4267,3 +4267,10 @@
   background: #f4f7fd;
   color: #18243b;
 }
+.search-directory-related {
+  margin-bottom: 18px;
+}
+.search-directory-related .search-directory-links a {
+  border-color: #cfdcf3;
+  background: #f4f7fd;
+}

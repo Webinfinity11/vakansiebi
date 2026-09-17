@@ -79,10 +79,10 @@ async function countBy(trait: TraitKey | null): Promise<LandingCount[]> {
   const args = [...plan.args, [...cities], cities.map(cityStem)];
   const names = `$${args.length - 1}::text[]`;
   const stems = `$${args.length}::text[]`;
-  // A condition already narrows the list; pairing it with both a category and a
-  // city as well leaves pages too alike and too empty to be worth indexing.
+  // A condition, a field and a city together is a real search; what keeps such
+  // a page off the index is its count, not its shape.
   const sets = trait
-    ? '((), (category), (city))'
+    ? '((), (category), (city), (category, city))'
     : '((category), (city), (category, city))';
   const { rows } = await db().query<{
     category: string | null;

@@ -11,6 +11,7 @@ import {
   landingHeading,
   landingLinks,
   landingOf,
+  relatedLandings,
 } from '@/lib/seo-landing';
 import { nearestCity } from '@/lib/nearest-city';
 import type { Application } from '@/lib/personal-space';
@@ -2102,7 +2103,19 @@ export default function JobBoard({
       </main>
       {/* Reader-facing, and the only way a crawler reaches these lists by
           following links rather than by reading the sitemap. */}
-      <nav className="search-directory" aria-label="პოპულარული ძიებები">
+      <nav className="search-directory" aria-label="მსგავსი ძიებები">
+        {landing && (
+          <div className="search-directory-related">
+            <h2>მსგავსი ძიებები</h2>
+            <div className="search-directory-links">
+              {relatedLandings(landing).map(({ path, label }) => (
+                <Link key={path} href={path} prefetch={false}>
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
         <h2>პოპულარული ძიებები</h2>
         <div className="search-directory-links">
           {landingLinks().map(({ path, label }) => (

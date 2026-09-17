@@ -27,6 +27,8 @@ void test('a category, a city and remote work are pages; everything else is a fi
     'employment=part-time',
     'employment=internship',
     'city=ბათუმი&salaryPeriod=day',
+    // A field, a city and a condition together is the shape most searched for.
+    'category=ლოჯისტიკა&city=ბათუმი&salaryPeriod=day',
   ])
     assert.ok(landingFor(new URLSearchParams(address)), address);
   for (const address of [
@@ -46,8 +48,6 @@ void test('a category, a city and remote work are pages; everything else is a fi
     'city=ლონდონი',
     'category=სხვა',
     'remote=false',
-    // A condition narrows one dimension, never both.
-    'category=გაყიდვები&city=თბილისი&remote=true',
     // Two conditions at once name a page nobody searches for.
     'remote=true&entryLevel=true',
     // A profession is a page; a phrase the vocabulary does not know is a search.
@@ -125,7 +125,10 @@ void test('the list on screen claims the name only when it is exactly that list'
   // A condition is a page of its own; a free search and the narrower filters are not.
   assert.equal(of('category=დაცვა&entryLevel=true')?.trait, 'entry');
   assert.equal(of('category=დაცვა&postedWithin=7'), null);
-  assert.equal(of('category=დაცვა&city=ქუთაისი&entryLevel=true'), null);
+  assert.equal(
+    of('category=დაცვა&city=ქუთაისი&entryLevel=true')?.trait,
+    'entry',
+  );
 });
 void test('every linked list is one the index is open to', () => {
   const links = landingLinks();

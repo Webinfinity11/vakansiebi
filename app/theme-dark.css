@@ -2113,6 +2113,10 @@
   background: #212b40;
   color: #aebcd5;
 }
+:root[data-theme='dark'] .search-directory-related .search-directory-links a {
+  border-color: #232d3e;
+  background: #212b40;
+}
 
 /* ── from app/phone.css ── */
 :root[data-theme='dark'] .board-shell .job-new {
