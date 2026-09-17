@@ -62,17 +62,47 @@ void test('a landing page names itself the way a reader would say it', () => {
   assert.equal(heading('city=ბათუმი'), 'ვაკანსიები ბათუმში');
   assert.equal(
     heading('category=ფინანსები'),
-    'ფინანსების ვაკანსიები საქართველოში',
+    'ფინანსური ვაკანსიები საქართველოში',
   );
   assert.equal(heading('remote=true'), 'დისტანციური ვაკანსიები');
   assert.equal(
     heading('category=მარკეტინგი&remote=true'),
     'მარკეტინგის დისტანციური ვაკანსიები',
   );
-  // Two of the categories are adjectives already and are not declined.
+  // Category modifiers use adjectives or field names where a genitive is awkward.
   assert.equal(
     heading('category=სამედიცინო'),
     'სამედიცინო ვაკანსიები საქართველოში',
+  );
+  assert.equal(
+    heading('category=ადმინისტრაცია&city=თბილისი'),
+    'ადმინისტრაციული ვაკანსიები თბილისში',
+  );
+  assert.equal(
+    heading('category=სილამაზე&city=ბათუმი'),
+    'სილამაზის სფეროს ვაკანსიები ბათუმში',
+  );
+  assert.equal(
+    heading('category=მშენებლობა'),
+    'სამშენებლო ვაკანსიები საქართველოში',
+  );
+  assert.equal(
+    heading('category=ტექნოლოგიები'),
+    'ტექნოლოგიების სფეროს ვაკანსიები საქართველოში',
+  );
+  assert.equal(
+    heading('category=განათლება'),
+    'განათლების სფეროს ვაკანსიები საქართველოში',
+  );
+  assert.equal(
+    landingCopy(landingFor(new URLSearchParams('category=ადმინისტრაცია'))!),
+    'ადმინისტრაციული ვაკანსიები საქართველოში — აქტიური განცხადებები ერთ სიაში. შეადარე ანაზღაურება, სამუშაოს ადგილმდებარეობა და პირობები, შემდეგ კი გაეცანი განცხადებას პირველწყაროზე.',
+  );
+  assert.equal(
+    landingCopy(
+      landingFor(new URLSearchParams('category=სილამაზე&city=ბათუმი'))!,
+    ),
+    'სილამაზის სფეროს ვაკანსიები ბათუმში. სია ყოველდღიურად ახლდება დამსაქმებლებისა და დასაქმების საიტებზე გამოქვეყნებული აქტიური განცხადებებით.',
   );
 });
 void test('the list on screen claims the name only when it is exactly that list', () => {
@@ -135,10 +165,26 @@ void test('every condition says in its own words what the reader has landed on',
   );
   assert.equal(
     landingHeading({ category: null, city: 'ბათუმი', trait: 'entry' }),
-    'ვაკანსიები ბათუმში გამოცდილების გარეშე',
+    'ვაკანსიები გამოცდილების გარეშე ბათუმში',
   );
   assert.equal(
     landingHeading({ category: null, city: null, trait: 'internship' }),
     'სტაჟირების ვაკანსიები',
+  );
+  assert.equal(
+    landingHeading({ category: 'იურიდიული', city: null, trait: 'internship' }),
+    'იურიდიული სტაჟირების ვაკანსიები',
+  );
+  assert.equal(
+    landingHeading({ category: null, city: 'თბილისი', trait: 'daily' }),
+    'ვაკანსიები დღიური ანაზღაურებით თბილისში',
+  );
+  assert.equal(
+    landingHeading({ category: null, city: 'თბილისი', trait: 'paid' }),
+    'ვაკანსიები მითითებული ხელფასით თბილისში',
+  );
+  assert.equal(
+    landingHeading({ category: 'სილამაზე', city: null, trait: 'part-time' }),
+    'სილამაზის სფეროს ვაკანსიები ნახევარ განაკვეთზე',
   );
 });
