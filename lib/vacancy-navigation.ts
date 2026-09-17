@@ -156,10 +156,51 @@ function stampEntry() {
   window.history.replaceState({ ...state, jobxAt: at }, '');
   return at;
 }
+/* A trail of what the history actually did, kept in this browser and nowhere
+   else, so a fault only one phone can produce can still be read. It records the
+   shape of each address, never its query string. Shown at /debug/nav. */
+const trail = 'ertad-nav-trail';
+export function recordNav(event: string) {
+  try {
+    const state = window.history.state as EntryState | null;
+    const path = location.pathname;
+    const entries = JSON.parse(localStorage.getItem(trail) || '[]');
+    entries.push({
+      e: event,
+      t: new Date().toISOString().slice(11, 19),
+      p: path.startsWith('/vacancies/')
+        ? 'vacancy/' + path.slice(11, 15)
+        : path,
+      q: location.search ? location.search.slice(0, 20) : '',
+      len: window.history.length,
+      at: state?.jobxAt,
+      list: state?.jobxFromList ? 1 : 0,
+      nav: (
+        performance.getEntriesByType('navigation')[0] as
+          | PerformanceNavigationTiming
+          | undefined
+      )?.type,
+    });
+    localStorage.setItem(trail, JSON.stringify(entries.slice(-80)));
+  } catch {}
+}
+export function readNavTrail() {
+  try {
+    return JSON.parse(localStorage.getItem(trail) || '[]') as unknown[];
+  } catch {
+    return [];
+  }
+}
+export function clearNavTrail() {
+  try {
+    localStorage.removeItem(trail);
+  } catch {}
+}
 export function enterTab() {
   try {
     loadedAt ??= location.pathname + location.search;
     stampEntry();
+    recordNav('load');
   } catch {}
 }
 /* Answers whether "back to the list" may step back instead of pushing the list

@@ -2,6 +2,7 @@ import { siteUrl, shareImage } from '@/lib/seo';
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { GoogleAnalytics } from './google-analytics';
+import { YandexMetrika } from './yandex-metrika';
 import './globals.css';
 import './board.css';
 import './phone.css';
@@ -68,6 +69,7 @@ export default function RootLayout({
         {children}
         <Suspense fallback={null}>
           <GoogleAnalytics measurementId="G-9S8J0W7QXM" />
+          <YandexMetrika counterId={112737833} />
         </Suspense>
       </body>
     </html>
