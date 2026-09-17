@@ -148,6 +148,8 @@ export function landingLinks() {
   ];
   return links.map((landing) => ({
     path: landingPath(landing),
-    label: landingHeading(landing),
+    /* The page calls itself "… ვაკანსიები საქართველოში"; a row of links does not
+       need to say the country twelve times. */
+    label: landingHeading(landing).replace(' საქართველოში', ''),
   }));
 }

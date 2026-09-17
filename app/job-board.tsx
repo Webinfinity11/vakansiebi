@@ -2029,12 +2029,13 @@ export default function JobBoard({
                 <div className="load-more-row" ref={nextPageTarget}>
                   {appending && (
                     <div className="append-loading">
-                      <output className="brand-loading">
+                      {/* The cards arriving are the message. A banner, a
+                          progress bar and a button all saying the same sentence
+                          pushed the list a screenful further down to repeat
+                          what the skeletons already show; only a reader who
+                          cannot see them still needs the words. */}
+                      <output className="sr-only">
                         შემდეგი ვაკანსიები იტვირთება…
-                        <span
-                          className="brand-loading-track"
-                          aria-hidden="true"
-                        />
                       </output>
                       <VacancySkeletons count={2} />
                     </div>
@@ -2046,7 +2047,7 @@ export default function JobBoard({
                     onClick={loadMore}
                   >
                     {appending
-                      ? 'შემდეგი ვაკანსიები იტვირთება…'
+                      ? 'იტვირთება…'
                       : appendError
                         ? 'ხელახლა ცდა'
                         : loadedThrough - page >= 49

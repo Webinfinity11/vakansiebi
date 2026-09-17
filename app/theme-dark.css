@@ -975,6 +975,9 @@
 :root[data-theme='dark'] .source-coverage small {
   color: #9fa4ad;
 }
+:root[data-theme='dark'] .sr-only {
+  border: 0;
+}
 
 /* ── from app/board.css ── */
 :root[data-theme='dark'] .board-shell {
@@ -2504,16 +2507,6 @@
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
   .discovery-shortcut[aria-pressed='true'] {
   border-bottom-color: #6f93ff;
-}
-:root[data-theme='dark'] .brand-loading {
-  color: #6f93ff;
-  background: #1c2a45;
-}
-:root[data-theme='dark'] .brand-loading-track {
-  background: #1c2845;
-}
-:root[data-theme='dark'] .brand-loading-track::after {
-  background: linear-gradient(90deg, #6f93ff, #47ccea);
 }
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-skeleton {
   border-color: #232c3e;

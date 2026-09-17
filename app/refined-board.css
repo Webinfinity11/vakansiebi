@@ -881,41 +881,6 @@
   .discovery-shortcut[aria-pressed='true'] {
   border-bottom-color: #2457e6;
 }
-.brand-loading {
-  display: flex;
-  align-items: center;
-  position: relative;
-  gap: 12px;
-  overflow: hidden;
-  padding: 14px 16px 20px;
-  color: #2457e6;
-  background: #eaf1ff;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.brand-loading-mark {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  background: url('/brand/jobx-mark.png') center / contain no-repeat;
-}
-.brand-loading-track {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: #d1dfff;
-  overflow: hidden;
-}
-.brand-loading-track::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: linear-gradient(90deg, #2457e6, #15c2e9);
-}
 .board-shell.editorial-board.crafted-board.refined-board .job-skeleton {
   border-color: #dbe5f7;
   background: #fff;
@@ -947,9 +912,6 @@
   .refined-board .hero-copy {
     animation: jobx-copy-arrive 650ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
-  .brand-loading-track::after {
-    animation: jobx-loading-run 1.4s ease-in-out infinite;
-  }
   .board-shell.editorial-board.crafted-board.refined-board
     .save-button.is-saved
     svg {
@@ -974,14 +936,6 @@
   }
   to {
     transform: none;
-  }
-}
-@keyframes jobx-loading-run {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(350%);
   }
 }
 @keyframes jobx-save-pop {
@@ -1028,9 +982,6 @@
   .board-shell.editorial-board.crafted-board.refined-board
     .discovery-shortcuts {
     margin-top: 12px;
-  }
-  .brand-loading {
-    font-size: 12px;
   }
 }
 :root[data-theme='dark']
