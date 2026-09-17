@@ -66,6 +66,21 @@ const roles = [
   ['მასაჟისტ', 'მასაჟისტი', 'massage', 'массажист'],
   ['მებაღე', 'gardener', 'садовник'],
 ];
+/* The reviewed roles, each as the word a reader would tap and the stem that
+   finds it in a title. They are the vocabulary behind "popular searches": every
+   one of them is a phrase this catalogue answers, unlike a raw search log,
+   which is mostly typos and one-off phrasings. */
+export const roleVocabulary = roles.map((group) => {
+  const stem = group[0];
+  const written = group[1];
+  return {
+    stem,
+    label:
+      written && written.startsWith(stem) && /^[ა-ჰ]/.test(written)
+        ? written
+        : stem,
+  };
+});
 // Longest suffix first; a case ending is removed once and only from a word that
 // keeps a stem of at least three letters.
 const georgianSuffixes = ['ები', 'ებს', 'ის', 'ში', 'ით', 'ს', 'ი'];

@@ -144,6 +144,12 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+/* The starting panel is not a list of near-misses to glance at but the whole
+   offer — the reader's own history and the roles on the board — so it is given
+   the room to be read without scrolling. */
+.board-shell .search-query-field .search-start {
+  max-height: min(560px, 62dvh);
+}
 /* Let the suggestion list extend below the masthead. Decorative layers stay inside it. */
 .board-shell .discovery-hero {
   overflow: visible;
@@ -188,4 +194,145 @@
   border: 0;
   padding: 0;
   min-height: 0;
+}
+
+/* ---------- The panel before the first keystroke ---------- */
+.search-start {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  max-height: min(66vh, 520px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.search-start h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #6a7588;
+}
+.search-start-recent header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.search-start-recent header button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  color: #6a7588;
+  cursor: pointer;
+}
+.search-start-recent header button:hover {
+  color: #18243b;
+  background: #f1f4fa;
+}
+.search-start-recent ul {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.search-start-recent li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 9px;
+}
+.search-start-recent li:hover {
+  background: #f4f7fd;
+}
+.search-start-term {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: #18243b;
+  text-align: left;
+  cursor: pointer;
+}
+.search-start-term svg {
+  flex: none;
+  color: #8a94a8;
+}
+.search-start-term span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-start-forget {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a94a8;
+  cursor: pointer;
+}
+.search-start-forget:hover {
+  color: #18243b;
+  background: #e7ecf6;
+}
+.search-start-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+.search-start-chips button {
+  min-height: 34px;
+  padding: 6px 13px;
+  border: 0;
+  border-radius: 999px;
+  background: #f1f4fa;
+  font: inherit;
+  font-size: 13px;
+  color: #26334d;
+  cursor: pointer;
+}
+.search-start-chips button:hover {
+  background: #e2e9f7;
+  color: #18243b;
+}
+@media (max-width: 760px) {
+  .search-start {
+    gap: 16px;
+    padding: 14px 12px;
+  }
+  .search-start-term {
+    min-height: 40px;
+    font-size: 14px;
+  }
+  /* Three to a row at 390px: a wall of one-per-line reads as a menu to work
+     through rather than a handful of ideas to glance at. */
+  .search-start-chips {
+    gap: 6px;
+  }
+  .search-start-chips button {
+    min-height: 38px;
+    padding: 6px 11px;
+    font-size: 13px;
+  }
 }

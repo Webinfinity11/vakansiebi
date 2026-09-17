@@ -2302,6 +2302,47 @@
   background: none;
   border: 0;
 }
+:root[data-theme='dark'] .search-start h2 {
+  color: #969ca6;
+}
+:root[data-theme='dark'] .search-start-recent header button {
+  border: 0;
+  background: transparent;
+  color: #969ca6;
+}
+:root[data-theme='dark'] .search-start-recent header button:hover {
+  color: #aebcd5;
+  background: #262d3b;
+}
+:root[data-theme='dark'] .search-start-recent li:hover {
+  background: #212b40;
+}
+:root[data-theme='dark'] .search-start-term {
+  border: 0;
+  background: transparent;
+  color: #aebcd5;
+}
+:root[data-theme='dark'] .search-start-term svg {
+  color: #939aaa;
+}
+:root[data-theme='dark'] .search-start-forget {
+  border: 0;
+  background: transparent;
+  color: #939aaa;
+}
+:root[data-theme='dark'] .search-start-forget:hover {
+  color: #aebcd5;
+  background: #272d3a;
+}
+:root[data-theme='dark'] .search-start-chips button {
+  border: 0;
+  background: #262d3b;
+  color: #c4ccdd;
+}
+:root[data-theme='dark'] .search-start-chips button:hover {
+  background: #242c3d;
+  color: #aebcd5;
+}
 
 /* ── from app/refined-board.css ── */
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board {

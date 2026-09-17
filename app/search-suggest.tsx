@@ -3,7 +3,27 @@
 'use client';
 import './search-features.css';
 import { useEffect, useRef, useState, type RefObject } from 'react';
+import { History, Trash2, X } from 'lucide-react';
 import type { Suggestion } from '@/lib/server/suggest';
+import {
+  clearRecentSearches,
+  forgetRecentSearch,
+  readRecentSearches,
+} from '@/lib/recent-searches';
+
+/* Asked for once per session, the first time a reader opens the field. */
+let popularOnce: Promise<string[]> | null = null;
+function popularTerms() {
+  popularOnce ||= fetch('/api/popular-searches')
+    .then((r) => (r.ok ? r.json() : { terms: [] }))
+    .then((body: { terms?: { label?: unknown }[] }) =>
+      (body.terms ?? [])
+        .map((t) => t.label)
+        .filter((l): l is string => typeof l === 'string'),
+    )
+    .catch(() => []);
+  return popularOnce;
+}
 
 /* Session-local memo of prefix → suggestions; the route also allows a minute of
    HTTP caching, this only spares repeated keystrokes their round trip. */
@@ -23,6 +43,85 @@ function highlight(value: string, query: string) {
     </>
   );
 }
+
+/* An open search field with nothing typed in it used to show nothing at all,
+   which asks the reader to invent a word before the site has offered one. It now
+   opens on what they searched before and on the roles this catalogue actually
+   answers — one tap instead of one guess. */
+function StartPanel({ onPick }: { onPick: (value: string) => void }) {
+  const [recent, setRecent] = useState<string[]>([]);
+  const [popular, setPopular] = useState<string[]>([]);
+  useEffect(() => {
+    const timer = setTimeout(() => setRecent(readRecentSearches()), 0);
+    let live = true;
+    void popularTerms().then((terms) => live && setPopular(terms));
+    return () => {
+      clearTimeout(timer);
+      live = false;
+    };
+  }, []);
+  if (!recent.length && !popular.length) return null;
+  return (
+    <div
+      className="search-suggest search-start"
+      onPointerDown={(event) => event.preventDefault()}
+    >
+      {recent.length > 0 && (
+        <section className="search-start-recent">
+          <header>
+            <h2>ბოლოს მოძებნილი</h2>
+            <button
+              type="button"
+              onClick={() => {
+                clearRecentSearches();
+                setRecent([]);
+              }}
+            >
+              <Trash2 size={14} aria-hidden="true" /> გასუფთავება
+            </button>
+          </header>
+          <ul>
+            {recent.map((value) => (
+              <li key={value}>
+                <button
+                  type="button"
+                  className="search-start-term"
+                  onClick={() => onPick(value)}
+                >
+                  <History size={15} aria-hidden="true" />
+                  <span>{value}</span>
+                </button>
+                <button
+                  type="button"
+                  className="search-start-forget"
+                  aria-label={`„${value}" ისტორიიდან წაშლა`}
+                  onClick={() => {
+                    forgetRecentSearch(value);
+                    setRecent(readRecentSearches());
+                  }}
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {popular.length > 0 && (
+        <section className="search-start-popular">
+          <h2>პოპულარული ძიებები</h2>
+          <div className="search-start-chips">
+            {popular.map((value) => (
+              <button key={value} type="button" onClick={() => onPick(value)}>
+                {value}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
 export function SearchSuggest({
   query,
   inputRef,
@@ -40,6 +139,8 @@ export function SearchSuggest({
   } | null>(null);
   const [focused, setFocused] = useState(false);
   const [dismissed, setDismissed] = useState('');
+  // The empty-field panel is dismissed on its own: it belongs to no query.
+  const [startClosed, setStartClosed] = useState(false);
   // The highlighted row belongs to one query; typing on resets it without an effect.
   const [cursor, setCursor] = useState({ key: '', index: -1 });
   const trimmed = query.trim().replace(/\s+/g, ' ');
@@ -74,6 +175,7 @@ export function SearchSuggest({
     const onFocus = () => {
       window.clearTimeout(blurTimer);
       setFocused(true);
+      setStartClosed(false);
     };
     const onBlur = () => {
       blurTimer = window.setTimeout(() => setFocused(false), 120);
@@ -84,6 +186,7 @@ export function SearchSuggest({
       if (event.key === 'Escape') {
         if (state.open) event.preventDefault();
         setDismissed(input.value.trim().replace(/\s+/g, ' '));
+        setStartClosed(true);
         move(-1);
         return;
       }
@@ -153,6 +256,16 @@ export function SearchSuggest({
     else input.removeAttribute('aria-activedescendant');
   }, [inputRef, open, active, listId]);
 
+  /* Nothing typed yet: the panel offers a starting point instead of a blank. */
+  if (focused && !trimmed && !startClosed)
+    return (
+      <StartPanel
+        onPick={(value) => {
+          setStartClosed(true);
+          onPick(value);
+        }}
+      />
+    );
   if (!open) return null;
   // A combobox listbox: aria-activedescendant on the input points at these ids.
   // The native <option> the linter prefers cannot live outside a <select>.

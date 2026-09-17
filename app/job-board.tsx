@@ -5,6 +5,7 @@ import { VacancyStatus } from './vacancy-status';
 import { useSwipe } from './use-swipe';
 import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
+import { rememberRecentSearch } from '@/lib/recent-searches';
 import { nearestCity } from '@/lib/nearest-city';
 import type { Application } from '@/lib/personal-space';
 import {
@@ -1024,6 +1025,8 @@ export default function JobBoard({
       trackedSearches.current.add(key);
       track('search', settled);
       if (total === 0) track('search_empty', settled);
+      // Worth offering back only if it led somewhere.
+      else rememberRecentSearch(settled);
     }, 1500);
     return () => clearTimeout(timer);
   }, [query, total, resultsPending, demo, savedOnly]);
