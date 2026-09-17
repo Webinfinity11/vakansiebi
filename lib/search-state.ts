@@ -60,10 +60,13 @@ export function readSearch(params: URLSearchParams): SearchFilters {
     postedWithin: ([1, 3, 7, 30].includes(Number(params.get('postedWithin')))
       ? Number(params.get('postedWithin'))
       : 0) as SearchFilters['postedWithin'],
+    /* Newest first, unless the reader asks otherwise. A job board's value is
+       what arrived today; relevance only ever applied to a typed search, and
+       even there the newest matching vacancy is usually the one wanted. */
     sort:
       Object.keys(sortKeys).find(
         (key) => sortKeys[key] === params.get('sort'),
-      ) || 'შესაბამისობა',
+      ) || 'უახლესი',
   };
 }
 export function searchParams(filters: SearchFilters) {
@@ -84,8 +87,8 @@ export function searchParams(filters: SearchFilters) {
   if (filters.deep) result.set('deep', 'true');
   if (filters.postedWithin)
     result.set('postedWithin', String(filters.postedWithin));
-  if (filters.sort !== 'შესაბამისობა')
-    result.set('sort', sortKeys[filters.sort] || 'relevance');
+  if (filters.sort !== 'უახლესი')
+    result.set('sort', sortKeys[filters.sort] || 'new');
   return result;
 }
 

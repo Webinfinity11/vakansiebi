@@ -225,7 +225,9 @@ export function landingOf(filters: SearchFilters): Landing | null {
     filters.salaryTo !== null ||
     filters.deep ||
     filters.postedWithin ||
-    filters.subcategory
+    filters.subcategory ||
+    // A page that is sorted another way is one reader's view, not the page.
+    filters.sort !== 'უახლესი'
   )
     return null;
   return landingFor(params);

@@ -190,12 +190,19 @@ function daysUntil(date: string) {
   const at = Date.parse(date);
   return Number.isFinite(at) ? Math.ceil((at - Date.now()) / dayMs) : NaN;
 }
-function isNew(datePosted?: string) {
-  if (!datePosted) return false;
-  const at = Date.parse(datePosted);
-  if (!Number.isFinite(at)) return false;
+/* "ახალი" has to mean new to this board, not merely dated today. A classified
+   site lets an advertiser lift an old posting back to the top, and its date
+   moves with it; 82 vacancies we had been carrying for over three days wore the
+   badge on that strength alone. A vacancy is new when the source dates it
+   within two days AND it reached us within two days. */
+function within(value: string | undefined, days: number) {
+  if (!value) return false;
+  const at = Date.parse(value);
   const age = Date.now() - at;
-  return age >= 0 && age <= 2 * dayMs;
+  return Number.isFinite(at) && age >= -dayMs && age <= days * dayMs;
+}
+function isNew(job: { datePosted?: string; createdAt?: string }) {
+  return within(job.datePosted, 2) && within(job.createdAt, 2);
 }
 
 /* One vacancy in the list. On a touch screen the card slides: right saves, left hides; the
@@ -307,7 +314,7 @@ const JobCard = memo(function JobCard({
                 VIP
               </span>
             )}
-            {isNew(j.datePosted) && <span className="job-new">ახალი</span>}
+            {isNew(j) && <span className="job-new">ახალი</span>}
           </div>
           <div className="job-company">
             <CompanyIdentity

@@ -502,10 +502,9 @@ export function searchPlan(
     ordering = `${salary} DESC NULLS LAST,${newest}`;
   if (params.get('sort') === 'deadline')
     ordering = `NULLIF(${p('deadline')},'') ASC NULLS LAST,${newest}`;
-  if (
-    searching &&
-    !['salary', 'new', 'deadline'].includes(params.get('sort') || '')
-  )
+  // Relevance is now a choice rather than the unstated default: an address
+  // without a sort is the newest list, typed search or not.
+  if (searching && params.get('sort') === 'relevance')
     ordering = `j.relevance DESC,${newest}`;
   return {
     where,

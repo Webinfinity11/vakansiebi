@@ -40,8 +40,15 @@ void test('unknown categories, sources and sort values cannot create misleading 
   );
   assert.equal(parsed.category, 'ყველა');
   assert.equal(parsed.source, 'ყველა');
-  assert.equal(parsed.sort, 'შესაბამისობა');
+  // An unreadable sort falls back to the default, which is the newest list.
+  assert.equal(parsed.sort, 'უახლესი');
   assert.equal(parsed.paid, false);
+  // The default is not written into an address; every other choice is.
+  assert.equal(searchParams(parsed).has('sort'), false);
+  assert.equal(
+    searchParams(readSearch(new URLSearchParams('sort=relevance'))).get('sort'),
+    'relevance',
+  );
 });
 void test('every board category is a valid filter and the shared city list keeps "other" as a mode, not a name', () => {
   assert.equal(categories.length, 15);
