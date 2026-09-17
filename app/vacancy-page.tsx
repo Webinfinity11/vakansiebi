@@ -29,7 +29,6 @@ import { applicationBody, emailDraft } from '@/lib/application-contact';
 import {
   canStepBack,
   planListReturn,
-  recordNav,
   vacancyPath,
 } from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
@@ -514,11 +513,7 @@ export default function VacancyPage({
             href={returnTo}
             prefetch={false}
             onClick={(event) => {
-              if (!steppedFromList.current || !canStepBack()) {
-                recordNav('crumb-push');
-                return;
-              }
-              recordNav('crumb-back');
+              if (!steppedFromList.current || !canStepBack()) return;
               event.preventDefault();
               router.back();
             }}

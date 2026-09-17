@@ -4,7 +4,7 @@ import { useEffect, useState, type MouseEvent } from 'react';
 import { Bookmark, Search, Plus } from 'lucide-react';
 import { Brand } from './brand';
 import { ThemeToggle } from './theme-toggle';
-import { enterTab, recordNav } from '@/lib/vacancy-navigation';
+import { enterTab } from '@/lib/vacancy-navigation';
 
 function localAction(
   event: MouseEvent<HTMLAnchorElement>,
@@ -41,18 +41,6 @@ export function PublicHeader({
      history entry is recognised — before any page decides whether its own
      "back" control has a step behind it to take. */
   useEffect(enterTab, []);
-  /* The same trail, continued through the steps a page load does not see. */
-  useEffect(() => {
-    const back = () => recordNav('popstate');
-    const shown = (event: PageTransitionEvent) =>
-      recordNav(event.persisted ? 'restored' : 'shown');
-    window.addEventListener('popstate', back);
-    window.addEventListener('pageshow', shown);
-    return () => {
-      window.removeEventListener('popstate', back);
-      window.removeEventListener('pageshow', shown);
-    };
-  }, []);
   const [storedCount, setStoredCount] = useState(0);
   useEffect(() => {
     if (savedCount !== undefined) return;
