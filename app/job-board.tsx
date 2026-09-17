@@ -239,7 +239,7 @@ const JobCard = memo(function JobCard({
     : undefined;
   // A promoted card leading the list names its own placement; its section has no heading.
   const featured = j.placement?.priority ? j.placement.tier : undefined;
-  const openHref = vacancyPath(j.id, { preview: demo, from: returnPath });
+  const openHref = vacancyPath(j, { preview: demo, from: returnPath });
   return (
     <div
       className="swipe-shell"

@@ -165,7 +165,7 @@ export default async function CompanyPage(props: Props) {
             {result.jobs.map((job) => (
               <ListHopLink
                 key={job.id}
-                href={vacancyPath(job.id, { from: here })}
+                href={vacancyPath(job, { from: here })}
                 from={here}
                 className="similar-card"
               >

@@ -4,7 +4,7 @@ import { cities, cityStem } from '../cities';
 import { traitKeys, traits, type TraitKey } from '../seo-landing';
 import { roleVocabulary } from '../search-language';
 
-export type DatedVacancy = { id: string; lastModified: Date };
+export type DatedVacancy = { id: string; title: string; lastModified: Date };
 
 let held: { at: number; value: Promise<DatedVacancy[]> } | null = null;
 /* The last list that was actually built. A crawler that asks while the database
@@ -19,13 +19,15 @@ export function publicVacancyDates(now = Date.now()) {
   if (held && now - held.at < 300_000) return held.value;
   const plan = searchPlan(new URLSearchParams(), false, { grouped: true });
   const value = db()
-    .query<{ id: string; modified: Date }>(
-      `${plan.cte} SELECT j.id,COALESCE(record.updated_at,j.published_at,j.created_at) AS modified FROM searchable j JOIN jobs record ON record.id=j.id WHERE ${plan.where} ORDER BY ${plan.ordering},j.id LIMIT 45000`,
+    // The title travels with the identifier: the address it builds carries it.
+    .query<{ id: string; title: string | null; modified: Date }>(
+      `${plan.cte} SELECT j.id,j.p_title AS title,COALESCE(record.updated_at,j.published_at,j.created_at) AS modified FROM searchable j JOIN jobs record ON record.id=j.id WHERE ${plan.where} ORDER BY ${plan.ordering},j.id LIMIT 45000`,
       plan.args,
     )
     .then((result) =>
       result.rows.map((r) => ({
         id: r.id,
+        title: r.title || '',
         lastModified: new Date(r.modified),
       })),
     );

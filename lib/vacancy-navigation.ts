@@ -2,8 +2,28 @@ import { clearBoard } from './board-return-cache';
 import { searchParams, readSearch } from './search-state';
 import type { SearchFilters } from './personal-space';
 const uuid = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i;
+/* A vacancy's address carries its own name. `/vacancies/<uuid>` said nothing:
+   not in a search result, not in a shared link, not to a crawler weighing what
+   the page is about. The title leads and the identifier still closes the
+   address, so nothing has to be looked up twice and every old link still
+   resolves — the page redirects it to the spelling with the name in it. */
+export function vacancySlug(title: string) {
+  return title
+    .normalize('NFKC')
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+    .slice(0, 7)
+    .join('-')
+    .slice(0, 70)
+    .replace(/-+$/, '');
+}
+export function vacancySegment(job: { id: string; title?: string }) {
+  const slug = job.title ? vacancySlug(job.title) : '';
+  return slug ? `${slug}-${job.id}` : job.id;
+}
 export function vacancyPath(
-  id: string,
+  job: { id: string; title?: string },
   options: { preview?: boolean; from?: string } = {},
 ) {
   const params = new URLSearchParams();
@@ -11,8 +31,13 @@ export function vacancyPath(
   if (options.from && options.from !== '/')
     params.set('from', safeReturnPath(options.from));
   return (
-    `/vacancies/${encodeURIComponent(id)}` + (params.size ? '?' + params : '')
+    `/vacancies/${encodeURIComponent(vacancySegment(job))}` +
+    (params.size ? '?' + params : '')
   );
+}
+/** The identifier an address ends with, whatever name precedes it. */
+export function vacancyIdFrom(segment: string) {
+  return uuid.exec(segment.slice(-36))?.[0]?.toLowerCase() ?? null;
 }
 export function searchReturnPath(
   filters: SearchFilters,

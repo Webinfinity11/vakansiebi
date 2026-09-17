@@ -94,7 +94,7 @@ export function SimilarVacancies({
           {current.jobs.map(({ job, reasons }) => (
             <Link
               key={job.id}
-              href={vacancyPath(job.id, { from: returnTo })}
+              href={vacancyPath(job, { from: returnTo })}
               prefetch={false}
               className="similar-card"
             >

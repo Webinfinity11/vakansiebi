@@ -100,12 +100,16 @@ const job: PublicJob = {
 void test('structured vacancies use the real domain and only supported public facts', () => {
   const data = jobPosting(job, '2026-09-14')!;
   assert.equal(data['@type'], 'JobPosting');
-  assert.equal(data.url, 'https://jobx.ge/vacancies/a');
+  // The published address carries the vacancy's own name, then its identifier.
+  assert.equal(
+    decodeURIComponent(data.url),
+    'https://jobx.ge/vacancies/დეველოპერი-a',
+  );
   assert.equal(data.validThrough, '2026-09-30T23:59:59+04:00');
   assert.equal('baseSalary' in data, false);
   assert.equal(
-    vacancyUrl({ ...job, canonicalId: 'b' }),
-    'https://jobx.ge/vacancies/b',
+    decodeURIComponent(vacancyUrl({ ...job, canonicalId: 'b' })),
+    'https://jobx.ge/vacancies/დეველოპერი-b',
   );
   for (const patch of [
     { company: 'კერძო განცხადება' },

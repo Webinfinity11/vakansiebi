@@ -30,7 +30,7 @@ export function RecentVacancies({
           <ListHopLink
             className="recent-card"
             key={item.id}
-            href={vacancyPath(item.id, { from: returnPath })}
+            href={vacancyPath(item, { from: returnPath })}
             from={returnPath}
           >
             <strong title={item.title}>{vacancyCardTitle(item.title)}</strong>

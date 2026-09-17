@@ -3,6 +3,7 @@ import { privateListingLabel } from './types';
 import { cities, cityStem } from './cities';
 import { safeExternalUrl } from './vacancy-media';
 import { genericCompanyKeys, logoCompanyKey } from './company-logo-identity';
+import { vacancySegment } from './vacancy-navigation';
 
 export const siteUrl = 'https://jobx.ge';
 /* The picture a messenger shows for any page of the site, built by
@@ -15,8 +16,14 @@ export const shareImage = {
   height: 630,
   alt: 'JOBX',
 } as const;
-export const vacancyUrl = (job: Pick<PublicJob, 'id' | 'canonicalId'>) =>
-  `${siteUrl}/vacancies/${job.canonicalId || job.id}`;
+export const vacancyUrl = (
+  job: Pick<PublicJob, 'id' | 'canonicalId'> & { title?: string },
+) =>
+  siteUrl +
+  '/vacancies/' +
+  encodeURIComponent(
+    vacancySegment({ id: job.canonicalId || job.id, title: job.title }),
+  );
 export const jsonLd = (value: unknown) =>
   JSON.stringify(value).replace(/</g, '\\u003c');
 

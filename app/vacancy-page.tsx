@@ -369,7 +369,7 @@ export default function VacancyPage({
   }
   async function share() {
     const outcome = await shareLink(
-      window.location.origin + vacancyPath(job.id),
+      window.location.origin + vacancyPath(job),
       `${job.title} — ${job.company}`,
       [job.city, compactSalary(job.salary, job.salaryPeriod)]
         .filter(Boolean)

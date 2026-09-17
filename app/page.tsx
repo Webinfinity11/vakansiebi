@@ -101,10 +101,15 @@ export default async function Home({
     for (const [key, value] of Object.entries(query))
       if (key !== 'job' && typeof value === 'string') from.set(key, value);
     redirect(
-      vacancyPath(query.job, {
-        preview: query.preview === '1',
-        from: safeReturnPath('/?' + from),
-      }),
+      /* A legacy `?job=` link carries no title; the vacancy's own page sends
+         the reader on to the address that has its name in it. */
+      vacancyPath(
+        { id: query.job },
+        {
+          preview: query.preview === '1',
+          from: safeReturnPath('/?' + from),
+        },
+      ),
     );
   }
   const params = new URLSearchParams();

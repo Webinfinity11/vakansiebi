@@ -11,16 +11,22 @@ import { notFound } from 'next/navigation';
 import { isAdmin } from '@/lib/server/auth';
 import { getVacancyPage } from '@/lib/server/vacancy-page';
 import { employerPages } from '@/lib/server/employers';
-import { safeReturnPath } from '@/lib/vacancy-navigation';
+import {
+  safeReturnPath,
+  vacancyIdFrom,
+  vacancySegment,
+} from '@/lib/vacancy-navigation';
 import VacancyPage from '../../vacancy-page';
 type Props = {
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 async function load({ params, searchParams }: Props) {
-  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const [{ id: segment }, query] = await Promise.all([params, searchParams]);
   const preview = query.preview === '1';
   if (preview && !(await isAdmin())) notFound();
+  const id = vacancyIdFrom(decodeURIComponent(segment));
+  if (!id) notFound();
   const job = await getVacancyPage(id, preview);
   if (!job) notFound();
   // Resolve the cached directory so the employer link is present on a first visit.
@@ -73,7 +79,10 @@ export default async function Page(props: Props) {
         ...(companyPath && job.company
           ? [{ name: job.company, path: companyPath }]
           : []),
-        { name: job.title, path: `/vacancies/${job.canonicalId || job.id}` },
+        {
+          name: job.title,
+          path: `/vacancies/${encodeURIComponent(vacancySegment({ id: job.canonicalId || job.id, title: job.title }))}`,
+        },
       ]);
   return (
     <>

@@ -9,19 +9,30 @@ import {
   planListReturn,
   enterTab,
   canStepBack,
+  vacancyIdFrom,
 } from '../lib/vacancy-navigation';
 import { readSearch } from '../lib/search-state';
 import { getVacancyPage } from '../lib/server/vacancy-page';
 void test('vacancy links keep search context separate from their stable share URL', () => {
   const id = 'a7f16c4c-5d47-4a08-8fa5-9e7b5a46664c';
-  assert.equal(vacancyPath(id), '/vacancies/' + id);
+  assert.equal(vacancyPath({ id }), '/vacancies/' + id);
+  // The name leads and the identifier closes the address.
+  assert.equal(
+    decodeURIComponent(vacancyPath({ id, title: 'მოლარე-კონსულტანტი' })),
+    `/vacancies/მოლარე-კონსულტანტი-${id}`,
+  );
+  assert.equal(vacancyIdFrom(`მოლარე-კონსულტანტი-${id}`), id);
+  assert.equal(vacancyIdFrom(id.toUpperCase()), id);
+  assert.equal(vacancyIdFrom('მოლარე'), null);
+  // A title of punctuation alone leaves the identifier to name the page.
+  assert.equal(vacancyPath({ id, title: '!!! ???' }), '/vacancies/' + id);
   const from = searchReturnPath(
     readSearch(new URLSearchParams('q=developer&salaryPeriod=day')),
     3,
     true,
   );
   const url = new URL(
-    vacancyPath(id, { from, preview: true }),
+    vacancyPath({ id }, { from, preview: true }),
     'https://example.com',
   );
   assert.equal(url.searchParams.get('from'), from);
