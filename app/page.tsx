@@ -1,5 +1,10 @@
 import type { Metadata } from 'next';
 import { shareImage, siteUrl } from '@/lib/seo';
+import {
+  landingDescription,
+  landingFor,
+  landingHeading,
+} from '@/lib/seo-landing';
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import JobBoard from './job-board';
@@ -46,18 +51,38 @@ export async function generateMetadata({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<Metadata> {
   const query = await searchParams;
-  const filtered = Object.keys(query).some(
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    const first = Array.isArray(value) ? value[0] : value;
+    if (first !== undefined) params.set(key, first);
+  }
+  const filtered = [...params.keys()].some(
     (key) => !key.startsWith('utm_') && !['gclid', 'fbclid'].includes(key),
   );
+  /* A category, a city, remote work and their combinations are searches people
+     actually make, so those lists are worth being found by and describe
+     themselves. Every other combination — free text, a salary floor, a sort
+     order, page nine — is an endless space that says nothing new, and stays
+     out of the index while still passing its links on. */
+  const landing = filtered ? landingFor(params) : null;
+  const heading = landing && landingHeading(landing);
+  const title = heading
+    ? `${heading} | JOBX`
+    : 'JOBX — ვაკანსიები ერთ სივრცეში';
+  const description = landing
+    ? landingDescription(landing)
+    : 'მოძებნე ვაკანსიები საქართველოში და შეადარე პირობები.';
   return {
-    alternates: { canonical: siteUrl + '/' },
-    robots: filtered
-      ? { index: false, follow: true }
-      : { index: true, follow: true },
+    ...(heading ? { title, description } : {}),
+    alternates: { canonical: siteUrl + (landing ? landing.path : '/') },
+    robots:
+      filtered && !landing
+        ? { index: false, follow: true }
+        : { index: true, follow: true },
     openGraph: {
-      title: 'JOBX — ვაკანსიები ერთ სივრცეში',
-      description: 'მოძებნე ვაკანსიები საქართველოში და შეადარე პირობები.',
-      url: siteUrl,
+      title,
+      description,
+      url: siteUrl + (landing ? landing.path : ''),
       siteName: 'JOBX',
       locale: 'ka_GE',
       type: 'website',

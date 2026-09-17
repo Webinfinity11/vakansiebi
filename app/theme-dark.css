@@ -2097,6 +2097,19 @@
 :root[data-theme='dark'] .company-page .similar-card:focus-visible {
   outline: 2px solid #6f93ff;
 }
+:root[data-theme='dark'] .search-directory h2 {
+  color: #969ca6;
+}
+:root[data-theme='dark'] .search-directory-links a {
+  border: 1px solid #273040;
+  background: #131b2c;
+  color: #c4ccdd;
+}
+:root[data-theme='dark'] .search-directory-links a:hover {
+  border-color: #bfcce3;
+  background: #212b40;
+  color: #aebcd5;
+}
 
 /* ── from app/phone.css ── */
 :root[data-theme='dark'] .board-shell .job-new {

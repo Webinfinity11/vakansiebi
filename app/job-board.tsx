@@ -6,6 +6,7 @@ import { useSwipe } from './use-swipe';
 import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
 import { rememberRecentSearch } from '@/lib/recent-searches';
+import { landingHeading, landingLinks, landingOf } from '@/lib/seo-landing';
 import { nearestCity } from '@/lib/nearest-city';
 import type { Application } from '@/lib/personal-space';
 import {
@@ -494,6 +495,10 @@ export default function JobBoard({
     sort,
     ...advanced,
   };
+  /* A list of one category, one city or remote work is a page in its own right —
+     it is what a reader searched for on Google — so it says its own name where
+     the site's tagline otherwise stands. */
+  const landing = landingOf(currentSearch);
   const [searchMeta, setSearchMeta] = useState<SearchMeta | null>(
     seed?.search || null,
   );
@@ -1495,7 +1500,13 @@ export default function JobBoard({
           <div className="hero-inner">
             <div className="hero-copy">
               <h1 id="search-heading">
-                იპოვე შენი შემდეგი <em>სამსახური.</em>
+                {landing ? (
+                  landingHeading(landing)
+                ) : (
+                  <>
+                    იპოვე შენი შემდეგი <em>სამსახური.</em>
+                  </>
+                )}
               </h1>
             </div>
           </div>
@@ -2074,6 +2085,18 @@ export default function JobBoard({
           </div>
         </div>
       </main>
+      {/* Reader-facing, and the only way a crawler reaches these lists by
+          following links rather than by reading the sitemap. */}
+      <nav className="search-directory" aria-label="პოპულარული ძიებები">
+        <h2>პოპულარული ძიებები</h2>
+        <div className="search-directory-links">
+          {landingLinks().map(({ path, label }) => (
+            <Link key={path} href={path} prefetch={false}>
+              {label}
+            </Link>
+          ))}
+        </div>
+      </nav>
       <footer className="site-footer jobx-footer">
         <div className="footer-main">
           <Brand />

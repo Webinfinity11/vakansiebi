@@ -5,6 +5,7 @@ import { GET as legacyIndexGET } from '../app/sitemap.xml/route';
 import {
   sitemapCacheControl,
   sitemapIndexResponse,
+  sitemapPaths,
   sitemapUnavailable,
   urlsetResponse,
 } from '../lib/sitemap';
@@ -18,12 +19,8 @@ void test('both discovery URLs remain available without a configured database', 
       const response = get();
       assert.equal(response.status, 200);
       const body = await response.text();
-      assert.equal(body.match(/<sitemap>/g)?.length, 3);
-      for (const path of [
-        '/sitemap-pages.xml',
-        '/vacancies/sitemap.xml',
-        '/companies/sitemap.xml',
-      ])
+      assert.equal(body.match(/<sitemap>/g)?.length, sitemapPaths.length);
+      for (const path of sitemapPaths)
         assert.ok(body.includes(`<loc>https://jobx.ge${path}</loc>`));
       bodies.push(body);
     }
@@ -71,7 +68,7 @@ void test('the index dates a section only when its date is known', async () => {
   const body = await sitemapIndexResponse({
     '/vacancies/sitemap.xml': new Date('2026-09-15T00:00:00.000Z'),
   }).text();
-  assert.equal(body.match(/<sitemap>/g)?.length, 3);
+  assert.equal(body.match(/<sitemap>/g)?.length, sitemapPaths.length);
   assert.equal(body.match(/<lastmod>/g)?.length, 1);
   assert.ok(
     body.includes(

@@ -1039,3 +1039,14 @@
     overflow-wrap: anywhere;
   }
 }
+
+@media (max-width: 760px) {
+  .search-directory {
+    padding: 20px 14px 4px;
+  }
+  .search-directory-links a {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
+}

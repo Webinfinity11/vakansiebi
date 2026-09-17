@@ -4235,3 +4235,35 @@
     padding-right: 44px;
   }
 }
+
+/* ---------- The directory of lists worth being found by ---------- */
+.search-directory {
+  max-width: 1224px;
+  margin: 0 auto;
+  padding: 26px 28px 8px;
+}
+.search-directory h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6a7588;
+}
+.search-directory-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.search-directory-links a {
+  padding: 7px 13px;
+  border: 1px solid #e1e6ef;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  color: #26334d;
+  text-decoration: none;
+}
+.search-directory-links a:hover {
+  border-color: #c7d3e8;
+  background: #f4f7fd;
+  color: #18243b;
+}
