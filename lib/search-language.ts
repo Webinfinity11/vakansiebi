@@ -73,14 +73,22 @@ const roles = [
 export const roleVocabulary = roles.map((group) => {
   const stem = group[0];
   const written = group[1];
-  return {
-    stem,
-    label:
-      written && written.startsWith(stem) && /^[ა-ჰ]/.test(written)
-        ? written
-        : stem,
-  };
+  const label =
+    written && written.startsWith(stem) && /^[ა-ჰ]/.test(written)
+      ? written
+      : stem;
+  return { stem, label, genitive: genitiveOf(label) };
 });
+/* "მოლარის ვაკანსიები" — the form a heading needs. Georgian is regular here for
+   occupation names: the nominative -ი or -e gives way to -ის and -ა takes -ს.
+   The -ებელი suffix is the one that also drops its own vowel: მასწავლებელი →
+   მასწავლებლის, never მასწავლებელის. */
+function genitiveOf(word: string) {
+  if (word.endsWith('ებელი')) return word.slice(0, -5) + 'ებლის';
+  if (word.endsWith('ი') || word.endsWith('ე')) return word.slice(0, -1) + 'ის';
+  if (word.endsWith('ა')) return word + 'ს';
+  return word + 'ის';
+}
 // Longest suffix first; a case ending is removed once and only from a word that
 // keeps a stem of at least three letters.
 const georgianSuffixes = ['ები', 'ებს', 'ის', 'ში', 'ით', 'ს', 'ი'];

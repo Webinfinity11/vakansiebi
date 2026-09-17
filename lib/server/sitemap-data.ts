@@ -2,6 +2,7 @@ import { db } from './db';
 import { searchPlan } from './search-plan';
 import { cities, cityStem } from '../cities';
 import { traitKeys, traits, type TraitKey } from '../seo-landing';
+import { roleVocabulary } from '../search-language';
 
 export type DatedVacancy = { id: string; lastModified: Date };
 
@@ -65,6 +66,7 @@ export type LandingCount = {
   category: string | null;
   city: string | null;
   trait: TraitKey | null;
+  role?: string | null;
   count: number;
 };
 async function countBy(trait: TraitKey | null): Promise<LandingCount[]> {
@@ -96,14 +98,65 @@ async function countBy(trait: TraitKey | null): Promise<LandingCount[]> {
        ) c ON true
      )
      SELECT category, city, count(*)::int AS count FROM placed
-     GROUP BY GROUPING SETS ${sets}`,
+     GROUP BY GROUPING SETS ${sets}
+     /* A grouping set that names a dimension must not answer NULL for it: the
+        vacancies whose city is not one of the thirteen would otherwise be
+        counted as a second, smaller "this category everywhere". */
+     HAVING (GROUPING(category) = 1 OR category IS NOT NULL)
+        AND (GROUPING(city) = 1 OR city IS NOT NULL)`,
     args,
   );
   return rows.map((row) => ({ ...row, trait }));
 }
-export async function landingCounts(minimum = 10) {
-  const passes = await Promise.all(
-    [null, ...traitKeys].map((trait) => countBy(trait)),
+/* The professions, counted the way the pages are built: a word from the
+   reviewed vocabulary against the titles the catalogue holds, alone and by
+   city. One query for all of them — 42 words over one materialised list. */
+async function countRoles(): Promise<LandingCount[]> {
+  const plan = searchPlan(new URLSearchParams(), false, { grouped: true });
+  const args = [...plan.args];
+  const roleValues = roleVocabulary
+    .map(({ label, stem }) => {
+      args.push(label, '%' + stem.replace(/[\\%_]/g, (c) => '\\' + c) + '%');
+      return `($${args.length - 1},$${args.length})`;
+    })
+    .join(',');
+  args.push([...cities], cities.map(cityStem));
+  const names = `$${args.length - 1}::text[]`;
+  const stems = `$${args.length}::text[]`;
+  const { rows } = await db().query<{
+    role: string;
+    city: string | null;
+    count: number;
+  }>(
+    `${plan.cte}, visible AS MATERIALIZED (
+       SELECT j.p_title AS title, j.p_city AS city FROM searchable j WHERE ${plan.where}
+     ),
+     placed AS (
+       SELECT r.label AS role, c.name AS city
+       FROM visible v
+       JOIN (VALUES ${roleValues}) AS r(label,pattern) ON v.title ILIKE r.pattern ESCAPE '\\'
+       LEFT JOIN LATERAL (
+         SELECT t.name FROM unnest(${names}, ${stems}) AS t(name, stem)
+         WHERE lower(v.city) LIKE '%' || t.stem || '%' LIMIT 1
+       ) c ON true
+     )
+     SELECT role, city, count(*)::int AS count FROM placed
+     GROUP BY GROUPING SETS ((role), (role, city))
+     HAVING GROUPING(city) = 1 OR city IS NOT NULL`,
+    args,
   );
+  return rows.map((row) => ({
+    category: null,
+    city: row.city,
+    trait: null,
+    role: row.role,
+    count: row.count,
+  }));
+}
+export async function landingCounts(minimum = 10) {
+  const passes = await Promise.all([
+    ...[null, ...traitKeys].map((trait) => countBy(trait)),
+    countRoles(),
+  ]);
   return passes.flat().filter((row) => row.count >= minimum);
 }

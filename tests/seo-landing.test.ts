@@ -19,6 +19,8 @@ void test('a category, a city and remote work are pages; everything else is a fi
     'remote=true',
     'category=გაყიდვები&city=თბილისი',
     'category=ფინანსები&remote=true',
+    'q=მოლარე',
+    'q=მძღოლი&city=ბათუმი',
     'salaryPeriod=day',
     'entryLevel=true',
     'paid=true',
@@ -29,7 +31,8 @@ void test('a category, a city and remote work are pages; everything else is a fi
     assert.ok(landingFor(new URLSearchParams(address)), address);
   for (const address of [
     '',
-    'q=მოლარე',
+    // A word the vocabulary does not know stays what it is: a search.
+    'q=ღამის ცვლა',
     'page=2',
     'sort=salary',
     'category=გაყიდვები&q=მოლარე',
@@ -47,6 +50,10 @@ void test('a category, a city and remote work are pages; everything else is a fi
     'category=გაყიდვები&city=თბილისი&remote=true',
     // Two conditions at once name a page nobody searches for.
     'remote=true&entryLevel=true',
+    // A profession is a page; a phrase the vocabulary does not know is a search.
+    'q=მოლარე ღამის ცვლაში',
+    'q=მოლარე&category=გაყიდვები',
+    'q=მოლარე&remote=true',
     'employment=all',
     'salaryPeriod=month',
   ])
@@ -186,5 +193,23 @@ void test('every condition says in its own words what the reader has landed on',
   assert.equal(
     landingHeading({ category: 'სილამაზე', city: null, trait: 'part-time' }),
     'სილამაზის სფეროს ვაკანსიები ნახევარ განაკვეთზე',
+  );
+});
+
+void test('a profession names its page the way a job seeker would search for it', () => {
+  const heading = (address: string) =>
+    landingHeading(landingFor(new URLSearchParams(address))!);
+  assert.equal(heading('q=მოლარე'), 'მოლარის ვაკანსიები საქართველოში');
+  assert.equal(heading('q=მძღოლი&city=ბათუმი'), 'მძღოლის ვაკანსიები ბათუმში');
+  // -ებელი drops its own vowel: მასწავლებელი → მასწავლებლის, not მასწავლებელის.
+  assert.equal(
+    heading('q=მასწავლებელი'),
+    'მასწავლებლის ვაკანსიები საქართველოში',
+  );
+  assert.equal(heading('q=ბარისტა'), 'ბარისტას ვაკანსიები საქართველოში');
+  // The address keeps the word the reader would have typed.
+  assert.equal(
+    decodeURIComponent(landingFor(new URLSearchParams('q=მოლარე'))!.path),
+    '/?q=მოლარე',
   );
 });

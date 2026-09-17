@@ -1,4 +1,5 @@
 import { cities, cityStem } from './cities';
+import { roleVocabulary } from './search-language';
 import { categories } from './types';
 import type { SearchFilters } from './personal-space';
 
@@ -60,9 +61,20 @@ export type Landing = {
   category: string | null;
   city: string | null;
   trait: TraitKey | null;
+  /* A profession, as a reader names it. "მოლარის ვაკანსიები თბილისში" is what
+     people type into Google — far more often than the name of a whole field —
+     and it is the one search the board answered only through free text, which
+     stays out of the index for good reason. A word from the reviewed vocabulary
+     is not free text: it is a term with a page behind it. */
+  role: string | null;
   path: string;
 };
-type Choice = Omit<Landing, 'path'>;
+/* `role` is the newest of the four and the rarest, so it may be left out. */
+type Choice = Omit<Landing, 'path' | 'role'> & { role?: string | null };
+const roleFor = (value: string) =>
+  roleVocabulary.find(
+    (role) => role.label === value.normalize('NFKC').trim().toLowerCase(),
+  ) ?? null;
 
 /* Category modifiers, written out rather than derived: headings need genitive
    phrases for some fields and adjectives for others. */
@@ -90,6 +102,7 @@ export function landingPath(landing: Choice) {
   // One spelling per page: the order is fixed, so the canonical never varies.
   if (landing.category) params.set('category', landing.category);
   if (landing.city) params.set('city', landing.city);
+  if (landing.role) params.set('q', landing.role);
   if (landing.trait) {
     const [key, value] = traits[landing.trait].param;
     params.set(key, value);
@@ -105,7 +118,7 @@ export function landingFor(params: URLSearchParams): Landing | null {
   const traitNames = new Set<string>(
     traitKeys.map((key) => traits[key].param[0]),
   );
-  const allowed = new Set(['category', 'city', ...traitNames]);
+  const allowed = new Set(['category', 'city', 'q', ...traitNames]);
   let trait: TraitKey | null = null;
   for (const [key, value] of params) {
     const ignorable =
@@ -126,6 +139,10 @@ export function landingFor(params: URLSearchParams): Landing | null {
   }
   const category = params.get('category');
   const city = params.get('city');
+  const typed = params.get('q');
+  // Only a word the vocabulary knows; anything else is a search, not a page.
+  const role = typed === null ? null : (roleFor(typed)?.label ?? null);
+  if (typed !== null && !role) return null;
   if (
     category !== null &&
     !(categories as readonly string[]).includes(category)
@@ -138,13 +155,21 @@ export function landingFor(params: URLSearchParams): Landing | null {
   // A condition narrows one dimension, never both: the pages left over would be
   // near-empty and say the same thing as the ones above them.
   if (trait && category && city) return null;
-  if (!category && !city && !trait) return null;
-  const landing = { category, city, trait };
+  /* A profession already names the work; a field on top of it is a narrower way
+     of saying the same thing, and a condition on top of that empties the page. */
+  if (role && (category || trait)) return null;
+  if (!category && !city && !trait && !role) return null;
+  const landing = { category, city, trait, role };
   return { ...landing, path: landingPath(landing) };
 }
 
 /** What such a page calls itself, on the page and in a result. */
 export function landingHeading(landing: Choice) {
+  if (landing.role) {
+    const role = roleFor(landing.role);
+    const where = landing.city ? ' ' + cityIn(landing.city) : ' საქართველოში';
+    return `${role?.genitive ?? landing.role} ვაკანსიები${where}`;
+  }
   const trait = landing.trait ? traits[landing.trait] : null;
   const before = trait && 'before' in trait ? trait.before + ' ' : '';
   const after = trait && 'after' in trait ? ' ' + trait.after : '';
@@ -161,6 +186,11 @@ export function landingHeading(landing: Choice) {
    repeating its title: a list with nothing to read is the thin page Google is
    right to ignore. */
 export function landingCopy(landing: Choice) {
+  if (landing.role) {
+    const role = roleFor(landing.role);
+    const where = landing.city ? cityIn(landing.city) : 'საქართველოს მასშტაბით';
+    return `${role?.genitive ?? landing.role} აქტიური ვაკანსიები ${where}. სია ყოველდღიურად ახლდება დამსაქმებლებისა და დასაქმების საიტებზე გამოქვეყნებული განცხადებებით — შეადარე ანაზღაურება, გრაფიკი და პირობები.`;
+  }
   if (landing.trait) return traits[landing.trait].copy;
   if (landing.category && landing.city)
     return `${genitive[landing.category]} ვაკანსიები ${cityIn(landing.city)}. სია ყოველდღიურად ახლდება დამსაქმებლებისა და დასაქმების საიტებზე გამოქვეყნებული აქტიური განცხადებებით.`;
@@ -175,6 +205,11 @@ export function landingDescription(landing: Choice) {
 /** Whether the list on screen is exactly this landing page, and may name itself. */
 export function landingOf(filters: SearchFilters): Landing | null {
   const params = new URLSearchParams();
+  if (filters.query) {
+    const role = roleFor(filters.query);
+    if (!role) return null;
+    params.set('q', role.label);
+  }
   if (filters.category !== 'ყველა') params.set('category', filters.category);
   if (filters.city !== 'ყველა') params.set('city', filters.city);
   if (filters.remote) params.set('remote', 'true');
@@ -184,7 +219,6 @@ export function landingOf(filters: SearchFilters): Landing | null {
     params.set('employment', filters.employment);
   if (filters.salaryPeriod === 'day') params.set('salaryPeriod', 'day');
   if (
-    filters.query ||
     filters.source !== 'ყველა' ||
     filters.salaryFrom !== null ||
     filters.salaryTo !== null ||
@@ -210,13 +244,45 @@ export const linkedCities = [
   'ზუგდიდი',
   'გორი',
 ] as const;
+/* The professions readers name most often, by our own search log and by how
+   much of the catalogue answers them. */
+export const linkedRoles = [
+  'მძღოლი',
+  'მოლარე',
+  'ადმინისტრატორი',
+  'კონსულტანტი',
+  'ოპერატორი',
+  'მენეჯერი',
+  'კურიერი',
+  'დიზაინერი',
+  'ბუღალტერი',
+  'მზარეული',
+  'მიმტანი',
+  'დამლაგებელი',
+] as const;
 export function landingLinks() {
   const links: Choice[] = [
     ...categories
       .filter((category) => category !== 'სხვა')
-      .map((category) => ({ category, city: null, trait: null })),
-    ...linkedCities.map((city) => ({ category: null, city, trait: null })),
-    ...traitKeys.map((trait) => ({ category: null, city: null, trait })),
+      .map((category) => ({ category, city: null, trait: null, role: null })),
+    ...linkedCities.map((city) => ({
+      category: null,
+      city,
+      trait: null,
+      role: null,
+    })),
+    ...traitKeys.map((trait) => ({
+      category: null,
+      city: null,
+      trait,
+      role: null,
+    })),
+    ...linkedRoles.map((role) => ({
+      category: null,
+      city: null,
+      trait: null,
+      role,
+    })),
   ];
   return links.map((landing) => ({
     path: landingPath(landing),
