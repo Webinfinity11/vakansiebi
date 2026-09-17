@@ -302,14 +302,28 @@ export default function VacancyPage({
   const personal = usePersonalSpace();
   const activity = useVacancyActivity();
   const { markSeen } = activity;
+  /* Long enough that a tap taken back is not a visit, short enough that anyone
+     who meant to read this has already been counted. */
   useEffect(() => {
     if (preview) return;
     const timer = setTimeout(
       () => markSeen(job.id, { title: job.title, company: job.company }),
-      0,
+      2500,
     );
     return () => clearTimeout(timer);
   }, [job.id, job.title, job.company, preview, markSeen]);
+  /* "ნანახია" answers a question about the visits before this one. Read once,
+     when the page opens, so this visit's own mark does not turn the badge on
+     while the reader is still on the page. */
+  const [seenBefore, setSeenBefore] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!activity.ready) return;
+    const timer = setTimeout(
+      () => setSeenBefore((known) => known ?? activity.seen.includes(job.id)),
+      0,
+    );
+    return () => clearTimeout(timer);
+  }, [activity.ready, activity.seen, job.id]);
   /* One view per vacancy per page load; the ref keeps a re-run of the effect from counting twice. */
   const viewed = useRef('');
   useEffect(() => {
@@ -490,7 +504,7 @@ export default function VacancyPage({
       job={job}
       space={personal}
       disabled={preview}
-      seen={activity.seen.includes(job.id)}
+      seen={seenBefore === true}
     />
   );
   return (

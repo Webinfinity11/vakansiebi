@@ -59,6 +59,7 @@ import {
   readSearch,
   readSearchPage,
   searchParams,
+  listPageSize,
 } from '@/lib/search-state';
 import { track } from '@/lib/analytics-client';
 import {
@@ -1075,7 +1076,6 @@ export default function JobBoard({
     return () => clearTimeout(timer);
   }, [storageReady, activity.ready, filterKey, params, seed]);
   const returnPath = searchReturnPath(currentSearch, page, savedOnly, demo);
-  const markSeen = activity.markSeen;
   const hideVacancy = activity.hide;
   const openContext = useRef({
     loadedResult,
@@ -1105,30 +1105,31 @@ export default function JobBoard({
     searchMeta,
     companyLinksPending,
   ]);
-  const openJob = useCallback(
-    (job: Job) => {
-      const context = openContext.current;
-      rememberBoard({
-        key: context.loadedResult.key,
-        page: context.loadedResult.page,
-        through: context.loadedState.through,
-        path: context.loadedResult.path,
-        jobs: context.jobs,
-        total: context.total,
-        pages: context.pages,
-        search: context.searchMeta,
-        companyLinksPending: context.companyLinksPending,
-      });
-      rememberSearch(
-        context.loadedResult.path,
-        job.id,
-        context.loadedResult.page,
-        context.loadedState.through,
-      );
-      markSeen(job.id, { title: job.title, company: job.company });
-    },
-    [markSeen],
-  );
+  const openJob = useCallback((job: Job) => {
+    const context = openContext.current;
+    rememberBoard({
+      key: context.loadedResult.key,
+      page: context.loadedResult.page,
+      through: context.loadedState.through,
+      path: context.loadedResult.path,
+      jobs: context.jobs,
+      total: context.total,
+      pages: context.pages,
+      search: context.searchMeta,
+      companyLinksPending: context.companyLinksPending,
+    });
+    rememberSearch(
+      context.loadedResult.path,
+      job.id,
+      context.loadedResult.page,
+      context.loadedState.through,
+    );
+    /* Opening a vacancy is not the same as having read it. Marking it here
+         stamped "ნანახია" onto the card under the reader's own finger, before
+         the vacancy had even appeared; the vacancy's own page marks it once the
+         reader has stayed a moment, so the badge is waiting for them when they
+         come back and never flickers on the way out. */
+  }, []);
   const hideJob = useCallback(
     (job: Job) => {
       setFeedback(
@@ -1514,11 +1515,6 @@ export default function JobBoard({
                   </>
                 )}
               </h1>
-              {/* A list with nothing to read is a thin page; this says, in the
-                  site's own words, what the reader has landed on. */}
-              {landing && (
-                <p className="hero-landing-copy">{landingCopy(landing)}</p>
-              )}
             </div>
           </div>
           <div className="hero-search-wrap">
@@ -2067,7 +2063,7 @@ export default function JobBoard({
                         ? 'ხელახლა ცდა'
                         : loadedThrough - page >= 49
                           ? 'შემდეგი ვაკანსიების ნახვა'
-                          : `მეტის ჩვენება · კიდევ ${Math.min(20, Math.max(0, total - (page - 1) * 20 - jobs.length))}`}
+                          : `მეტის ჩვენება · კიდევ ${Math.min(listPageSize, Math.max(0, total - (page - 1) * listPageSize - jobs.length))}`}
                   </button>
                   {appendError && (
                     <p className="load-more-error" role="alert">
@@ -2079,9 +2075,12 @@ export default function JobBoard({
               {!error && !resultsPending && total > 0 && (
                 <div className="results-progress">
                   <output>
-                    ნაჩვენებია {(page - 1) * 20 + 1}–
-                    {Math.min((page - 1) * 20 + visibleJobs.length, total)} /{' '}
-                    {total} ვაკანსია
+                    ნაჩვენებია {(page - 1) * listPageSize + 1}–
+                    {Math.min(
+                      (page - 1) * listPageSize + visibleJobs.length,
+                      total,
+                    )}{' '}
+                    / {total} ვაკანსია
                   </output>
                   {page > 1 && (
                     <button
@@ -2104,6 +2103,10 @@ export default function JobBoard({
       {/* Reader-facing, and the only way a crawler reaches these lists by
           following links rather than by reading the sitemap. */}
       <nav className="search-directory" aria-label="მსგავსი ძიებები">
+        {/* Below the vacancies, not above them: a list with nothing to read is
+            a thin page, but the reader came for the list and the sentence that
+            describes it has no business standing between them. */}
+        {landing && <p className="landing-copy">{landingCopy(landing)}</p>}
         {landing && (
           <div className="search-directory-related">
             <h2>მსგავსი ძიებები</h2>

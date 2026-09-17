@@ -1437,11 +1437,11 @@
   }
 }
 
-/* The landing page's own sentence, under its heading. */
-.hero-landing-copy {
-  max-width: 62ch;
-  margin: 10px 0 0;
-  font-size: 15px;
-  line-height: 1.65;
-  color: #dbe6ff;
+/* The landing page's own sentence, under the list it describes. */
+.landing-copy {
+  max-width: 76ch;
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #6a7588;
 }

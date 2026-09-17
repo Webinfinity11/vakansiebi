@@ -6,7 +6,7 @@ import { employerlessSources, privateListingLabel } from '../types';
 import { z } from 'zod';
 import type { QueryResultRow } from 'pg';
 import { db, transaction } from './db';
-import { readSearch } from '../search-state';
+import { readSearch, listPageSize } from '../search-state';
 import { ApiError } from './auth';
 import { audit } from '../../worker/importer';
 import { reconcileJob } from '../../worker/automation';
@@ -93,7 +93,7 @@ async function loadPublicJobs(
     1,
     Math.min(10000, Math.floor(Number(params.get('page'))) || 1),
   );
-  const limit = 20;
+  const limit = listPageSize;
   // The public listing shows one row per identical posting; a lookup by id
   // (detail page, saved list) keeps every row reachable, sources folded either way.
   const { where, args, ordering, metrics, filters } = searchPlan(

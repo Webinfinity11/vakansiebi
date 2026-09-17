@@ -79,19 +79,9 @@
   .board-shell .hero-copy > p {
     display: none;
   }
-  /* A landing page's own sentence is not the tagline: it says what this list
-     holds, to a reader who arrived on it from a search engine and has nothing
-     else to tell them they are in the right place. It stays, held to two lines
-     so the search field keeps its position. */
-  .board-shell .discovery-hero .hero-copy > p.hero-landing-copy,
-  .board-shell .hero-copy > p.hero-landing-copy {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-    margin-top: 8px;
-    font-size: 13px;
-    line-height: 1.55;
+  .landing-copy {
+    font-size: 12.5px;
+    margin-bottom: 14px;
   }
   .board-shell .discovery-hero .hero-search-wrap {
     padding: 0 16px 16px;

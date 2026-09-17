@@ -1,6 +1,12 @@
 import { subcategoryFor } from './subcategories';
 import type { SearchFilters } from './personal-space';
 import { categories, listingSourceNames } from './types';
+/* How many vacancies one page of the list holds. Twenty meant a reader reached
+   the end of the list every few seconds of scrolling and had to ask for more;
+   the rows are small and the request is a summary, so a longer page costs
+   little and interrupts far less. Shared, so the server, the button's count and
+   the "showing 1–N" line can never disagree. */
+export const listPageSize = 30;
 export const sortKeys: Record<string, string> = {
   შესაბამისობა: 'relevance',
   უახლესი: 'new',
