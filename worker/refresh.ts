@@ -34,6 +34,12 @@ export async function refreshDescriptions(
     held = 0,
     failed = 0,
     removed = 0;
+  let newAttempts = 0,
+    recheckAttempts = 0,
+    unchanged = 0,
+    imported = 0,
+    changed = 0,
+    linked = 0;
   try {
     locked = await acquireSourceLease(source, owner, ttlMs);
     if (!locked)
@@ -65,14 +71,16 @@ export async function refreshDescriptions(
       )
     ).rows;
     if (items.length) {
-      await db().query('INSERT INTO source_runs(id,source_id) VALUES($1,$2)', [
-        runId,
-        source,
-      ]);
+      await db().query(
+        "INSERT INTO source_runs(id,source_id,run_kind) VALUES($1,$2,'repair')",
+        [runId, source],
+      );
       runStarted = true;
     }
     for (const item of items) {
       if (Date.now() - started >= timeBudgetMs) break;
+      if (item.raw) recheckAttempts++;
+      else newAttempts++;
       try {
         const html = await sourceFetch(
           source,
@@ -86,6 +94,10 @@ export async function refreshDescriptions(
           item.failures,
         );
         const result = await stageVacancy(item.id, data);
+        if (result === 'imported') imported++;
+        if (result === 'changed') changed++;
+        if (result === 'unchanged') unchanged++;
+        if (result === 'linked') linked++;
         if (result === 'quality_held') held++;
         else refreshed++;
       } catch (e) {
@@ -136,15 +148,24 @@ export async function refreshDescriptions(
     );
     if (runStarted)
       await db().query(
-        'UPDATE source_runs SET status=$2,finished_at=now(),changed=$3,failed=$4,error=$5 WHERE id=$1',
+        'UPDATE source_runs SET status=$2,finished_at=now(),changed=$3,failed=$4,error=$5,imported=$6,metrics=$7 WHERE id=$1',
         [
           runId,
           failed || held ? 'partial' : 'success',
-          refreshed,
+          changed,
           failed,
           failed || held
             ? `Description refresh: ${held} held, ${failed} failed, ${remaining} remaining`
             : null,
+          imported,
+          {
+            new_attempts: newAttempts,
+            recheck_attempts: recheckAttempts,
+            unchanged,
+            linked,
+            removed,
+            quality_held: held,
+          },
         ],
       );
     return { source, refreshed, held, failed, removed, remaining };

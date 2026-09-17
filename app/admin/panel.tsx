@@ -54,6 +54,8 @@ import { AnalyticsPanel } from './analytics';
 import { ReportsSection } from './reports';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
 import { runMessage } from '@/lib/run-messages';
+import { ScraperMetricsPanel } from './scraper-metrics';
+import type { ScraperMetrics } from '@/lib/server/scraper-metrics';
 type AdminSource = Source & { removed_count?: number };
 const names: Record<string, string> = {
   pending: 'შემოტანილი',
@@ -213,6 +215,9 @@ function SubmissionSummary({ job, draft }: { job: AdminJob; draft: Vacancy }) {
   );
 }
 export default function AdminPanel() {
+  const [scraperMetrics, setScraperMetrics] = useState<ScraperMetrics | null>(
+    null,
+  );
   const [observedAt, setObservedAt] = useState(0);
   const [summary, setSummary] = useState<{
     imported: number;
@@ -280,6 +285,7 @@ export default function AdminPanel() {
       }
       setCounts(b.summary.counts);
       setSummary(b.summary);
+      setScraperMetrics(b.metrics ?? null);
       setSources(b.sources);
       setRuns(b.runs);
       setGithub(b.github);
@@ -869,7 +875,7 @@ export default function AdminPanel() {
               </div>
               <dl className="scraper-metrics">
                 <div>
-                  <dt>შემოტანილი</dt>
+                  <dt>ახალი ვაკანსია</dt>
                   <dd>{summary?.imported ?? '—'}</dd>
                 </div>
                 <div>
@@ -885,6 +891,17 @@ export default function AdminPanel() {
                   <dd>{summary?.completed_runs ?? '—'}</dd>
                 </div>
               </dl>
+              <ScraperMetricsPanel
+                metrics={scraperMetrics}
+                sources={sources}
+                busy={busy}
+                onMode={(processingMode) =>
+                  void sourceAction(
+                    { id: 'all' },
+                    { action: 'configure', processingMode },
+                  )
+                }
+              />
               <div className="scraper-preferences">
                 <label>
                   ყველა წყაროს ინტერვალი
@@ -1162,6 +1179,24 @@ export default function AdminPanel() {
                       </select>
                     </div>
                     <div className="interval-row">
+                      <span>დამუშავების რეჟიმი</span>
+                      <select
+                        className="choice"
+                        aria-label={`${s.name}: დამუშავების რეჟიმი`}
+                        value={s.processing_mode ?? 'full'}
+                        disabled={busy}
+                        onChange={(e) =>
+                          void sourceAction(s, {
+                            action: 'configure',
+                            processingMode: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="economical">ეკონომიური</option>
+                        <option value="full">სრული</option>
+                      </select>
+                    </div>
+                    <div className="interval-row">
                       <span>ვაკანსიის ხელახალი შემოწმება</span>
                       <select
                         className="choice"
@@ -1347,8 +1382,8 @@ export default function AdminPanel() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {invoiceNumber(selected.invoice.number)}{' '}
-                    · {selected.invoice.amount_gel} ₾
+                    {invoiceNumber(selected.invoice.number)} ·{' '}
+                    {selected.invoice.amount_gel} ₾
                   </a>
                   {selected.invoice.status === 'pending' && (
                     <button

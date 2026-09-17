@@ -1,6 +1,7 @@
 import { nextRunAt } from './next-run';
 import { completeDescription } from './linked-description';
 import { detailQueue, detailQueueProjection } from './detail-queue';
+import { recheckBudget } from './recheck-budget';
 import { assessReportedTotal, structuralFailure } from './quality';
 import { randomUUID } from 'node:crypto';
 import {
@@ -78,6 +79,19 @@ export async function runSource(
     expired = 0,
     qualityHeld = 0,
     budgetExhausted = false;
+  let newAttempts = 0,
+    recheckAttempts = 0,
+    unchanged = 0;
+  const metrics = () => ({
+    new_attempts: newAttempts,
+    recheck_attempts: recheckAttempts,
+    unchanged,
+    linked,
+    removed,
+    expired,
+    quality_held: qualityHeld,
+    budget_exhausted: budgetExhausted,
+  });
   try {
     locked = await acquireSourceLease(source, owner, ttlMs);
     if (!locked) return { skipped: true };
@@ -90,10 +104,10 @@ export async function runSource(
       "UPDATE source_runs SET status='interrupted',finished_at=now(),error='Worker interrupted; next run retries pending items' WHERE source_id=$1 AND status='running'",
       [source],
     );
-    await db().query('INSERT INTO source_runs(id,source_id) VALUES($1,$2)', [
-      runId,
-      source,
-    ]);
+    await db().query(
+      "INSERT INTO source_runs(id,source_id,run_kind) VALUES($1,$2,'discovery')",
+      [runId, source],
+    );
     started = true;
     await db().query(
       'UPDATE sources SET last_started_at=now(),requested_at=NULL WHERE id=$1',
@@ -328,10 +342,32 @@ export async function runSource(
         [source, limit, latestIds],
       )
     ).rows;
+    const population = (
+      await db().query(
+        `SELECT count(*)::int published,
+      count(*) FILTER(WHERE next_check_at<=now() AND (last_verified_at IS NULL OR last_verified_at<now()-interval '5 days'))::int urgent
+      FROM source_items WHERE source_id=$1 AND raw IS NOT NULL
+      AND job_id IN (SELECT id FROM jobs WHERE status='published')`,
+        [source],
+      )
+    ).rows[0];
+    const recheckLimit = recheckBudget(
+      config.processing_mode,
+      limit,
+      population.published,
+      config.interval_minutes,
+      population.urgent,
+    );
     const existing = (
       await db().query(
-        `SELECT ${detailQueueProjection} FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND next_check_at<=now() AND job_id IN (SELECT id FROM jobs WHERE status='published') ORDER BY (last_seen_at<now()-interval '36 hours') DESC,next_check_at LIMIT $2`,
-        [source, Math.max(0, limit - Math.min(pending.length, quota))],
+        `SELECT ${detailQueueProjection} FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND next_check_at<=now() AND job_id IN (SELECT id FROM jobs WHERE status='published') ORDER BY (last_verified_at IS NULL OR last_verified_at<now()-interval '5 days') DESC,(last_seen_at<now()-interval '36 hours') DESC,next_check_at LIMIT $2`,
+        [
+          source,
+          Math.min(
+            recheckLimit,
+            Math.max(0, limit - Math.min(pending.length, quota)),
+          ),
+        ],
       )
     ).rows;
     const newCount = Math.min(pending.length, limit - existing.length);
@@ -365,6 +401,7 @@ export async function runSource(
         consecutiveDetailFailures = 0;
         if (outcome === 'imported') imported++;
         if (outcome === 'changed') changed++;
+        if (outcome === 'unchanged') unchanged++;
         if (outcome === 'linked') linked++;
         if (outcome === 'expired') expired++;
         if (outcome === 'quality_held') qualityHeld++;
@@ -414,6 +451,8 @@ export async function runSource(
         const item = queue[next++];
         if (!item) return;
         attempted++;
+        if (item.previously_imported) recheckAttempts++;
+        else newAttempts++;
         await processItem(item);
       }
     };
@@ -437,7 +476,7 @@ export async function runSource(
         .filter(Boolean)
         .join('; ') || null;
     await db().query(
-      'UPDATE source_runs SET status=$2,finished_at=now(),discovered=$3,imported=$4,changed=$5,failed=$6,error=$7 WHERE id=$1',
+      'UPDATE source_runs SET status=$2,finished_at=now(),discovered=$3,imported=$4,changed=$5,failed=$6,error=$7,metrics=$8 WHERE id=$1',
       [
         runId,
         warning ? 'partial' : 'success',
@@ -446,6 +485,7 @@ export async function runSource(
         changed,
         failed,
         warning,
+        metrics(),
       ],
     );
     const operationalWarning =
@@ -515,7 +555,7 @@ export async function runSource(
     let consecutiveFailures: number | undefined;
     if (started) {
       await db().query(
-        'UPDATE source_runs SET status=$7,finished_at=now(),error=$2,discovered=$3,imported=$4,changed=$5,failed=$6 WHERE id=$1',
+        'UPDATE source_runs SET status=$7,finished_at=now(),error=$2,discovered=$3,imported=$4,changed=$5,failed=$6,metrics=$8 WHERE id=$1',
         [
           runId,
           error,
@@ -524,6 +564,7 @@ export async function runSource(
           changed,
           failed,
           deferred ? 'deferred' : 'failed',
+          metrics(),
         ],
       );
       consecutiveFailures = (

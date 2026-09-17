@@ -20,7 +20,7 @@ export function detailQueue<T>(
 /** Rechecks only reuse a previous snapshot when it contains verified employer text.
  * Ordinary descriptions and quality candidates are read under lock by the importer,
  * not preloaded for every queued item (many of which may exceed the time budget). */
-export const detailQueueProjection = `id,job_id,url,listing_hints,failures,
+export const detailQueueProjection = `id,job_id,url,listing_hints,failures,raw IS NOT NULL AS previously_imported,
   CASE WHEN COALESCE(raw->>'fullTextUrl','')<>'' THEN
     jsonb_build_object('fullTextUrl',raw->>'fullTextUrl','description',raw->>'description','logoUrl',raw->>'logoUrl')
   ELSE NULL END AS raw`;

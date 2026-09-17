@@ -117,6 +117,7 @@ export type Source = {
   latest_run?: SourceRun | null;
   interval_minutes: number;
   detail_interval_hours: number;
+  processing_mode?: 'economical' | 'full';
   last_started_at: string | null;
   last_success_at: string | null;
   next_run_at: string;

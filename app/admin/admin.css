@@ -615,6 +615,49 @@
   padding-top: 18px;
   border-top: 1px solid var(--line, #e1e5ed);
 }
+.scraper-economy {
+  margin: 24px 0;
+}
+.scraper-economy h3 {
+  margin: 24px 0 8px;
+}
+.scraper-economy details {
+  margin-top: 18px;
+}
+.scraper-economy summary {
+  cursor: pointer;
+  font-weight: 650;
+  padding: 10px 0;
+}
+.scraper-mode-label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  max-width: 540px;
+}
+.scraper-table-scroll {
+  overflow-x: auto;
+  margin: 16px 0;
+}
+.scraper-economy-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+.scraper-economy-table th,
+.scraper-economy-table td {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid var(--line, #e1e5ed);
+}
+.scraper-economy-table thead th {
+  color: #62708a;
+  font-size: 12px;
+  min-width: 95px;
+}
+.scraper-economy-table tbody th {
+  white-space: nowrap;
+}
 .scraper-preferences label {
   display: grid;
   gap: 8px;
