@@ -132,6 +132,9 @@ function loadedFromList(expected: string) {
   return (
     location.pathname + location.search === loadedAt &&
     window.history.length > 1 &&
+    /* The tab's own first entry has a foreign site below it, whatever the
+       referrer says, and is the one entry a step back must never leave from. */
+    stampEntry() > 0 &&
     document.referrer === location.origin + safeReturnPath(expected)
   );
 }
