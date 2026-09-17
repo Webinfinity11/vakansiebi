@@ -613,8 +613,13 @@ export default function JobBoard({
         if (demo) address.set('preview', '1');
         if (savedOnly) address.set('saved', '1');
         if (page > 1) address.set('page', String(page));
+        /* Keep the entry's state: it holds the router's own record of this
+           history position. Replacing it with null left the entry looking like
+           a foreign page, so returning to it by the phone's back gesture forced
+           a full reload and cost the reader their place in the back stack —
+           one more press and the site was gone. Only the address changes here. */
         window.history.replaceState(
-          null,
+          window.history.state,
           '',
           '/' + (address.size ? '?' + address.toString() : ''),
         );
