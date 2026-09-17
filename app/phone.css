@@ -741,9 +741,31 @@
     min-height: 44px;
     font-size: 13px;
   }
-  /* The masthead's back link already goes where the breadcrumb does. */
+  /* The masthead leads to the unfiltered list; the reader's own list — their
+     search, their page, the place they had scrolled to — is only behind this
+     link, and stepping back over it is what keeps the history from growing.
+     Hidden here, a phone reader had no way back but the browser's own button,
+     which walks out of the site. It stays, thumb-sized, without the trailing
+     category a narrow line has no room for. */
   .vacancy-page .vacancy-breadcrumb {
+    /* The page's own column reordering would otherwise leave this sized to its
+       text and pushed to the far edge, where a back control reads as a stray
+       link rather than the way out. */
+    width: 100%;
+    justify-content: flex-start;
+    margin: 0 0 4px;
+  }
+  .vacancy-page .vacancy-breadcrumb > span {
     display: none;
+  }
+  .vacancy-page .vacancy-breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    margin-left: -4px;
+    font-size: 13px !important;
+    font-weight: 600;
   }
   .contact-phone small,
   .vacancy-page .contact-call,

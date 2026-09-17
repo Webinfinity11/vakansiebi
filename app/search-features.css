@@ -18,11 +18,16 @@
 }
 .search-suggest [role='listbox'] {
   display: grid;
+  /* An implicit `auto` column never shrinks below the longest suggestion, so a
+     long title used to be cut off flat against the panel's edge instead of
+     ending in an ellipsis. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 2px;
   padding: 6px;
 }
 .search-suggest [role='option'] {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 12px;

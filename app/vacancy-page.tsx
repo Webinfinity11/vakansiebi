@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowUpRight,
   Bookmark,
+  ChevronLeft,
   Share2,
   Clock3,
   Globe2,
@@ -481,7 +482,10 @@ export default function VacancyPage({
     ? 'კომპანიაზე დაბრუნება'
     : new URLSearchParams(returnTo.split('?')[1] || '').get('saved') === '1'
       ? 'შენახულებში დაბრუნება'
-      : 'შედეგებზე დაბრუნება';
+      : // A reader who arrived from a search engine has no results to return to.
+        returnTo === '/'
+        ? 'ყველა ვაკანსია'
+        : 'შედეგებზე დაბრუნება';
   const progress = (
     <ApplicationControl
       job={job}
@@ -519,6 +523,7 @@ export default function VacancyPage({
               router.back();
             }}
           >
+            <ChevronLeft size={15} aria-hidden="true" />
             {returnLabel}
           </Link>
           {job.category !== 'სხვა' && (

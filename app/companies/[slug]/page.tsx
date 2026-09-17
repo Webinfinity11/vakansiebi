@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { ArrowUpRight, MapPin, ExternalLink } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, MapPin, ExternalLink } from 'lucide-react';
 import { PublicHeader } from '../../public-header';
 import { CompanyLogo } from '../../company-logo';
 import { ListHopLink } from '../../list-hop-link';
@@ -120,7 +120,8 @@ export default async function CompanyPage(props: Props) {
       <main className="vacancy-page-main">
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
           <Link href="/" prefetch={false}>
-            ვაკანსიები
+            <ChevronLeft size={15} aria-hidden="true" />
+            ყველა ვაკანსია
           </Link>
           <span aria-hidden="true">/</span>
           <span>დამსაქმებელი</span>

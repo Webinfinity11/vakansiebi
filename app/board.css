@@ -1404,7 +1404,13 @@
   color: #6a7588;
 }
 .vacancy-breadcrumb a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   color: #2457e6;
+}
+.vacancy-breadcrumb a svg {
+  margin-top: 1px;
 }
 .vacancy-layout {
   display: grid;
