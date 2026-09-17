@@ -2604,6 +2604,9 @@
   border: 1px solid #273040;
   background: #131b2c;
 }
+:root[data-theme='dark'] .hero-landing-copy {
+  color: #a1b2d9;
+}
 
 /* ── from app/public-header.css ── */
 :root[data-theme='dark'] .board-shell .topbar.public-header {

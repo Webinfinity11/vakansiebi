@@ -1,6 +1,7 @@
 import { db } from './db';
 import { searchPlan } from './search-plan';
 import { cities, cityStem } from '../cities';
+import { traitKeys, traits, type TraitKey } from '../seo-landing';
 
 export type DatedVacancy = { id: string; lastModified: Date };
 
@@ -57,21 +58,28 @@ export function newest(dates: Iterable<Date>) {
 
 /* How many vacancies each indexable list holds today. A landing page is only
    worth a crawl while it has something on it: an empty "ფინანსების ვაკანსიები
-   ფოთში" is a thin page that costs the whole site standing. Counted here the
-   way the sitemap needs it — one pass for the categories and cities, one for
-   remote work, whose column the plan only extracts when it is being filtered. */
+   ფოთში" is a thin page that costs the whole site standing. One pass per
+   condition, because each one is a different query to the catalogue; within a
+   pass the categories, the cities and their pairs are counted together. */
 export type LandingCount = {
   category: string | null;
   city: string | null;
-  remote: boolean;
+  trait: TraitKey | null;
   count: number;
 };
-async function countBy(remote: boolean): Promise<LandingCount[]> {
-  const params = new URLSearchParams(remote ? { remote: 'true' } : {});
+async function countBy(trait: TraitKey | null): Promise<LandingCount[]> {
+  const params = new URLSearchParams(
+    trait ? [[...traits[trait].param] as [string, string]] : [],
+  );
   const plan = searchPlan(params, false, { grouped: true });
   const args = [...plan.args, [...cities], cities.map(cityStem)];
   const names = `$${args.length - 1}::text[]`;
   const stems = `$${args.length}::text[]`;
+  // A condition already narrows the list; pairing it with both a category and a
+  // city as well leaves pages too alike and too empty to be worth indexing.
+  const sets = trait
+    ? '((), (category), (city))'
+    : '((category), (city), (category, city))';
   const { rows } = await db().query<{
     category: string | null;
     city: string | null;
@@ -88,12 +96,14 @@ async function countBy(remote: boolean): Promise<LandingCount[]> {
        ) c ON true
      )
      SELECT category, city, count(*)::int AS count FROM placed
-     GROUP BY GROUPING SETS ((category), (city), (category, city))`,
+     GROUP BY GROUPING SETS ${sets}`,
     args,
   );
-  return rows.map((row) => ({ ...row, remote }));
+  return rows.map((row) => ({ ...row, trait }));
 }
 export async function landingCounts(minimum = 10) {
-  const [plain, remote] = await Promise.all([countBy(false), countBy(true)]);
-  return [...plain, ...remote].filter((row) => row.count >= minimum);
+  const passes = await Promise.all(
+    [null, ...traitKeys].map((trait) => countBy(trait)),
+  );
+  return passes.flat().filter((row) => row.count >= minimum);
 }

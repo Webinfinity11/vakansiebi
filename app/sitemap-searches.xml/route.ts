@@ -10,8 +10,8 @@ export async function GET() {
   try {
     const rows = await landingCounts();
     const paths = rows
-      .map(({ category, city, remote }) =>
-        landingPath({ category, city, remote }),
+      .map(({ category, city, trait }) =>
+        landingPath({ category, city, trait }),
       )
       // The same guard the page itself uses, so a listed address is an indexable one.
       .filter(

@@ -3,17 +3,66 @@ import { categories } from './types';
 import type { SearchFilters } from './personal-space';
 
 /* A search this site is willing to be found by. Readers do not look for "a job
-   board"; they look for "გაყიდვების ვაკანსიები თბილისში". Those pages exist
-   already as filters of the list — they were simply closed to search engines,
-   every one of them, to keep the endless combinations of salary, sort and free
-   text out of the index. This is the short, reviewed list that is worth opening:
-   a category, a city, remote work, and their combinations, and nothing else. */
+   board"; they look for "გაყიდვების ვაკანსიები თბილისში" or "ვაკანსიები დღიური
+   ანაზღაურებით". Those pages exist already as filters of the list — they were
+   simply closed to search engines, every one of them, to keep the endless
+   combinations of salary, sort and free text out of the index. This is the
+   short, reviewed list that is worth opening, each page naming itself and
+   saying in its own words what it holds. */
+
+/* The conditions people search by name. One per page: a reader looking for
+   daily pay is not also looking for an internship, and every extra pairing
+   multiplies pages that say almost the same thing. */
+export const traits = {
+  remote: {
+    param: ['remote', 'true'],
+    before: 'დისტანციური',
+    copy: 'სამუშაოები, რომელთა შესრულებაც სახლიდან ან ნებისმიერი ადგილიდან შეიძლება. დამსაქმებელი თავად უთითებს დისტანციურ რეჟიმს განცხადებაში.',
+  },
+  daily: {
+    param: ['salaryPeriod', 'day'],
+    after: 'დღიური ანაზღაურებით',
+    copy: 'სამუშაოები, სადაც ანაზღაურება დღეში ან ცვლაში ითვლება — კურიერობა, დარბაზის მომსახურება, დატვირთვა-გადმოტვირთვა, პრომო-აქციები და სხვა. ხელფასი ყოველთვის ჩანს სიაში.',
+  },
+  entry: {
+    param: ['entryLevel', 'true'],
+    after: 'გამოცდილების გარეშე',
+    copy: 'დამწყებისთვის ღია პოზიციები: განცხადებები, სადაც გამოცდილება სავალდებულო არ არის ან სწავლება ადგილზეა. კარგი დასაწყისია პირველი სამსახურისთვის და პროფესიის შეცვლისთვის.',
+  },
+  paid: {
+    param: ['paid', 'true'],
+    after: 'მითითებული ხელფასით',
+    copy: 'მხოლოდ ის განცხადებები, სადაც დამსაქმებელმა ანაზღაურება დაწერა. შეგიძლია შეადარო თანხები ერთმანეთს, სანამ განაცხადს გააკეთებ.',
+  },
+  'part-time': {
+    param: ['employment', 'part-time'],
+    after: 'ნახევარ განაკვეთზე',
+    copy: 'არასრული განაკვეთის სამუშაოები — მოქნილი გრაფიკით, სწავლასთან ან სხვა საქმესთან შესათავსებლად.',
+  },
+  internship: {
+    param: ['employment', 'internship'],
+    before: 'სტაჟირების',
+    copy: 'სტაჟირებისა და პრაქტიკის პროგრამები სტუდენტებისა და დამწყებებისთვის — ანაზღაურებადიც და საგანმანათლებლოც.',
+  },
+} as const satisfies Record<
+  string,
+  {
+    param: readonly [string, string];
+    before?: string;
+    after?: string;
+    copy: string;
+  }
+>;
+export type TraitKey = keyof typeof traits;
+export const traitKeys = Object.keys(traits) as TraitKey[];
+
 export type Landing = {
   category: string | null;
   city: string | null;
-  remote: boolean;
+  trait: TraitKey | null;
   path: string;
 };
+type Choice = Omit<Landing, 'path'>;
 
 /* Genitive forms, written out rather than derived: Georgian noun endings do not
    follow one rule, and a heading is read by people. Two of the categories are
@@ -37,30 +86,47 @@ const genitive: Record<string, string> = {
 /** თბილისი → თბილისში, მცხეთა → მცხეთაში: the stem the search already uses. */
 export const cityIn = (city: string) => cityStem(city) + 'ში';
 
-export function landingPath(landing: Omit<Landing, 'path'>) {
+export function landingPath(landing: Choice) {
   const params = new URLSearchParams();
   // One spelling per page: the order is fixed, so the canonical never varies.
   if (landing.category) params.set('category', landing.category);
   if (landing.city) params.set('city', landing.city);
-  if (landing.remote) params.set('remote', 'true');
+  if (landing.trait) {
+    const [key, value] = traits[landing.trait].param;
+    params.set(key, value);
+  }
   return '/' + (params.size ? '?' + params : '');
 }
 
 /* The address a crawler asked for, as a landing page — or null, which means the
    list stays out of the index as it always has. */
 export function landingFor(params: URLSearchParams): Landing | null {
-  const allowed = new Set(['category', 'city', 'remote']);
-  for (const [key, value] of params)
-    if (
-      !allowed.has(key) &&
-      !(key === 'page' && value === '1') &&
-      !key.startsWith('utm_') &&
-      !['gclid', 'fbclid'].includes(key)
-    )
-      return null;
+  // Two conditions share the `employment` key, so a parameter is recognised by
+  // its name and its value together, never by the name alone.
+  const traitNames = new Set<string>(
+    traitKeys.map((key) => traits[key].param[0]),
+  );
+  const allowed = new Set(['category', 'city', ...traitNames]);
+  let trait: TraitKey | null = null;
+  for (const [key, value] of params) {
+    const ignorable =
+      (key === 'page' && value === '1') ||
+      key.startsWith('utm_') ||
+      ['gclid', 'fbclid'].includes(key);
+    if (ignorable) continue;
+    if (!allowed.has(key)) return null;
+    if (!traitNames.has(key)) continue;
+    const named = traitKeys.find(
+      (candidate) =>
+        traits[candidate].param[0] === key &&
+        traits[candidate].param[1] === value,
+    );
+    // One condition per page, and only the value that names it.
+    if (!named || trait) return null;
+    trait = named;
+  }
   const category = params.get('category');
   const city = params.get('city');
-  const remote = params.get('remote');
   if (
     category !== null &&
     !(categories as readonly string[]).includes(category)
@@ -68,55 +134,61 @@ export function landingFor(params: URLSearchParams): Landing | null {
     return null;
   if (city !== null && !(cities as readonly string[]).includes(city))
     return null;
-  if (remote !== null && remote !== 'true') return null;
   // "სხვა" names everything the categories could not place; it describes no search.
   if (category === 'სხვა') return null;
-  const landing = {
-    category,
-    city,
-    remote: remote === 'true',
-  };
-  if (!landing.category && !landing.city && !landing.remote) return null;
+  // A condition narrows one dimension, never both: the pages left over would be
+  // near-empty and say the same thing as the ones above them.
+  if (trait && category && city) return null;
+  if (!category && !city && !trait) return null;
+  const landing = { category, city, trait };
   return { ...landing, path: landingPath(landing) };
 }
 
 /** What such a page calls itself, on the page and in a result. */
-export function landingHeading(landing: Omit<Landing, 'path'>) {
-  const what = landing.remote ? 'დისტანციური ვაკანსიები' : 'ვაკანსიები';
+export function landingHeading(landing: Choice) {
+  const trait = landing.trait ? traits[landing.trait] : null;
+  const before = trait && 'before' in trait ? trait.before + ' ' : '';
+  const after = trait && 'after' in trait ? ' ' + trait.after : '';
   const field = landing.category ? genitive[landing.category] + ' ' : '';
   const where = landing.city
     ? ' ' + cityIn(landing.city)
-    : landing.remote
+    : // The country is worth saying only when nothing else narrows the list.
+      trait
       ? ''
       : ' საქართველოში';
-  return `${field}${what}${where}`;
+  return `${field}${before}ვაკანსიები${where}${after}`;
 }
-export function landingDescription(landing: Omit<Landing, 'path'>) {
-  return `${landingHeading(landing)} — ყველა წყარო ერთ სივრცეში, ყოველდღიური განახლებით. შეადარე პირობები და ხელფასი, გადადი პირველწყაროზე.`;
+/* Two sentences of the site's own, so the page answers the search rather than
+   repeating its title: a list with nothing to read is the thin page Google is
+   right to ignore. */
+export function landingCopy(landing: Choice) {
+  if (landing.trait) return traits[landing.trait].copy;
+  if (landing.category && landing.city)
+    return `${genitive[landing.category]} მიმართულების აქტიური ვაკანსიები ${cityIn(landing.city)} — შეგროვებული დამსაქმებლებისა და სამუშაოს საიტებიდან, ყოველდღიური განახლებით.`;
+  if (landing.category)
+    return `${genitive[landing.category]} მიმართულების აქტიური ვაკანსიები საქართველოში, ერთ სიაში: შეადარე ხელფასი, ქალაქი და პირობები, მერე გადადი პირველწყაროზე.`;
+  return `აქტიური ვაკანსიები ${cityIn(landing.city!)} — ყველა მიმართულება ერთ სიაში, დამსაქმებლებისა და სამუშაოს საიტებიდან, ყოველდღიური განახლებით.`;
+}
+export function landingDescription(landing: Choice) {
+  return `${landingHeading(landing)}. ${landingCopy(landing)}`.slice(0, 300);
 }
 
-/** The same filters, as the board reads them. */
-export function landingFilters(landing: Omit<Landing, 'path'>) {
-  return {
-    category: landing.category ?? 'ყველა',
-    city: landing.city ?? 'ყველა',
-    remote: landing.remote,
-  } satisfies Partial<SearchFilters>;
-}
 /** Whether the list on screen is exactly this landing page, and may name itself. */
 export function landingOf(filters: SearchFilters): Landing | null {
   const params = new URLSearchParams();
   if (filters.category !== 'ყველა') params.set('category', filters.category);
   if (filters.city !== 'ყველა') params.set('city', filters.city);
   if (filters.remote) params.set('remote', 'true');
+  if (filters.paid) params.set('paid', 'true');
+  if (filters.entryLevel) params.set('entryLevel', 'true');
+  if (filters.employment !== 'all')
+    params.set('employment', filters.employment);
+  if (filters.salaryPeriod === 'day') params.set('salaryPeriod', 'day');
   if (
     filters.query ||
     filters.source !== 'ყველა' ||
-    filters.paid ||
     filters.salaryFrom !== null ||
     filters.salaryTo !== null ||
-    filters.employment !== 'all' ||
-    filters.entryLevel ||
     filters.deep ||
     filters.postedWithin ||
     filters.subcategory
@@ -126,10 +198,11 @@ export function landingOf(filters: SearchFilters): Landing | null {
 }
 
 /* The lists worth linking to from every page: each category, the cities with a
-   catalogue of their own, and remote work. A crawler that never reaches a page
-   cannot index it, and a sitemap alone is a weaker signal than a link a reader
-   can follow. Kept to combinations that are always populated; the narrower
-   pairs are discovered through the sitemap, which counts them first. */
+   catalogue of their own, and each condition people search by name. A crawler
+   that never reaches a page cannot index it, and a sitemap alone is a weaker
+   signal than a link a reader can follow. Kept to combinations that are always
+   populated; the narrower pairs are discovered through the sitemap, which
+   counts them first. */
 export const linkedCities = [
   'თბილისი',
   'ბათუმი',
@@ -139,12 +212,12 @@ export const linkedCities = [
   'გორი',
 ] as const;
 export function landingLinks() {
-  const links = [
+  const links: Choice[] = [
     ...categories
       .filter((category) => category !== 'სხვა')
-      .map((category) => ({ category, city: null, remote: false })),
-    ...linkedCities.map((city) => ({ category: null, city, remote: false })),
-    { category: null, city: null, remote: true },
+      .map((category) => ({ category, city: null, trait: null })),
+    ...linkedCities.map((city) => ({ category: null, city, trait: null })),
+    ...traitKeys.map((trait) => ({ category: null, city: null, trait })),
   ];
   return links.map((landing) => ({
     path: landingPath(landing),

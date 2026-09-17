@@ -1436,3 +1436,12 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The landing page's own sentence, under its heading. */
+.hero-landing-copy {
+  max-width: 62ch;
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #dbe6ff;
+}

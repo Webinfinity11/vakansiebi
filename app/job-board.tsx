@@ -6,7 +6,12 @@ import { useSwipe } from './use-swipe';
 import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
 import { rememberRecentSearch } from '@/lib/recent-searches';
-import { landingHeading, landingLinks, landingOf } from '@/lib/seo-landing';
+import {
+  landingCopy,
+  landingHeading,
+  landingLinks,
+  landingOf,
+} from '@/lib/seo-landing';
 import { nearestCity } from '@/lib/nearest-city';
 import type { Application } from '@/lib/personal-space';
 import {
@@ -1508,6 +1513,11 @@ export default function JobBoard({
                   </>
                 )}
               </h1>
+              {/* A list with nothing to read is a thin page; this says, in the
+                  site's own words, what the reader has landed on. */}
+              {landing && (
+                <p className="hero-landing-copy">{landingCopy(landing)}</p>
+              )}
             </div>
           </div>
           <div className="hero-search-wrap">
@@ -1817,8 +1827,12 @@ export default function JobBoard({
                     advanced.salaryFrom !== null ||
                     advanced.salaryTo !== null) && (
                     <button onClick={() => relaxFilter('salary')}>
-                      {advanced.salaryFrom ?? 0}–{advanced.salaryTo ?? '∞'} ₾ /{' '}
-                      {advanced.salaryPeriod === 'day' ? 'დღე' : 'თვე'}
+                      {/* With no amount on either side there is no range to
+                          show, and "0–∞ ₾ / დღე" named a filter nobody set. */}
+                      {advanced.salaryFrom === null &&
+                      advanced.salaryTo === null
+                        ? 'დღიური ანაზღაურება'
+                        : `${advanced.salaryFrom ?? 0}–${advanced.salaryTo ?? '∞'} ₾ / ${advanced.salaryPeriod === 'day' ? 'დღე' : 'თვე'}`}
                       <X size={12} />
                     </button>
                   )}
