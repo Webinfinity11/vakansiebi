@@ -55,6 +55,7 @@ import { ReportsSection } from './reports';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
 import { runMessage } from '@/lib/run-messages';
 import { ScraperMetricsPanel } from './scraper-metrics';
+import { ScraperLimits } from './scraper-limits';
 import type { ScraperMetrics } from '@/lib/server/scraper-metrics';
 type AdminSource = Source & { removed_count?: number };
 const names: Record<string, string> = {
@@ -902,6 +903,17 @@ export default function AdminPanel() {
                   )
                 }
               />
+              <ScraperLimits
+                sources={sources}
+                busy={busy}
+                global
+                onSave={(values) =>
+                  void sourceAction(
+                    { id: 'all' },
+                    { action: 'configure', ...values },
+                  )
+                }
+              />
               <div className="scraper-preferences">
                 <label>
                   ყველა წყაროს ინტერვალი
@@ -1178,6 +1190,13 @@ export default function AdminPanel() {
                         <option value={1440}>24 საათი</option>
                       </select>
                     </div>
+                    <ScraperLimits
+                      sources={[s]}
+                      busy={busy}
+                      onSave={(values) =>
+                        void sourceAction(s, { action: 'configure', ...values })
+                      }
+                    />
                     <div className="interval-row">
                       <span>დამუშავების რეჟიმი</span>
                       <select

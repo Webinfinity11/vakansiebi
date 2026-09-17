@@ -118,6 +118,10 @@ export type Source = {
   interval_minutes: number;
   detail_interval_hours: number;
   processing_mode?: 'economical' | 'full';
+  batch_limit?: number;
+  budget_minutes?: number;
+  discovery_page_limit?: number;
+  repair_limit?: number;
   last_started_at: string | null;
   last_success_at: string | null;
   next_run_at: string;

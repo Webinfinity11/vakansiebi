@@ -22,6 +22,7 @@ export async function refreshDescriptions(
   timeBudgetMs = 18 * 60_000,
 ) {
   if (!(source in configs)) throw Error('Unsupported source');
+  timeBudgetMs = Math.min(timeBudgetMs, 3 * 60_000);
   const ttlMs = timeBudgetMs + 5 * 60_000;
   const owner = randomUUID();
   let heartbeat: ReturnType<typeof setInterval> | undefined;
@@ -53,6 +54,24 @@ export async function refreshDescriptions(
         remaining: 0,
       };
     heartbeat = startLeaseHeartbeat(source, owner, ttlMs);
+    const config = (
+      await db().query(
+        'SELECT enabled,retired,repair_limit FROM sources WHERE id=$1',
+        [source],
+      )
+    ).rows[0];
+    limit = Math.min(limit, config?.repair_limit ?? limit);
+    if (!config?.enabled || config.retired || limit === 0) {
+      return {
+        source,
+        skipped: true,
+        refreshed,
+        held,
+        failed,
+        removed,
+        remaining: 0,
+      };
+    }
     const removedItems = (
       await db().query(
         `SELECT i.id FROM source_items i JOIN jobs j ON j.id=i.job_id

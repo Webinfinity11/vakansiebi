@@ -5,6 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { Client } from 'pg';
 import { db } from '../lib/server/db';
 import { runSource } from '../worker/run';
+import { refreshDescriptions } from '../worker/refresh';
 
 void test(
   'closed Worknet pages advance within the budget, while repeated or unreadable pages retain the cursor',
@@ -120,6 +121,55 @@ void test(
           );
         }
       }
+      await db().query(
+        "UPDATE sources SET batch_limit=1,discovery_page_limit=0,repair_limit=0 WHERE id='worknet'",
+      );
+      const requestedPages: number[] = [];
+      let details = 0;
+      globalThis.fetch = async (input) => {
+        const u = new URL(input instanceof Request ? input.url : String(input));
+        if (u.pathname === '/robots.txt')
+          return new Response('User-agent: *\nAllow: /');
+        if (u.pathname.endsWith('/All')) {
+          requestedPages.push(Number(u.searchParams.get('pageIndex')));
+          return Response.json({
+            items: [
+              { id: 700010, vacancyStatusId: 1 },
+              { id: 700011, vacancyStatusId: 1 },
+            ],
+            totalCount: 4,
+            totalPages: 4,
+          });
+        }
+        details++;
+        return Response.json({
+          ...detail,
+          id: Number(u.searchParams.get('Id')),
+        });
+      };
+      const limited = await runSource('worknet', 200);
+      assert.ok(!('error' in limited), JSON.stringify(limited));
+      assert.deepEqual(
+        requestedPages,
+        [1],
+        'zero extra pages still reads the newest listing',
+      );
+      assert.equal(
+        details,
+        1,
+        'database batch limit overrides larger runner limit',
+      );
+      const measured = (
+        await db().query(
+          "SELECT metrics FROM source_runs WHERE source_id='worknet' ORDER BY started_at DESC LIMIT 1",
+        )
+      ).rows[0].metrics;
+      assert.equal(measured.batch_limit, 1);
+      assert.equal(measured.new_attempts + measured.recheck_attempts, 1);
+      globalThis.fetch = async () => {
+        throw new Error('disabled repair must not fetch');
+      };
+      assert.equal((await refreshDescriptions('worknet')).skipped, true);
     } finally {
       globalThis.fetch = originalFetch;
       await db().end();

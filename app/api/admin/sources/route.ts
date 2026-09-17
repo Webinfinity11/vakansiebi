@@ -5,6 +5,7 @@ import { githubScraperStatus } from '@/lib/server/scraper-github';
 import { wakeScraper } from '@/lib/server/scraper-control';
 import { sourceNames } from '@/lib/types';
 import { scraperMetrics } from '@/lib/server/scraper-metrics';
+import { scraperLimitFields } from '@/lib/scraper-limits';
 import {
   apiError,
   requireAdmin,
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
         detailIntervalHours: z.number().int().min(1).max(168).optional(),
         autoPublish: z.boolean().optional(),
         processingMode: z.enum(['economical', 'full']).optional(),
+        ...scraperLimitFields,
       })
       .parse(await readBody(req));
     if (data.action === 'run' || data.action === 'retry') {
@@ -142,6 +144,8 @@ export async function POST(req: Request) {
        interval_minutes=COALESCE($4,interval_minutes),auto_publish=COALESCE($5,auto_publish),
        detail_interval_hours=COALESCE($6,detail_interval_hours),
        processing_mode=COALESCE($8,processing_mode),
+       batch_limit=COALESCE($9,batch_limit),budget_minutes=COALESCE($10,budget_minutes),
+       discovery_page_limit=COALESCE($11,discovery_page_limit),repair_limit=COALESCE($12,repair_limit),
        requested_at=CASE WHEN $2=false OR $3=false THEN NULL ELSE requested_at END,
        next_run_at=CASE WHEN $7::timestamptz IS NOT NULL THEN
          CASE WHEN consecutive_failures>0 THEN GREATEST(next_run_at,$7::timestamptz) ELSE $7::timestamptz END
@@ -158,6 +162,10 @@ export async function POST(req: Request) {
           ? nextRunAt(data.intervalMinutes, Date.now(), 180)
           : null,
         data.processingMode,
+        data.batchLimit,
+        data.budgetMinutes,
+        data.discoveryPageLimit,
+        data.repairLimit,
       ],
     );
     return Response.json({ ok: true });

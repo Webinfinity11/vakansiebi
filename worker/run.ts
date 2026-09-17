@@ -2,6 +2,7 @@ import { nextRunAt } from './next-run';
 import { completeDescription } from './linked-description';
 import { detailQueue, detailQueueProjection } from './detail-queue';
 import { recheckBudget } from './recheck-budget';
+import { effectiveScraperLimits } from '../lib/scraper-limits';
 import { assessReportedTotal, structuralFailure } from './quality';
 import { randomUUID } from 'node:crypto';
 import {
@@ -62,7 +63,7 @@ export async function runSource(
 ) {
   const activeConfig = getSourceConfig(source);
   const startedAt = Date.now();
-  const budgetMs = runBudgetMs();
+  let budgetMs = runBudgetMs();
   const ttlMs = budgetMs + 5 * 60_000;
   const owner = randomUUID();
   let heartbeat: ReturnType<typeof setInterval> | undefined;
@@ -91,6 +92,8 @@ export async function runSource(
     expired,
     quality_held: qualityHeld,
     budget_exhausted: budgetExhausted,
+    batch_limit: limit,
+    budget_minutes: budgetMs / 60_000,
   });
   try {
     locked = await acquireSourceLease(source, owner, ttlMs);
@@ -100,6 +103,16 @@ export async function runSource(
       await db().query('SELECT * FROM sources WHERE id=$1', [source])
     ).rows[0];
     if (!config?.enabled || config.retired) return { skipped: true };
+    const configuredPages = Number(process.env.DISCOVERY_PAGE_BUDGET ?? 20);
+    const limits = effectiveScraperLimits(config, {
+      batch: limit,
+      minutes: budgetMs / 60_000,
+      pages: Number.isFinite(configuredPages)
+        ? Math.max(0, Math.min(50, Math.floor(configuredPages)))
+        : 20,
+    });
+    limit = limits.batch;
+    budgetMs = limits.minutes * 60_000;
     await db().query(
       "UPDATE source_runs SET status='interrupted',finished_at=now(),error='Worker interrupted; next run retries pending items' WHERE source_id=$1 AND status='running'",
       [source],
@@ -179,32 +192,31 @@ export async function runSource(
     // A source whose shape or coverage looks different needs a person; a single failed
     // fetch that the backoff will retry does not.
     let discoveryStructural = Boolean(countQuality?.warning);
-    const pageBudget = Math.max(
-      1,
-      Math.min(50, Number(process.env.DISCOVERY_PAGE_BUDGET) || 20),
-    );
-    const extraPages = countQuality?.hold
-      ? []
-      : source === 'jobs'
+    const pageBudget = limits.pages;
+    let extraRequests = 0;
+    const extraPages =
+      countQuality?.hold || pageBudget === 0
         ? []
-        : paginated
-          ? planDiscoveryPages(
-              source as DiscoverySource,
-              info!,
-              config.discovery_cursor,
-              pageBudget,
-            ).urls
-          : [
-              ...new Set(
-                Array.from({ length: 3 }, (_, offset) =>
-                  additionalListing(
-                    source,
-                    html,
-                    config.sitemap_cursor + offset,
-                  ),
-                ).filter((url): url is string => !!url),
-              ),
-            ];
+        : source === 'jobs'
+          ? []
+          : paginated
+            ? planDiscoveryPages(
+                source as DiscoverySource,
+                info!,
+                config.discovery_cursor,
+                pageBudget,
+              ).urls
+            : [
+                ...new Set(
+                  Array.from({ length: Math.min(3, pageBudget) }, (_, offset) =>
+                    additionalListing(
+                      source,
+                      html,
+                      config.sitemap_cursor + offset,
+                    ),
+                  ).filter((url): url is string => !!url),
+                ),
+              ];
     if (paginated && !info?.totalPages) {
       discoveryWarning =
         'Listing page count is unavailable; first page retained and discovery will retry';
@@ -213,7 +225,12 @@ export async function runSource(
     // Jobs.ge is discovered through its category listings: the same pages, but each row then
     // carries its category and work location, and the vacancy-only filter keeps tenders and
     // trainings out. The start category rotates so a small budget still covers every category.
-    if (source === 'jobs' && !countQuality?.hold && info?.totalPages) {
+    if (
+      source === 'jobs' &&
+      pageBudget > 0 &&
+      !countQuality?.hold &&
+      info?.totalPages
+    ) {
       const plan = planJobsCategoryPages(config.discovery_cursor, pageBudget);
       let used = 0;
       categories: for (const category of plan.order) {
@@ -224,6 +241,7 @@ export async function runSource(
           if (Date.now() - startedAt >= budgetMs * 0.2) break categories;
           const url = jobsCategoryListingUrl(category.cid, page);
           try {
+            extraRequests++;
             const pageHtml = await sourceFetch(source, url);
             used++;
             if (page === 1)
@@ -259,6 +277,7 @@ export async function runSource(
     for (const extra of extraPages) {
       if (Date.now() - startedAt >= budgetMs * 0.2) break;
       try {
+        extraRequests++;
         const pageHtml = await sourceFetch(source, extra);
         const pageLinks = listLinks(source, pageHtml, extra);
         const closedIds = pageLinks.length
@@ -292,22 +311,32 @@ export async function runSource(
         break;
       }
     }
-    if (sitemap && Date.now() - startedAt < budgetMs * 0.2) {
+    if (
+      sitemap &&
+      extraRequests < pageBudget &&
+      Date.now() - startedAt < budgetMs * 0.2
+    ) {
       try {
+        extraRequests++;
         const xml = await sourceFetch(source, sitemap);
         const $ = load(xml, { xml: true });
         const pages = $('sitemap > loc')
           .map((_, e) => $(e).text())
           .get();
-        const documents = pages.length
-          ? [
-              await sourceFetch(
-                source,
-                validateUrl(source, pages[config.sitemap_cursor % pages.length])
-                  .href,
-              ),
-            ]
-          : [xml];
+        const documents =
+          pages.length && extraRequests < pageBudget
+            ? [
+                await sourceFetch(
+                  source,
+                  validateUrl(
+                    source,
+                    pages[config.sitemap_cursor % pages.length],
+                  ).href,
+                ),
+              ]
+            : pages.length
+              ? []
+              : [xml];
         for (const doc of documents) {
           const x = load(doc, { xml: true });
           x('url > loc').each((_, e) => {
@@ -318,7 +347,7 @@ export async function runSource(
             } catch {}
           });
         }
-        if (pages.length)
+        if (pages.length && documents.length)
           await db().query(
             'UPDATE sources SET sitemap_cursor=sitemap_cursor+1 WHERE id=$1',
             [source],
