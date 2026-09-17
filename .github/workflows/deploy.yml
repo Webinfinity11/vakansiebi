@@ -1,0 +1,29 @@
+name: Scheduled production deployment
+
+on:
+  schedule:
+    # Asia/Tbilisi (UTC+4): 09:00, 15:00, 21:00. GitHub can delay schedules.
+    - cron: '0 5,11,17 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jobx-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Deploy changed code and verify production
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VERCEL_DEPLOY_HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: node scripts/scheduled-deploy.mjs

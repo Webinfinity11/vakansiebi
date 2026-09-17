@@ -124,7 +124,11 @@ The two government hosts are not in the matrix: `vacancy.hr.gov.ge` and `worknet
 
 GitHub schedules may be delayed. In public repositories, schedules disable after 60 days without repository activity and must be re-enabled. Standard GitHub-hosted runners are free for this public repository; Neon usage is separate.
 
-`Webinfinity11/vakansiebi` რეპოზიტორიის `main` ბრენჩზე ატვირთვა ავტომატურად აახლებს `infinity-solutions/vakansiebi`-ის Production გარემოს და `jobx.ge`-ს. განთავსების შემდეგ გადაამოწმე Vercel-ის `Ready` სტატუსი და `https://jobx.ge/api/health`-ის `{"status":"ok"}` პასუხი. `APP_URL` უნდა იყოს `https://jobx.ge`; გარემოს პარამეტრების ცვლილება ახალი განთავსების შემდეგ მოქმედებს. CLI-ის გამოყენებამდე გადაამოწმე ანგარიში და პროექტი — ლოკალური `.vercel/project.json` შეიძლება ძველ სატესტო პროექტზე იყოს მიბმული.
+Production deployment runs through `.github/workflows/deploy.yml` at **09:00, 15:00 and 21:00 Asia/Tbilisi** (UTC+4). GitHub can delay schedules. Pushing to `main` no longer starts a Vercel build. The workflow compares main against the healthy live revision; identical code and documentation/test-only changes are skipped. Builds still run on Vercel with its existing cache. Vacancy database updates remain independent, and website deployment does not need this computer.
+
+For urgent code changes: `gh workflow run deploy.yml --ref main`. Do not additionally run `vercel --prod`. The `VERCEL_DEPLOY_HOOK` GitHub secret grants only deployment of this project's main branch; keep its URL secret. Concurrent runs are serialized. Each run requests at most one build and waits up to 10 minutes for the new healthy revision at `https://jobx.ge/api/health`. A failed build is retried at the next run because production still serves the old revision. Failures appear in Actions. If production is already unhealthy, diagnose it first; use Vercel's manual deployment for an emergency code fix.
+
+Environment-only changes do not change the Git SHA: use Vercel Redeploy once, with the existing build cache, after changing environment variables. `APP_URL` must be `https://jobx.ge`. Verify the CLI project is `infinity-solutions/vakansiebi` before deployment. `git.deploymentEnabled: false` disables Git-triggered builds while retaining the deploy hook. To restore automatic deployments, remove that setting and disable this scheduled workflow so the two mechanisms do not overlap.
 
 ## Google Analytics და Search Console
 
