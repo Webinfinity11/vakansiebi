@@ -69,6 +69,27 @@ export function safeReturnPath(value?: string) {
   }
 }
 const key = 'ertad-search-return';
+const hop = 'ertad-list-hop';
+/* A vacancy opened from a list sits one step above it in history, so its "back
+   to the list" control should step back rather than push the list again. Each
+   hop is marked here and claimed once by the page it opened: two visits in a row
+   used to leave four entries behind, and a reader tapping the phone's back
+   button walked through vacancies they had already closed before leaving the
+   site — which is what it felt like being thrown out. */
+export function markListHop() {
+  try {
+    sessionStorage.setItem(hop, '1');
+  } catch {}
+}
+export function takeListHop() {
+  try {
+    const marked = sessionStorage.getItem(hop) === '1';
+    sessionStorage.removeItem(hop);
+    return marked;
+  } catch {
+    return false;
+  }
+}
 /* `loadedThrough` is the last page appended with "load more"; the URL keeps the first page,
    so returning to the list has to know how many pages to fetch again before scrolling. */
 export function rememberSearch(
@@ -77,6 +98,7 @@ export function rememberSearch(
   page: number,
   loadedThrough = page,
 ) {
+  markListHop();
   try {
     // The board restores its anchor after all previously loaded pages return.
     // Native history restoration would otherwise race this asynchronous layout.

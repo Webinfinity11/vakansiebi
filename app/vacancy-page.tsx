@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { salaryDetails } from '@/lib/salary-summary';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ArrowUpRight,
   Bookmark,
@@ -24,7 +25,7 @@ import {
   defaultApplicationBody,
 } from '@/lib/vacancy-details';
 import { applicationBody, emailDraft } from '@/lib/application-contact';
-import { vacancyPath } from '@/lib/vacancy-navigation';
+import { takeListHop, vacancyPath } from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
 import { track } from '@/lib/analytics-client';
 import type { PublicJob } from '@/lib/types';
@@ -311,6 +312,24 @@ export default function VacancyPage({
     viewed.current = job.id;
     track('view', job.id);
   }, [job.id, preview]);
+  /* Where "back to the list" should lead. A vacancy the list opened is one step
+     above it, so stepping back returns the reader to the page they left, with
+     its scroll and its loaded pages, and leaves the history no longer than it
+     was. The flag lives in this history entry, so it survives going back and
+     forward again; a vacancy opened from a search engine or a shared link has
+     no step to go back to and keeps the plain link. */
+  const router = useRouter();
+  const steppedFromList = useRef(false);
+  useEffect(() => {
+    const state = window.history.state as { jobxFromList?: boolean } | null;
+    if (state?.jobxFromList) {
+      steppedFromList.current = true;
+      return;
+    }
+    if (!takeListHop()) return;
+    window.history.replaceState({ ...state, jobxFromList: true }, '');
+    steppedFromList.current = true;
+  }, [job.id]);
   const leftFor = useRef(false);
   const [saved, setSaved] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
@@ -489,7 +508,15 @@ export default function VacancyPage({
           </p>
         )}
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
-          <Link href={returnTo} prefetch={false}>
+          <Link
+            href={returnTo}
+            prefetch={false}
+            onClick={(event) => {
+              if (!steppedFromList.current) return;
+              event.preventDefault();
+              router.back();
+            }}
+          >
             {returnLabel}
           </Link>
           {job.category !== 'სხვა' && (
