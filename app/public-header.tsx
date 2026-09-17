@@ -4,6 +4,7 @@ import { useEffect, useState, type MouseEvent } from 'react';
 import { Bookmark, Search, Plus } from 'lucide-react';
 import { Brand } from './brand';
 import { ThemeToggle } from './theme-toggle';
+import { enterTab } from '@/lib/vacancy-navigation';
 
 function localAction(
   event: MouseEvent<HTMLAnchorElement>,
@@ -36,6 +37,10 @@ export function PublicHeader({
   onSaved?: () => void;
   onSearch?: () => void;
 }) {
+  /* The header is on every public page, so this is where the tab's first
+     history entry is recognised — before any page decides whether its own
+     "back" control has a step behind it to take. */
+  useEffect(enterTab, []);
   const [storedCount, setStoredCount] = useState(0);
   useEffect(() => {
     if (savedCount !== undefined) return;

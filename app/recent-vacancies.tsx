@@ -1,8 +1,8 @@
 'use client';
 import { vacancyCardTitle } from '@/lib/vacancy-card-labels';
-import Link from 'next/link';
 import { History } from 'lucide-react';
-import { markListHop, vacancyPath } from '@/lib/vacancy-navigation';
+import { vacancyPath } from '@/lib/vacancy-navigation';
+import { ListHopLink } from './list-hop-link';
 import type { RecentVacancy } from '@/lib/vacancy-activity';
 export function RecentVacancies({
   items,
@@ -25,18 +25,17 @@ export function RecentVacancies({
       </div>
       <div className="recent-track">
         {items.map((item) => (
-          <Link
+          /* This strip is part of the list too: a vacancy opened from it
+             should be stepped back over, not stacked on top of. */
+          <ListHopLink
             className="recent-card"
             key={item.id}
             href={vacancyPath(item.id, { from: returnPath })}
-            prefetch={false}
-            /* This strip is part of the list too: a vacancy opened from it
-               should be stepped back over, not stacked on top of. */
-            onClick={markListHop}
+            from={returnPath}
           >
             <strong title={item.title}>{vacancyCardTitle(item.title)}</strong>
             <span>{item.company || 'კერძო განცხადება'}</span>
-          </Link>
+          </ListHopLink>
         ))}
       </div>
     </details>

@@ -25,7 +25,11 @@ import {
   defaultApplicationBody,
 } from '@/lib/vacancy-details';
 import { applicationBody, emailDraft } from '@/lib/application-contact';
-import { takeListHop, vacancyPath } from '@/lib/vacancy-navigation';
+import {
+  canStepBack,
+  planListReturn,
+  vacancyPath,
+} from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
 import { track } from '@/lib/analytics-client';
 import type { PublicJob } from '@/lib/types';
@@ -321,15 +325,8 @@ export default function VacancyPage({
   const router = useRouter();
   const steppedFromList = useRef(false);
   useEffect(() => {
-    const state = window.history.state as { jobxFromList?: boolean } | null;
-    if (state?.jobxFromList) {
-      steppedFromList.current = true;
-      return;
-    }
-    if (!takeListHop()) return;
-    window.history.replaceState({ ...state, jobxFromList: true }, '');
-    steppedFromList.current = true;
-  }, [job.id]);
+    steppedFromList.current = planListReturn(returnTo);
+  }, [job.id, returnTo]);
   const leftFor = useRef(false);
   const [saved, setSaved] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
@@ -512,7 +509,7 @@ export default function VacancyPage({
             href={returnTo}
             prefetch={false}
             onClick={(event) => {
-              if (!steppedFromList.current) return;
+              if (!steppedFromList.current || !canStepBack()) return;
               event.preventDefault();
               router.back();
             }}

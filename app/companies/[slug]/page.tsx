@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { ArrowUpRight, MapPin, ExternalLink } from 'lucide-react';
 import { PublicHeader } from '../../public-header';
 import { CompanyLogo } from '../../company-logo';
+import { ListHopLink } from '../../list-hop-link';
 import { formatDate } from '../../vacancy-text';
 import { db } from '@/lib/server/db';
 import { publicJobs } from '@/lib/server/jobs';
@@ -161,10 +162,10 @@ export default async function CompanyPage(props: Props) {
           </h2>
           <div className="similar-grid">
             {result.jobs.map((job) => (
-              <Link
+              <ListHopLink
                 key={job.id}
                 href={vacancyPath(job.id, { from: here })}
-                prefetch={false}
+                from={here}
                 className="similar-card"
               >
                 <h3 title={job.title}>
@@ -201,7 +202,7 @@ export default async function CompanyPage(props: Props) {
                   size={18}
                   aria-hidden="true"
                 />
-              </Link>
+              </ListHopLink>
             ))}
           </div>
           {result.pages > 1 && (
