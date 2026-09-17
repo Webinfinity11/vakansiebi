@@ -156,6 +156,8 @@ function tab(entries: { state: unknown }[] = [{ state: null }]) {
   };
   Object.assign(globalThis, {
     window: { history },
+    location: { pathname: '/', search: '', origin: 'https://jobx.ge' },
+    document: { referrer: '' },
     sessionStorage: {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
@@ -167,7 +169,7 @@ function tab(entries: { state: unknown }[] = [{ state: null }]) {
 void test('a vacancy the list opened steps back onto it, however often the reader returns', () => {
   const history = tab();
   enterTab(); // the list is the tab's first page
-  assert.deepEqual(history.state, { jobxAt: 0, jobxRoot: true });
+  assert.deepEqual(history.state, { jobxAt: 0 });
   for (let visit = 1; visit <= 3; visit++) {
     markListHop('/?q=dev');
     history.push(); // the vacancy is opened on top of the list
@@ -186,7 +188,7 @@ void test('a vacancy without a list below it keeps the plain link', () => {
   enterTab();
   markListHop('/'); // even a matching mark cannot unlock the first entry
   assert.equal(planListReturn('/'), false);
-  assert.deepEqual(history.state, { jobxAt: 0, jobxRoot: true });
+  assert.deepEqual(history.state, { jobxAt: 0 });
   // A mark left by a tap that never became a visit names another list.
   tab([{ state: { jobxAt: 4 } }]);
   markListHop('/?q=dev');

@@ -120,16 +120,26 @@ function takeListHop(expected: string) {
 /* A soft navigation keeps the document, and with it this flag: a mark made here
    can only be claimed by a page the reader reached without leaving. */
 let sameDocument = false;
-type EntryState = {
-  jobxAt?: number;
-  jobxRoot?: boolean;
-  jobxFromList?: boolean;
-};
+type EntryState = { jobxAt?: number; jobxFromList?: boolean };
+/* The address this document was served at. A reader who taps a card before the
+   page has woken up gets an ordinary browser navigation instead of a soft one,
+   and then the only evidence of what lies below is the referrer. It describes
+   this address and no other, so it stops counting the moment the reader moves
+   on within the document. */
+let loadedAt =
+  typeof window === 'undefined' ? null : location.pathname + location.search;
+function loadedFromList(expected: string) {
+  return (
+    location.pathname + location.search === loadedAt &&
+    window.history.length > 1 &&
+    document.referrer === location.origin + safeReturnPath(expected)
+  );
+}
 /* Every public page numbers its own history entry as it loads. The number is
    kept in the entry, so going back, forward, or reloading finds it again, and
-   the counter follows the reader rather than the size of the stack — which a
-   new push truncates. Entry zero is the tab's first page: there is nothing
-   behind it but another site, so nothing here may ever step back from it. */
+   the counter follows the reader rather than the size of the stack, which a
+   new push truncates. Adjacent numbers are what proves a vacancy sits directly
+   above the list it names. */
 function stampEntry() {
   const state = (window.history.state ?? null) as EntryState | null;
   if (typeof state?.jobxAt === 'number') {
@@ -143,26 +153,27 @@ function stampEntry() {
   const previous = seen === null ? -1 : Math.floor(Number(seen));
   const at = (Number.isFinite(previous) ? Math.max(-1, previous) : -1) + 1;
   sessionStorage.setItem(cursor, String(at));
-  window.history.replaceState(
-    { ...state, jobxAt: at, ...(at === 0 ? { jobxRoot: true } : {}) },
-    '',
-  );
+  window.history.replaceState({ ...state, jobxAt: at }, '');
   return at;
 }
 export function enterTab() {
   try {
+    loadedAt ??= location.pathname + location.search;
     stampEntry();
   } catch {}
 }
-/* Answers, once per history entry, whether "back to the list" may step back.
-   The answer is kept in the entry itself, so it survives a reload and going
-   back and forward again, and is never decided twice. */
+/* Answers whether "back to the list" may step back instead of pushing the list
+   again. A yes needs positive evidence that the entry below is that very list —
+   a mark this document made and this entry alone can claim, or a referrer from
+   the load that brought the reader here. Anything less keeps the plain link:
+   one extra entry costs a reader nothing, and stepping off the site costs them
+   everything. The answer is kept in the entry, so a reload or a step forward
+   finds it again. */
 export function planListReturn(returnTo: string) {
   try {
     const state = window.history.state as EntryState | null;
-    if (state?.jobxRoot) return false;
     if (state?.jobxFromList) return true;
-    if (!takeListHop(returnTo)) return false;
+    if (!takeListHop(returnTo) && !loadedFromList(returnTo)) return false;
     window.history.replaceState(
       { ...window.history.state, jobxFromList: true },
       '',
