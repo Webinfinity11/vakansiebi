@@ -2021,10 +2021,14 @@ export default function JobBoard({
               {!error && !resultsPending && loadedThrough < pages && (
                 <div className="load-more-row" ref={nextPageTarget}>
                   {appending && (
-                    <div className="sr-only">
+                    <div className="append-loading">
+                      {/* The cards arriving are the message; with the next page
+                          fetched before the reader reaches the end, something
+                          has to occupy the space it will land in. */}
                       <output className="sr-only">
                         შემდეგი ვაკანსიები იტვირთება…
                       </output>
+                      <VacancySkeletons count={2} />
                     </div>
                   )}
                   <button
