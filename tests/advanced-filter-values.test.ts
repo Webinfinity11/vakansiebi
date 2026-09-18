@@ -21,9 +21,9 @@ void test('changing employment cannot restore an old category, city, query or re
     ...advanced,
   };
   const request = searchParams(edited);
-  assert.equal(request.get('q'), 'დიზაინერი');
-  assert.equal(request.get('category'), 'ტექნოლოგიები');
-  assert.equal(request.get('city'), 'თბილისი');
+  assert.equal(request.get('q'), 'dizaineri');
+  assert.equal(request.get('category'), 'teknologiebi');
+  assert.equal(request.get('city'), 'tbilisi');
   assert.equal(request.get('remote'), 'true');
   assert.equal(request.has('paid'), false);
   assert.equal(request.get('employment'), 'part-time');

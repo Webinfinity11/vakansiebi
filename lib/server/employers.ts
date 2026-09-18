@@ -6,6 +6,7 @@ import {
   candidatePairs,
   employerIdentity,
   employerSlug,
+  legacyEmployerSlug,
   mergedIdentities,
 } from '../employer-identity';
 
@@ -164,16 +165,35 @@ async function buildEmployerPages() {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   const bySlug = new Map<string, EmployerPage>();
   const byJob = new Map<string, string>();
-  // Largest first, so when two employers would share an address the larger keeps the plain one.
-  for (const [identity, g] of [...groups]
+  const ordered = [...groups]
     .filter(([, g]) => g.ids.length >= employerPageMinimum)
     .sort(
       (a, b) => b[1].ids.length - a[1].ids.length || a[0].localeCompare(b[0]),
-    )) {
+    );
+  // Reserve every old address before transliteration to avoid stealing another employer's URL.
+  const legacyOwners = new Map<string, string>();
+  const legacyByIdentity = new Map<string, string>();
+  for (const [identity, g] of ordered) {
+    const base = legacyEmployerSlug(ranked(g.names)[0].name) || identity;
+    let slug = base;
+    for (let n = 2; legacyOwners.has(slug); n++) slug = `${base}-${n}`;
+    legacyOwners.set(slug, identity);
+    legacyByIdentity.set(identity, slug);
+  }
+  const aliases = new Map<string, string>();
+  for (const [identity, g] of ordered) {
     const names = ranked(g.names);
     const base = employerSlug(names[0].name) || identity;
     let slug = base;
-    for (let n = 2; bySlug.has(slug); n++) slug = `${base}-${n}`;
+    for (
+      let n = 2;
+      bySlug.has(slug) ||
+      (legacyOwners.has(slug) && legacyOwners.get(slug) !== identity);
+      n++
+    )
+      slug = `${base}-${n}`;
+    const legacy = legacyByIdentity.get(identity)!;
+    if (legacy !== slug) aliases.set(legacy, slug);
     bySlug.set(slug, {
       slug,
       name: names[0].name,
@@ -186,7 +206,7 @@ async function buildEmployerPages() {
       for (const id of g.ids) byJob.set(id, slug);
     }
   }
-  return { bySlug, byJob };
+  return { bySlug, byJob, aliases };
 }
 
 let pages: { at: number; value: ReturnType<typeof buildEmployerPages> } | null =

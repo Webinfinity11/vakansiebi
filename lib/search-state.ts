@@ -1,4 +1,5 @@
 import { subcategoryFor } from './subcategories';
+import { searchUrlValue, searchValueFromUrl } from './search-url';
 import type { SearchFilters } from './personal-space';
 import { categories, listingSourceNames } from './types';
 /* How many vacancies one page of the list holds. Twenty meant a reader reached
@@ -18,6 +19,11 @@ export const sortKeys: Record<string, string> = {
    are cleaned here, where every other filter is already whitelisted. */
 const typed = (value: string | null) => (value || '').replace(/\p{Cc}/gu, '');
 export function readSearch(params: URLSearchParams): SearchFilters {
+  params = new URLSearchParams(params);
+  for (const key of ['category', 'city', 'q']) {
+    const value = params.get(key);
+    if (value !== null) params.set(key, searchValueFromUrl(key, value));
+  }
   const amount = (key: string) => {
     const value = params.get(key);
     return value && /^\d{1,9}$/.test(value) && Number(value) <= 100000000
@@ -71,9 +77,11 @@ export function readSearch(params: URLSearchParams): SearchFilters {
 }
 export function searchParams(filters: SearchFilters) {
   const result = new URLSearchParams();
-  if (filters.query.trim()) result.set('q', filters.query.trim());
+  if (filters.query.trim())
+    result.set('q', searchUrlValue('q', filters.query.trim()));
   for (const field of ['city', 'category', 'source'] as const)
-    if (filters[field] !== 'ყველა') result.set(field, filters[field]);
+    if (filters[field] !== 'ყველა')
+      result.set(field, searchUrlValue(field, filters[field]));
   const subcategory = subcategoryFor(filters.category, filters.subcategory);
   if (subcategory) result.set('subcategory', subcategory.id);
   if (filters.paid) result.set('paid', 'true');

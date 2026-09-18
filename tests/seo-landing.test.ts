@@ -118,7 +118,7 @@ void test('the list on screen claims the name only when it is exactly that list'
   // The path is percent-encoded, as a canonical URL has to be.
   assert.equal(
     decodeURIComponent(of('category=დაცვა&city=ქუთაისი')?.path ?? ''),
-    '/?category=დაცვა&city=ქუთაისი',
+    '/?category=datsva&city=kutaisi',
   );
   assert.equal(of(''), null);
   assert.equal(of('q=მოლარე&category=დაცვა'), null);
@@ -213,6 +213,6 @@ void test('a profession names its page the way a job seeker would search for it'
   // The address keeps the word the reader would have typed.
   assert.equal(
     decodeURIComponent(landingFor(new URLSearchParams('q=მოლარე'))!.path),
-    '/?q=მოლარე',
+    '/?q=molare',
   );
 });

@@ -140,9 +140,10 @@ Environment-only changes do not change the Git SHA: use Vercel Redeploy once, wi
 
 `jobx.ge`-ის GA4 ანგარიშია **JOBX** (`408126196`), property — **JOBX — jobx.ge** (`554293924`), ვებნაკადი — **JOBX Website** (`15781177095`), Measurement ID — `G-9S8J0W7QXM`. დროის სარტყელია საქართველო (UTC+4), ვალუტა — GEL.
 
-Search Console-ის property: `https://jobx.ge/`. საკუთრებას ადასტურებს root metadata-ს `google-site-verification`; მისი წაშლა ვერიფიკაციას გააუქმებს. Sitemap ინდექსი: `https://jobx.ge/sitemap-index.xml`; ძველი `/sitemap.xml` მისამართიც იმავე ინდექსს აბრუნებს გადამისამართების გარეშე.
+Search Console-ის მთავარი sitemap: `https://jobx.ge/sitemap.xml`; `robots.txt` ამ მისამართს უთითებს. ერთი `<urlset>` შეიცავს ძირითად გვერდებს, ინდექსირებად ძიებებსა და კომპანიებს. ცალკეული ვაკანსიები მთავარ sitemap-სა და ინდექსში აღარ შედის; მათი გვერდები და JobPosting მონაცემები რჩება.
 
-ორივე ინდექსი (`/sitemap-index.xml` და `/sitemap.xml`) build-ის დროს მონაცემთა ბაზის გარეშე მზადდება და CDN-დან გაიცემა. შეიცავს სამ დამოუკიდებელ ფაილს: `/sitemap-pages.xml`, `/vacancies/sitemap.xml` და `/companies/sitemap.xml`. ვაკანსიებისა და კომპანიების XML-ს Route Handler-ები ქმნის; მონაცემები სერვერზე 5 წუთით, წარმატებული პასუხები კი CDN-ზე 1 საათით ინახება. ცალკეული URL-ების `lastmod` ამ დინამიკურ ფაილებში რჩება. ბაზის შეფერხება ძირითადი ინდექსის ჩამოტვირთვას ვეღარ აფერხებს. ინდექსის გაგზავნის შემდეგ Search Console-ში შეამოწმეთ როგორც ინდექსის, ისე ორივე დინამიკური ნაწილის წაკითხვის შედეგი.
+XML მოთხოვნისას იქმნება და CDN-ზე 1 საათით ინახება; ახალი build მონაცემების განახლებისთვის საჭირო არ არის. პასუხი ნაკადურად გაიცემა. 50,000 URL-ის ან 50 MiB-ის გადაჭარბებისას ბრუნდება სექციების ინდექსი. ძველი `/sitemap-index.xml` შენარჩუნებულია და შეიცავს `/sitemap-pages.xml`, `/sitemap-searches.xml` და `/companies/sitemap.xml` სექციებს. ძველი ვაკანსიების XML მისამართიც ხელმისაწვდომია თავსებადობისთვის, მაგრამ ინდექსში აღარ არის მითითებული. მთავარი სიის შექმნის შეცდომაზე ბრუნდება არაკეშირებადი 503; სტატიკური ინდექსი ბაზის გარეშეც მუშაობს.
+
 
 `app/google-analytics.tsx` ტვირთავს Google tag-ს მხოლოდ production `https://jobx.ge`-ის საჯარო გვერდებზე. `page_view` იგზავნება ერთხელ თითო გვერდზე, Next.js-ის ნავიგაციის დროსაც. URL-ის query/hash და referrer-ის კერძო გზები იშლება. ადმინი, ინვოისები და preview გამორიცხულია; ფორმების ველები, აპლიკანტის კონტაქტები და შიდა ძიების ტექსტი არ იგზავნება. სარეკლამო პერსონალიზაცია და Google signals გამორთულია.
 
@@ -254,3 +255,9 @@ Due discovery runs first; description repair follows with at most 20 items / a s
 For immediate admin-to-GitHub dispatch, set server-only `GITHUB_ACTIONS_TOKEN` in Vercel Production: a fine-grained token restricted to `Webinfinity11/vakansiebi`, **Actions: read and write**, with an explicit expiry/rotation plan. No client environment variable. The endpoint is fixed to `scrape.yml` on `main`, requires an admin session and same-origin POST, and coalesces dispatches for 60 seconds using a database lock. If the token is missing or GitHub rejects a request, the durable queue remains and the UI explicitly says it is awaiting a scheduled run. Never copy a token into this README, a screenshot or a chat message.
 
 ვაკანსიის გვერდზე კატეგორიის ხელფასებთან შედარება მოხსნილია: ფართო კატეგორია თანაბარ პოზიციებს არ ნიშნავს. ვაკანსიის საკუთარი ანაზღაურება რჩება. ერთი მოკლე ამონარიდი (მაგალითად, მისამართი) ძირითად პირობებს უერთდება; ცალკე „პირობები მოკლედ“ მხოლოდ რამდენიმე ამონარიდისთვის ჩანს.
+
+## Public URL spelling and automatic pagination
+
+Known city, category and profession filters use Latin query values (for example `?city=tbilisi` and `?q=mdzgholi`). The UI and database filters stay Georgian; arbitrary search text is preserved. Old Georgian filter URLs permanently redirect to the equivalent Latin URL, preserving pagination and other parameters. Employer URLs reserve old names before assigning transliterated slugs so a collision cannot take over another employer's old address. Vacancy identifiers remain unchanged; their existing canonical redirect resolves old titles to the new spelling.
+
+Automatic pagination requires a fresh downward user scroll near the end of the list. It adds one page at a time with at least 1.2 seconds between automatic requests; layout shifts and component rerenders do not request more pages. The load-more button remains available for manual loading and retries. Loading indicators do not insert temporary skeleton rows, and the footer is excluded from scroll anchoring.

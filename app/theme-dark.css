@@ -2100,6 +2100,24 @@
 :root[data-theme='dark'] .company-page .similar-card:focus-visible {
   outline: 2px solid #6f93ff;
 }
+:root[data-theme='dark'] .search-directory-browse {
+  border-top: 1px solid #273040;
+}
+:root[data-theme='dark'] .search-directory .search-directory-browse > h2 {
+  color: #c4ccdd;
+}
+:root[data-theme='dark'] .search-directory-group h3 {
+  color: #969ca6;
+}
+:root[data-theme='dark'] .search-directory-group a {
+  color: #c4ccdd;
+}
+:root[data-theme='dark'] .search-directory-group a:hover {
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .search-directory a:focus-visible {
+  outline: 2px solid #6f93ff;
+}
 :root[data-theme='dark'] .search-directory h2 {
   color: #969ca6;
 }

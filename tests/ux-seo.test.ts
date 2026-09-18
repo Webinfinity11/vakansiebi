@@ -103,14 +103,14 @@ void test('structured vacancies use the real domain and only supported public fa
   // The published address carries the vacancy's own name, then its identifier.
   assert.equal(
     decodeURIComponent(data.url),
-    'https://jobx.ge/vacancies/დეველოპერი-a',
+    'https://jobx.ge/vacancies/developeri-a',
   );
   assert.equal(data.validThrough, '2026-09-30T23:59:59+04:00');
   // This fixture publishes no pay, so none is claimed.
   assert.equal('baseSalary' in data, false);
   assert.equal(
     decodeURIComponent(vacancyUrl({ ...job, canonicalId: 'b' })),
-    'https://jobx.ge/vacancies/დეველოპერი-b',
+    'https://jobx.ge/vacancies/developeri-b',
   );
   for (const patch of [
     { company: 'კერძო განცხადება' },

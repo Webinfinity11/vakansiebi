@@ -6,7 +6,8 @@ import {
   landingHeading,
 } from '@/lib/seo-landing';
 import { Suspense } from 'react';
-import { redirect } from 'next/navigation';
+import { redirect, permanentRedirect } from 'next/navigation';
+import { canonicalSearchParams } from '@/lib/search-url';
 import JobBoard from './job-board';
 import { vacancyPath, safeReturnPath } from '@/lib/vacancy-navigation';
 import { publicJobs } from '@/lib/server/jobs';
@@ -117,6 +118,9 @@ export default async function Home({
     const first = Array.isArray(value) ? value[0] : value;
     if (first !== undefined) params.set(key, first);
   }
+  const canonicalParams = canonicalSearchParams(params);
+  if (canonicalParams.toString() !== params.toString())
+    permanentRedirect('/?' + canonicalParams.toString());
   return (
     <>
       {/* Said once, on the front page: what this site is and how it is

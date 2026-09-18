@@ -1,8 +1,18 @@
-import { sitemapIndexResponse } from '@/lib/sitemap';
+import {
+  pagesEntries,
+  searchesEntries,
+  companiesEntries,
+} from '@/lib/server/sitemap-entries';
+import { combinedSitemapResponse, sitemapUnavailable } from '@/lib/sitemap';
 
-// Keep the already submitted URL available without a redirect.
-export const dynamic = 'force-static';
+// Refresh at the CDN without rebuilding the website when vacancies change.
+export const dynamic = 'force-dynamic';
 
-export function GET() {
-  return sitemapIndexResponse();
+export async function GET() {
+  try {
+    const sections = await Promise.all([searchesEntries(), companiesEntries()]);
+    return combinedSitemapResponse([...pagesEntries(), ...sections.flat()]);
+  } catch {
+    return sitemapUnavailable();
+  }
 }

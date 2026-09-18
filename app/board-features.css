@@ -120,10 +120,6 @@
   position: relative;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .board-shell .job-list .swipe-shell {
-    animation: vacancy-arrive 220ms ease-out backwards;
-    animation-delay: var(--vacancy-delay, 0ms);
-  }
   .results-updating[data-active] .results-loading-track::after {
     animation: vacancy-progress 1300ms ease-in-out infinite;
   }

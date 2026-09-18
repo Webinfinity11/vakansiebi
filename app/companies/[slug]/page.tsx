@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { cache } from 'react';
 import { ArrowUpRight, ChevronLeft, MapPin, ExternalLink } from 'lucide-react';
 import { PublicHeader } from '../../public-header';
@@ -34,7 +34,15 @@ const load = cache(async (rawSlug: string, rawPage: string) => {
   try {
     slug = decodeURIComponent(rawSlug);
   } catch {}
-  const employer = (await employerPages()).bySlug.get(slug);
+  const directory = await employerPages();
+  const canonicalSlug = directory.aliases.get(slug);
+  if (canonicalSlug) {
+    const page = Math.max(1, Math.min(10000, Math.floor(Number(rawPage)) || 1));
+    permanentRedirect(
+      `/companies/${encodeURIComponent(canonicalSlug)}${page > 1 ? `?page=${page}` : ''}`,
+    );
+  }
+  const employer = directory.bySlug.get(slug);
   if (!employer) notFound();
   const page = Math.max(1, Math.min(10000, Math.floor(Number(rawPage)) || 1));
   const [result, profile] = await Promise.all([

@@ -3,13 +3,13 @@ import './board-features.css';
 import { VacancySections } from './vacancy-sections';
 import { VacancyStatus } from './vacancy-status';
 import { useSwipe } from './use-swipe';
+import { useAutoLoad } from './use-auto-load';
 import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
 import { rememberRecentSearch } from '@/lib/recent-searches';
 import {
   landingCopy,
   landingHeading,
-  landingLinks,
   landingOf,
   relatedLandings,
 } from '@/lib/seo-landing';
@@ -21,6 +21,7 @@ import {
   vacancyCardLocation,
 } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
+import { SearchDirectoryGroups } from './search-directory-groups';
 import {
   rememberBoard,
   takeBoard,
@@ -870,44 +871,18 @@ export default function JobBoard({
     setAppendPage({ key: filterKey, page: loadedThrough + 1 });
   }, [appending, resultsPending, loadedThrough, pages, filterKey, page]);
   const nextPageTarget = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    // Start one page before the reader reaches the end. Errors require an explicit retry;
-    // opening a filter sheet must not trigger background pagination.
-    if (
-      !restoreReady ||
-      appending ||
-      resultsPending ||
-      error ||
-      appendError ||
-      filtersOpen ||
-      loadedThrough - page >= 49 ||
-      loadedThrough >= pages
-    )
-      return;
-    const target = nextPageTarget.current;
-    if (!target || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        observer.disconnect();
-        loadMore();
-      },
-      { rootMargin: '0px 0px 600px 0px' },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [
-    restoreReady,
-    appending,
-    resultsPending,
-    error,
-    appendError,
-    filtersOpen,
-    page,
-    loadedThrough,
-    pages,
+  useAutoLoad(
+    nextPageTarget,
+    restoreReady &&
+      !appending &&
+      !resultsPending &&
+      !error &&
+      !appendError &&
+      !filtersOpen &&
+      loadedThrough - page < 49 &&
+      loadedThrough < pages,
     loadMore,
-  ]);
+  );
   const applySearch = (filters: SearchFilters) => {
     setPageState({ key: '', page: 1 });
     setQuery(filters.query);
@@ -2046,16 +2021,10 @@ export default function JobBoard({
               {!error && !resultsPending && loadedThrough < pages && (
                 <div className="load-more-row" ref={nextPageTarget}>
                   {appending && (
-                    <div className="append-loading">
-                      {/* The cards arriving are the message. A banner, a
-                          progress bar and a button all saying the same sentence
-                          pushed the list a screenful further down to repeat
-                          what the skeletons already show; only a reader who
-                          cannot see them still needs the words. */}
+                    <div className="sr-only">
                       <output className="sr-only">
                         შემდეგი ვაკანსიები იტვირთება…
                       </output>
-                      <VacancySkeletons count={2} />
                     </div>
                   )}
                   <button
@@ -2126,14 +2095,7 @@ export default function JobBoard({
             </div>
           </div>
         )}
-        <h2>პოპულარული ძიებები</h2>
-        <div className="search-directory-links">
-          {landingLinks().map(({ path, label }) => (
-            <Link key={path} href={path} prefetch={false}>
-              {label}
-            </Link>
-          ))}
-        </div>
+        <SearchDirectoryGroups />
       </nav>
       <footer className="site-footer jobx-footer">
         <div className="footer-main">

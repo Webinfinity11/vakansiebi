@@ -1,4 +1,5 @@
 import { cities, cityStem } from './cities';
+import { searchUrlValue, searchValueFromUrl } from './search-url';
 import { roleVocabulary } from './search-language';
 import { categories } from './types';
 import type { SearchFilters } from './personal-space';
@@ -100,9 +101,10 @@ export const cityIn = (city: string) => cityStem(city) + 'ში';
 export function landingPath(landing: Choice) {
   const params = new URLSearchParams();
   // One spelling per page: the order is fixed, so the canonical never varies.
-  if (landing.category) params.set('category', landing.category);
-  if (landing.city) params.set('city', landing.city);
-  if (landing.role) params.set('q', landing.role);
+  if (landing.category)
+    params.set('category', searchUrlValue('category', landing.category));
+  if (landing.city) params.set('city', searchUrlValue('city', landing.city));
+  if (landing.role) params.set('q', searchUrlValue('q', landing.role));
   if (landing.trait) {
     const [key, value] = traits[landing.trait].param;
     params.set(key, value);
@@ -137,9 +139,15 @@ export function landingFor(params: URLSearchParams): Landing | null {
     if (!named || trait) return null;
     trait = named;
   }
-  const category = params.get('category');
-  const city = params.get('city');
-  const typed = params.get('q');
+  const category = params.has('category')
+    ? searchValueFromUrl('category', params.get('category')!)
+    : null;
+  const city = params.has('city')
+    ? searchValueFromUrl('city', params.get('city')!)
+    : null;
+  const typed = params.has('q')
+    ? searchValueFromUrl('q', params.get('q')!)
+    : null;
   // Only a word the vocabulary knows; anything else is a search, not a page.
   const role = typed === null ? null : (roleFor(typed)?.label ?? null);
   if (typed !== null && !role) return null;

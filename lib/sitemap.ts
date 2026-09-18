@@ -3,7 +3,6 @@ import { siteUrl } from './seo';
 export const sitemapPaths = [
   '/sitemap-pages.xml',
   '/sitemap-searches.xml',
-  '/vacancies/sitemap.xml',
   '/companies/sitemap.xml',
 ] as const;
 
@@ -41,6 +40,50 @@ const xmlEscape = (value: string) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+
+const urlsetStart =
+  '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+const urlXml = (entry: SitemapEntry) =>
+  `<url><loc>${xmlEscape(entry.url)}</loc>${lastmod(entry.lastModified)}</url>\n`;
+
+/** A flat sitemap, with the existing index as a fallback beyond protocol limits.
+ * Stream the XML so the growing catalogue does not hit Vercel's buffered body limit.
+ * All data is loaded before opening the stream so database failures still return 503.
+ */
+export function combinedSitemapResponse(entries: readonly SitemapEntry[]) {
+  const unique = [
+    ...new Map(entries.map((entry) => [entry.url, entry])).values(),
+  ];
+  if (unique.length > 50_000) return sitemapIndexResponse();
+  const chunks = [urlsetStart, ...unique.map(urlXml), '</urlset>\n'];
+  const encoder = new TextEncoder();
+  const bytes = chunks.reduce(
+    (total, chunk) => total + encoder.encode(chunk).byteLength,
+    0,
+  );
+  if (bytes > 50 * 1024 * 1024) return sitemapIndexResponse();
+  let position = 0;
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (position >= chunks.length) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(
+          encoder.encode(chunks.slice(position, position + 100).join('')),
+        );
+        position += 100;
+      },
+    }),
+    {
+      headers: {
+        'Content-Type': 'application/xml; charset=utf-8',
+        'Cache-Control': sitemapCacheControl,
+      },
+    },
+  );
+}
 
 export function urlsetResponse(entries: readonly SitemapEntry[]) {
   return new Response(

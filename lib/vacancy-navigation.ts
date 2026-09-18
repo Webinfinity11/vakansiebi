@@ -1,4 +1,5 @@
 import { clearBoard } from './board-return-cache';
+import { latinUrl } from './latin-url';
 import { searchParams, readSearch } from './search-state';
 import type { SearchFilters } from './personal-space';
 const uuid = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i;
@@ -8,7 +9,7 @@ const uuid = /^[a-f\d]{8}-(?:[a-f\d]{4}-){3}[a-f\d]{12}$/i;
    address, so nothing has to be looked up twice and every old link still
    resolves — the page redirects it to the spelling with the name in it. */
 export function vacancySlug(title: string) {
-  return title
+  return latinUrl(title)
     .normalize('NFKC')
     .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)

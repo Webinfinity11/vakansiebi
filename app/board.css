@@ -4237,10 +4237,79 @@
 }
 
 /* ---------- The directory of lists worth being found by ---------- */
+.load-more-row,
+.search-directory,
+.jobx-footer {
+  overflow-anchor: none;
+}
 .search-directory {
+  display: block;
   max-width: 1224px;
   margin: 0 auto;
   padding: 26px 28px 8px;
+}
+.search-directory-browse {
+  border-top: 1px solid #e1e6ef;
+  padding-top: 24px;
+}
+.search-directory .search-directory-browse > h2 {
+  margin-bottom: 24px;
+  font-size: 18px;
+  color: #26334d;
+}
+.search-directory-groups {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 28px;
+}
+.search-directory-group h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6a7588;
+}
+.search-directory-group ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.search-directory-group a {
+  display: block;
+  height: auto;
+  padding: 7px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #26334d;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.search-directory-group a:hover {
+  color: #2457e6;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.search-directory a:focus-visible {
+  outline: 2px solid #2457e6;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+@media (max-width: 900px) {
+  .search-directory-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .search-directory-groups {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .search-directory-group a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
 }
 .search-directory h2 {
   margin: 0 0 12px;

@@ -19,7 +19,7 @@ void test('vacancy links keep search context separate from their stable share UR
   // The name leads and the identifier closes the address.
   assert.equal(
     decodeURIComponent(vacancyPath({ id, title: 'მოლარე-კონსულტანტი' })),
-    `/vacancies/მოლარე-კონსულტანტი-${id}`,
+    `/vacancies/molare-konsultanti-${id}`,
   );
   assert.equal(vacancyIdFrom(`მოლარე-კონსულტანტი-${id}`), id);
   assert.equal(vacancyIdFrom(id.toUpperCase()), id);

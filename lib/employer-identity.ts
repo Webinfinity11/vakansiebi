@@ -1,3 +1,4 @@
+import { latinUrl } from './latin-url';
 import { companyKey } from './company-key';
 import { genericCompanyKeys } from './company-logo-identity';
 
@@ -171,7 +172,7 @@ export function mergedIdentities(
 
 /* The address of an employer's page, readable in either script: the most used spelling in lower
    case, legal form dropped, words joined by hyphens — "ლიბერთი-ბანკი", "jibe-cash-carry". */
-export function employerSlug(name: string) {
+export function legacyEmployerSlug(name: string) {
   return name
     .normalize('NFKC')
     .toLowerCase()
@@ -180,4 +181,8 @@ export function employerSlug(name: string) {
     .replace(/^-+|-+$/g, '')
     .slice(0, 80)
     .replace(/-+$/, '');
+}
+
+export function employerSlug(name: string) {
+  return latinUrl(legacyEmployerSlug(name));
 }
