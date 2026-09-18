@@ -22,12 +22,15 @@ import {
   ListChecks,
   ReceiptText,
   DatabaseZap,
+  Gauge,
   History,
   BarChart3,
   Building2,
   Flag,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { AttentionBoard } from './attention-board';
+import { attentionList } from '@/lib/admin-attention';
 import {
   Sheet,
   SheetContent,
@@ -229,7 +232,8 @@ export default function AdminPanel() {
   const [github, setGithub] = useState<Awaited<
     ReturnType<typeof githubScraperStatus>
   > | null>(null);
-  const [tab, setTab] = useState('submissions'),
+  // The panel opens on the state of things, not on a queue.
+  const [tab, setTab] = useState('control'),
     [submissionView, setSubmissionView] =
       useState<SubmissionView>('submissions'),
     [status, setStatus] = useState('review'),
@@ -377,6 +381,12 @@ export default function AdminPanel() {
       await load();
     }
   };
+  /* The count beside the tab: how many findings would be waiting there. */
+  const attention = observedAt
+    ? attentionList(sources, observedAt).filter(
+        (item) => item.severity !== 'note',
+      ).length
+    : 0;
   const sourceAction = async (
     s: { id: Source['id'] | 'all' },
     body: Record<string, unknown>,
@@ -572,6 +582,11 @@ export default function AdminPanel() {
           }}
         >
           <TabsList variant="line" className="admin-tabs">
+            <TabsTrigger value="control">
+              <Gauge size={17} />
+              <span>მართვა</span>
+              {attention > 0 && <b>{attention}</b>}
+            </TabsTrigger>
             <TabsTrigger value="submissions">
               <Inbox size={17} />
               <span>ჩვენი ვაკანსიები</span>
@@ -607,6 +622,20 @@ export default function AdminPanel() {
               <span>კომპანიების სახელები</span>
             </TabsTrigger>
           </TabsList>
+          <TabsContent value="control">
+            <SectionHeading title="მართვა">
+              რა გაჩერდა, რა ჩაიჭედა, რას სჭირდება დასვენება — და რა უნდა
+              გააკეთო. ყველა დანარჩენი ჩანართი დეტალებია.
+            </SectionHeading>
+            <AttentionBoard
+              sources={sources}
+              busy={busy}
+              now={observedAt}
+              onAct={(source, body) =>
+                void sourceAction({ id: source as Source['id'] }, body)
+              }
+            />
+          </TabsContent>
           <TabsContent value="submissions">
             <SectionHeading title="ჩვენი ვაკანსიები">
               JOBX-ზე ფორმით გაგზავნილი ვაკანსიები, სხვა საიტებიდან შემოტანილის
