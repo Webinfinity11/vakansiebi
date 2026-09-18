@@ -1,12 +1,12 @@
 import type { MetadataRoute } from 'next';
+import { homeDescription } from '@/lib/seo';
 /* Served at /manifest.webmanifest. Makes the site installable from the browser menu
    ("მთავარ ეკრანზე დამატება") and opens it without browser chrome afterwards. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'JOBX — ვაკანსიები',
     short_name: 'JOBX',
-    description:
-      'მოძებნე ვაკანსიები სხვადასხვა წყაროდან. შეადარე პირობები და გადადი პირველწყაროზე.',
+    description: homeDescription,
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

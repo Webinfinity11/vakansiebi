@@ -1,4 +1,4 @@
-import { siteUrl, shareImage } from '@/lib/seo';
+import { siteUrl, shareImage, homeTitle, homeDescription } from '@/lib/seo';
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { GoogleAnalytics } from './google-analytics';
@@ -29,15 +29,16 @@ export const metadata: Metadata = {
     google: 'HEArO7D4Prjvkmq7ovhmlyOGpzZD9_SOZ_TETGDI6Fw',
   },
   openGraph: {
+    title: homeTitle,
+    description: homeDescription,
     siteName: 'JOBX',
     locale: 'ka_GE',
     type: 'website',
     images: [shareImage],
   },
   twitter: { card: 'summary_large_image', images: [shareImage.url] },
-  title: 'JOBX — ვაკანსიები ერთ სივრცეში',
-  description:
-    'მოძებნე ვაკანსიები სხვადასხვა წყაროდან. შეადარე პირობები და გადადი პირველწყაროზე.',
+  title: homeTitle,
+  description: homeDescription,
   applicationName: 'JOBX',
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title: 'JOBX', statusBarStyle: 'default' },

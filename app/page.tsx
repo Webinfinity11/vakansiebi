@@ -1,5 +1,12 @@
 import type { Metadata } from 'next';
-import { jsonLd, shareImage, siteIdentity, siteUrl } from '@/lib/seo';
+import {
+  jsonLd,
+  shareImage,
+  siteIdentity,
+  siteUrl,
+  homeTitle,
+  homeDescription,
+} from '@/lib/seo';
 import {
   landingDescription,
   landingFor,
@@ -67,14 +74,11 @@ export async function generateMetadata({
      out of the index while still passing its links on. */
   const landing = filtered ? landingFor(params) : null;
   const heading = landing && landingHeading(landing);
-  const title = heading
-    ? `${heading} | JOBX`
-    : 'JOBX — ვაკანსიები ერთ სივრცეში';
-  const description = landing
-    ? landingDescription(landing)
-    : 'მოძებნე ვაკანსიები საქართველოში და შეადარე პირობები.';
+  const title = heading ? `${heading} | JOBX` : homeTitle;
+  const description = landing ? landingDescription(landing) : homeDescription;
   return {
-    ...(heading ? { title, description } : {}),
+    title,
+    description,
     alternates: { canonical: siteUrl + (landing ? landing.path : '/') },
     robots:
       filtered && !landing
