@@ -33,7 +33,7 @@ export async function GET() {
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.error IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410')) removed_count,
         (SELECT COALESCE(jsonb_agg(e),'[]'::jsonb) FROM (SELECT left(i.error,120) message,count(*)::int count FROM source_items i WHERE i.source_id=s.id AND i.error NOT IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410') GROUP BY 1 ORDER BY 2 DESC LIMIT 3) e) top_errors,
         (SELECT count(*)::int FROM source_runs r WHERE r.source_id=s.id AND r.status='deferred' AND r.started_at>now()-interval '3 days') deferred_runs,
-        (SELECT count(DISTINCT j.id)::int FROM source_items i JOIN jobs j ON j.id=i.job_id WHERE i.source_id=s.id AND j.status='published' AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))) published_count,
+        (SELECT count(DISTINCT j.id)::int FROM source_items i JOIN jobs j ON j.id=i.job_id WHERE i.source_id=s.id AND j.status='published' AND (COALESCE(j.search_deadline,'')='' OR j.search_deadline>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))) published_count,
         (SELECT count(*)::int FROM source_discovery_pages p WHERE p.source_id=s.id AND p.observed_at>now()-interval '24 hours') observed_pages
         FROM sources s WHERE NOT s.retired AND s.id<>'jobx' ORDER BY s.id`,
       )
