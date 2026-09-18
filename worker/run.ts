@@ -29,6 +29,7 @@ import {
   parseDetail,
   additionalListing,
   UnavailableVacancy,
+  UnpublishableVacancy,
   type ListedLink,
 } from './adapters';
 import {
@@ -76,6 +77,8 @@ export async function runSource(
     failed = 0,
     discovered = 0,
     removed = 0,
+    // Advertisements that parsed but had nothing written in them.
+    blank = 0,
     linked = 0,
     expired = 0,
     qualityHeld = 0,
@@ -89,6 +92,7 @@ export async function runSource(
     unchanged,
     linked,
     removed,
+    blank,
     expired,
     quality_held: qualityHeld,
     budget_exhausted: budgetExhausted,
@@ -435,11 +439,17 @@ export async function runSource(
         if (outcome === 'expired') expired++;
         if (outcome === 'quality_held') qualityHeld++;
       } catch (e) {
+        /* A withdrawn posting and an advertisement with nothing written in it
+           are both answers, not faults: the source is working. They are
+           re-confirmed on the slow schedule and never count towards the
+           consecutive failures that halt a run. */
         if (
           (e instanceof SourceHttpError && [404, 410].includes(e.status)) ||
-          e instanceof UnavailableVacancy
+          e instanceof UnavailableVacancy ||
+          e instanceof UnpublishableVacancy
         ) {
-          removed++;
+          if (e instanceof UnpublishableVacancy) blank++;
+          else removed++;
           consecutiveDetailFailures = 0;
           // A withdrawn vacancy is re-confirmed at a growing interval, not every week forever.
           await db().query(
@@ -571,6 +581,7 @@ export async function runSource(
       changed,
       failed,
       removed,
+      blank,
       linked,
       expired,
       budgetExhausted,

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseDetail,
+  UnpublishableVacancy,
   listLinks,
   externalId,
   cleanText,
@@ -410,13 +411,19 @@ void test('a short classified original passes both parsing and publication valid
   const v = parseDetail('gancxadebebi', html, gxVacancyUrl);
   assert.equal(v.description, short);
   assert.ok(vacancySchema.safeParse(v).success);
+  /* An advertisement whose author wrote nothing is refused — but as an
+     advertisement with nothing to publish, not as a source whose shape has
+     changed. Three of those in a row used to halt the whole run and mark every
+     scraper build red, which hid the failures worth seeing. */
   for (const description of ['', '   ', '.........']) {
-    assert.throws(() =>
-      parseDetail(
-        'gancxadebebi',
-        html.replace(short, description),
-        gxVacancyUrl,
-      ),
+    assert.throws(
+      () =>
+        parseDetail(
+          'gancxadebebi',
+          html.replace(short, description),
+          gxVacancyUrl,
+        ),
+      UnpublishableVacancy,
     );
     assert.ok(!vacancySchema.safeParse({ ...v, description }).success);
   }

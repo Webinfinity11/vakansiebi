@@ -13,6 +13,7 @@ import { safeLogoUrl, safeExternalUrl } from '../../lib/vacancy-media';
 import { classify, sourceCategory, type Category } from '../categories';
 import {
   UnavailableVacancy,
+  UnpublishableVacancy,
   type ListedLink,
   type ListingHints,
   type SourceModule,
@@ -48,7 +49,7 @@ type HrAnnouncement = {
   isSuitableForStudent?: boolean;
 };
 type HrState = { b?: { data?: { announcement?: HrAnnouncement } } };
-export { UnavailableVacancy } from './module';
+export { UnavailableVacancy, UnpublishableVacancy } from './module';
 type Location = { address?: { addressLocality?: string } };
 type JobPosting = {
   '@type'?: string;
@@ -1028,13 +1029,16 @@ function finishVacancy(
   if (!j.city && hints?.city) j.city = hints.city.replace(/\s+/g, ' ').trim();
   j.category = classify(j.title, fromSource);
   if (!j.company) j.warnings.push('კომპანიის სახელი წყაროზე ვერ მოიძებნა.');
-  if (
-    j.title.length < 2 ||
-    (!verifiedMinimalSs &&
-      j.description.length < 40 &&
-      !hasShortClassifiedDescription(j))
-  )
+  // Nothing parsed: the page's shape is not what this adapter expects.
+  if (j.title.length < 2)
     throw Error('Vacancy structure changed or description is missing');
+  // The page parsed; the advertisement itself has no description to publish.
+  if (
+    !verifiedMinimalSs &&
+    j.description.length < 40 &&
+    !hasShortClassifiedDescription(j)
+  )
+    throw new UnpublishableVacancy('Advertisement carries no description');
   if (verifiedMinimalSs && !j.description)
     j.warnings.push(
       'პირველწყაროზე აღწერა მითითებული არ არის. დეტალებისთვის გახსენი განცხადება.',

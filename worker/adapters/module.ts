@@ -7,6 +7,18 @@ export class UnavailableVacancy extends Error {
   }
 }
 
+/* The page parsed and the vacancy is still there — the advertiser simply wrote
+   no description. Not a broken source and not a withdrawn posting: there is
+   nothing here worth publishing, and there never will be unless the advertiser
+   comes back and writes it. Kept apart from a structural failure so that three
+   of these in a row cannot halt a healthy run, and so the scraper's red is
+   still worth looking at. */
+export class UnpublishableVacancy extends Error {
+  constructor(reason: string) {
+    super(reason);
+  }
+}
+
 /** What a listing page already says about a vacancy before its detail is fetched. */
 export type ListingHints = {
   city?: string;
