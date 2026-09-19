@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GET as indexGET } from '../app/sitemap-index.xml/route';
+import { GET as mainGET } from '../app/sitemap.xml/route';
 import robots from '../app/robots';
 import {
   sitemapCacheControl,
@@ -10,6 +11,24 @@ import {
   sitemapUnavailable,
   urlsetResponse,
 } from '../lib/sitemap';
+
+void test('the submitted sitemap keeps discovery available when the database fails', async () => {
+  const previous = process.env.DATABASE_URL;
+  delete process.env.DATABASE_URL;
+  try {
+    const response = await mainGET();
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    assert.equal(response.headers.get('Content-Type'), 'application/xml; charset=utf-8');
+    const body = await response.text();
+    assert.equal(body, await indexGET().text());
+    for (const path of sitemapPaths)
+      assert.ok(body.includes(`<loc>https://jobx.ge${path}</loc>`));
+  } finally {
+    if (previous === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous;
+  }
+});
 
 void test('the legacy discovery index remains available without a configured database', async () => {
   const previous = process.env.DATABASE_URL;
