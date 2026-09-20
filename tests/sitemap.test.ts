@@ -44,7 +44,7 @@ void test('the legacy discovery index remains available without a configured dat
         assert.ok(body.includes(`<loc>https://jobx.ge${path}</loc>`));
       bodies.push(body);
     }
-    assert.ok(!bodies[0].includes('/vacancies/sitemap.xml'));
+    assert.ok(bodies[0].includes('<loc>https://jobx.ge/vacancies/sitemap.xml</loc>'));
   } finally {
     if (previous === undefined) delete process.env.DATABASE_URL;
     else process.env.DATABASE_URL = previous;
@@ -106,13 +106,15 @@ void test('the main sitemap is a flat, escaped, deduplicated URL list', async ()
       lastModified: new Date('2026-09-18T00:00:00Z'),
     },
     { url: 'https://jobx.ge/' },
+    { url: 'https://jobx.ge/vacancies/example' },
   ]);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Cache-Control'), sitemapCacheControl);
   const body = await response.text();
   assert.match(body, /<urlset /);
   assert.doesNotMatch(body, /<sitemapindex/);
-  assert.equal(body.match(/<url>/g)?.length, 3);
+  assert.equal(body.match(/<url>/g)?.length, 4);
+  assert.ok(body.includes('<loc>https://jobx.ge/vacancies/example</loc>'));
   assert.match(body, /category=a&amp;city=b/);
   assert.match(body, /<lastmod>2026-09-18T00:00:00.000Z<\/lastmod>/);
   assert.ok(body.endsWith('</urlset>\n'));

@@ -2,6 +2,7 @@ import {
   pagesEntries,
   searchesEntries,
   companiesEntries,
+  vacanciesEntries,
 } from '@/lib/server/sitemap-entries';
 import { combinedSitemapResponse, sitemapIndexResponse } from '@/lib/sitemap';
 
@@ -10,7 +11,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const sections = await Promise.all([searchesEntries(), companiesEntries()]);
+    const sections = await Promise.all([
+      searchesEntries(),
+      companiesEntries(),
+      vacanciesEntries(),
+    ]);
     return combinedSitemapResponse([...pagesEntries(), ...sections.flat()]);
   } catch {
     // Keep discovery available during a database outage. Do not cache this

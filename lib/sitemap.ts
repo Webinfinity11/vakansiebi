@@ -3,6 +3,7 @@ import { siteUrl } from './seo';
 export const sitemapPaths = [
   '/sitemap-pages.xml',
   '/sitemap-searches.xml',
+  '/vacancies/sitemap.xml',
   '/companies/sitemap.xml',
 ] as const;
 
