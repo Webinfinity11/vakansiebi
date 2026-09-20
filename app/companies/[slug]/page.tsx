@@ -227,9 +227,14 @@ export default async function CompanyPage(props: Props) {
                       {job.city}
                     </span>
                   )}
+                  {job.datePosted && (
+                    <time dateTime={job.datePosted}>
+                      გამოქვეყნდა: {formatDate(job.datePosted)}
+                    </time>
+                  )}
                   {job.deadline && (
                     <time dateTime={job.deadline}>
-                      ვადა: {formatDate(job.deadline)}
+                      ბოლო ვადა: {formatDate(job.deadline)}
                     </time>
                   )}
                 </div>

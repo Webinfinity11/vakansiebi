@@ -7,6 +7,9 @@ void test(
   'events are counted, folded into daily totals without loss or double counting, and constrained',
   { skip: process.env.RUN_DB_TESTS !== '1' },
   async () => {
+    const url = new URL(process.env.DATABASE_URL!);
+    assert.ok(['localhost', '127.0.0.1'].includes(url.hostname));
+    assert.equal(url.pathname, '/ertad_test');
     const { db } = await import('../lib/server/db');
     const { analyticsSummary, normalizeEvent, recordEvent, rollupAnalytics } =
       await import('../lib/server/analytics');
@@ -14,6 +17,7 @@ void test(
     for (const [kind, value] of [
       ['search', 'Მოლარე'],
       ['search', 'მოლარე '],
+      ['search', 'ფლებოტომისტი'],
       ['search_empty', 'ფლებოტომისტი'],
     ] as const) {
       const event = normalizeEvent(kind, value)!;
@@ -23,6 +27,10 @@ void test(
       `INSERT INTO analytics_events(kind,value,created_at) VALUES('search','მოლარე', now() - interval '45 days')`,
     );
     const before = await analyticsSummary(90);
+    assert.deepEqual(
+      before.searchPerformance.find((r) => r.value === 'ფლებოტომისტი'),
+      { value: 'ფლებოტომისტი', searches: 1, empty: 1 },
+    );
     assert.equal(before.searches[0].value, 'მოლარე');
     assert.equal(
       before.searches[0].count,
@@ -31,7 +39,7 @@ void test(
     );
     assert.equal(
       (await analyticsSummary(30)).totals.search,
-      2,
+      3,
       'a 45-day-old event is outside 30 days',
     );
 
@@ -39,7 +47,11 @@ void test(
        included, and adds up to the totals it is drawn beside. */
     const day = await analyticsSummary(1);
     assert.equal(day.unit, 'hour');
-    assert.equal(day.activity.length, 24, 'a day is read hour by hour');
+    assert.equal(
+      day.activity.length,
+      25,
+      'rolling 24 hours includes both partial edge hours',
+    );
     assert.equal(
       day.activity.reduce((n, point) => n + point.search, 0),
       day.totals.search,
@@ -74,9 +86,22 @@ void test(
     assert.equal(
       (await db().query('SELECT count(*)::int n FROM analytics_events')).rows[0]
         .n,
-      3,
+      4,
     );
 
+    // Events in the partially covered starting bucket must not disappear
+    // from the curve while remaining in the total.
+    await db().query(`INSERT INTO analytics_events(kind,value,created_at) VALUES
+      ('search','boundary',now()-interval '24 hours'+interval '1 minute'),
+      ('search','week boundary',now()-interval '7 days'+interval '1 minute')`);
+    for (const days of [1, 7, 90, 365]) {
+      const summary = await analyticsSummary(days);
+      assert.equal(
+        summary.activity.reduce((n, p) => n + p.search, 0),
+        summary.totals.search,
+        `curve matches total for ${days} days`,
+      );
+    }
     await assert.rejects(
       db().query(
         `INSERT INTO analytics_events(kind,value) VALUES('ip','1.2.3.4')`,

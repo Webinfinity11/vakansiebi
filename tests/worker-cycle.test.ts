@@ -39,46 +39,31 @@ function fixture({ due = true, failed = 14, stopped = false } = {}) {
   };
   return { events, deps };
 }
-void test('repeated repair failures cannot starve due discovery on successive worker invocations', async () => {
+void test('new-only cycles discover and reconcile without invoking repairs', async () => {
   const { events, deps } = fixture();
+  deps.refresh = async () => {
+    throw Error('must never fetch old details');
+  };
   await runSourceCycle('jobs', deps);
   await runSourceCycle('jobs', deps);
-  assert.equal(events.filter((e) => e === 'discover').length, 2);
-  assert.deepEqual(events.slice(0, 6), [
+  assert.deepEqual(events, [
     'discover',
     'reconcile',
     'discovery-reported',
-    'refresh',
-    'refresh-reported',
+    'discover',
     'reconcile',
+    'discovery-reported',
   ]);
 });
-void test('paused or not-yet-due discovery stays paused while requested repairs proceed', async () => {
+void test('not-yet-due and stopped sources make no detail requests', async () => {
   const { events, deps } = fixture({ due: false });
   await runSourceCycle('jobs', deps);
-  assert.ok(events.includes('refresh'));
-  assert.ok(!events.includes('discover'));
+  assert.deepEqual(events, ['discovery-reported']);
+  const stopped = fixture({ stopped: true });
+  await runSourceCycle('jobs', stopped.deps);
+  assert.deepEqual(stopped.events, []);
 });
-void test('shutdown and infrastructure failures never start another discovery batch', async () => {
-  const { events, deps } = fixture({ stopped: true });
-  await runSourceCycle('jobs', deps);
-  assert.ok(!events.includes('discover'));
-  const broken = fixture();
-  broken.deps.refresh = async () => {
-    throw Error('database unavailable');
-  };
-  await assert.rejects(
-    runSourceCycle('jobs', broken.deps),
-    /database unavailable/,
-  );
-  assert.equal(
-    broken.events.filter((e) => e === 'discover').length,
-    1,
-    'new vacancies were handled before the old repair failed',
-  );
-});
-
-void test('a discovery infrastructure failure stops the cycle before repairs', async () => {
+void test('a discovery infrastructure failure stops the cycle', async () => {
   const { events, deps } = fixture();
   deps.discover = async () => {
     throw Error('database unavailable');

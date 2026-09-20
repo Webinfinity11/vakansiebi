@@ -5,7 +5,7 @@ import { dueSourcesSql } from '../worker/scheduler';
 import { reconciliationCandidatesSql } from '../worker/automation';
 
 void test(
-  'database schedules skip unchanged records and disabled sources while retaining repairs and expiry',
+  'database schedules skip unchanged records and disabled sources without repairs, while retaining expiry',
   { skip: !process.env.TEST_DATABASE_URL },
   async () => {
     const client = new Client({
@@ -48,7 +48,7 @@ void test(
         ).rows
           .map((r) => r.id)
           .sort((a: string, b: string) => a.localeCompare(b)),
-        ['hr', 'jobs', 'worknet'],
+        ['hr', 'jobs'],
       );
       assert.deepEqual(
         (
@@ -56,7 +56,7 @@ void test(
         ).rows
           .map((r) => r.id)
           .sort((a: string, b: string) => a.localeCompare(b)),
-        ['changed', 'expired', 'new', 'stale'],
+        ['changed', 'expired', 'new'],
       );
     } finally {
       await client.end();

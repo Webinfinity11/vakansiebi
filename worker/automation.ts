@@ -9,6 +9,7 @@ import {
 import { externalId, fingerprint, tbilisiDate } from './adapters';
 import { auditChange } from './importer';
 import { db, transaction } from '../lib/server/db';
+import { importDateReason } from './new-only';
 import { safeLogoUrl } from '../lib/vacancy-media';
 
 export function publishable(
@@ -106,7 +107,9 @@ export async function reconcileJob(c: PoolClient, id: string) {
   );
   const candidate = fresh
     .map((i) => publishable(i.raw, i.source_id, i.url))
-    .find(Boolean);
+    .find(
+      (v) => v && (job.status !== 'pending' || !importDateReason(v.datePosted)),
+    );
   let status = job.status;
   let reason: string | null = null;
   let draft = job.draft;
@@ -134,13 +137,9 @@ export async function reconcileJob(c: PoolClient, id: string) {
           i.error || '',
         ),
       );
-    if (
-      allExpired ||
-      allRemoved ||
-      (job.automation_managed && now - lastGood > 7 * 86400000)
-    ) {
+    if (allExpired || allRemoved) {
       status = 'archived';
-      reason = allExpired ? 'expired' : allRemoved ? 'removed' : 'unverified';
+      reason = allExpired ? 'expired' : 'removed';
       published = null;
     } else if (
       fresh.length &&
@@ -190,7 +189,6 @@ export const reconciliationCandidatesSql = `SELECT j.id FROM jobs j
   AND (
     j.automation_checked_at IS NULL OR j.updated_at>j.automation_checked_at
     OR EXISTS(SELECT 1 FROM source_items i WHERE i.job_id=j.id AND i.last_checked_at>j.automation_checked_at)
-    OR (j.status IN ('pending','published') AND j.automation_checked_at<now()-interval '24 hours')
     OR (j.status='published' AND NULLIF(j.draft->>'deadline','') < $2)
   ) ORDER BY j.automation_checked_at NULLS FIRST,j.id LIMIT 500`;
 

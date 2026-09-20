@@ -25,6 +25,23 @@ const measures = [
   { key: 'outbound', name: 'გადასვლა', colour: '#1baf7a' },
 ] as const;
 
+const filterNames: Record<string, string> = {
+  query: 'საძიებო სიტყვა',
+  city: 'ქალაქი',
+  category: 'მიმართულება',
+  subcategory: 'ქვემიმართულება',
+  source: 'წყარო',
+  paid: 'ხელფასი მითითებულია',
+  remote: 'დისტანციური',
+  sort: 'დალაგება',
+  salaryPeriod: 'ანაზღაურების პერიოდი',
+  salaryFrom: 'მინიმალური ხელფასი',
+  salaryTo: 'მაქსიმალური ხელფასი',
+  employment: 'განაკვეთი',
+  entryLevel: 'გამოცდილების გარეშე',
+  deep: 'აღწერაშიც ძებნა',
+  postedWithin: 'გამოქვეყნების თარიღი',
+};
 const whole = new Intl.NumberFormat('ka-GE');
 const share = (part: number, whole_: number) =>
   whole_ > 0 ? `${Math.round((part / whole_) * 1000) / 10}%` : '—';
@@ -112,11 +129,7 @@ export function AnalyticsPanel() {
             <Tile
               label="ვაკანსიის ნახვა"
               value={totals!.view}
-              note={
-                totals!.search
-                  ? `ერთ ძებნაზე ${(totals!.view / totals!.search).toFixed(1)}`
-                  : 'გახსნილი ვაკანსიის გვერდი'
-              }
+              note="გახსნილი ვაკანსიის გვერდები, მათ შორის პირდაპირი ვიზიტები"
             />
             <Tile
               label="გადასვლა დამსაქმებელთან"
@@ -167,7 +180,51 @@ export function AnalyticsPanel() {
             </section>
             <Funnel steps={data!.steps} />
           </div>
+          <section className="admin-analytics-list">
+            <h3>ძიების შედეგიანობა</h3>
+            <p className="admin-analytics-hint">
+              უშედეგო ძებნები პირველ რიგში. შედეგზე არჩეული ფილტრებიც მოქმედებს;
+              ეს მომხმარებლების რაოდენობა არ არის.
+            </p>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="admin-search-performance">
+                <thead>
+                  <tr>
+                    <th scope="col">საძიებო სიტყვა</th>
+                    <th scope="col">ძებნა</th>
+                    <th scope="col">უშედეგო</th>
+                    <th scope="col">უშედეგო წილი</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data!.searchPerformance.map((row) => (
+                    <tr key={row.value}>
+                      <th scope="row">{row.value}</th>
+                      <td>{whole.format(row.searches)}</td>
+                      <td>{whole.format(row.empty)}</td>
+                      <td>
+                        {row.empty <= row.searches
+                          ? share(row.empty, row.searches)
+                          : 'არასრული მონაცემი'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!data!.searchPerformance.length && (
+                <p>ამ პერიოდში ძებნა არ დაფიქსირებულა.</p>
+              )}
+            </div>
+          </section>
           <div className="admin-analytics-lists">
+            <RankedList
+              title="გამოყენებული ფილტრები"
+              rows={data!.filters.map((row) => ({
+                ...row,
+                value: filterNames[row.value] || row.value,
+              }))}
+              unit="გამოყენება"
+            />
             <RankedList
               title="ყველაზე ხშირი ძებნა"
               rows={data!.searches}
@@ -175,7 +232,7 @@ export function AnalyticsPanel() {
             />
             <RankedList
               title="ძებნა, რომელიც არაფერს პოულობს"
-              hint="რას ეძებენ და რა არ გვაქვს — აქედან იწყება ახალი წყარო."
+              hint="რომელი ძებნა დარჩა შედეგის გარეშე არჩეული ფილტრებით."
               rows={data!.emptySearches}
               unit="ძებნა"
             />
@@ -195,8 +252,8 @@ export function AnalyticsPanel() {
         </>
       )}
       <p className="admin-analytics-note">
-        ანონიმური რაოდენობები: ინახება მხოლოდ მოვლენის ტიპი, მნიშვნელობა და დრო
-        — IP მისამართი, cookie და სესია არა.
+        მოვლენების რაოდენობები: ინახება ტიპი, მნიშვნელობა და დრო — IP მისამართი,
+        cookie და სესია არა.
       </p>
     </section>
   );

@@ -18,8 +18,7 @@ type CycleDependencies = {
   reportAutomation: (result: Record<string, number>) => void;
 };
 
-// Fresh vacancies get the first turn. Repairs keep their separate bounded budget
-// after discovery, so a slow old employer link cannot delay new publication.
+// New-only mode never invokes historical description repairs.
 export async function runSourceCycle(
   source: ActiveSourceId,
   deps: CycleDependencies,
@@ -36,8 +35,4 @@ export async function runSourceCycle(
       reason: 'No enabled sources are due',
     });
   }
-  if (deps.stopped()) return;
-  const refresh = await deps.refresh(source, 20, 3 * 60_000);
-  deps.reportRefresh(refresh);
-  deps.reportAutomation(await deps.reconcile(source));
 }

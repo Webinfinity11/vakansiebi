@@ -239,11 +239,6 @@ const JobCard = memo(function JobCard({
   const cardTitle = vacancyCardTitle(j.title, j.source);
   const left = j.deadline ? daysUntil(j.deadline) : NaN;
   const urgent = left >= 0 && left <= 3;
-  const when = j.deadline
-    ? `${urgent ? 'იწურება' : 'ვადა:'} ${formatDate(j.deadline)}`
-    : j.datePosted
-      ? formatDate(j.datePosted)
-      : '';
   const style: CSSProperties | undefined = swipe.dx
     ? { transform: `translateX(${swipe.dx}px)` }
     : undefined;
@@ -366,10 +361,18 @@ const JobCard = memo(function JobCard({
               {salary}
             </span>
           )}
-          {when && (
-            <span className={`job-when${urgent ? ' is-urgent' : ''}`}>
-              {when}
-            </span>
+          {j.datePosted && (
+            <time className="job-when" dateTime={j.datePosted}>
+              გამოქვეყნდა: {formatDate(j.datePosted)}
+            </time>
+          )}
+          {j.deadline && (
+            <time
+              className={`job-when${urgent ? ' is-urgent' : ''}`}
+              dateTime={j.deadline}
+            >
+              ბოლო ვადა: {formatDate(j.deadline)}
+            </time>
           )}
         </div>
         <div className="job-side">
@@ -1005,25 +1008,27 @@ export default function JobBoard({
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   /* A search counts once the reader has stopped typing it and its results are on screen, so
-     "გა", "გაყ" and "გაყი" on the way to a word are not three searches. Each distinct query is
-     counted once per page load, and a search that found nothing is also counted as such. */
+     "გა", "გაყ" and "გაყი" on the way to a word are not three searches. Each distinct query/filter combination is
+     counted once per board visit, and a search that found nothing is also counted as such. */
   const trackedSearches = useRef(new Set<string>());
   useEffect(() => {
     const settled = query.trim();
     // A search inside the saved list is not a search of the catalogue, and finding nothing
     // there says nothing about what the site is missing.
-    if (demo || savedOnly || resultsPending || settled.length < 2) return;
+    if (demo || savedOnly || resultsPending || error || settled.length < 2)
+      return;
     const timer = setTimeout(() => {
-      const key = settled.toLowerCase();
+      const key = filterKey;
+      // Recent history must move a repeated successful query to the front even
+      // when analytics already counted that query during this board visit.
+      if (total > 0) rememberRecentSearch(settled);
       if (trackedSearches.current.has(key)) return;
       trackedSearches.current.add(key);
       track('search', settled);
       if (total === 0) track('search_empty', settled);
-      // Worth offering back only if it led somewhere.
-      else rememberRecentSearch(settled);
     }, 1500);
     return () => clearTimeout(timer);
-  }, [query, total, resultsPending, demo, savedOnly]);
+  }, [query, total, resultsPending, error, filterKey, demo, savedOnly]);
   /* Counts which filter the reader changed — only its name, once it has settled — so the admin
      can see which filters are actually used. The values chosen are not sent. */
   const filterSnapshot = JSON.stringify({ ...currentSearch, query: '' });
@@ -2031,11 +2036,27 @@ export default function JobBoard({
                       <VacancySkeletons count={2} />
                     </div>
                   )}
-                  <button
-                    type="button"
+                  <a
+                    href={searchReturnPath(
+                      currentSearch,
+                      loadedThrough + 1,
+                      savedOnly,
+                      demo,
+                    )}
+                    rel="next"
                     className="load-more secondary-button"
-                    disabled={appending}
-                    onClick={loadMore}
+                    aria-disabled={appending || undefined}
+                    onClick={(event) => {
+                      if (
+                        event.metaKey ||
+                        event.ctrlKey ||
+                        event.shiftKey ||
+                        event.altKey
+                      )
+                        return;
+                      event.preventDefault();
+                      if (!appending) loadMore();
+                    }}
                   >
                     {appending
                       ? 'იტვირთება…'
@@ -2044,7 +2065,7 @@ export default function JobBoard({
                         : loadedThrough - page >= 49
                           ? 'შემდეგი ვაკანსიების ნახვა'
                           : `მეტის ჩვენება · კიდევ ${Math.min(listPageSize, Math.max(0, total - (page - 1) * listPageSize - jobs.length))}`}
-                  </button>
+                  </a>
                   {appendError && (
                     <p className="load-more-error" role="alert">
                       {appendError}
@@ -2063,6 +2084,31 @@ export default function JobBoard({
                     / {total} ვაკანსია
                   </output>
                   {page > 1 && (
+                    <a
+                      href={searchReturnPath(
+                        currentSearch,
+                        page - 1,
+                        savedOnly,
+                        demo,
+                      )}
+                      rel="prev"
+                      className="secondary-button"
+                      onClick={(event) => {
+                        if (
+                          event.metaKey ||
+                          event.ctrlKey ||
+                          event.shiftKey ||
+                          event.altKey
+                        )
+                          return;
+                        event.preventDefault();
+                        paginate(page - 1);
+                      }}
+                    >
+                      წინა გვერდი
+                    </a>
+                  )}
+                  {page > 2 && (
                     <button
                       className="secondary-button"
                       onClick={() => paginate(1)}

@@ -1,216 +1,148 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
-import { stageVacancy, hashVacancy } from '../worker/importer';
-import { fingerprint } from '../worker/adapters';
+import { stageVacancy, discoverItems } from '../worker/importer';
+import { tbilisiDate } from '../worker/adapters';
 import { vacancySchema } from '../lib/vacancy-schema';
+import { pendingNewItemsSql } from '../worker/new-only';
+import { reconcileJob } from '../worker/automation';
 
 void test(
-  'successful rechecks clear quality with freshness in one update and preserve unchanged TOAST values',
+  'new-only import keeps immutable snapshots, skips old dates and never resurrects completed IDs',
   { skip: process.env.RUN_DB_TESTS !== '1' },
   async () => {
     const url = new URL(process.env.DATABASE_URL!);
     assert.ok(['127.0.0.1', 'localhost'].includes(url.hostname));
     assert.equal(url.pathname, '/ertad_test');
-    // A single connection keeps temporary tables visible to stageVacancy's
-    // real transaction helper. Other processes and permanent fixtures are untouched.
     const pool = new Pool({ connectionString: url.href, max: 1 });
     const globalDb = globalThis as unknown as { ertadPool?: Pool };
     const previous = globalDb.ertadPool;
-    const id = randomUUID();
-    const vacancy = vacancySchema.parse({
-      title: 'Developer',
-      company: 'Worker write fixture',
-      city: 'თბილისი',
-      salary: '',
-      salaryMin: null,
-      currency: '',
-      salaryPeriod: '',
-      mode: '',
-      category: 'ტექნოლოგიები',
-      // Incompressible enough to exercise external TOAST storage, not just an
-      // inline JSON value that would hide repeated large-payload writes.
-      description:
-        'Join our development team. ' + randomBytes(18000).toString('hex'),
-      url: 'https://www.hr.ge/announcement/123/test',
-      source: 'hr.ge',
-      datePosted: '2026-09-01',
-      deadline: '2099-01-01',
-    });
     globalDb.ertadPool = pool;
     try {
       await pool.query(`
-        CREATE TEMP TABLE sources (LIKE public.sources INCLUDING DEFAULTS);
-        CREATE TEMP TABLE jobs (LIKE public.jobs INCLUDING DEFAULTS);
-        CREATE TEMP TABLE source_items (LIKE public.source_items INCLUDING DEFAULTS);
+        CREATE TEMP TABLE sources (LIKE public.sources INCLUDING DEFAULTS INCLUDING INDEXES);
+        ALTER TABLE sources ADD COLUMN IF NOT EXISTS repair_limit integer;
+        CREATE TEMP TABLE jobs (LIKE public.jobs INCLUDING DEFAULTS INCLUDING INDEXES);
+        CREATE TEMP TABLE source_items (LIKE public.source_items INCLUDING DEFAULTS INCLUDING INDEXES);
         CREATE TEMP TABLE audit_log (LIKE public.audit_log INCLUDING DEFAULTS INCLUDING IDENTITY);
-        CREATE TEMP TABLE write_count (n integer);
-        INSERT INTO write_count VALUES (0);
-        CREATE FUNCTION pg_temp.count_item_writes() RETURNS trigger LANGUAGE plpgsql AS $$
-          BEGIN UPDATE write_count SET n=n+1; RETURN NEW; END $$;
-        CREATE TRIGGER count_item_writes AFTER UPDATE ON source_items
-          FOR EACH ROW EXECUTE FUNCTION pg_temp.count_item_writes();
         INSERT INTO sources(id,name,auto_publish) VALUES ('hr','hr.ge',true);
       `);
       await pool.query(
-        `INSERT INTO jobs(id,draft,published,status,fingerprint,automation_managed,needs_review,updated_at)
-        VALUES ($1,$2,$2,'published',$3,true,false,now()-interval '1 day')`,
-        [id, vacancy, fingerprint(vacancy)],
+        "INSERT INTO source_items(id,source_id,external_id,url) VALUES($1,'hr','backlog','https://www.hr.ge/announcement/999/test')",
+        [randomUUID()],
       );
       await pool.query(
-        `INSERT INTO source_items(id,source_id,external_id,url,job_id,raw,content_hash,last_checked_at,last_verified_at)
-        VALUES ($1,'hr','123',$2,$1,$3,$4,now()-interval '1 day',now()-interval '1 day')`,
-        [id, vacancy.url, vacancy, hashVacancy(vacancy)],
-      );
-      const before = (
-        await pool.query('SELECT updated_at,version,published FROM jobs')
-      ).rows[0];
-      const toastTable = (
-        await pool.query(
-          "SELECT reltoastrelid::regclass::text name FROM pg_class WHERE oid='source_items'::regclass",
-        )
-      ).rows[0].name;
-      const toastChunks = async () =>
-        (
-          await pool.query(
-            `SELECT chunk_id::text,chunk_seq,md5(chunk_data) hash FROM ${toastTable} ORDER BY chunk_id,chunk_seq`,
-          )
-        ).rows;
-      const beforeToast = await toastChunks();
-      assert.ok(beforeToast.length > 1, 'fixture is stored outside the heap');
-      assert.equal(await stageVacancy(id, vacancy), 'unchanged');
-      assert.deepEqual(
-        await toastChunks(),
-        beforeToast,
-        'identical JSON keeps the existing TOAST chunks',
+        await readFile('db/migrations/033_new_only_scraping.sql', 'utf8'),
       );
       assert.equal(
-        (await pool.query('SELECT n FROM write_count')).rows[0].n,
-        1,
-        'only the necessary freshness update writes a tuple',
-      );
-      const fresh = (
-        await pool.query(
-          'SELECT last_checked_at,last_verified_at,next_check_at FROM source_items',
-        )
-      ).rows[0];
-      assert.ok(fresh.last_checked_at > before.updated_at);
-      assert.ok(fresh.last_verified_at > before.updated_at);
-      assert.ok(fresh.next_check_at > fresh.last_checked_at);
-      assert.deepEqual(
-        (await pool.query('SELECT updated_at,version,published FROM jobs'))
-          .rows[0],
-        before,
-      );
-      assert.equal(
-        (await pool.query('SELECT count(*)::int n FROM audit_log')).rows[0].n,
+        (await pool.query(pendingNewItemsSql('id'), ['hr', 20])).rowCount,
         0,
       );
-
-      // Even partially populated historical quality state must still be cleared.
-      for (const residual of [
-        "quality_candidate='{}'::jsonb",
-        "quality_signature='previous'",
-        "quality_warning='previous'",
-        'quality_first_seen=now()',
-        'quality_last_seen=now()',
-        'quality_observations=1',
-      ]) {
-        await pool.query(
-          `UPDATE source_items SET ${residual},last_checked_at=now()-interval '1 day'`,
-        );
-        await pool.query('UPDATE write_count SET n=0');
-        assert.equal(await stageVacancy(id, vacancy), 'unchanged');
-        assert.equal(
-          (await pool.query('SELECT n FROM write_count')).rows[0].n,
-          1,
-          residual,
-        );
-        assert.deepEqual(
-          (
-            await pool.query(`SELECT quality_candidate,quality_signature,quality_warning,
-          quality_first_seen,quality_last_seen,quality_observations FROM source_items`)
-          ).rows[0],
-          {
-            quality_candidate: null,
-            quality_signature: null,
-            quality_warning: null,
-            quality_first_seen: null,
-            quality_last_seen: null,
-            quality_observations: 0,
-          },
-        );
+      await pool.query("DELETE FROM source_items WHERE external_id='backlog'");
+      const vacancy = vacancySchema.parse({
+        title: 'Developer',
+        salary: '',
+        salaryMin: null,
+        currency: '',
+        salaryPeriod: '',
+        mode: '',
+        category: 'ტექნოლოგიები',
+        company: 'New only fixture',
+        city: 'თბილისი',
+        description: 'Join our development team and develop applications.',
+        url: 'https://www.hr.ge/announcement/123/test',
+        source: 'hr.ge',
+        datePosted: tbilisiDate(),
+        deadline: '2099-01-01',
+      });
+      const id = randomUUID();
+      await pool.query(
+        "INSERT INTO source_items(id,source_id,external_id,url) VALUES($1,'hr','123',$2)",
+        [id, vacancy.url],
+      );
+      assert.equal(await stageVacancy(id, vacancy), 'imported');
+      const before = (await pool.query('SELECT * FROM jobs')).rows;
+      const itemBefore = (await pool.query('SELECT * FROM source_items')).rows;
+      assert.equal(
+        await stageVacancy(id, { ...vacancy, title: 'Changed title' }),
+        'unchanged',
+      );
+      assert.deepEqual((await pool.query('SELECT * FROM jobs')).rows, before);
+      assert.deepEqual(
+        (await pool.query('SELECT * FROM source_items')).rows,
+        itemBefore,
+      );
+      assert.equal(
+        await discoverItems('hr', [{ externalId: '123', url: vacancy.url }]),
+        0,
+      );
+      assert.deepEqual(
+        (await pool.query('SELECT * FROM source_items')).rows,
+        itemBefore,
+      );
+      assert.equal(
+        (await pool.query(pendingNewItemsSql('id'), ['hr', 20])).rowCount,
+        0,
+      );
+      // No recheck-age archival: a valid saved snapshot stays public until expiry.
+      await pool.query(
+        "UPDATE source_items SET last_verified_at=now()-interval '20 days'",
+      );
+      const client = await pool.connect();
+      try {
+        assert.equal(await reconcileJob(client, before[0].id), 'unchanged');
+      } finally {
+        client.release();
       }
-      assert.deepEqual(
-        (await pool.query('SELECT updated_at,version,published FROM jobs'))
-          .rows[0],
-        before,
-      );
+      // Purging a job cannot put its retained source ID back into the queue.
+      await pool.query('UPDATE source_items SET job_id=NULL');
       assert.equal(
-        (await pool.query('SELECT count(*)::int n FROM audit_log')).rows[0].n,
+        (await pool.query(pendingNewItemsSql('id'), ['hr', 20])).rowCount,
         0,
       );
-      assert.deepEqual(
-        await toastChunks(),
-        beforeToast,
-        'quality recovery does not rewrite unchanged raw',
-      );
-
-      const changed = {
-        ...vacancy,
-        description: vacancy.description + '\nNew application instructions.',
-      };
-      assert.equal(await stageVacancy(id, changed), 'changed');
-      assert.notDeepEqual(
-        await toastChunks(),
-        beforeToast,
-        'a real payload change is stored',
-      );
-      assert.deepEqual(
-        (await pool.query('SELECT raw FROM source_items')).rows[0].raw,
-        changed,
-      );
+      for (const [externalId, date, outcome] of [
+        ['124', '2020-01-01', 'outside_window'],
+        ['125', '', 'undated'],
+      ]) {
+        const itemId = randomUUID();
+        const v = {
+          ...vacancy,
+          url: `https://www.hr.ge/announcement/${externalId}/test`,
+          datePosted: date,
+        };
+        await pool.query(
+          "INSERT INTO source_items(id,source_id,external_id,url) VALUES($1,'hr',$2,$3)",
+          [itemId, externalId, v.url],
+        );
+        assert.equal(await stageVacancy(itemId, v), outcome);
+      }
       assert.equal(
-        (await pool.query('SELECT count(*)::int n FROM audit_log')).rows[0].n,
-        2,
-        'source and publication changes remain audited',
-      );
-
-      // The early-return path for an unlinked expired vacancy must also clear
-      // quality once while retaining its source snapshot and seven-day retry.
-      const expiredId = randomUUID();
-      const expired = {
-        ...vacancy,
-        url: 'https://www.hr.ge/announcement/124/test',
-        deadline: '2000-01-01',
-        datePosted: '1999-12-01',
-      };
-      await pool.query(
-        `INSERT INTO source_items(id,source_id,external_id,url,raw,content_hash,quality_warning,quality_observations)
-        VALUES ($1,'hr','124',$2,$3,$4,'previous',1)`,
-        [expiredId, expired.url, expired, hashVacancy(expired)],
-      );
-      await pool.query('UPDATE write_count SET n=0');
-      const expiredToast = await toastChunks();
-      assert.equal(await stageVacancy(expiredId, expired), 'expired');
-      assert.equal(
-        (await pool.query('SELECT n FROM write_count')).rows[0].n,
+        (await pool.query('SELECT count(*)::int n FROM jobs')).rows[0].n,
         1,
       );
-      assert.deepEqual(await toastChunks(), expiredToast);
-      const expiredRow = (
+      // Pending failures are bounded; the historical queue is excluded.
+      for (const [externalId, age, failures] of [
+        ['126', 0, 2],
+        ['127', 0, 3],
+        ['128', 4, 0],
+      ])
         await pool.query(
-          `SELECT job_id,quality_warning,quality_observations,last_checked_at,
-        extract(epoch FROM next_check_at-last_checked_at)::int retry_seconds FROM source_items WHERE id=$1`,
-          [expiredId],
-        )
-      ).rows[0];
-      assert.equal(expiredRow.job_id, null);
-      assert.equal(expiredRow.quality_warning, null);
-      assert.equal(expiredRow.quality_observations, 0);
-      assert.ok(expiredRow.last_checked_at);
-      assert.equal(expiredRow.retry_seconds, 7 * 86400);
+          `INSERT INTO source_items(id,source_id,external_id,url,discovered_at,failures)
+          VALUES($1,'hr',$2,$3,now()-($4*interval '1 day'),$5)`,
+          [
+            randomUUID(),
+            externalId,
+            `https://www.hr.ge/announcement/${externalId}/test`,
+            age,
+            failures,
+          ],
+        );
+      assert.deepEqual(
+        (await pool.query(pendingNewItemsSql('external_id'), ['hr', 20])).rows,
+        [{ external_id: '126' }],
+      );
     } finally {
       globalDb.ertadPool = previous;
       await pool.end();

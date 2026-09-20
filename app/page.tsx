@@ -1,19 +1,8 @@
 import type { Metadata } from 'next';
-import {
-  jsonLd,
-  shareImage,
-  siteIdentity,
-  siteUrl,
-  homeTitle,
-  homeDescription,
-} from '@/lib/seo';
-import {
-  landingDescription,
-  landingFor,
-  landingHeading,
-} from '@/lib/seo-landing';
-import { Suspense } from 'react';
-import { redirect, permanentRedirect } from 'next/navigation';
+import { jsonLd, shareImage, siteIdentity, siteUrl } from '@/lib/seo';
+import { searchSeo } from '@/lib/search-seo';
+import { cache, Suspense } from 'react';
+import { notFound, redirect, permanentRedirect } from 'next/navigation';
 import { canonicalSearchParams } from '@/lib/search-url';
 import JobBoard from './job-board';
 import { vacancyPath, safeReturnPath } from '@/lib/vacancy-navigation';
@@ -26,15 +15,22 @@ import {
   searchParams as toSearchParams,
 } from '@/lib/search-state';
 
+const readBoardJobs = cache((query: string) =>
+  publicJobs(new URLSearchParams(query)),
+);
+function boardJobs(params: URLSearchParams) {
+  const request = toSearchParams(readSearch(params));
+  request.set('summary', '1');
+  request.set('page', String(readSearchPage(params)));
+  return readBoardJobs(request.toString());
+}
+
 async function InitialBoard({ params }: { params: URLSearchParams }) {
   const filters = readSearch(params);
-  const request = toSearchParams(filters);
   const page = readSearchPage(params);
-  request.set('summary', '1');
-  request.set('page', String(page));
   let initial: BoardInitial | undefined;
   try {
-    const result = await publicJobs(request);
+    const result = await boardJobs(params);
     initial = {
       // The summary card never reads source history. A single posting can have
       // thousands of source checks; keep that detail out of the streamed seed.
@@ -64,30 +60,22 @@ export async function generateMetadata({
     const first = Array.isArray(value) ? value[0] : value;
     if (first !== undefined) params.set(key, first);
   }
-  const filtered = [...params.keys()].some(
-    (key) => !key.startsWith('utm_') && !['gclid', 'fbclid'].includes(key),
-  );
-  /* A category, a city, remote work and their combinations are searches people
-     actually make, so those lists are worth being found by and describe
-     themselves. Every other combination — free text, a salary floor, a sort
-     order, page nine — is an endless space that says nothing new, and stays
-     out of the index while still passing its links on. */
-  const landing = filtered ? landingFor(params) : null;
-  const heading = landing && landingHeading(landing);
-  const title = heading ? `${heading} | JOBX` : homeTitle;
-  const description = landing ? landingDescription(landing) : homeDescription;
+  const { title, description, path, index } = searchSeo(params);
+  // Out-of-range lists must not become an unlimited set of indexable empty
+  // pages. The server seed reuses this request through React's render cache.
+  if (index && readSearchPage(params) > 1) {
+    const result = await boardJobs(params);
+    if (readSearchPage(params) > result.pages) notFound();
+  }
   return {
     title,
     description,
-    alternates: { canonical: siteUrl + (landing ? landing.path : '/') },
-    robots:
-      filtered && !landing
-        ? { index: false, follow: true }
-        : { index: true, follow: true },
+    alternates: { canonical: siteUrl + path },
+    robots: { index, follow: true },
     openGraph: {
       title,
       description,
-      url: siteUrl + (landing ? landing.path : ''),
+      url: siteUrl + path,
       siteName: 'JOBX',
       locale: 'ka_GE',
       type: 'website',

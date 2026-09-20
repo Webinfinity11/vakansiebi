@@ -11,9 +11,8 @@ import { db, transaction } from '../lib/server/db';
    Only automation-managed, unpaused records are touched. An editor's work is never deleted by
    a schedule.
 
-   The source item is kept with its job link cleared. That row is what tells the importer it has
-   already seen this posting: re-read with a past deadline it records nothing (importer.ts), and
-   re-read with an extended deadline it creates the vacancy again, which is the right outcome.
+   The source item is retained after clearing its job link. Its ID and raw snapshot
+   prevent the new-only worker from importing it again, even if a listing repeats it.
 
    The foreign keys to jobs have no ON DELETE rule, so the order below is not optional: clear
    every reference, then delete. One transaction per run, so a failure deletes nothing. */

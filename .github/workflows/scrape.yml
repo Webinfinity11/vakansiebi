@@ -43,8 +43,3 @@ jobs:
           SCRAPE_BUDGET_MINUTES: '8'
           DETAIL_CONCURRENCY: '3'
           DISCOVERY_PAGE_BUDGET: '3'
-      - name: Verify refreshed descriptions match published text
-        if: always()
-        run: npx tsx scripts/verify-description-refresh.ts --source=${{ matrix.source }}
-        env:
-          DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}

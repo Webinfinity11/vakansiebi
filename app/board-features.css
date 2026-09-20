@@ -14,7 +14,8 @@
   font-size: 13px;
   font-weight: 600;
 }
-.board-shell .load-more:disabled {
+.board-shell .load-more:disabled,
+.board-shell .load-more[aria-disabled='true'] {
   opacity: 0.6;
   cursor: wait;
 }

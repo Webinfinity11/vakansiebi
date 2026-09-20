@@ -921,17 +921,7 @@ export default function AdminPanel() {
                   <dd>{summary?.completed_runs ?? '—'}</dd>
                 </div>
               </dl>
-              <ScraperMetricsPanel
-                metrics={scraperMetrics}
-                sources={sources}
-                busy={busy}
-                onMode={(processingMode) =>
-                  void sourceAction(
-                    { id: 'all' },
-                    { action: 'configure', processingMode },
-                  )
-                }
-              />
+              <ScraperMetricsPanel metrics={scraperMetrics} />
               <ScraperLimits
                 sources={sources}
                 busy={busy}
@@ -1226,49 +1216,9 @@ export default function AdminPanel() {
                         void sourceAction(s, { action: 'configure', ...values })
                       }
                     />
-                    <div className="interval-row">
-                      <span>დამუშავების რეჟიმი</span>
-                      <select
-                        className="choice"
-                        aria-label={`${s.name}: დამუშავების რეჟიმი`}
-                        value={s.processing_mode ?? 'full'}
-                        disabled={busy}
-                        onChange={(e) =>
-                          void sourceAction(s, {
-                            action: 'configure',
-                            processingMode: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="economical">ეკონომიური</option>
-                        <option value="full">სრული</option>
-                      </select>
-                    </div>
-                    <div className="interval-row">
-                      <span>ვაკანსიის ხელახალი შემოწმება</span>
-                      <select
-                        className="choice"
-                        aria-label={`${s.name}: დეტალის შემოწმების ინტერვალი`}
-                        value={s.detail_interval_hours}
-                        disabled={busy}
-                        onChange={(e) =>
-                          void sourceAction(s, {
-                            action: 'configure',
-                            detailIntervalHours: Number(e.target.value),
-                          })
-                        }
-                      >
-                        <option value={6}>6 საათი</option>
-                        <option value={12}>12 საათი</option>
-                        <option value={24}>24 საათი</option>
-                        <option value={48}>2 დღე</option>
-                        <option value={168}>7 დღე</option>
-                      </select>
-                    </div>
                     <p className="admin-helper">
-                      უფრო გრძელი ინტერვალი ახალ ვაკანსიებს მეტ ადგილს უთმობს
-                      გაშვების ბიუჯეტში; სიიდან გამქრალი ჩანაწერები ისედაც
-                      პირველ რიგში მოწმდება.
+                      რეჟიმი: მხოლოდ ახალი ვაკანსიები. ერთხელ შენახული ჩანაწერი
+                      აღარ მოწმდება.
                     </p>
                     {s.last_error && (
                       <div className="notice">

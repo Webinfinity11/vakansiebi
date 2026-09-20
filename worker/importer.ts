@@ -11,12 +11,13 @@ import { samePosting } from '../lib/job-intelligence';
 import type { SourceId, Vacancy } from '../lib/types';
 import { reconcileJob } from './automation';
 import { assessVacancy } from './quality';
+import { importDateReason } from './new-only';
 export function hashVacancy(v: Vacancy) {
   return createHash('sha256').update(JSON.stringify(v)).digest('hex');
 }
 const clearedQualitySql = `quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,
   quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0`;
-export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
+export async function stageVacancy(itemId: string, v: Vacancy, _hours = 6) {
   return transaction(async (c) => {
     const item = (
       await c.query(
@@ -25,6 +26,8 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
       )
     ).rows[0];
     if (!item) throw Error('Item missing');
+    // Successful source snapshots are immutable in the new-only worker.
+    if (item.job_id || item.raw) return 'unchanged';
     const quality = assessVacancy(item.raw, v, {
       signature: item.quality_signature,
       firstSeen: item.quality_first_seen,
@@ -35,7 +38,7 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
       await c.query(
         `UPDATE source_items SET quality_candidate=$2,quality_signature=$3,quality_warning=$4,
         quality_first_seen=$5,quality_last_seen=$6,quality_observations=$7,last_checked_at=now(),error=NULL,failures=0,
-        next_check_at=now()+interval '30 minutes' WHERE id=$1`,
+        next_check_at=CASE WHEN $7>=3 THEN 'infinity'::timestamptz ELSE now()+interval '30 minutes' END WHERE id=$1`,
         [
           itemId,
           v,
@@ -46,55 +49,21 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
           quality.observations,
         ],
       );
-      if (item.job_id && item.quality_signature !== quality.signature) {
-        await c.query(
-          'UPDATE jobs SET needs_review=(NOT automation_managed OR automation_paused),version=version+1 WHERE id=$1',
-          [item.job_id],
-        );
-        await audit(
-          c,
-          item.job_id,
-          'source.quality_held',
-          'crawler:' + item.source_id,
-          { warning: item.quality_warning },
-          { warning: quality.warning },
-        );
-      }
       return 'quality_held';
     }
-    // A catalogue refresh explicitly requests current source text, including older paused snapshots.
-    // A newer editor change wins over the queued refresh request.
-    if (
-      item.job_id &&
-      item.refresh_requested_at &&
-      (!item.refresh_completed_at ||
-        item.refresh_requested_at > item.refresh_completed_at)
-    ) {
-      const resumed = await c.query(
-        `UPDATE jobs SET automation_managed=true,automation_paused=false WHERE id=$1
-        AND status='published' AND published->>'url'=$2 AND updated_at<=$3
-        AND (NOT automation_managed OR automation_paused) RETURNING id`,
-        [item.job_id, item.url, item.refresh_requested_at],
-      );
-      if (resumed.rowCount)
-        await audit(
-          c,
-          item.job_id,
-          'automation.resumed',
-          'requested:full-description-refresh',
-          { refreshRequestedAt: item.refresh_requested_at },
-          { automation_managed: true, automation_paused: false },
-        );
-    }
     const hash = hashVacancy(v);
-    if (!item.job_id && v.deadline && v.deadline < tbilisiDate()) {
+    const skipReason =
+      v.deadline && v.deadline < tbilisiDate()
+        ? 'expired'
+        : importDateReason(v.datePosted);
+    if (skipReason) {
       await c.query(
         `UPDATE source_items SET raw=CASE WHEN raw IS DISTINCT FROM $2::jsonb THEN $2::jsonb ELSE raw END,
-        content_hash=$3,last_checked_at=now(),next_check_at=now()+interval '7 days',error=NULL,failures=0,
+        content_hash=$3,last_checked_at=now(),next_check_at='infinity'::timestamptz,error=NULL,failures=0,
         ${clearedQualitySql} WHERE id=$1`,
         [itemId, v, hash],
       );
-      return 'expired';
+      return skipReason;
     }
     let outcome = 'unchanged';
     let jobId = item.job_id;
@@ -133,12 +102,6 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
         fingerprint(v),
       ]);
       outcome = 'imported';
-    } else if (item.job_id && item.content_hash !== hash) {
-      await c.query(
-        'UPDATE jobs SET needs_review=true,version=version+1,updated_at=now() WHERE id=$1',
-        [jobId],
-      );
-      outcome = 'changed';
     }
     // Clear recovered quality state in the necessary freshness update, saving a
     // query and tuple version. Reuse unchanged raw's TOAST value instead of
@@ -147,8 +110,8 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
     await c.query(
       `UPDATE source_items SET job_id=$2,raw=CASE WHEN raw IS DISTINCT FROM $3::jsonb THEN $3::jsonb ELSE raw END,
       content_hash=$4,last_checked_at=now(),last_verified_at=now(),refresh_completed_at=CASE WHEN refresh_requested_at IS NOT NULL THEN now() ELSE refresh_completed_at END,
-      next_check_at=now()+($5*interval '1 hour'),error=NULL,failures=0,${clearedQualitySql} WHERE id=$1`,
-      [itemId, jobId, v, hash, hours],
+      next_check_at='infinity'::timestamptz,error=NULL,failures=0,${clearedQualitySql} WHERE id=$1`,
+      [itemId, jobId, v, hash],
     );
     if (outcome !== 'unchanged')
       await audit(
@@ -167,8 +130,9 @@ export async function stageVacancy(itemId: string, v: Vacancy, hours = 6) {
 export async function discoverItems(
   source: SourceId,
   links: { externalId: string; url: string; hints?: ListingHints }[],
-  { updateStoredHints = true }: { updateStoredHints?: boolean } = {},
+  { updateStoredHints = false }: { updateStoredHints?: boolean } = {},
 ) {
+  let inserted = 0;
   for (let i = 0; i < links.length; i += 100) {
     const chunk = links.slice(i, i + 100);
     const values: unknown[] = [];
@@ -184,18 +148,21 @@ export async function discoverItems(
       return `($${n + 1},$${n + 2},$${n + 3},$${n + 4},$${n + 5})`;
     });
     if (chunk.length)
-      await db().query(
-        `INSERT INTO source_items(id,source_id,external_id,url,listing_hints) VALUES ${placeholders.join(',')}
-        ON CONFLICT(source_id,external_id) DO UPDATE SET last_seen_at=now(),url=excluded.url,
-        listing_hints=CASE WHEN excluded.listing_hints IS NULL THEN source_items.listing_hints ELSE COALESCE(source_items.listing_hints,'{}'::jsonb)||excluded.listing_hints END`,
-        values,
-      );
+      inserted +=
+        (
+          await db().query(
+            `INSERT INTO source_items(id,source_id,external_id,url,listing_hints) VALUES ${placeholders.join(',')}
+        ON CONFLICT(source_id,external_id) DO NOTHING`,
+            values,
+          )
+        ).rowCount || 0;
     if (chunk.length && updateStoredHints)
       await applyStoredHints(
         source,
         chunk.map((a) => a.externalId),
       );
   }
+  return inserted;
 }
 /**
  * A hint that arrives after a vacancy was imported is applied to the stored copy right away.

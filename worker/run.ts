@@ -1,7 +1,7 @@
 import { nextRunAt } from './next-run';
 import { completeDescription } from './linked-description';
-import { detailQueue, detailQueueProjection } from './detail-queue';
-import { recheckBudget } from './recheck-budget';
+import { detailQueueProjection } from './detail-queue';
+import { importDateReason, pendingNewItemsSql } from './new-only';
 import { effectiveScraperLimits } from '../lib/scraper-limits';
 import { assessReportedTotal, structuralFailure } from './quality';
 import { randomUUID } from 'node:crypto';
@@ -9,14 +9,11 @@ import {
   readDiscoveryInfo,
   discoveryListingUrl,
   discoverySources,
-  jobsCategoryListingUrl,
   planDiscoveryPages,
-  planJobsCategoryPages,
   DiscoveryPageGuard,
   listingFingerprint,
   type DiscoverySource,
 } from './discovery';
-import { load } from 'cheerio';
 import { db, transaction } from '../lib/server/db';
 import { reconcileJob } from './automation';
 import type { SourceId } from '../lib/types';
@@ -24,7 +21,6 @@ import {
   getSourceConfig,
   modules,
   detailRequestUrl,
-  externalId,
   listLinks,
   parseDetail,
   additionalListing,
@@ -32,12 +28,7 @@ import {
   UnpublishableVacancy,
   type ListedLink,
 } from './adapters';
-import {
-  sourceFetch,
-  validateUrl,
-  SourceHttpError,
-  deferredSourceFailure,
-} from './http';
+import { sourceFetch, SourceHttpError, deferredSourceFailure } from './http';
 import { discoverItems, stageVacancy } from './importer';
 import {
   acquireSourceLease,
@@ -82,6 +73,7 @@ export async function runSource(
     linked = 0,
     expired = 0,
     qualityHeld = 0,
+    dateSkipped = 0,
     budgetExhausted = false;
   let newAttempts = 0,
     recheckAttempts = 0,
@@ -95,6 +87,7 @@ export async function runSource(
     blank,
     expired,
     quality_held: qualityHeld,
+    date_skipped: dateSkipped,
     budget_exhausted: budgetExhausted,
     batch_limit: limit,
     budget_minutes: budgetMs / 60_000,
@@ -145,19 +138,22 @@ export async function runSource(
       throw Error(
         'Listing returned no vacancy links; source structure may have changed',
       );
-    const latestIds = links.map((link) => link.externalId);
     const info = paginated
       ? readDiscoveryInfo(source as DiscoverySource, html)
       : null;
     const guard = new DiscoveryPageGuard();
     guard.accept(firstObserved);
+    let knownPages = 0;
     const rememberPage = async (
       url: string,
       pageLinks: ListedLink[],
       observed = pageLinks.map(({ externalId }) => ({ externalId })),
     ) => {
       // Store hints for parsing, without rewriting historical snapshots before new imports.
-      await discoverItems(source, pageLinks, { updateStoredHints: false });
+      const inserted = await discoverItems(source, pageLinks, {
+        updateStoredHints: false,
+      });
+      knownPages = inserted === 0 ? knownPages + 1 : 0;
       await db().query(
         `INSERT INTO source_discovery_pages(source_id,url,signature,item_count) VALUES($1,$2,$3,$4)
         ON CONFLICT(source_id,url) DO UPDATE SET signature=excluded.signature,item_count=excluded.item_count,observed_at=now()`,
@@ -190,98 +186,32 @@ export async function runSource(
         'UPDATE sources SET reported_total=$2,reported_pages=$3,discovery_observed_at=now() WHERE id=$1',
         [source, info.reportedTotal, info.totalPages],
       );
-    // The full HR search is authoritative for discovery; its sitemap is only a fallback.
-    const sitemap = info?.totalPages ? null : activeConfig.sitemap;
     let discoveryWarning = countQuality?.warning || '';
     // A source whose shape or coverage looks different needs a person; a single failed
     // fetch that the backoff will retry does not.
     let discoveryStructural = Boolean(countQuality?.warning);
     const pageBudget = limits.pages;
-    let extraRequests = 0;
     const extraPages =
       countQuality?.hold || pageBudget === 0
         ? []
-        : source === 'jobs'
-          ? []
-          : paginated
-            ? planDiscoveryPages(
-                source as DiscoverySource,
-                info!,
-                config.discovery_cursor,
-                pageBudget,
-              ).urls
-            : [
-                ...new Set(
-                  Array.from({ length: Math.min(3, pageBudget) }, (_, offset) =>
-                    additionalListing(
-                      source,
-                      html,
-                      config.sitemap_cursor + offset,
-                    ),
-                  ).filter((url): url is string => !!url),
-                ),
-              ];
+        : paginated
+          ? planDiscoveryPages(source as DiscoverySource, info!, 0, pageBudget)
+              .urls
+          : [
+              ...new Set(
+                Array.from({ length: Math.min(3, pageBudget) }, (_, offset) =>
+                  additionalListing(source, html, offset),
+                ).filter((url): url is string => !!url),
+              ),
+            ];
     if (paginated && !info?.totalPages) {
       discoveryWarning =
         'Listing page count is unavailable; first page retained and discovery will retry';
       discoveryStructural = true;
     }
-    // Jobs.ge is discovered through its category listings: the same pages, but each row then
-    // carries its category and work location, and the vacancy-only filter keeps tenders and
-    // trainings out. The start category rotates so a small budget still covers every category.
-    if (
-      source === 'jobs' &&
-      pageBudget > 0 &&
-      !countQuality?.hold &&
-      info?.totalPages
-    ) {
-      const plan = planJobsCategoryPages(config.discovery_cursor, pageBudget);
-      let used = 0;
-      categories: for (const category of plan.order) {
-        if (Date.now() - startedAt >= budgetMs * 0.2) break;
-        if (used >= plan.budget) break;
-        let pages = 1;
-        for (let page = 1; page <= pages && used < plan.budget; page++) {
-          if (Date.now() - startedAt >= budgetMs * 0.2) break categories;
-          const url = jobsCategoryListingUrl(category.cid, page);
-          try {
-            extraRequests++;
-            const pageHtml = await sourceFetch(source, url);
-            used++;
-            if (page === 1)
-              pages = Math.min(
-                50,
-                readDiscoveryInfo('jobs', pageHtml).totalPages || 1,
-              );
-            const pageLinks = listLinks(source, pageHtml, url, {
-              categoryLabel: category.label,
-              category: category.category,
-            });
-            const accepted = guard.accept(pageLinks);
-            // A small category's first page can repeat what the shared first page already
-            // showed; that is not a reason to skip the pages behind it. A repeated or empty
-            // page deeper in is this category's end, not a broken source.
-            if (accepted === 'empty' || (accepted === 'repeated' && page > 1))
-              break;
-            if (accepted === 'accepted') {
-              await rememberPage(url, pageLinks);
-              links.push(...pageLinks);
-            }
-          } catch (e) {
-            discoveryWarning = 'Listing page: ' + (e as Error).message;
-            break categories;
-          }
-        }
-        await db().query(
-          'UPDATE sources SET discovery_cursor=discovery_cursor+1 WHERE id=$1',
-          [source],
-        );
-      }
-    }
     for (const extra of extraPages) {
-      if (Date.now() - startedAt >= budgetMs * 0.2) break;
+      if (knownPages >= 2 || Date.now() - startedAt >= budgetMs * 0.2) break;
       try {
-        extraRequests++;
         const pageHtml = await sourceFetch(source, extra);
         const pageLinks = listLinks(source, pageHtml, extra);
         const closedIds = pageLinks.length
@@ -293,9 +223,7 @@ export async function runSource(
         const accepted = guard.accept(observed);
         if (accepted !== 'accepted') {
           discoveryWarning =
-            'Pagination returned ' +
-            accepted +
-            ' page; cursor retained for retry';
+            'Pagination returned ' + accepted + ' page; stopping discovery';
           // A page whose every entry is closed carries no link and is ordinary on a board
           // that keeps expired records in its listing. A page repeating one already read is
           // the pagination itself behaving differently than the source described.
@@ -304,128 +232,40 @@ export async function runSource(
         }
         await rememberPage(extra, pageLinks, observed);
         links.push(...pageLinks);
-        await db().query(
-          paginated
-            ? 'UPDATE sources SET discovery_cursor=discovery_cursor+1 WHERE id=$1'
-            : 'UPDATE sources SET sitemap_cursor=sitemap_cursor+1 WHERE id=$1',
-          [source],
-        );
       } catch (e) {
         discoveryWarning = 'Listing page: ' + (e as Error).message;
         break;
       }
     }
-    if (
-      sitemap &&
-      extraRequests < pageBudget &&
-      Date.now() - startedAt < budgetMs * 0.2
-    ) {
-      try {
-        extraRequests++;
-        const xml = await sourceFetch(source, sitemap);
-        const $ = load(xml, { xml: true });
-        const pages = $('sitemap > loc')
-          .map((_, e) => $(e).text())
-          .get();
-        const documents =
-          pages.length && extraRequests < pageBudget
-            ? [
-                await sourceFetch(
-                  source,
-                  validateUrl(
-                    source,
-                    pages[config.sitemap_cursor % pages.length],
-                  ).href,
-                ),
-              ]
-            : pages.length
-              ? []
-              : [xml];
-        for (const doc of documents) {
-          const x = load(doc, { xml: true });
-          x('url > loc').each((_, e) => {
-            const url = x(e).text().trim();
-            try {
-              const id = externalId(source, url);
-              if (id) links.push({ externalId: id, url });
-            } catch {}
-          });
-        }
-        if (pages.length && documents.length)
-          await db().query(
-            'UPDATE sources SET sitemap_cursor=sitemap_cursor+1 WHERE id=$1',
-            [source],
-          );
-      } catch (e) {
-        discoveryWarning = 'Sitemap: ' + (e as Error).message;
-      }
-    }
-    const unique = [...new Map(links.map((a) => [a.externalId, a])).values()];
-    if (sitemap)
-      await discoverItems(source, unique, { updateStoredHints: false });
-    discovered = unique.length;
-    // Split the budget between backlog and rechecks so neither can starve the other.
-    const quota = Math.max(1, Math.ceil(limit * 0.9));
-    // Newest postings first: they are what readers look for, and an old backlog entry that
-    // has meanwhile expired costs a fetch either way. Rechecks start with records that have
-    // dropped out of the listings, the cheapest signal that a vacancy was withdrawn.
+    discovered = new Set(links.map((a) => a.externalId)).size;
+    // Only recent unseen records; completed snapshots and the historical backlog
+    // are never queued. Migration 033 retires the pre-switch backlog once.
     const pending = (
-      await db().query(
-        `SELECT ${detailQueueProjection} FROM source_items WHERE source_id=$1 AND raw IS NULL AND next_check_at<=now() ORDER BY (external_id=ANY($3::text[])) DESC,discovered_at DESC,id LIMIT $2`,
-        [source, limit, latestIds],
-      )
+      await db().query(pendingNewItemsSql(detailQueueProjection), [
+        source,
+        limit,
+      ])
     ).rows;
-    const population = (
-      await db().query(
-        `SELECT count(*)::int published,
-      count(*) FILTER(WHERE next_check_at<=now() AND (last_verified_at IS NULL OR last_verified_at<now()-interval '5 days'))::int urgent
-      FROM source_items WHERE source_id=$1 AND raw IS NOT NULL
-      AND job_id IN (SELECT id FROM jobs WHERE status='published')`,
-        [source],
-      )
-    ).rows[0];
-    const recheckLimit = recheckBudget(
-      config.processing_mode,
-      limit,
-      population.published,
-      config.interval_minutes,
-      population.urgent,
-    );
-    const existing = (
-      await db().query(
-        `SELECT ${detailQueueProjection} FROM source_items WHERE source_id=$1 AND raw IS NOT NULL AND next_check_at<=now() AND job_id IN (SELECT id FROM jobs WHERE status='published') ORDER BY (last_verified_at IS NULL OR last_verified_at<now()-interval '5 days') DESC,(last_seen_at<now()-interval '36 hours') DESC,next_check_at LIMIT $2`,
-        [
-          source,
-          Math.min(
-            recheckLimit,
-            Math.max(0, limit - Math.min(pending.length, quota)),
-          ),
-        ],
-      )
-    ).rows;
-    const newCount = Math.min(pending.length, limit - existing.length);
     let consecutiveDetailFailures = 0;
     let stoppedEarly = false;
     let attempted = 0;
-    const queue = detailQueue(pending.slice(0, newCount), existing).slice(
-      0,
-      limit,
-    );
+    const queue = pending;
     let next = 0;
     let halt = false;
     const processItem = async (item: (typeof queue)[number]) => {
       try {
-        const data = await completeDescription(
-          parseDetail(
-            source,
-            await sourceFetch(source, detailRequestUrl(source, item.url)),
-            item.url,
-            item.listing_hints,
-          ),
-          item.raw,
-          item.failures,
-          { reuseVerified: true },
+        const parsed = parseDetail(
+          source,
+          await sourceFetch(source, detailRequestUrl(source, item.url)),
+          item.url,
+          item.listing_hints,
         );
+        // Do not fetch employer attachments for an old/undated vacancy.
+        const data = importDateReason(parsed.datePosted)
+          ? parsed
+          : await completeDescription(parsed, item.raw, item.failures, {
+              reuseVerified: true,
+            });
         const outcome = await stageVacancy(
           item.id,
           data,
@@ -437,6 +277,8 @@ export async function runSource(
         if (outcome === 'unchanged') unchanged++;
         if (outcome === 'linked') linked++;
         if (outcome === 'expired') expired++;
+        if (outcome === 'outside_window' || outcome === 'undated')
+          dateSkipped++;
         if (outcome === 'quality_held') qualityHeld++;
       } catch (e) {
         /* A withdrawn posting and an advertisement with nothing written in it
@@ -453,7 +295,7 @@ export async function runSource(
           consecutiveDetailFailures = 0;
           // A withdrawn vacancy is re-confirmed at a growing interval, not every week forever.
           await db().query(
-            "UPDATE source_items SET last_checked_at=now(),error=$2,failures=failures+1,quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0,next_check_at=now()+(LEAST(112,7*power(2,LEAST(failures,4)))*interval '1 day') WHERE id=$1",
+            "UPDATE source_items SET last_checked_at=now(),error=$2,failures=failures+1,quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0,next_check_at='infinity'::timestamptz WHERE id=$1",
             [item.id, e.message],
           );
           if (item.job_id)

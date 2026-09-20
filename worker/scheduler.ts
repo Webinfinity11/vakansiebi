@@ -40,10 +40,5 @@ export class SourceScheduler {
 
 export const dueSourcesSql = `SELECT s.id FROM sources s
   WHERE s.id=ANY($1::text[]) AND s.enabled AND NOT s.retired AND (
-    s.requested_at IS NOT NULL OR (s.auto_enabled AND s.next_run_at<=now()) OR EXISTS (
-      SELECT 1 FROM source_items i WHERE i.source_id=s.id
-      AND i.refresh_requested_at IS NOT NULL
-      AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at)
-      AND i.next_check_at<=now()
-    )
+    s.requested_at IS NOT NULL OR (s.auto_enabled AND s.next_run_at<=now())
   ) ORDER BY s.requested_at NULLS LAST, s.next_run_at, s.id`;

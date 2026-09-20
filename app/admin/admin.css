@@ -1147,3 +1147,21 @@
     justify-self: start;
   }
 }
+
+.admin-search-performance {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.admin-search-performance th,
+.admin-search-performance td {
+  padding: 10px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--line, #e6e9ef);
+  font-variant-numeric: tabular-nums;
+}
+.admin-search-performance th:first-child {
+  text-align: left;
+  min-width: 150px;
+  overflow-wrap: anywhere;
+}

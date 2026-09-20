@@ -100,6 +100,8 @@ export type AnalyticsSummary = {
   /** How far the posting form got, by step name. */
   steps: Ranked[];
   searches: Ranked[];
+  filters: Ranked[];
+  searchPerformance: { value: string; searches: number; empty: number }[];
   emptySearches: Ranked[];
   views: Ranked[];
   outbound: Ranked[];
@@ -119,7 +121,12 @@ export async function analyticsSummary(
   days = 30,
   top = 20,
 ): Promise<AnalyticsSummary> {
-  const since = `now() - ($1::int * interval '1 day')`;
+  // Daily rollups cannot represent a partial day. Long windows start at local
+  // midnight; short windows retain the exact rolling-hour boundary.
+  const since =
+    days > 30
+      ? `date_trunc('day', now() AT TIME ZONE 'Asia/Tbilisi' - ($1::int * interval '1 day')) AT TIME ZONE 'Asia/Tbilisi'`
+      : `now() - ($1::int * interval '1 day')`;
   const counted = `(SELECT kind, value, count(*)::int n FROM analytics_events WHERE created_at >= ${since} GROUP BY 1,2
      UNION ALL
      SELECT kind, value, sum(count)::int n FROM analytics_daily WHERE day >= ((${since}) AT TIME ZONE 'Asia/Tbilisi')::date GROUP BY 1,2)`;
@@ -129,21 +136,35 @@ export async function analyticsSummary(
       [days],
     )
   ).rows;
-  const ranked = async (kind: EventKind, withJob: boolean) =>
-    (
-      await db().query(
-        `SELECT c.value, sum(c.n)::int count${withJob ? ",max(j.published->>'title') title,max(j.published->>'company') company" : ''}
-         FROM ${counted} c ${withJob ? 'LEFT JOIN jobs j ON j.id::text=c.value' : ''}
-         WHERE c.kind=$2 GROUP BY c.value ORDER BY count DESC, c.value LIMIT $3`,
-        [days, kind, top],
-      )
-    ).rows.map((r) => ({
-      value: r.value,
-      count: r.count,
-      ...(withJob && r.title
-        ? { title: r.title, company: r.company || '' }
-        : {}),
-    }));
+  // Rank all event kinds in one scan, rather than rescanning both tables for
+  // every card. Join job titles only for the bounded list of ranked records.
+  const rankings = (
+    await db().query(
+      `WITH counted AS (SELECT kind,value,sum(n)::int count FROM ${counted} c GROUP BY kind,value),
+      ranked AS (SELECT *,row_number() OVER (PARTITION BY kind ORDER BY count DESC,value) position FROM counted)
+     SELECT r.kind,r.value,r.count,j.published->>'title' title,j.published->>'company' company
+     FROM ranked r LEFT JOIN jobs j ON r.kind IN ('view','outbound') AND j.id::text=r.value
+     WHERE r.position<=$2 ORDER BY r.kind,r.position`,
+      [days, top],
+    )
+  ).rows;
+  const ranked = (kind: EventKind): Ranked[] =>
+    rankings
+      .filter((r) => r.kind === kind)
+      .map((r) => ({
+        value: r.value,
+        count: r.count,
+        ...(r.title ? { title: r.title, company: r.company || '' } : {}),
+      }));
+  const searchPerformance = (
+    await db().query(
+      `SELECT value,COALESCE(sum(n) FILTER (WHERE kind='search'),0)::int searches,
+      COALESCE(sum(n) FILTER (WHERE kind='search_empty'),0)::int empty
+     FROM ${counted} c WHERE kind IN ('search','search_empty') GROUP BY value
+     ORDER BY empty DESC,searches DESC,value LIMIT $2`,
+      [days, top],
+    )
+  ).rows;
   const byKind = Object.fromEntries(eventKinds.map((k) => [k, 0])) as Record<
     EventKind,
     number
@@ -163,7 +184,7 @@ export async function analyticsSummary(
     await db().query(
       `WITH edge AS (SELECT date_trunc('${unit}',now() AT TIME ZONE 'Asia/Tbilisi') AS last_bucket),
          buckets AS (SELECT generate_series(
-           (SELECT last_bucket FROM edge) - ($1::int * interval '1 day') + interval '${step}',
+           date_trunc('${unit}',(${since}) AT TIME ZONE 'Asia/Tbilisi'),
            (SELECT last_bucket FROM edge), interval '${step}') AS bucket)
        SELECT to_char(b.bucket,'YYYY-MM-DD"T"HH24:MI') AS bucket,
          COALESCE(sum(c.n) FILTER (WHERE c.kind='search'),0)::int AS search,
@@ -181,11 +202,13 @@ export async function analyticsSummary(
     to: activity.at(-1)?.bucket ?? '',
     totals: byKind,
     activity,
-    steps: await ranked('post', false),
-    searches: await ranked('search', false),
-    emptySearches: await ranked('search_empty', false),
-    views: await ranked('view', true),
-    outbound: await ranked('outbound', true),
+    filters: ranked('filter'),
+    searchPerformance,
+    steps: ranked('post'),
+    searches: ranked('search'),
+    emptySearches: ranked('search_empty'),
+    views: ranked('view'),
+    outbound: ranked('outbound'),
   };
 }
 

@@ -248,13 +248,15 @@ void test(
         ),
       );
       assert.equal((await search({ q: 'დეველოპერი' })).total, 3);
+      const corrected = await search({ q: 'develoepr' });
+      assert.deepEqual(corrected.search.corrected, {
+        from: 'develoepr',
+        to: 'developer',
+      });
       assert.equal(
-        (await search({ q: 'develoepr' })).search.suggestion?.query,
-        'developer',
-      );
-      assert.equal(
-        (await search({ q: 'develoepr' })).search.suggestion?.count,
+        corrected.total,
         3,
+        'a spelling correction returns matching results immediately',
       );
       assert.equal((await search({ q: 'C++' })).search.suggestion, null);
       assert.equal((await search({ employment: 'part-time' })).total, 1);
@@ -417,7 +419,7 @@ void test(
       );
       assert.equal(
         (await list({ city: 'თბილისი' })).total,
-        4,
+        5,
         'a missing city falls back to the city named in the text',
       );
       assert.equal(
@@ -596,7 +598,7 @@ void test(
           [georgianIds[i], v, fingerprint(v), i],
         );
         await db().query(
-          "INSERT INTO source_items(id,source_id,external_id,url,job_id,raw,last_checked_at) VALUES($1,'hr',$1::text,$2,$1,$3,now())",
+          "INSERT INTO source_items(id,source_id,external_id,url,job_id,raw,last_checked_at) VALUES($1::uuid,'hr',$1::text,$2,$1::uuid,$3,now())",
           [
             georgianIds[i],
             `https://www.hr.ge/announcement/${i}/${georgianMarker}`,
@@ -622,7 +624,7 @@ void test(
           const item = randomUUID();
           extraItems.push(item);
           await db().query(
-            "INSERT INTO source_items(id,source_id,external_id,url,job_id,raw,last_checked_at) VALUES($1,$2,$1::text,$3,$4,'{}',now()-($5||' hours')::interval)",
+            "INSERT INTO source_items(id,source_id,external_id,url,job_id,raw,last_checked_at) VALUES($1::uuid,$2,$1::text,$3,$4,'{}',now()-($5||' hours')::interval)",
             [
               item,
               source,

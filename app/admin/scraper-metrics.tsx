@@ -3,24 +3,13 @@ import type {
   ScraperMetrics,
   ScraperMetricRow,
 } from '@/lib/server/scraper-metrics';
-import { listingSourceNames, type Source } from '@/lib/types';
+import { listingSourceNames } from '@/lib/types';
 
 export function ScraperMetricsPanel({
   metrics,
-  sources,
-  busy,
-  onMode,
 }: {
   metrics: ScraperMetrics | null;
-  sources: Source[];
-  busy: boolean;
-  onMode: (mode: 'economical' | 'full') => void;
 }) {
-  const common =
-    sources.length &&
-    sources.every((s) => s.processing_mode === sources[0].processing_mode)
-      ? sources[0].processing_mode
-      : '';
   const table = (rows: ScraperMetricRow[], daily: boolean) => (
     <section
       className="scraper-table-scroll"
@@ -70,32 +59,10 @@ export function ScraperMetricsPanel({
   );
   return (
     <div className="scraper-economy">
-      <label className="scraper-mode-label">
-        დამუშავების რეჟიმი — ყველა წყარო
-        <select
-          className="choice"
-          value={common || ''}
-          disabled={busy || !sources.length}
-          onChange={(event) =>
-            onMode(event.target.value as 'economical' | 'full')
-          }
-        >
-          <option value="" disabled>
-            წყაროებს განსხვავებული რეჟიმი აქვს
-          </option>
-          <option value="economical">
-            ეკონომიური — ახალი ვაკანსიები პირველ რიგში
-          </option>
-          <option value="full">
-            სრული — დარჩენილი ბიუჯეტი ძველების შემოწმებას
-          </option>
-        </select>
-      </label>
       <p className="admin-helper">
-        ეკონომიური რეჟიმი ძველების შემოწმებას დაახლოებით სამ დღეზე ანაწილებს და
-        დიდი ხნის შეუმოწმებელ ჩანაწერებს პრიორიტეტს აძლევს. ახალი ვაკანსიების
-        ძებნის ინტერვალი არ იცვლება. ვადაგასული და წაშლილი განცხადებების
-        კონტროლი რჩება.
+        მხოლოდ ახალი ვაკანსიები: ერთხელ წამოღებული ჩანაწერი აღარ მოწმდება. ვადა
+        შენახული თარიღით სრულდება. ქვემოთ ძველი რეჟიმის ისტორიული გადამოწმებებიც
+        ჩანს; ახალი გაშვებები მათ აღარ აგროვებს.
       </p>
       <h3>დღეში რამდენი ახალი ვაკანსია ემატება</h3>
       <p className="admin-helper">
