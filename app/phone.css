@@ -488,14 +488,13 @@
     bottom: 0;
     top: auto;
     border-radius: 18px 18px 0 0;
-    overflow: auto;
+    background: #fff;
+    color: #1c2944;
+    overflow: hidden;
     overscroll-behavior: contain;
-    padding: 26px 18px calc(10px + env(safe-area-inset-bottom)) !important;
-    gap: 12px;
+    padding: 14px 0 0 !important;
+    gap: 0;
   }
-  /* position: sticky is constrained to the parent's content box, so bottom padding on the sheet
-     would hold the apply button up by that amount; the button therefore keeps its own margin and
-     the sheet's padding stays small. At scroll end the button sits in flow below the last row. */
   .mobile-filters-sheet::before {
     content: '';
     position: absolute;
@@ -508,7 +507,11 @@
     background: #cfd6e2;
   }
   .mobile-filters-sheet [data-slot='sheet-header'] {
-    padding: 0 96px 0 0;
+    flex: 0 0 auto;
+    min-height: 52px;
+    justify-content: center;
+    padding: 0 190px 0 18px;
+    border-bottom: 1px solid var(--border);
     gap: 2px;
   }
   .mobile-filters-sheet [data-slot='sheet-title'] {
@@ -534,7 +537,7 @@
     margin: 0;
     min-height: 0;
   }
-  .mobile-filters-sheet .filter-head > button {
+  .mobile-filters-sheet .mobile-filters-clear {
     position: absolute;
     top: 10px;
     right: 60px;
@@ -543,7 +546,56 @@
     font-size: 13px;
   }
   .mobile-filters-sheet .filters {
-    padding: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 16px 18px;
+    scroll-padding-block: 16px;
+  }
+  .mobile-filters-clear:disabled {
+    opacity: 0.45;
+  }
+  .mobile-filters-sheet .choice {
+    min-height: 48px !important;
+    font-size: 16px !important;
+    background: var(--popover) !important;
+    color: inherit;
+  }
+  .mobile-filters-sheet .filters h3,
+  .mobile-filters-sheet legend,
+  .mobile-filters-sheet .filters select {
+    color: inherit;
+  }
+  .mobile-filters-sheet .choice,
+  .mobile-filters-sheet .filters select {
+    min-height: 48px;
+    height: auto;
+    font-size: 16px;
+  }
+  .mobile-filter-options [data-slot='select-item'] {
+    min-height: 48px;
+    padding-block: 12px;
+    font-size: 14px;
+  }
+  .mobile-filters-sheet .salary-filter {
+    margin: 20px 0 12px;
+    padding-bottom: 12px;
+  }
+  .mobile-filters-sheet .salary-presets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .mobile-filters-sheet .salary-presets button {
+    min-height: 44px;
+    padding-inline: 3px;
+  }
+  .mobile-filters-sheet .filter-extra summary {
+    min-height: 48px;
+  }
+  .mobile-filters-footer {
+    flex: 0 0 auto;
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
   }
   .mobile-filters-sheet .filters h3 {
     font-size: 14px;
@@ -587,8 +639,7 @@
   }
   .mobile-filters-sheet > .primary,
   .mobile-filters-sheet .filters-apply {
-    position: sticky;
-    bottom: env(safe-area-inset-bottom, 0px);
+    position: static;
     z-index: 2;
     display: flex;
     align-items: center;
@@ -596,11 +647,9 @@
     gap: 8px;
     width: 100%;
     min-height: 50px;
-    margin: 12px 0 0;
+    margin: 0;
     font-size: 15px;
-    box-shadow:
-      0 -18px 18px -6px #fff,
-      0 -34px 24px -10px #fffffff0;
+    box-shadow: none;
   }
 
   /* ---------- Personal sheet ---------- */
@@ -1052,5 +1101,61 @@
     min-height: 36px;
     display: inline-flex;
     align-items: center;
+  }
+}
+
+/* One mobile control language for search, filtering and sorting. */
+@media (max-width: 760px) {
+  .board-shell .results-tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .board-shell .results-tools .results-sort {
+    min-width: 0;
+  }
+  .board-shell .results-tools .mobile-filter-toggle,
+  .board-shell .results-tools .results-sort .choice {
+    width: 100%;
+    max-width: none;
+    height: 48px;
+    min-height: 48px !important;
+    border: 1px solid #dce1ea !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    color: #46526b;
+    font-family: inherit;
+    font-size: 14px !important;
+    font-weight: 600;
+    line-height: 1.4;
+    padding: 10px 12px !important;
+    box-shadow: none;
+  }
+  .board-shell .results-tools .mobile-filter-toggle:focus-visible,
+  .board-shell .results-tools .results-sort .choice:focus-visible {
+    outline: 2px solid #2457e6;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+  .board-shell .discovery-hero .search-city .choice {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    min-height: 48px !important;
+  }
+  .job-choice-options {
+    min-width: min(260px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    max-height: min(360px, var(--available-height));
+    padding: 4px;
+    border-radius: 12px;
+    overscroll-behavior: contain;
+  }
+  .job-choice-options [data-slot='select-item'] {
+    min-height: 48px;
+    padding: 12px 30px 12px 12px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .job-choice-options [data-slot='select-item'] > span {
+    white-space: normal;
   }
 }

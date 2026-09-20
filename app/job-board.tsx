@@ -147,6 +147,7 @@ export function Choice({
   options,
   onLocate,
   locating = false,
+  mobile = false,
 }: {
   label: string;
   id?: string;
@@ -155,6 +156,7 @@ export function Choice({
   options: string[];
   onLocate?: () => void;
   locating?: boolean;
+  mobile?: boolean;
 }) {
   return (
     <Select
@@ -169,7 +171,12 @@ export function Choice({
           {locating ? 'ქალაქს ვადგენთ…' : value === 'ყველა' ? label : value}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent
+        className={`job-choice-options${mobile ? ' mobile-filter-options' : ''}`}
+        alignItemWithTrigger={false}
+        align="start"
+        sideOffset={8}
+      >
         {onLocate && (
           <SelectItem value="__near_me__" disabled={locating}>
             <LocateFixed size={16} aria-hidden="true" /> ჩემთან ახლოს
@@ -1092,7 +1099,9 @@ export default function JobBoard({
     searchMeta,
     companyLinksPending,
   ]);
+  const searchRestored = useRef(false);
   const openJob = useCallback((job: Job) => {
+    searchRestored.current = false;
     const context = openContext.current;
     rememberBoard({
       key: context.loadedResult.key,
@@ -1127,7 +1136,6 @@ export default function JobBoard({
     },
     [hideVacancy],
   );
-  const searchRestored = useRef(false);
   useEffect(() => {
     if (
       !restoreReady ||
@@ -1154,8 +1162,10 @@ export default function JobBoard({
       return () => clearTimeout(timer);
     }
     if (appending) return;
-    searchRestored.current = true;
     const frame = requestAnimationFrame(() => {
+      // A cancelled frame has not restored anything. Mark completion only when
+      // the scroll runs, including after React reactivates a retained page.
+      searchRestored.current = true;
       const anchor = document.querySelector<HTMLAnchorElement>(
         `[data-vacancy-id="${position.id}"]`,
       );
@@ -1242,34 +1252,24 @@ export default function JobBoard({
         : setRemote(value);
     return (
       <>
-        <div className="filter-head">
-          <h2>
-            <SlidersHorizontal size={17} /> ფილტრები
-          </h2>
-          <button
-            onClick={() =>
-              prefix === 'mobile'
-                ? setMobileDraft(readSearch(new URLSearchParams()))
-                : reset()
-            }
-            disabled={prefix === 'mobile' ? !mobileKey : !activeCount}
-          >
-            გასუფთავება
-          </button>
-        </div>
-        <SalaryFilter
-          prefix={prefix}
-          value={draft}
-          onChange={(next) =>
-            prefix === 'mobile'
-              ? setMobileDraft({ ...draft, ...next })
-              : setAdvanced(next)
-          }
-        />
+        {prefix !== 'mobile' && (
+          <div className="filter-head">
+            <h2>
+              <SlidersHorizontal size={17} /> ფილტრები
+            </h2>
+            <button onClick={reset} disabled={!activeCount}>
+              გასუფთავება
+            </button>
+          </div>
+        )}
+        {prefix !== 'mobile' && (
+          <SalaryFilter prefix={prefix} value={draft} onChange={setAdvanced} />
+        )}
         <div className="filter-primary-city">
           <h3>ქალაქი</h3>
           <Choice
             label="ყველა ქალაქი"
+            mobile={prefix === 'mobile'}
             value={draft.city}
             onChange={changeCity}
             options={cities}
@@ -1280,6 +1280,7 @@ export default function JobBoard({
             <h3>მიმართულება</h3>
             <Choice
               label="ყველა მიმართულება"
+              mobile={prefix === 'mobile'}
               value={draft.category}
               onChange={changeCategory}
               options={[...categories]}
@@ -1415,6 +1416,13 @@ export default function JobBoard({
             </option>
           ))}
         </select>
+        {prefix === 'mobile' && (
+          <SalaryFilter
+            prefix={prefix}
+            value={draft}
+            onChange={(next) => setMobileDraft({ ...draft, ...next })}
+          />
+        )}
         <details className="filter-extra">
           <summary>
             დამატებითი პირობები
@@ -1436,6 +1444,7 @@ export default function JobBoard({
           <h3>პირველწყარო</h3>
           <Choice
             label="ყველა წყარო"
+            mobile={prefix === 'mobile'}
             value={draft.source}
             onChange={changeSource}
             options={Object.values(listingSourceNames)}
@@ -1816,7 +1825,7 @@ export default function JobBoard({
                       {advanced.salaryFrom === null &&
                       advanced.salaryTo === null
                         ? 'დღიური ანაზღაურება'
-                        : `${advanced.salaryFrom ?? 0}–${advanced.salaryTo ?? '∞'} ₾ / ${advanced.salaryPeriod === 'day' ? 'დღე' : 'თვე'}`}
+                        : `${advanced.salaryFrom !== null && advanced.salaryTo !== null ? `${advanced.salaryFrom}–${advanced.salaryTo} ₾` : advanced.salaryFrom !== null ? `${advanced.salaryFrom} ₾-დან` : `${advanced.salaryTo} ₾-მდე`} / ${advanced.salaryPeriod === 'day' ? 'დღე' : 'თვე'}`}
                       <X size={12} />
                     </button>
                   )}
@@ -2229,27 +2238,36 @@ export default function JobBoard({
         <SheetContent side="bottom" className="mobile-filters-sheet">
           <SheetHeader>
             <SheetTitle>ფილტრები</SheetTitle>
+            <button
+              className="mobile-filters-clear"
+              disabled={!mobileKey}
+              onClick={() => setMobileDraft(readSearch(new URLSearchParams()))}
+            >
+              გასუფთავება
+            </button>
             <SheetDescription>
               მონიშნე პირობები — სია განახლდება „შედეგების ჩვენებაზე“ დაჭერისას.
             </SheetDescription>
           </SheetHeader>
           <div className="filters">{renderFilters('mobile')}</div>
-          <button
-            className="primary filters-apply"
-            disabled={
-              !!mobileDraft &&
-              mobileDraft.salaryFrom !== null &&
-              mobileDraft.salaryTo !== null &&
-              mobileDraft.salaryFrom > mobileDraft.salaryTo
-            }
-            onClick={() => {
-              if (mobileDraft) applySearch(mobileDraft);
-              setFiltersOpen(false);
-              setMobileDraft(null);
-            }}
-          >
-            შედეგების ჩვენება <ArrowRight size={16} />
-          </button>
+          <div className="mobile-filters-footer">
+            <button
+              className="primary filters-apply"
+              disabled={
+                !!mobileDraft &&
+                mobileDraft.salaryFrom !== null &&
+                mobileDraft.salaryTo !== null &&
+                mobileDraft.salaryFrom > mobileDraft.salaryTo
+              }
+              onClick={() => {
+                if (mobileDraft) applySearch(mobileDraft);
+                setFiltersOpen(false);
+                setMobileDraft(null);
+              }}
+            >
+              შედეგების ჩვენება <ArrowRight size={16} />
+            </button>
+          </div>
         </SheetContent>
       </Sheet>
     </div>
