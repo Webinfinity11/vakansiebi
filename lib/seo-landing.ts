@@ -207,8 +207,15 @@ export function landingCopy(landing: Choice) {
     return `${genitive[landing.category]} ვაკანსიები საქართველოში — აქტიური განცხადებები ერთ სიაში. შეადარე ანაზღაურება, სამუშაოს ადგილმდებარეობა და პირობები, შემდეგ კი გაეცანი განცხადებას პირველწყაროზე.`;
   return `აქტიური ვაკანსიები ${cityIn(landing.city!)} — ყველა სფერო ერთ სიაში. სია ყოველდღიურად ახლდება დამსაქმებლებისა და დასაქმების საიტებზე გამოქვეყნებული განცხადებებით.`;
 }
+/* Most copy already opens with the heading's own words; prefixing the heading again made
+   the description say the same sentence twice, and Google replaced it with the nav links. */
 export function landingDescription(landing: Choice) {
-  return `${landingHeading(landing)}. ${landingCopy(landing)}`.slice(0, 300);
+  const heading = landingHeading(landing);
+  const copy = landingCopy(landing);
+  return (copy.includes(heading) ? copy : `${heading}. ${copy}`).slice(
+    0,
+    300,
+  );
 }
 
 /** Whether the list on screen is exactly this landing page, and may name itself. */
