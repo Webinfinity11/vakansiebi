@@ -4004,22 +4004,20 @@
   overflow: hidden;
   flex-shrink: 0;
 }
-.shortcut-3d img {
-  position: absolute;
-  width: 200%;
-  height: 200%;
-  max-width: none;
-  left: 0;
-  top: 0;
-  object-fit: fill;
+.shortcut-3d {
+  background-image: url('/images/shortcuts-3d-256.png');
+  background-repeat: no-repeat;
+  background-size: 200% 200%;
+  background-position: 0 0;
 }
-.shortcut-3d[data-kind='remote'] img,
-.shortcut-3d[data-kind='salary'] img {
-  left: -100%;
+.shortcut-3d[data-kind='remote'] {
+  background-position: 100% 0;
 }
-.shortcut-3d[data-kind='entry'] img,
-.shortcut-3d[data-kind='salary'] img {
-  top: -100%;
+.shortcut-3d[data-kind='entry'] {
+  background-position: 0 100%;
+}
+.shortcut-3d[data-kind='salary'] {
+  background-position: 100% 100%;
 }
 .board-shell.editorial-board.crafted-board .discovery-shortcut > .shortcut-3d {
   width: 58px;
@@ -4051,9 +4049,11 @@
   box-shadow: none;
 }
 .company-avatar .company-fallback-3d {
+  display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  background: url('/images/company-fallback-160.png') center / contain
+    no-repeat;
 }
 /* One quiet surface across all four shortcuts. */
 .board-shell.editorial-board.crafted-board .discovery-shortcut:nth-child(n) {

@@ -55,14 +55,9 @@ export function CompanyLogo({
             {companyInitials(company)}
           </span>
         ) : (
-          <Image
-            src="/images/jobx-company-3d-v1.png"
-            alt=""
-            width={80}
-            height={80}
-            sizes={large ? '80px' : '48px'}
-            className="company-fallback-3d"
-          />
+          /* A CSS background, not an <img>: as an image element the stand-in was the largest
+             picture on a company page, and Google showed a briefcase as that page's thumbnail. */
+          <span className="company-fallback-3d" aria-hidden="true" />
         ))}
     </span>
   );

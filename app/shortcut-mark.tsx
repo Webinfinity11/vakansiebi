@@ -1,4 +1,6 @@
-import Image from 'next/image';
+/* The four marks are quarters of one sprite, drawn as a CSS background: as <img> elements
+   they were the largest pictures on the home and landing pages, and search engines took
+   them for the page's own image. */
 export function ShortcutMark({
   kind,
 }: {
@@ -9,14 +11,6 @@ export function ShortcutMark({
       className="category-mark shortcut-mark shortcut-3d"
       data-kind={kind}
       aria-hidden="true"
-    >
-      <Image
-        src="/images/jobx-shortcuts-3d-v1.png"
-        alt=""
-        width={1280}
-        height={1280}
-        sizes="128px"
-      />
-    </span>
+    />
   );
 }
