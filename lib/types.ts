@@ -8,7 +8,8 @@ export type SourceId =
   | 'hrgov'
   | 'gancxadebebi'
   | 'worknet'
-  | 'myjobs';
+  | 'myjobs'
+  | 'awork';
 export type ActiveSourceId = Exclude<SourceId, 'samushao'>;
 export const sourceNames: Record<ActiveSourceId, string> = {
   hr: 'hr.ge',
@@ -18,6 +19,7 @@ export const sourceNames: Record<ActiveSourceId, string> = {
   gancxadebebi: 'gancxadebebi.ge',
   worknet: 'worknet.moh.gov.ge',
   myjobs: 'myjobs.ge',
+  awork: 'awork.ge',
 };
 // Native submissions share the catalogue, but are never crawler targets.
 export const listingSourceNames = { ...sourceNames, jobx: 'JOBX' };
