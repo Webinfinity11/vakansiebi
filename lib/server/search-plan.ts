@@ -21,7 +21,11 @@ export async function publicRead(statement: string, args: unknown[] = []) {
   const client = await db().connect();
   let discard: Error | undefined;
   try {
-    await client.query("BEGIN READ ONLY; SET LOCAL statement_timeout='12s'");
+    // The searchable CTE sorted on disk at the default 4MB (≈250MB of temp files per
+    // call on 2026-09-21); 32MB keeps that sort in memory on the few pooled sessions.
+    await client.query(
+      "BEGIN READ ONLY; SET LOCAL statement_timeout='12s'; SET LOCAL work_mem='32MB'",
+    );
     const result = await client.query(statement, args);
     await client.query('COMMIT');
     return result;

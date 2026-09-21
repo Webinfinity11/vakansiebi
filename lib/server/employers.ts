@@ -211,10 +211,12 @@ async function buildEmployerPages() {
 
 let pages: { at: number; value: ReturnType<typeof buildEmployerPages> } | null =
   null;
-/* Rebuilt at most every ten minutes per server instance: new vacancies arrive on a cycle of that
-   order, and a failed build is forgotten at once so the next request tries again. */
+/* Rebuilt at most every thirty minutes per server instance: sources are collected every three
+   hours, and the build was the costliest query on 2026-09-21 (a sequential scan of jobs). A
+   failed build is forgotten at once so the next request tries again. */
+const employerPagesTtl = 1_800_000;
 export function employerPages() {
-  if (!pages || Date.now() - pages.at > 600000) {
+  if (!pages || Date.now() - pages.at > employerPagesTtl) {
     const value = buildEmployerPages().catch((error) => {
       pages = null;
       throw error;
@@ -227,7 +229,8 @@ export function employerPages() {
 /* For a page that only links to an employer: never waits for a cold directory. The first caller
    starts the build and renders without the link; later ones get it. */
 export async function employerPagesIfReady() {
-  const fresh = pages && Date.now() - pages.at <= 600000 ? pages.value : null;
+  const fresh =
+    pages && Date.now() - pages.at <= employerPagesTtl ? pages.value : null;
   if (!fresh) {
     employerPages().catch(() => {});
     return null;
