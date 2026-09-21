@@ -9,7 +9,9 @@ import {
 } from './sitemap-data';
 
 export function pagesEntries() {
-  return ['/', '/post-job'].map((path) => ({ url: `${siteUrl}${path}` }));
+  return ['/', '/post-job', '/cv'].map((path) => ({
+    url: `${siteUrl}${path}`,
+  }));
 }
 
 export async function searchesEntries() {

@@ -937,10 +937,15 @@
     transform: scale(1.25);
   }
 }
-@media (max-width: 1280px) and (min-width: 761px) {
+/* The hero sits on the same 28px content line as the header, shortcuts and list at every
+   desktop width; above 1280px it used to run to the page edge, 28px past everything else. */
+@media (min-width: 761px) {
   .board-shell.editorial-board.crafted-board.refined-board .discovery-hero {
-    margin-inline: 28px;
+    max-width: none;
+    margin-inline: max(28px, calc((100% - 1224px) / 2));
   }
+}
+@media (max-width: 1280px) and (min-width: 761px) {
   .refined-board .hero-brand-art {
     width: 280px;
     height: 280px;

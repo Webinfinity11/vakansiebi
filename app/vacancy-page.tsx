@@ -460,6 +460,15 @@ export default function VacancyPage({
       extraFacts.splice(i, 1);
   const hasContact = Boolean(contacts.emails.length || contacts.phones.length);
   const hasAction = hasContact || Boolean(applicationDestination(job));
+  /* Where applying happens is where a missing resume is noticed. */
+  const cvHint = (
+    <p className="vacancy-cv-hint">
+      CV არ გაქვს?{' '}
+      <Link href="/cv" prefetch={false}>
+        შექმენი უფასოდ
+      </Link>
+    </p>
+  );
   const hasDescriptionContent = Boolean(
     description.trim() ||
     sourceExcerpt ||
@@ -668,6 +677,7 @@ export default function VacancyPage({
                   განაცხადის გაგზავნა <ArrowUpRight size={16} />
                 </a>
                 <p>გაიხსნება ორიგინალი განცხადება.</p>
+                {cvHint}
               </div>
               {progress}
             </aside>
@@ -677,7 +687,10 @@ export default function VacancyPage({
               className="vacancy-contact"
               aria-label="დამსაქმებელთან დაკავშირება"
             >
-              <QuickApply job={job}>{progress}</QuickApply>
+              <QuickApply job={job}>
+                {progress}
+                {cvHint}
+              </QuickApply>
             </aside>
           )}
           {hasDescriptionContent && (

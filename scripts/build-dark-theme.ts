@@ -21,6 +21,7 @@ const sources = [
   'app/public-header.css',
   'app/post-job.css',
   'app/invoices.css',
+  'app/cv.css',
 ];
 const output = 'app/theme-dark.css';
 
@@ -33,6 +34,7 @@ const colourProperties =
    The masthead is a dark blue gradient in both themes; a company logo needs a light chip
    behind it, because most employer marks are dark ink on transparency. */
 const keepAsIs = [
+  '.cv-page', // printable document colors stay independent of the site theme
   '.dark', // shadcn ships its own dark palette; inverting it would undo the theme
   '.company-avatar', // a light chip: most employer marks are dark ink on transparency
   '.hero-art',

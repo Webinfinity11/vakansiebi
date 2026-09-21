@@ -95,6 +95,7 @@ import {
   Scale,
   Scissors,
   Ellipsis,
+  FileText,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -2166,6 +2167,9 @@ export default function JobBoard({
             <button onClick={openSaved}>
               <Bookmark size={16} aria-hidden="true" /> შენახული ვაკანსიები
             </button>
+            <Link href="/cv" prefetch={false}>
+              <FileText size={16} aria-hidden="true" /> რეზიუმეს შედგენა
+            </Link>
           </nav>
         </div>
         <details id="how-it-works" className="footer-help">

@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState, type MouseEvent } from 'react';
-import { Bookmark, Search, Plus } from 'lucide-react';
+import { Bookmark, Search, Plus, FileText } from 'lucide-react';
 import { Brand } from './brand';
 import { ThemeToggle } from './theme-toggle';
 import { enterTab } from '@/lib/vacancy-navigation';
@@ -101,6 +101,17 @@ export function PublicHeader({
             <Bookmark size={18} />
             <span>შენახული</span>
             <b>{savedCount ?? storedCount}</b>
+          </Link>
+          {/* Styled as the personal-space link was: labelled on desktop, an icon below 1100px. */}
+          <Link
+            href="/cv"
+            prefetch={false}
+            className="personal-nav header-cv"
+            aria-label="რეზიუმეს შედგენა"
+            title="რეზიუმეს შედგენა"
+          >
+            <FileText size={18} />
+            <span>CV შექმნა</span>
           </Link>
 
           <Link

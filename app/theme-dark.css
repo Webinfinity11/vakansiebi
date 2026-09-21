@@ -1551,6 +1551,13 @@
 :root[data-theme='dark'] .vacancy-contact-guidance a.primary {
   color: #131b2c;
 }
+:root[data-theme='dark'] .vacancy-contact .vacancy-cv-hint {
+  border-top: 1px solid #262f3e;
+  color: #95a0af;
+}
+:root[data-theme='dark'] .vacancy-contact .vacancy-cv-hint a {
+  color: #6f93ff;
+}
 :root[data-theme='dark'] .vacancy-layout > .vacancy-source {
   background: #262f3b;
   border: 1px solid #282f39;
@@ -2934,5 +2941,198 @@
 :root[data-theme='dark'] .invoice-test-notice {
   color: #ffd277;
   background: #342b18;
+}
+
+/* ── from app/cv.css ── */
+:root[data-theme='dark'] .cv-shell {
+  background: #0e1523;
+  color: #afbcd5;
+}
+:root[data-theme='dark'] .cv-note {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .cv-main button,
+:root[data-theme='dark'] .cv-file-button {
+  border: 1px solid #2a3444;
+  background: #131b2c;
+  color: #afbcd5;
+}
+:root[data-theme='dark'] .cv-main button:hover:not(:disabled),
+:root[data-theme='dark'] .cv-file-button:hover {
+  border-color: #546178;
+}
+:root[data-theme='dark'] .cv-main button:focus-visible,
+:root[data-theme='dark'] .cv-file-button:focus-within,
+:root[data-theme='dark'] .cv-main input:focus-visible,
+:root[data-theme='dark'] .cv-main textarea:focus-visible,
+:root[data-theme='dark'] .cv-main select:focus-visible {
+  outline: 2px solid #6f93ff;
+}
+:root[data-theme='dark'] .cv-main button.cv-primary {
+  background: #6f93ff;
+  border-color: #6f93ff;
+  color: #131b2c;
+}
+:root[data-theme='dark'] .cv-segment {
+  background: #20293b;
+}
+:root[data-theme='dark'] .cv-segment button {
+  background: transparent;
+  border-color: transparent;
+}
+:root[data-theme='dark'] .cv-segment button[aria-pressed='true'] {
+  background: #131b2c;
+  color: #6f93ff;
+  box-shadow: 0 1px 3px #05070a1d;
+}
+:root[data-theme='dark'] .cv-message {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .cv-main .cv-template {
+  border: 2px solid #2a3444;
+}
+:root[data-theme='dark'] .cv-template-thumbnail {
+  background: #131b2c;
+  box-shadow: 0 1px 4px #05070a32;
+}
+:root[data-theme='dark'] .cv-template-check {
+  color: #131b2c;
+}
+:root[data-theme='dark'] .cv-style {
+  border-bottom: 1px solid #2a3444;
+}
+:root[data-theme='dark'] .cv-text-contrast-warning {
+  color: #e87d7d;
+}
+:root[data-theme='dark'] .cv-main .cv-swatches button {
+  border: 3px solid #131b2c;
+  color: #131b2c;
+  box-shadow: 0 0 0 1px #121721;
+}
+:root[data-theme='dark'] .cv-custom-color {
+  background: conic-gradient(
+    #e66a6e,
+    #f3b859,
+    #f3c432,
+    #41d979,
+    #1ad3f3,
+    #5d96f3,
+    #8c5ff2,
+    #eb65a7,
+    #e66a6e
+  );
+}
+:root[data-theme='dark'] .cv-custom-color-dot {
+  background: #131b2c;
+  color: #b1bac9;
+}
+:root[data-theme='dark'] .cv-custom-color[data-active] .cv-custom-color-dot {
+  color: #131b2c;
+}
+:root[data-theme='dark'] .cv-custom-color:focus-within {
+  outline: 2px solid #6f93ff;
+}
+:root[data-theme='dark'] .cv-custom-color input {
+  border: 0;
+}
+:root[data-theme='dark'] .cv-style-options button[aria-pressed='true'] {
+  color: #6f93ff;
+  background: #1c2745;
+  border-color: #6f93ff;
+}
+:root[data-theme='dark'] .cv-progress progress {
+  border: 0;
+  background: #2a313f;
+  accent-color: #6f93ff;
+}
+:root[data-theme='dark'] .cv-progress progress::-webkit-progress-bar {
+  background: #2a313f;
+}
+:root[data-theme='dark'] .cv-progress progress::-webkit-progress-value {
+  background: #6f93ff;
+}
+:root[data-theme='dark'] .cv-section {
+  background: #131b2c;
+  border: 1px solid #2a313f;
+}
+:root[data-theme='dark'] .cv-section h2 > button {
+  border: 0;
+}
+:root[data-theme='dark'] .cv-complete {
+  color: #9ee5e0;
+}
+:root[data-theme='dark'] .cv-field input,
+:root[data-theme='dark'] .cv-field textarea,
+:root[data-theme='dark'] .cv-field select {
+  border: 1px solid #2a3444;
+  background: #131b2c;
+  color: #afbcd5;
+}
+:root[data-theme='dark'] .cv-field small {
+  color: #939aaa;
+}
+:root[data-theme='dark'] .cv-field input:disabled {
+  background: #0e1523;
+}
+:root[data-theme='dark'] .cv-month {
+  border: 0;
+}
+:root[data-theme='dark'] .cv-main .cv-month select {
+  border: 1px solid #2a3444;
+  background-color: #131b2c;
+  color: #afbcd5;
+}
+:root[data-theme='dark'] .cv-main .cv-month select:focus-visible {
+  outline: 2px solid #6f93ff;
+}
+:root[data-theme='dark'] .cv-main .cv-month:disabled select {
+  background: #0e1523;
+  color: #969ca6;
+}
+:root[data-theme='dark'] .cv-check input {
+  accent-color: #6f93ff;
+}
+:root[data-theme='dark'] .cv-entry {
+  border-top: 1px solid #2a313f;
+}
+:root[data-theme='dark'] .cv-main .cv-chip {
+  background: #1c2745;
+  color: #6f93ff;
+}
+:root[data-theme='dark'] .cv-preview-heading {
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .cv-preview-viewport {
+  background: #131b2c;
+}
+@media print {
+  :root[data-theme='dark'] .cv-shell,
+:root[data-theme='dark'] .cv-main,
+:root[data-theme='dark'] .cv-layout,
+:root[data-theme='dark'] .cv-preview,
+:root[data-theme='dark'] .cv-preview-viewport,
+:root[data-theme='dark'] .cv-preview-paper {
+    box-shadow: none !important;
+  }
+}
+:root[data-theme='dark'] .cv-main .cv-template:hover:not(:disabled) {
+  border-color: #2a3444;
+  box-shadow: 0 2px 7px #05070a20;
+}
+:root[data-theme='dark'] .cv-photo-editor__dialog {
+  border: 0;
+  background: #131b2c;
+  color: #aebcd6;
+}
+:root[data-theme='dark'] .cv-photo-editor__viewport {
+  background: #232d3d;
+}
+:root[data-theme='dark'] .cv-photo-editor__actions button {
+  border: 1px solid #343f51;
+  background: #131b2c;
+  color: #9ca5b5;
+}
+:root[data-theme='dark'] .cv-photo-editor__dialog .cv-photo-editor__error {
+  color: #e4818c;
 }
 

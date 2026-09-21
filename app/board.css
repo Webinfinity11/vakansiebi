@@ -1996,6 +1996,17 @@
 .vacancy-contact-guidance p {
   margin: 8px 0 0;
 }
+.vacancy-contact .vacancy-cv-hint {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #e3e8f0;
+  color: #5a6a80;
+  font-size: 13px;
+}
+.vacancy-contact .vacancy-cv-hint a {
+  color: #2457e6;
+  font-weight: 600;
+}
 .vacancy-layout > .vacancy-source {
   background: #edf2f9;
   border: 1px solid #d9e2ef;

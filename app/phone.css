@@ -1202,3 +1202,114 @@
     white-space: normal;
   }
 }
+
+/* ── CV builder ── */
+@media screen and (max-width: 760px) {
+  .cv-shell .cv-main {
+    padding: 22px 14px 40px;
+  }
+  .cv-shell .cv-intro h1 {
+    font-size: 24px;
+  }
+  .cv-shell .cv-toolbar {
+    align-items: stretch;
+  }
+  .cv-shell .cv-actions {
+    width: 100%;
+  }
+  .cv-shell .cv-actions button,
+  .cv-shell .cv-actions .cv-file-button {
+    flex: 1 1 auto;
+  }
+  .cv-shell .cv-layout {
+    display: block;
+  }
+  .cv-shell .cv-gallery-track {
+    margin-right: -14px;
+    padding-right: 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .cv-shell .cv-template-option {
+    flex-basis: 156px;
+    scroll-snap-align: start;
+  }
+  .cv-shell .cv-mobile-tabs {
+    display: flex;
+    position: sticky;
+    top: 64px;
+    z-index: 5;
+    margin: 0 0 20px;
+  }
+  .cv-shell .cv-mobile-tabs button {
+    flex: 1;
+    font-size: 16px;
+  }
+  .cv-shell .cv-layout[data-view='form'] .cv-preview,
+  .cv-shell .cv-layout[data-view='preview'] .cv-editor-column {
+    display: none;
+  }
+  .cv-shell .cv-preview {
+    position: static;
+  }
+  .cv-shell .cv-fields {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .cv-shell .cv-field input,
+  .cv-shell .cv-field textarea,
+  .cv-shell .cv-field select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .cv-shell .cv-main button,
+  .cv-shell .cv-file-button {
+    min-height: 44px;
+  }
+  .cv-shell .cv-swatches button {
+    width: 44px;
+    min-height: 44px;
+  }
+  .cv-shell .cv-custom-color {
+    width: 44px;
+    height: 44px;
+  }
+  .cv-shell .cv-custom-color-dot {
+    width: 32px;
+    height: 32px;
+  }
+  .cv-shell .cv-section-body {
+    padding: 0 16px 20px;
+  }
+  .cv-shell .cv-section h2 > button {
+    padding: 18px 16px;
+  }
+}
+@media screen and (max-width: 760px) {
+  .cv-shell .cv-segment > span {
+    font-size: 11px;
+  }
+}
+/* photo editor */
+@media screen and (max-width: 760px) {
+  .cv-photo-editor {
+    padding: 12px;
+  }
+  .cv-photo-editor__dialog {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    padding: 20px 12px;
+  }
+  .cv-photo-editor__viewport {
+    width: min(80vw, 280px);
+    height: min(80vw, 280px);
+  }
+  .cv-photo-editor__zoom input,
+  .cv-photo-editor__actions button {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .cv-photo-editor__actions button {
+    flex: 1;
+  }
+}
