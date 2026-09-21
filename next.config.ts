@@ -12,6 +12,35 @@ const config: NextConfig = {
      a real status, readers keep the streamed one. */
   htmlLimitedBots:
     /Googlebot|[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight/i,
+  async redirects() {
+    return [
+      {
+        source: '/sitemap-index.xml',
+        destination: '/sitemap.xml',
+        statusCode: 301,
+      },
+      {
+        source: '/sitemap-pages.xml',
+        destination: '/sitemap.xml',
+        statusCode: 301,
+      },
+      {
+        source: '/sitemap-searches.xml',
+        destination: '/sitemap.xml',
+        statusCode: 301,
+      },
+      {
+        source: '/vacancies/sitemap.xml',
+        destination: '/sitemap.xml',
+        statusCode: 301,
+      },
+      {
+        source: '/companies/sitemap.xml',
+        destination: '/sitemap.xml',
+        statusCode: 301,
+      },
+    ];
+  },
   async headers() {
     return [
       {
