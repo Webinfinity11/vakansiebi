@@ -2,7 +2,13 @@
    <select>/<option> the rule prefers cannot float under a free-text input. */
 'use client';
 import './search-features.css';
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from 'react';
 import { History, Trash2, X } from 'lucide-react';
 import type { Suggestion } from '@/lib/server/suggest';
 import {
@@ -44,11 +50,21 @@ function highlight(value: string, query: string) {
   );
 }
 
+const phoneQuery = '(max-width: 760px)';
+function subscribePhone(onChange: () => void) {
+  const media = window.matchMedia(phoneQuery);
+  media.addEventListener('change', onChange);
+  return () => media.removeEventListener('change', onChange);
+}
+const isPhone = () => window.matchMedia(phoneQuery).matches;
+const serverIsPhone = () => false;
+
 /* An open search field with nothing typed in it used to show nothing at all,
    which asks the reader to invent a word before the site has offered one. It now
    opens on what they searched before and on the roles this catalogue actually
    answers — one tap instead of one guess. */
 function StartPanel({ onPick }: { onPick: (value: string) => void }) {
+  const phone = useSyncExternalStore(subscribePhone, isPhone, serverIsPhone);
   const [recent, setRecent] = useState<string[]>([]);
   const [popular, setPopular] = useState<string[]>([]);
   useEffect(() => {
@@ -81,7 +97,7 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
             </button>
           </header>
           <ul>
-            {recent.map((value) => (
+            {recent.slice(0, phone ? 3 : 6).map((value) => (
               <li key={value}>
                 <button
                   type="button"
@@ -111,7 +127,7 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
         <section className="search-start-popular">
           <h2>პოპულარული ძიებები</h2>
           <div className="search-start-chips">
-            {popular.map((value) => (
+            {popular.slice(0, phone ? 6 : 18).map((value) => (
               <button key={value} type="button" onClick={() => onPick(value)}>
                 {value}
               </button>
