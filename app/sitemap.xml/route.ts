@@ -1,26 +1,30 @@
-import {
-  pagesEntries,
-  searchesEntries,
-  companiesEntries,
-  vacanciesEntries,
-} from '@/lib/server/sitemap-entries';
-import { combinedSitemapResponse, sitemapIndexResponse } from '@/lib/sitemap';
+import { newest, publicVacancyDatesOrLast } from '@/lib/server/sitemap-data';
+import { sitemapIndexResponse } from '@/lib/sitemap';
 
 // Refresh at the CDN without rebuilding the website when vacancies change.
 export const dynamic = 'force-dynamic';
 
+/* The submitted address is a sitemap index, not one large file: a crawler reads a few hundred
+   bytes and then fetches each section on its own schedule. The vacancy and company sections
+   carry the newest publication date so a recrawl is requested only when something changed. */
 export async function GET() {
   try {
-    const sections = await Promise.all([
-      searchesEntries(),
-      companiesEntries(),
-      vacanciesEntries(),
-    ]);
-    return combinedSitemapResponse([...pagesEntries(), ...sections.flat()]);
+    const changed = newest(
+      (await publicVacancyDatesOrLast()).flatMap(
+        ({ lastModified }) => lastModified || [],
+      ),
+    );
+    return sitemapIndexResponse(
+      changed
+        ? {
+            '/vacancies/sitemap.xml': changed,
+            '/companies/sitemap.xml': changed,
+          }
+        : {},
+    );
   } catch {
-    // Keep discovery available during a database outage. Do not cache this
-    // fallback: the next request should retry the full, up-to-date URL list.
-    console.warn('Main sitemap generation failed; serving the section index.');
+    // Discovery stays available during a database outage; the dates return on the next refresh.
+    console.warn('Sitemap dates unavailable; serving the plain section index.');
     const response = sitemapIndexResponse();
     response.headers.set('Cache-Control', 'no-store');
     return response;
