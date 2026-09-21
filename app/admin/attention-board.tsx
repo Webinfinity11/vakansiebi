@@ -27,17 +27,23 @@ export function AttentionBoard({
   busy,
   now,
   onAct,
+  onReview,
 }: {
   sources: Source[];
   busy: boolean;
   now: number;
   onAct: (source: string, body: Record<string, unknown>) => void;
+  onReview: (source: string) => void;
 }) {
   // `now` is the moment the panel's data was read; without it nothing is judged.
   const items = now ? attentionList(sources, now) : [];
   const act = (item: Attention) => {
     if (!item.action) return;
     const { source, kind } = item.action;
+    if (kind === 'review') {
+      onReview(source);
+      return;
+    }
     if (kind === 'rest') {
       const current =
         sources.find((s) => s.id === source)?.interval_minutes || 180;

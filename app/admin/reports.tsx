@@ -9,6 +9,7 @@ const reasons = {
 };
 type Report = {
   id: string;
+  job_id: string;
   reason: keyof typeof reasons;
   note: string | null;
   title: string;
@@ -16,7 +17,13 @@ type Report = {
   created_at: string;
 };
 
-export function ReportsSection({ onChange }: { onChange?: () => void }) {
+export function ReportsSection({
+  onChange,
+  onOpenJob,
+}: {
+  onChange?: () => void;
+  onOpenJob: (jobId: string) => void;
+}) {
   const [reports, setReports] = useState<Report[] | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -108,6 +115,14 @@ export function ReportsSection({ onChange }: { onChange?: () => void }) {
                   </time>
                 </div>
                 {report.note && <p className="reports-note">{report.note}</p>}
+                <button
+                  type="button"
+                  className="secondary-button reports-action"
+                  disabled={!!busy}
+                  onClick={() => onOpenJob(report.job_id)}
+                >
+                  რედაქტორში გახსნა
+                </button>
               </div>
               <button
                 type="button"

@@ -296,6 +296,7 @@ export default function AdminPanel() {
       setGithub(b.github);
       setObservedAt(Date.parse(b.observedAt));
       setError('');
+      return a?.jobs as AdminJob[] | undefined;
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -316,6 +317,13 @@ export default function AdminPanel() {
   }, [load, selected, busy]);
   const act = async (action: string, extras: Record<string, unknown> = {}) => {
     if (!selected) return;
+    const selectedIndex = jobs.findIndex((job) => job.id === selected.id);
+    const nextJob =
+      ['publish', 'reject', 'archive'].includes(action) &&
+      ['vacancies', 'submissions'].includes(tab) &&
+      selectedIndex >= 0
+        ? jobs[selectedIndex + 1]
+        : undefined;
     setBusy(true);
     setError('');
     try {
@@ -329,7 +337,7 @@ export default function AdminPanel() {
           : {}),
         ...extras,
       });
-      setSelected(null);
+      if (!nextJob) setSelected(null);
       setBillingVersion((v) => v + 1);
       setConfirm(null);
       setMessage(
@@ -339,7 +347,12 @@ export default function AdminPanel() {
             ? 'განცხადება უარყოფილია. შეტყობინება არ გაგზავნილა.'
             : 'ცვლილება შენახულია.',
       );
-      await load();
+      const refreshedJobs = await load();
+      if (nextJob) {
+        const next = refreshedJobs?.find((job) => job.id === nextJob.id);
+        if (next) openJob(next);
+        else setSelected(null);
+      }
     } catch (e) {
       setError((e as Error).message);
       setConfirm(null);
@@ -631,6 +644,13 @@ export default function AdminPanel() {
               sources={sources}
               busy={busy}
               now={observedAt}
+              onReview={(source) => {
+                setStatus('review');
+                setSourceFilter(source);
+                setQuery('');
+                setPage(1);
+                setTab('vacancies');
+              }}
               onAct={(source, body) =>
                 void sourceAction({ id: source as Source['id'] }, body)
               }
@@ -772,7 +792,25 @@ export default function AdminPanel() {
               მონიშნე გადაწყვეტილად.
             </SectionHeading>
             {tab === 'reports' && (
-              <ReportsSection onChange={() => void load()} />
+              <ReportsSection
+                onChange={() => void load()}
+                onOpenJob={async (id) => {
+                  try {
+                    const data = await request(
+                      `/api/admin/jobs?status=all&id=${encodeURIComponent(id)}`,
+                    );
+                    const job = data.jobs[0] as AdminJob | undefined;
+                    if (!job) throw Error('ვაკანსია ვერ მოიძებნა');
+                    setPage(1);
+                    setTab('vacancies');
+                    openJob(job);
+                  } catch (e) {
+                    setError(
+                      e instanceof Error ? e.message : 'ჩატვირთვა ვერ მოხერხდა',
+                    );
+                  }
+                }}
+              />
             )}
           </TabsContent>
           <TabsContent value="billing">
@@ -842,13 +880,12 @@ export default function AdminPanel() {
                   className="secondary-button"
                   disabled={busy}
                   onClick={() =>
-                    void sourceAction(
-                      { id: 'all' },
-                      {
-                        action: 'configure',
-                        autoEnabled: !sources.some((s) => s.auto_enabled),
-                      },
-                    )
+                    sources.some((s) => s.auto_enabled)
+                      ? setConfirm({ action: 'pause-all-sources' })
+                      : void sourceAction(
+                          { id: 'all' },
+                          { action: 'configure', autoEnabled: true },
+                        )
                   }
                 >
                   {sources.some((s) => s.auto_enabled)
@@ -1909,36 +1946,40 @@ export default function AdminPanel() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {confirm?.action === 'bulk-publish'
-                ? 'ყველა შემოტანილი ვაკანსია გამოვაქვეყნოთ?'
-                : confirm?.action === 'publish'
-                  ? submission
-                    ? 'დავადასტუროთ და გამოვაქვეყნოთ?'
-                    : 'გამოვაქვეყნოთ ეს ვერსია?'
-                  : confirm?.action === 'reject' && submission
-                    ? 'უარვყოფთ განცხადებას?'
-                    : confirm?.action === 'merge'
-                      ? 'გავაერთიანოთ ვაკანსიები?'
-                      : confirm?.action === 'resume-automation'
-                        ? 'ავტომატურ მართვას დავუბრუნოთ?'
-                        : 'დაადასტურე ცვლილება'}
+              {confirm?.action === 'pause-all-sources'
+                ? 'ყველა წყაროზე ავტომატური ძებნა შევაჩეროთ?'
+                : confirm?.action === 'bulk-publish'
+                  ? 'ყველა შემოტანილი ვაკანსია გამოვაქვეყნოთ?'
+                  : confirm?.action === 'publish'
+                    ? submission
+                      ? 'დავადასტუროთ და გამოვაქვეყნოთ?'
+                      : 'გამოვაქვეყნოთ ეს ვერსია?'
+                    : confirm?.action === 'reject' && submission
+                      ? 'უარვყოფთ განცხადებას?'
+                      : confirm?.action === 'merge'
+                        ? 'გავაერთიანოთ ვაკანსიები?'
+                        : confirm?.action === 'resume-automation'
+                          ? 'ავტომატურ მართვას დავუბრუნოთ?'
+                          : 'დაადასტურე ცვლილება'}
             </DialogTitle>
             <DialogDescription>
-              {confirm?.action === 'confirm-payment'
-                ? 'დაადასტურე მხოლოდ მაშინ, თუ ინვოისის სრული თანხა უკვე ჩაირიცხა ანგარიშზე. ეს ღილაკი ბანკიდან მონაცემებს არ ამოწმებს.'
-                : confirm?.action === 'confirm-refund'
-                  ? 'დაადასტურე მხოლოდ უკვე შესრულებული საბანკო დაბრუნება. ღილაკი თანხას არ რიცხავს.'
-                  : confirm?.action === 'bulk-publish'
-                    ? 'გამოქვეყნდება წყაროებიდან შემოტანილი ყველა მოლოდინში მყოფი ვაკანსია, ყველა გვერდიდან და ფილტრის მიუხედავად. დამსაქმებლის განცხადებები ამაში არ შედის — ისინი ცალ-ცალკე დასტურდება. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
-                    : confirm?.action === 'publish'
-                      ? 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
-                      : confirm?.action === 'apply-source'
-                        ? 'წყაროს ტექსტი შენახულ რედაქციას ჩაანაცვლებს. საჯარო ვერსია უცვლელი დარჩება.'
-                        : confirm?.action === 'merge'
-                          ? 'არჩეული ვაკანსიის რედაქცია დარჩება, ამ ჩანაწერის წყაროები კი მას მიემატება.'
-                          : confirm?.action === 'resume-automation'
-                            ? 'წყაროს ბოლო შემოწმებული ვერსია ჩაანაცვლებს შენს რედაქციას და შემდგომ ცვლილებებსაც ავტომატურად გამოაქვეყნებს. ვადაგასული ან მოხსნილი ჩანაწერი არქივში გადავა.'
-                            : 'ჩანაწერი საჯარო სიაში აღარ გამოჩნდება. აღდგენა ადმინიდან შეგიძლია.'}
+              {confirm?.action === 'pause-all-sources'
+                ? 'ყველა წყაროზე შეჩერდება დაგეგმილი ავტომატური ძებნა. ხელახლა ჩართვა ამავე ღილაკით შეგიძლია.'
+                : confirm?.action === 'confirm-payment'
+                  ? 'დაადასტურე მხოლოდ მაშინ, თუ ინვოისის სრული თანხა უკვე ჩაირიცხა ანგარიშზე. ეს ღილაკი ბანკიდან მონაცემებს არ ამოწმებს.'
+                  : confirm?.action === 'confirm-refund'
+                    ? 'დაადასტურე მხოლოდ უკვე შესრულებული საბანკო დაბრუნება. ღილაკი თანხას არ რიცხავს.'
+                    : confirm?.action === 'bulk-publish'
+                      ? 'გამოქვეყნდება წყაროებიდან შემოტანილი ყველა მოლოდინში მყოფი ვაკანსია, ყველა გვერდიდან და ფილტრის მიუხედავად. დამსაქმებლის განცხადებები ამაში არ შედის — ისინი ცალ-ცალკე დასტურდება. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
+                      : confirm?.action === 'publish'
+                        ? 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
+                        : confirm?.action === 'apply-source'
+                          ? 'წყაროს ტექსტი შენახულ რედაქციას ჩაანაცვლებს. საჯარო ვერსია უცვლელი დარჩება.'
+                          : confirm?.action === 'merge'
+                            ? 'არჩეული ვაკანსიის რედაქცია დარჩება, ამ ჩანაწერის წყაროები კი მას მიემატება.'
+                            : confirm?.action === 'resume-automation'
+                              ? 'წყაროს ბოლო შემოწმებული ვერსია ჩაანაცვლებს შენს რედაქციას და შემდგომ ცვლილებებსაც ავტომატურად გამოაქვეყნებს. ვადაგასული ან მოხსნილი ჩანაწერი არქივში გადავა.'
+                              : 'ჩანაწერი საჯარო სიაში აღარ გამოჩნდება. აღდგენა ადმინიდან შეგიძლია.'}
             </DialogDescription>
           </DialogHeader>
           <div className="confirm-actions">
@@ -1954,12 +1995,17 @@ export default function AdminPanel() {
               disabled={busy}
               onClick={() =>
                 confirm &&
-                (confirm.action === 'bulk-publish'
-                  ? void publishAll()
-                  : void act(confirm.action, {
-                      itemId: confirm.itemId,
-                      targetId: confirm.targetId,
-                    }))
+                (confirm.action === 'pause-all-sources'
+                  ? void sourceAction(
+                      { id: 'all' },
+                      { action: 'configure', autoEnabled: false },
+                    ).finally(() => setConfirm(null))
+                  : confirm.action === 'bulk-publish'
+                    ? void publishAll()
+                    : void act(confirm.action, {
+                        itemId: confirm.itemId,
+                        targetId: confirm.targetId,
+                      }))
               }
             >
               დადასტურება

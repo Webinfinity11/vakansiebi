@@ -14,7 +14,11 @@ export type Attention = {
   advice: string;
   /* The panel already knows how to run, retry and configure a source; a finding
      only names which of those its fix is. */
-  action?: { label: string; source: string; kind: 'run' | 'retry' | 'rest' };
+  action?: {
+    label: string;
+    source: string;
+    kind: 'run' | 'retry' | 'rest' | 'review';
+  };
 };
 
 /* The two government hosts time out from every GitHub runner and are collected
@@ -116,7 +120,13 @@ export function attentionList(
         title: `${source.name} — ${source.quality_held} ჩანაწერი შემოწმებას ელოდება`,
         detail:
           'ტექსტი წყაროზე შეიცვალა ისე, რომ ავტომატურად გამოქვეყნება სარისკოა.',
-        advice: 'გადახედე „შემოტანის ისტორიაში" და დაადასტურე ან უარყავი.',
+        advice:
+          'გადადი „ვაკანსიები“ → „შესამოწმებელი“ და დაადასტურე ან უარყავი.',
+        action: {
+          label: 'შესამოწმებელი ვაკანსიები',
+          source: source.id,
+          kind: 'review',
+        },
       });
     if ((source.queued ?? 0) > (source.batch_limit ?? 200) * 3)
       found.push({
