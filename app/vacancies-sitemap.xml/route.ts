@@ -2,20 +2,19 @@ import {
   pagesEntries,
   searchesEntries,
   companiesEntries,
-  vacanciesEntries,
 } from '@/lib/server/sitemap-entries';
 import { combinedSitemapResponse } from '@/lib/sitemap';
 
 /* The same list as /sitemap.xml under a second address. Search Console keeps its state per
    submitted URL, so an address it has never seen gets a fresh fetch rather than whatever
-   record is stuck against the old one. Both addresses serve identical content. */
+   record is stuck against the old one. Both addresses serve identical content, and neither
+   includes vacancy detail pages: those live about a month and then come down. */
 export const dynamic = 'force-static';
 export const revalidate = 3600;
 
 export async function GET() {
   const sections = await Promise.allSettled([
     searchesEntries(),
-    vacanciesEntries(),
     companiesEntries(),
   ]);
   const entries = pagesEntries();
