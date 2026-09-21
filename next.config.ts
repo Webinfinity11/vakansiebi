@@ -20,11 +20,6 @@ const config: NextConfig = {
         statusCode: 301,
       },
       {
-        source: '/sitemap-pages.xml',
-        destination: '/sitemap.xml',
-        statusCode: 301,
-      },
-      {
         source: '/sitemap-searches.xml',
         destination: '/sitemap.xml',
         statusCode: 301,
