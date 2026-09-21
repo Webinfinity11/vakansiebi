@@ -1,6 +1,7 @@
 import { load } from 'cheerio';
 import { sourceNames } from '../../lib/types';
 import { safeExternalUrl } from '../../lib/vacancy-media';
+import { explicitWorkCity } from '../../lib/work-location';
 import { cleanText, georgianDate, tbilisiDate } from './index';
 import type { ListedLink, SourceModule } from './module';
 
@@ -86,7 +87,10 @@ export const awork: SourceModule = {
         root.find('.vacancy-info .vacancy-content h4').first().text(),
       ),
       company: text(root.find('business-card .company-info h4').first().text()),
-      city: fields.get('მისამართი') || '',
+      city: explicitWorkCity({
+        description: '',
+        facts: [{ label: 'მისამართი', value: fields.get('მისამართი') || '' }],
+      }),
       category: '',
       salary,
       salaryMin: amount ? Number(amount[1].replace(/[ ,]/g, '')) : null,

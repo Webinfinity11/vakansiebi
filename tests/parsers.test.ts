@@ -774,3 +774,39 @@ void test('HR shows public benefits, languages, driving licences and student sui
   const capped = parseDetail('hr', page(announcement, rows), url);
   assert.equal(capped.facts?.length, 30);
 });
+
+void test('Awork stores only a recognized city and keeps the address as a fact', () => {
+  const url = 'https://awork.ge/user/vacancy/6a8c01bee207671578b2cc64';
+  const page = (address: string) => `
+    <link rel="canonical" href="${url}">
+    <vacancy-details>
+      <div class="vacancy-start-end-date">1 იანვარი - 31 დეკემბერი</div>
+      <div class="vacancy-info"><div class="vacancy-content"><h4>კონსულტანტი</h4></div></div>
+      <business-card><div class="company-info"><h4>კომპანია</h4></div></business-card>
+      <div class="overview-item">
+        <div class="overview-item-title">მისამართი</div>
+        <div class="overview-item-info">${address}</div>
+      </div>
+      <div class="job-detail-description">კომპანიას აქვს ოფისები თბილისში და ბათუმში.</div>
+    </vacancy-details>`;
+  for (const [address, city] of [
+    ['19 შოთა რუსთაველის გამზირი, თბილისი', 'თბილისი'],
+    ['4 თავისუფლების მოედანი, თბილისი', 'თბილისი'],
+    ['ბათუმი', 'ბათუმი'],
+    ['Tbilisi, Rustaveli Avenue 19', 'თბილისი'],
+    ['რუსთაველის გამზირი 19', ''],
+    ['უცნობი დასახლება', ''],
+    ['თბილისი, ბათუმი', ''],
+    ['', ''],
+    ['არ არის მითითებული', ''],
+  ]) {
+    const job = parseDetail('awork', page(address), url);
+    assert.equal(job.city, city, address);
+    if (address && address !== 'არ არის მითითებული')
+      assert.ok(
+        job.facts?.some(
+          (fact) => fact.label === 'მისამართი' && fact.value === address,
+        ),
+      );
+  }
+});
