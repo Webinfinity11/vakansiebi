@@ -1104,6 +1104,49 @@
   }
 }
 
+/* Keep autocomplete below its field, with one scroll area for history and chips. */
+@media (max-width: 760px) {
+  .board-shell .discovery-hero .search-query-field .search-suggest {
+    top: 100%;
+    max-height: min(360px, 55dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .board-shell .search-query-field .search-start {
+    display: block;
+    padding: 10px;
+  }
+  .board-shell .search-start > section + section {
+    margin-top: 12px;
+  }
+  .board-shell .search-start-recent header {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin-bottom: 2px;
+  }
+  .board-shell .search-start-recent header button,
+  .board-shell .search-start-term {
+    min-height: 44px;
+  }
+  .board-shell .search-start-forget {
+    width: 44px;
+    height: 44px;
+    margin-right: 0;
+  }
+  .board-shell .search-start-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .board-shell .search-start-chips button {
+    min-height: 44px;
+    max-width: 100%;
+    padding: 8px 10px;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* One mobile control language for search, filtering and sorting. */
 @media (max-width: 760px) {
   .board-shell .results-tools {
