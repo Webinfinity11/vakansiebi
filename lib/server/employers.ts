@@ -106,8 +106,8 @@ export async function decideEmployers(input: unknown) {
   return { a, b, decision: data.decision };
 }
 
-/* Keep existing company URLs available, but link from cards only when useful to browse. */
-export const employerPageMinimum = 1;
+/* A page of its own is worth making when it holds more than the single vacancy it would repeat. */
+export const employerPageMinimum = 2;
 export type EmployerPage = {
   slug: string;
   name: string;
@@ -131,9 +131,16 @@ export const employerRowsSql = `SELECT name,logo,city,sources,array_agg(id ORDER
 async function buildEmployerPages() {
   const [{ rows }, decisions] = await Promise.all([
     publicRead(employerRowsSql),
-    publicRead("SELECT a,b FROM employer_decisions WHERE decision='merge'"),
+    publicRead('SELECT a,b,decision FROM employer_decisions'),
   ]);
-  const root = mergedIdentities(decisions.rows.map((d) => [d.a, d.b] as const));
+  const root = mergedIdentities(
+    decisions.rows
+      .filter((d) => d.decision === 'merge')
+      .map((d) => [d.a, d.b] as const),
+  );
+  const answered = new Set(
+    decisions.rows.map((d: { a: string; b: string }) => `${d.a}\n${d.b}`),
+  );
   type Group = {
     ids: string[];
     names: Map<string, number>;
@@ -165,8 +172,19 @@ async function buildEmployerPages() {
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
   const bySlug = new Map<string, EmployerPage>();
   const byJob = new Map<string, string>();
+  /* Two employers whose spellings cannot be told apart get no page at all until a person says
+     whether they are one. A page under a name that may belong to someone else is worse than none;
+     their vacancies stay in the catalogue either way. */
+  const unresolved = new Set(
+    candidatePairs([...groups.keys()])
+      .filter(([a, b]) => !answered.has(`${a}\n${b}`) && root(a) !== root(b))
+      .flat(),
+  );
   const ordered = [...groups]
-    .filter(([, g]) => g.ids.length >= employerPageMinimum)
+    .filter(
+      ([identity, g]) =>
+        g.ids.length >= employerPageMinimum && !unresolved.has(identity),
+    )
     .sort(
       (a, b) => b[1].ids.length - a[1].ids.length || a[0].localeCompare(b[0]),
     );
