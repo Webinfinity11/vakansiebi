@@ -1,4 +1,4 @@
-import { subcategoryFor } from '../subcategories';
+import { subcategories, subcategoryFor } from '../subcategories';
 import { z } from 'zod';
 import { genericCompanyKeys } from '../company-logo-identity';
 import { readSearch } from '../search-state';
@@ -74,6 +74,7 @@ export type SearchSuggestion = {
 export type SearchMeta = {
   categories: { name: string; count: number }[];
   categoryTotal: number;
+  subcategories: { id: string; count: number }[];
   relaxations: { key: FilterKey; label: string; count: number }[];
   suggestion: SearchSuggestion | null;
   /** How many the same words would find if the descriptions were searched too. */
@@ -509,10 +510,20 @@ export function searchPlan(
     searching && deeper
       ? `,(SELECT count(*)::int FROM matches WHERE q_deep AND ${all('query')}) deep_total`
       : '';
-  const metrics = `${cte}, matches AS MATERIALIZED (SELECT ${p('category')} AS category_name,${searching && deeper ? 'j.q_deep,' : ''}${keys.map((key) => `COALESCE((${conditions[key]}),false) AS "${key}"`).join(',')} FROM searchable j WHERE ${kept})
+  const children = subcategories.filter(
+    (item) => item.category === filters.category,
+  );
+  // These literals come only from the static role catalogue, never URL input.
+  // Keep metric-only values out of args: callers also execute cte/where alone.
+  const literal = (value: string) => `'${value.replaceAll("'", "''")}'`;
+  const childFacets = children.length
+    ? `(SELECT jsonb_agg(facet) FROM (SELECT child.id,count(m.title) FILTER (WHERE m.title ~ child.pattern)::int count FROM (VALUES ${children.map((item) => `(${literal(item.id)},${literal(item.pattern)})`).join(',')}) child(id,pattern) LEFT JOIN (SELECT title FROM matches WHERE ${all('subcategory')}) m ON true GROUP BY child.id) facet)`
+    : "'[]'::jsonb";
+  const metrics = `${cte}, matches AS MATERIALIZED (SELECT ${p('category')} AS category_name,${children.length ? `${normalized(p('title'))} AS title,` : ''}${searching && deeper ? 'j.q_deep,' : ''}${keys.map((key) => `COALESCE((${conditions[key]}),false) AS "${key}"`).join(',')} FROM searchable j WHERE ${kept})
     SELECT (SELECT count(*)::int FROM matches WHERE ${all()}) total,
     (SELECT count(*)::int FROM matches WHERE ${all('category')}) category_total,
     COALESCE((SELECT jsonb_agg(c) FROM (SELECT category_name name,count(*)::int count FROM matches WHERE ${all('category')} GROUP BY category_name) c),'[]'::jsonb) categories,
+    ${childFacets} subcategories,
     jsonb_build_object(${keys.map((key) => `'${key}',(SELECT count(*)::int FROM matches WHERE ${all(key)})`).join(',')}) relaxed${widened}`;
   // One canonical "newest" order: the posting date the filter uses, then our
   // own publication time, and finally the id so pages never overlap.

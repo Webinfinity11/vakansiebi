@@ -2142,6 +2142,10 @@
   border-color: #232d3e;
   background: #212b40;
 }
+:root[data-theme='dark'] .board-shell .subcategory-options {
+  border: 0;
+  border-left: 1px solid #2a3444;
+}
 
 /* ── from app/phone.css ── */
 :root[data-theme='dark'] .board-shell .job-new {

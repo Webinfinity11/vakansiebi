@@ -139,6 +139,7 @@ async function loadPublicJobs(
   const search: SearchMeta = {
     categories: measured.categories,
     categoryTotal: measured.category_total,
+    subcategories: measured.subcategories,
     relaxations: (Object.entries(measured.relaxed) as [FilterKey, number][])
       .filter(([, n]) => n > count)
       .map(([key, n]) => ({ key, label: filterLabels[key], count: n }))

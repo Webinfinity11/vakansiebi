@@ -38,3 +38,41 @@ void test('duplicate grouping never joins two vacancies on a name that identifie
   assert.match(plan.cte, /IN \('კომპანია'/);
   assert.match(plan.cte, /< 2 OR/);
 });
+
+void test('child facets retain other filters but ignore the selected child', () => {
+  const plan = searchPlan(
+    new URLSearchParams({
+      category: 'ტექნოლოგიები',
+      subcategory: 'tech-development',
+      city: 'თბილისი',
+      paid: 'true',
+    }),
+    false,
+    { grouped: true },
+  );
+  const facet = plan.metrics.slice(
+    plan.metrics.indexOf('(SELECT jsonb_agg(facet)'),
+  );
+  const eligible = facet.match(/SELECT title FROM matches WHERE ([^)]+)/)?.[1];
+  assert.ok(eligible);
+  for (const key of ['category', 'city', 'paid', 'query', 'salary', 'remote'])
+    assert.ok(eligible.includes(`"${key}"`), key);
+  assert.ok(!eligible.includes('"subcategory"'));
+  assert.match(
+    facet,
+    /count\(m.title\) FILTER \(WHERE m.title ~ child.pattern\)/,
+  );
+  assert.match(facet, /LEFT JOIN/); // Empty parents must still expose zero-count children.
+  assert.ok(facet.includes('tech-development'));
+  assert.ok(!facet.includes('sales-retail'));
+});
+
+void test('parents without children do not evaluate child patterns', () => {
+  for (const category of ['ყველა', 'სხვა']) {
+    const plan = searchPlan(new URLSearchParams({ category }), false, {
+      grouped: true,
+    });
+    assert.match(plan.metrics, /'\[\]'::jsonb subcategories/);
+    assert.doesNotMatch(plan.metrics, /child\.pattern/);
+  }
+});

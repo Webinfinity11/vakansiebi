@@ -38,6 +38,7 @@ import type { SearchMeta, FilterKey } from '@/lib/server/search-plan';
 import { useSearchParams } from 'next/navigation';
 import {
   memo,
+  Fragment,
   useCallback,
   useMemo,
   useEffect,
@@ -1301,34 +1302,76 @@ export default function JobBoard({
                 .map((c) => {
                   const CategoryIcon = categoryIcons[c];
                   return (
-                    <label
-                      className="check-row"
-                      key={c}
-                      htmlFor={`${prefix}-${c}`}
-                    >
-                      <input
-                        type="radio"
-                        name={`${prefix}-category`}
-                        value={c}
-                        id={`${prefix}-${c}`}
-                        checked={draft.category === c}
-                        onChange={() => changeCategory(c)}
-                      />
-                      <CategoryIcon
-                        className="category-icon"
-                        size={17}
-                        aria-hidden="true"
-                      />
-                      <span>{c === 'ყველა' ? 'ყველა მიმართულება' : c}</span>
-                      {facets && (
-                        <small className="facet-count">
-                          {c === 'ყველა'
-                            ? facets.categoryTotal
-                            : facets.categories.find((item) => item.name === c)
-                                ?.count || 0}
-                        </small>
-                      )}
-                    </label>
+                    <Fragment key={c}>
+                      <label className="check-row" htmlFor={`${prefix}-${c}`}>
+                        <input
+                          type="radio"
+                          name={`${prefix}-category`}
+                          value={c}
+                          id={`${prefix}-${c}`}
+                          checked={draft.category === c}
+                          onChange={() => changeCategory(c)}
+                        />
+                        <CategoryIcon
+                          className="category-icon"
+                          size={17}
+                          aria-hidden="true"
+                        />
+                        <span>{c === 'ყველა' ? 'ყველა მიმართულება' : c}</span>
+                        {facets && (
+                          <small className="facet-count">
+                            {c === 'ყველა'
+                              ? facets.categoryTotal
+                              : facets.categories.find(
+                                  (item) => item.name === c,
+                                )?.count || 0}
+                          </small>
+                        )}
+                      </label>
+                      {c === draft.category &&
+                        subcategories.some((item) => item.category === c) && (
+                          <fieldset
+                            className="subcategory-options"
+                            aria-label={`${c} — ქვემიმართულება`}
+                          >
+                            {[
+                              { id: '', label: `ყველა — ${c}` },
+                              ...subcategories.filter(
+                                (item) => item.category === c,
+                              ),
+                            ].map((item) => (
+                              <label
+                                className="check-row"
+                                key={item.id}
+                                htmlFor={`${prefix}-subcategory-${item.id || 'all'}`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`${prefix}-subcategory`}
+                                  id={`${prefix}-subcategory-${item.id || 'all'}`}
+                                  value={item.id}
+                                  checked={
+                                    (draft.subcategory || '') === item.id
+                                  }
+                                  onChange={() => setSubcategory(item.id)}
+                                />
+                                <span>{item.label}</span>
+                                {facets && (
+                                  <small className="facet-count">
+                                    {item.id
+                                      ? (facets.subcategories?.find(
+                                          (child) => child.id === item.id,
+                                        )?.count ?? 0)
+                                      : (facets.categories.find(
+                                          (parent) => parent.name === c,
+                                        )?.count ?? 0)}
+                                  </small>
+                                )}
+                              </label>
+                            ))}
+                          </fieldset>
+                        )}
+                    </Fragment>
                   );
                 })}
             </div>
@@ -1343,39 +1386,40 @@ export default function JobBoard({
             </button>
           </>
         )}
-        {subcategories.some((item) => item.category === draft.category) && (
-          <div className="filter-subcategory">
-            <label htmlFor={`${prefix}-subcategory`}>ქვემიმართულება</label>
-            <select
-              id={`${prefix}-subcategory`}
-              aria-describedby={`${prefix}-subcategory-help`}
-              value={draft.subcategory || ''}
-              onChange={(event) => {
-                if (prefix === 'mobile')
-                  setMobileDraft({
-                    ...draft,
-                    subcategory: event.target.value || undefined,
-                  });
-                else setSubcategory(event.target.value);
-              }}
-            >
-              <option value="">ყველა — {draft.category}</option>
-              {subcategories
-                .filter((item) => item.category === draft.category)
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-            </select>
-            <p
-              className="filter-subcategory-help"
-              id={`${prefix}-subcategory-help`}
-            >
-              დაუზუსტებელი ვაკანსიებიც ჩანს „ყველა“-ში.
-            </p>
-          </div>
-        )}
+        {prefix === 'mobile' &&
+          subcategories.some((item) => item.category === draft.category) && (
+            <div className="filter-subcategory">
+              <label htmlFor={`${prefix}-subcategory`}>ქვემიმართულება</label>
+              <select
+                id={`${prefix}-subcategory`}
+                aria-describedby={`${prefix}-subcategory-help`}
+                value={draft.subcategory || ''}
+                onChange={(event) => {
+                  if (prefix === 'mobile')
+                    setMobileDraft({
+                      ...draft,
+                      subcategory: event.target.value || undefined,
+                    });
+                  else setSubcategory(event.target.value);
+                }}
+              >
+                <option value="">ყველა — {draft.category}</option>
+                {subcategories
+                  .filter((item) => item.category === draft.category)
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+              </select>
+              <p
+                className="filter-subcategory-help"
+                id={`${prefix}-subcategory-help`}
+              >
+                დაუზუსტებელი ვაკანსიებიც ჩანს „ყველა“-ში.
+              </p>
+            </div>
+          )}
         <div className="filter-divider" />
         <h3>სამუშაო პირობები</h3>
         <label className="check-row" htmlFor={`${prefix}-remote`}>
