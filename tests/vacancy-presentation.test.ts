@@ -69,6 +69,37 @@ void test('enrichment fills a missing city while respecting existing location an
   assert.equal(enrichVacancy({ ...job, city: 'თბილისი' }).city, 'თბილისი');
   assert.equal(enrichVacancy(job).description, job.description);
 });
+void test('explicit workplaces accept office phrases, inline labels and Latin city spellings', () => {
+  for (const [description, expected] of [
+    ['ოფისი მდებარეობს ბათუმში.', 'ბათუმი'],
+    ['სამუშაო ოფისი მდებარეობს ქ. ქუთაისში', 'ქუთაისი'],
+    ['ოფისის მდებარეობა: რუსთავი', 'რუსთავი'],
+    ['Office location: Batumi', 'ბათუმი'],
+    ['Location: Tbilisi', 'თბილისი'],
+    [
+      'Location: Shota Rustaveli Tbilisi International Airport, Tbilisi, Georgia',
+      'თბილისი',
+    ],
+    ['ანაზღაურება: 1500 ლარი + ბონუსი სამუშაო ადგილი: თბილისი', 'თბილისი'],
+    ['Location: Saburtalo, Tbilisi\nLocation: Vake, Tbilisi', 'თბილისი'],
+    ['კომპანია საქმიანობს ბათუმში. Our clients are in Tbilisi.', ''],
+    ['კომპანიის სათავო ოფისი მდებარეობს თბილისში.', ''],
+    ['იურიდიული მისამართი: ბათუმი\nსაკონტაქტო მისამართი: Tbilisi', ''],
+    ['ოფისი მდებარეობს ბათუმში და თბილისში.', ''],
+    ['ოფისი მდებარეობს ბათუმში.\nOffice location: Tbilisi', ''],
+    ['სამუშაო ადგილი: თბილისი\nLocation: Batumi', ''],
+    ['Location: Rustaveli Avenue', ''],
+    ['Office location: NewBatumiTown', ''],
+  ])
+    assert.equal(explicitWorkCity({ description }), expected, description);
+  assert.equal(
+    explicitWorkCity({
+      description: '',
+      facts: [{ label: 'Office location', value: 'Kutaisi' }],
+    }),
+    'ქუთაისი',
+  );
+});
 void test('salary labels show the shared concise amount while original conditions stay in source text', () => {
   for (const [source, expected] of [
     ['ფიქსირებული ხელფასი (1000 ლარი) + ყოველთვიური ბონუსი', '1 000 ₾'],
