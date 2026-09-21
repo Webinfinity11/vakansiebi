@@ -6,8 +6,10 @@ import {
 } from '@/lib/server/sitemap-entries';
 import { combinedSitemapResponse, sitemapIndexResponse } from '@/lib/sitemap';
 
-// Refresh at the CDN without rebuilding the website when vacancies change.
-export const dynamic = 'force-dynamic';
+/* Prerendered and then refreshed every hour: crawlers get a complete static file with the
+   usual validators, and the database is read once per hour instead of once per request. */
+export const dynamic = 'force-static';
+export const revalidate = 3600;
 
 export async function GET() {
   try {
