@@ -1,5 +1,6 @@
 import { siteUrl } from '../seo';
 import { landingFor, landingPath } from '../seo-landing';
+import { vacancyPath } from '../vacancy-navigation';
 import { employerPages } from './employers';
 import {
   landingCounts,
@@ -23,7 +24,20 @@ export async function searchesEntries() {
     .filter(
       (path) => !!landingFor(new URLSearchParams(path.split('?')[1] || '')),
     );
-  return [...new Set(paths)].sort().map((path) => ({ url: siteUrl + path }));
+  // The list itself has no single natural "changed at": it is a materialized
+  // count of live vacancies, re-verified whenever this route rebuilds.
+  const lastModified = new Date();
+  return [...new Set(paths)]
+    .sort()
+    .map((path) => ({ url: siteUrl + path, lastModified }));
+}
+
+export async function vacanciesEntries() {
+  const vacancies = await publicVacancyDatesOrLast();
+  return vacancies.map(({ id, title, lastModified }) => ({
+    url: siteUrl + vacancyPath({ id, title }),
+    lastModified,
+  }));
 }
 
 export async function companiesEntries() {

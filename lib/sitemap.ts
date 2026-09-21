@@ -61,3 +61,29 @@ export function combinedSitemapResponse(
     },
   });
 }
+
+const sitemapIndexStart =
+  '<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+const sitemapXml = (entry: SitemapEntry) =>
+  `<sitemap><loc>${xmlEscape(entry.url)}</loc>${lastmod(entry.lastModified)}</sitemap>\n`;
+
+/** The four leaf sitemaps every index address points at: split so a crawler can revisit
+ * the highly perishable job list on its own schedule, separately from the stable ones. */
+export function sitemapLeaves(base: string) {
+  return ['pages', 'categories', 'companies', 'jobs'].map((name) => ({
+    url: `${base}/sitemap-${name}.xml`,
+  }));
+}
+
+export function sitemapIndexResponse(entries: readonly SitemapEntry[]) {
+  const body =
+    sitemapIndexStart +
+    entries.map(sitemapXml).join('') +
+    '</sitemapindex>\n';
+  return new Response(body, {
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': sitemapCacheControl,
+    },
+  });
+}
