@@ -100,6 +100,20 @@ export type SearchPlanOptions = {
 const normalized = (sql: string) =>
   `lower(CASE WHEN COALESCE(${sql},'') IS NFKC NORMALIZED THEN COALESCE(${sql},'') ELSE normalize(COALESCE(${sql},''),NFKC) END)`;
 const today = "to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')";
+// A city may be declined, but its stem is not a free prefix: გორგია and
+// გორგასალი do not name გორი, just as სამგორი does not.
+const cityPattern = (name: string) => {
+  const normalizedName = name.normalize('NFKC').trim().toLowerCase();
+  const stem = cityStem(normalizedName);
+  return (
+    '(^|[^[:alnum:]ა-ჰ])' +
+    escapeRegex(stem) +
+    (stem !== normalizedName
+      ? '(ი|ისა?|ში|სა?|იდან|ით|ამდე)'
+      : '(|ში|სა?|დან|მდე)') +
+    '($|[^[:alnum:]ა-ჰ])'
+  );
+};
 type MatchGroup = {
   /** Where the group may match: a very short word names a role, so it stays out of descriptions. */
   s: 'head' | 'document';
@@ -278,14 +292,16 @@ export function searchPlan(
     );
   const cityStemPattern =
     filters.city !== 'ყველა' && filters.city !== otherCity
-      ? bind('\\m' + escapeRegex(cityStem(filters.city)))
+      ? bind(cityPattern(filters.city))
       : null;
   const employmentPattern =
     filters.employment === 'all'
       ? null
       : bind(
           filters.employment === 'daily'
-            ? '(^|[^ა-ჰa-z])(დღიური|ერთდღიანი|ერთჯერადი)[[:space:]-]+(სამუშაო|სამსახური|დასაქმება)|one[ -]day[[:space:]]+(job|work)|day[ -]labou?r'
+            ? // Do not join "ხელფასი: დღიური" to the next line's "სამუშაო",
+              // or mistake "დღიური სამუშაოს ხანგრძლივობა" for one-day work.
+              '(^|[^ა-ჰa-z])(დღიური|ერთდღიანი|ერთჯერადი)[[:blank:]-]+(სამუშაო|სამსახური|დასაქმება)([^ა-ჰa-z]|$)|one[ -]day[[:blank:]]+(job|work)\\M|day[ -]labou?r\\M'
             : filters.employment === 'part-time'
               ? '(ნახევარი?|არასრული?|ნაწილობრივი?)[[:space:]]+განაკვეთ|part[ -]?time'
               : 'სტაჟიორ|სტაჟირებ|\\mintern(ship)?\\M',
@@ -392,9 +408,9 @@ export function searchPlan(
   const cityCondition = () => {
     if (filters.city === 'ყველა') return 'true';
     if (filters.city === otherCity)
-      return `j.city_norm<>'' AND NOT EXISTS(SELECT 1 FROM unnest(${bind([...cities])}::text[]) known WHERE strpos(j.city_norm,lower(known))>0)`;
-    // The stem was matched at a word start so გორი never means კატეგორია.
-    return `CASE WHEN strpos(j.city_norm,${bind(filters.city.normalize('NFKC').toLowerCase())})>0 THEN true WHEN j.city_norm='' THEN j.city_text ELSE false END`;
+      return `j.city_norm<>'' AND NOT EXISTS(SELECT 1 FROM unnest(${bind(cities.map(cityPattern))}::text[]) known WHERE j.city_norm ~ known)`;
+    // Stored cities, text fallback and "other" share the same city boundaries.
+    return `CASE WHEN j.city_norm ~ ${cityStemPattern} THEN true WHEN j.city_norm='' THEN j.city_text ELSE false END`;
   };
   const conditions: Record<FilterKey, string> = {
     query: searching ? 'j.q_match' : 'true',
