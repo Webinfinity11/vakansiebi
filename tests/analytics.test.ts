@@ -44,6 +44,13 @@ void test('the process events keep their two shapes: a vacancy, or a step name',
     null,
     'a step is a code name, so no typed text can arrive as one',
   );
+  for (const value of ['section_skills', 'left_experience'])
+    assert.deepEqual(normalizeEvent('resume', value), {
+      kind: 'resume',
+      value,
+    });
+  for (const value of ['რეზიუმე', 'a', 'a'.repeat(25), 'section-skills'])
+    assert.equal(normalizeEvent('resume', value), null);
 });
 void test('a view or an outbound click must name a vacancy', () => {
   assert.deepEqual(normalizeEvent('view', id.toUpperCase()), {

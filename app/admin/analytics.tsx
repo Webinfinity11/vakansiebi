@@ -1,5 +1,12 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  buildFunnel,
+  postLadder,
+  postLabels,
+  resumeLadder,
+  resumeLabels,
+} from '@/lib/analytics-funnel';
 import type {
   ActivityPoint,
   AnalyticsSummary,
@@ -147,7 +154,7 @@ export function AnalyticsPanel() {
             />
           </dl>
           <Activity points={data!.activity} unit={data!.unit} />
-          <div className="admin-analytics-lists">
+          <div className="admin-analytics-lists admin-analytics-funnels">
             <section className="admin-analytics-list">
               <h3>დაკავშირება</h3>
               <p className="admin-analytics-hint">
@@ -178,7 +185,21 @@ export function AnalyticsPanel() {
                 ))}
               </dl>
             </section>
-            <Funnel steps={data!.steps} />
+            <Funnel
+              title="განცხადების დამატება"
+              rows={data!.steps}
+              ladder={postLadder}
+              labels={postLabels}
+              empty="ამ პერიოდში ფორმა არ გაუხსნიათ."
+            />
+            <Funnel
+              title="CV კონსტრუქტორი"
+              rows={data!.resume}
+              ladder={resumeLadder}
+              labels={resumeLabels}
+              empty="ამ პერიოდში კონსტრუქტორი არ გაუხსნიათ."
+              extras={<ResumeExtras rows={data!.resume} />}
+            />
           </div>
           <section className="admin-analytics-list">
             <h3>ძიების შედეგიანობა</h3>
@@ -510,71 +531,107 @@ function Activity({
   );
 }
 
-/* The posting form, step by step. The share is of the people who opened it, so
-   the row where the number falls away is the step that loses them; what the form
-   refused and where they left it are listed under their own headings, because
-   those are not stages of the same ladder. */
-const stepLabels: Record<string, string> = {
-  opened: 'ფორმა გაიხსნა',
-  started: 'შევსება დაიწყო',
-  details: 'დეტალებამდე მივიდა',
-  plans: 'განთავსების არჩევამდე',
-  submitted: 'გაგზავნას დააჭირა',
-  done: 'გაიგზავნა',
-};
-function Funnel({ steps }: { steps: Ranked[] }) {
-  const count = (name: string) =>
-    steps.find((step) => step.value === name)?.count || 0;
-  const opened = count('opened') || 1;
-  const left = steps.filter((step) => step.value.startsWith('left_'));
-  const refused = steps.filter((step) => step.value.startsWith('invalid_'));
+function Funnel({
+  title,
+  rows,
+  ladder,
+  labels,
+  empty,
+  extras,
+}: {
+  title: string;
+  rows: Ranked[];
+  ladder: readonly (readonly [string, string])[];
+  labels: Record<string, string>;
+  empty: string;
+  extras?: ReactNode;
+}) {
+  const report = buildFunnel(rows, ladder, labels);
   return (
     <section className="admin-analytics-list">
-      <h3>განცხადების დამატება</h3>
-      {!steps.length ? (
-        <p className="admin-analytics-empty">ამ პერიოდში ფორმა არ გაუხსნიათ.</p>
+      <h3>{title}</h3>
+      <p className="admin-analytics-hint">
+        წილი გახსნებთან; დაკარგვა — წინა საფეხურთან. მხოლოდ საფეხურები ითვლება,
+        არა ადამიანები.
+      </p>
+      {!rows.length ? (
+        <p className="admin-analytics-empty">{empty}</p>
       ) : (
         <>
           <dl className="admin-analytics-steps">
-            {Object.entries(stepLabels).map(([name, label]) => (
-              <div key={name}>
-                <dt>{label}</dt>
+            {report.steps.map((step, index) => (
+              <div key={step.name}>
+                <dt>{step.label}</dt>
                 <dd>
                   <span
-                    style={{ width: `${(count(name) / opened) * 100}%` }}
+                    style={{ width: `${Math.min(100, step.share)}%` }}
                     aria-hidden="true"
                   />
-                  <b>{whole.format(count(name))}</b>
-                  <small>{share(count(name), opened)}</small>
+                  <b>{whole.format(step.count)}</b>
+                  <small>{step.share}%</small>
+                  {index > 0 && step.drop > 0 && (
+                    <small className="admin-analytics-drop">
+                      −{step.drop}%
+                    </small>
+                  )}
                 </dd>
               </div>
             ))}
           </dl>
-          {!!left.length && (
+          {extras}
+          {!!report.left.length && (
             <p className="admin-analytics-hint">
               შეწყვიტა:{' '}
-              {left
-                .map(
-                  (step) =>
-                    `${stepLabels[step.value.slice(5)] || step.value.slice(5)} — ${whole.format(step.count)}`,
-                )
+              {report.left
+                .map((step) => `${step.label} — ${whole.format(step.count)}`)
                 .join(' · ')}
             </p>
           )}
-          {!!refused.length && (
+          {!!report.refused.length && (
             <p className="admin-analytics-hint">
               ფორმამ არ მიიღო:{' '}
-              {refused
-                .map(
-                  (step) =>
-                    `${step.value.slice(8)} — ${whole.format(step.count)}`,
-                )
+              {report.refused
+                .map((step) => `${step.name} — ${whole.format(step.count)}`)
                 .join(' · ')}
             </p>
           )}
         </>
       )}
     </section>
+  );
+}
+
+function ResumeExtras({ rows }: { rows: Ranked[] }) {
+  const templates = rows
+    .filter(({ value }) => value.startsWith('template_'))
+    .sort((a, b) => b.count - a.count);
+  const styles = rows
+    .filter(
+      ({ value }) =>
+        value.startsWith('style_') ||
+        value.startsWith('photo_') ||
+        value.startsWith('language_') ||
+        value === 'preview',
+    )
+    .sort((a, b) => b.count - a.count);
+  const cleared = rows.find(({ value }) => value === 'cleared');
+  const describe = (items: Ranked[]) =>
+    items
+      .map(
+        ({ value, count }) =>
+          `${resumeLabels[value] ?? value} — ${whole.format(count)}`,
+      )
+      .join(' · ');
+  return (
+    <>
+      {!!templates.length && (
+        <p className="admin-analytics-hint">შაბლონი: {describe(templates)}</p>
+      )}
+      {!!styles.length && (
+        <p className="admin-analytics-hint">სტილი: {describe(styles)}</p>
+      )}
+      {cleared && <p className="admin-analytics-hint">{describe([cleared])}</p>}
+    </>
   );
 }
 

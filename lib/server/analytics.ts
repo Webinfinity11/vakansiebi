@@ -19,6 +19,8 @@ export const eventKinds = [
   'apply',
   /* How far an employer got in the posting form, by step name. */
   'post',
+  /* How far a reader got in the CV builder, by step name. */
+  'resume',
 ] as const;
 export type EventKind = (typeof eventKinds)[number];
 
@@ -56,7 +58,8 @@ export function normalizeEvent(
     kind === 'filter' ||
     kind === 'application' ||
     kind === 'saved_search' ||
-    kind === 'post'
+    kind === 'post' ||
+    kind === 'resume'
   )
     return /^[a-zA-Z_]{2,24}$/.test(value) ? { kind, value } : null;
   const query = value
@@ -99,6 +102,8 @@ export type AnalyticsSummary = {
   activity: ActivityPoint[];
   /** How far the posting form got, by step name. */
   steps: Ranked[];
+  /** How far the CV builder got, by step name. */
+  resume: Ranked[];
   searches: Ranked[];
   filters: Ranked[];
   searchPerformance: { value: string; searches: number; empty: number }[];
@@ -138,13 +143,14 @@ export async function analyticsSummary(
   ).rows;
   // Rank all event kinds in one scan, rather than rescanning both tables for
   // every card. Join job titles only for the bounded list of ranked records.
+  // Funnels need every step, so post and resume are not limited to the top 20.
   const rankings = (
     await db().query(
       `WITH counted AS (SELECT kind,value,sum(n)::int count FROM ${counted} c GROUP BY kind,value),
       ranked AS (SELECT *,row_number() OVER (PARTITION BY kind ORDER BY count DESC,value) position FROM counted)
      SELECT r.kind,r.value,r.count,j.published->>'title' title,j.published->>'company' company
      FROM ranked r LEFT JOIN jobs j ON r.kind IN ('view','outbound') AND j.id::text=r.value
-     WHERE r.position<=$2 ORDER BY r.kind,r.position`,
+     WHERE (r.position<=$2 OR r.kind IN ('post','resume')) ORDER BY r.kind,r.position`,
       [days, top],
     )
   ).rows;
@@ -205,6 +211,7 @@ export async function analyticsSummary(
     filters: ranked('filter'),
     searchPerformance,
     steps: ranked('post'),
+    resume: ranked('resume'),
     searches: ranked('search'),
     emptySearches: ranked('search_empty'),
     views: ranked('view'),

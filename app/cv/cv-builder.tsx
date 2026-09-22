@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { flushSync } from 'react-dom';
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -31,6 +32,8 @@ import {
   type Cv,
   type LanguageLevel,
 } from '../../lib/cv';
+import { track } from '../../lib/analytics-client';
+import { createResumeSync } from '../../lib/resume-client';
 import { PhotoEditor } from './photo-editor';
 import {
   Phone,
@@ -456,6 +459,42 @@ function Preview({
   );
 }
 
+type CvSection =
+  | 'contact'
+  | 'summary'
+  | 'experience'
+  | 'education'
+  | 'skills'
+  | 'languages';
+
+function hasCvContent(cv: Cv): boolean {
+  return (
+    [
+      cv.fullName,
+      cv.title,
+      cv.phone,
+      cv.email,
+      cv.city,
+      cv.link,
+      cv.summary,
+      cv.photo,
+    ].some((value) => value.trim()) ||
+    cv.experience.some(
+      (item) =>
+        [item.company, item.role, item.description, item.from, item.to].some(
+          (value) => value.trim(),
+        ) || item.current,
+    ) ||
+    cv.education.some((item) =>
+      [item.school, item.degree, item.description, item.from, item.to].some(
+        (value) => value.trim(),
+      ),
+    ) ||
+    cv.skills.some((value) => value.trim()) ||
+    cv.languages.some((item) => item.name.trim())
+  );
+}
+
 export function CvBuilder() {
   const [printing, setPrinting] = useState(false);
   const [cv, setCv] = useState<Cv>(() => emptyCv());
@@ -465,22 +504,79 @@ export function CvBuilder() {
   const [error, setError] = useState('');
   const [skill, setSkill] = useState('');
   const [photoSource, setPhotoSource] = useState<File | string | null>(null);
-  const [openSection, setOpenSection] = useState('contact');
+  const [openSection, setOpenSection] = useState<CvSection | ''>('contact');
   const dirty = useRef(false);
+  const resumeSync = useRef<ReturnType<typeof createResumeSync> | null>(null);
+
+  useEffect(() => {
+    try {
+      resumeSync.current = createResumeSync(window.localStorage);
+    } catch {
+      return;
+    }
+    const retry = () => {
+      void resumeSync.current?.retry();
+    };
+    retry();
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, []);
+
+  /* How far this CV gets, in step names and nothing else. The counts describe
+     sections and choices, never the person filling them in. No text, photo,
+     id or session is sent, so a person is never followed between steps —
+     only the steps are counted. */
+  const sent = useRef(new Set<string>());
+  const lastSection = useRef<CvSection>('contact');
+  const printed = useRef(false);
+  const once = useCallback((value: string) => {
+    if (sent.current.has(value)) return;
+    sent.current.add(value);
+    track('resume', value);
+  }, []);
+
+  useEffect(() => {
+    once('opened');
+    const leave = () => {
+      if (!sent.current.has('started') || printed.current) return;
+      if (sent.current.has('left')) return;
+      sent.current.add('left');
+      once(`left_${lastSection.current}`);
+    };
+    window.addEventListener('pagehide', leave);
+    return () => window.removeEventListener('pagehide', leave);
+  }, [once]);
+
+  useEffect(() => {
+    if (view === 'preview') once('preview');
+  }, [view, once]);
+
+  function toggleSection(section: CvSection) {
+    const next = openSection === section ? '' : section;
+    if (next) {
+      lastSection.current = next;
+      once(`section_${next}`);
+    }
+    setOpenSection(next);
+  }
 
   const t = cvText.ka;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {
-        setCv(readCv(window.localStorage) ?? emptyCv('ka'));
+        const stored = readCv(window.localStorage);
+        setCv(stored ?? emptyCv('ka'));
+        // A visit that resumes a filled CV is a started one, so its later
+        // print or leaving counts against a start rather than against nothing.
+        if (stored && hasCvContent(stored)) once('started');
       } catch {
         setError(cvText.ka.storageError);
       }
       setMounted(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [once]);
 
   useEffect(() => {
     if (!mounted || !dirty.current) return;
@@ -507,6 +603,9 @@ export function CvBuilder() {
   }, []);
 
   function printCv() {
+    void resumeSync.current?.save(cv);
+    printed.current = true;
+    track('resume', 'printed');
     flushSync(() => setPrinting(true));
     window.requestAnimationFrame(() => {
       window.print();
@@ -514,12 +613,43 @@ export function CvBuilder() {
   }
 
   function update(patch: Partial<Cv>) {
+    const appearanceKeys = [
+      'template',
+      'accent',
+      'textColor',
+      'font',
+      'photoShape',
+      'showPhoto',
+      'language',
+    ];
+    if (
+      Object.keys(patch).some((key) => !appearanceKeys.includes(key)) &&
+      !hasCvContent(cv) &&
+      hasCvContent({ ...cv, ...patch })
+    )
+      once('started');
+    for (const [key, value] of [
+      ['accent', 'style_accent'],
+      ['textColor', 'style_text'],
+      ['font', 'style_font'],
+      ['photoShape', 'style_photo_shape'],
+    ] as const) {
+      if (patch[key] !== undefined && patch[key] !== cv[key]) once(value);
+    }
+    if (patch.photo !== undefined && patch.photo !== cv.photo) {
+      once(patch.photo ? 'photo_added' : 'photo_removed');
+    }
+    if (patch.language !== undefined && patch.language !== cv.language) {
+      track('resume', `language_${patch.language}`);
+    }
     dirty.current = true;
     setStatus('');
     setCv((value) => ({ ...value, ...patch }));
   }
   function clear() {
     if (!window.confirm(t.clearConfirm)) return;
+    track('resume', 'cleared');
+    void resumeSync.current?.clear();
     setPhotoSource(null);
     dirty.current = false;
     try {
@@ -704,6 +834,7 @@ export function CvBuilder() {
                     aria-label={t.templates[template].name}
                     aria-pressed={cv.template === template}
                     onClick={() => {
+                      track('resume', `template_${template}`);
                       update({ template });
                       if (window.matchMedia('(max-width: 760px)').matches) {
                         setView('preview');
@@ -839,9 +970,7 @@ export function CvBuilder() {
               id="contact"
               open={openSection === 'contact'}
               complete={completion.contact}
-              onToggle={() =>
-                setOpenSection(openSection === 'contact' ? '' : 'contact')
-              }
+              onToggle={() => toggleSection('contact')}
             >
               <div className="cv-fields">
                 {contactKeys.map((key) => (
@@ -923,9 +1052,7 @@ export function CvBuilder() {
               id="summary"
               open={openSection === 'summary'}
               complete={completion.summary}
-              onToggle={() =>
-                setOpenSection(openSection === 'summary' ? '' : 'summary')
-              }
+              onToggle={() => toggleSection('summary')}
             >
               <Field
                 label={t.summary}
@@ -942,9 +1069,7 @@ export function CvBuilder() {
               id="experience"
               open={openSection === 'experience'}
               complete={completion.experience}
-              onToggle={() =>
-                setOpenSection(openSection === 'experience' ? '' : 'experience')
-              }
+              onToggle={() => toggleSection('experience')}
             >
               <p className="cv-note">{t.hints.experience}</p>
               {cv.experience.map((item, index) => {
@@ -1035,9 +1160,7 @@ export function CvBuilder() {
               id="education"
               open={openSection === 'education'}
               complete={completion.education}
-              onToggle={() =>
-                setOpenSection(openSection === 'education' ? '' : 'education')
-              }
+              onToggle={() => toggleSection('education')}
             >
               <p className="cv-note">{t.hints.education}</p>
               {cv.education.map((item, index) => {
@@ -1118,9 +1241,7 @@ export function CvBuilder() {
               id="skills"
               open={openSection === 'skills'}
               complete={completion.skills}
-              onToggle={() =>
-                setOpenSection(openSection === 'skills' ? '' : 'skills')
-              }
+              onToggle={() => toggleSection('skills')}
             >
               <p className="cv-note">{t.hints.skills}</p>
               <div className="cv-chips">
@@ -1177,9 +1298,7 @@ export function CvBuilder() {
               id="languages"
               open={openSection === 'languages'}
               complete={completion.languages}
-              onToggle={() =>
-                setOpenSection(openSection === 'languages' ? '' : 'languages')
-              }
+              onToggle={() => toggleSection('languages')}
             >
               <p className="cv-note">{t.hints.languages}</p>
               {cv.languages.map((item, index) => (

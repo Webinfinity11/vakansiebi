@@ -8,14 +8,9 @@ import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
 import { TopGeCounter } from './top-ge-counter';
 import { rememberRecentSearch } from '@/lib/recent-searches';
-import {
-  landingCopy,
-  landingHeading,
-  landingOf,
-  relatedLandings,
-} from '@/lib/seo-landing';
+import { landingCopy, landingHeading, landingOf } from '@/lib/seo-landing';
+import { SearchDirectoryRelated } from './search-directory-context';
 import { nearestCity } from '@/lib/nearest-city';
-import type { Application } from '@/lib/personal-space';
 import {
   vacancyCardTitle,
   vacancyCardSalary,
@@ -117,7 +112,6 @@ import {
 import { CompanyIdentity } from './company-identity';
 import { ShortcutMark } from './shortcut-mark';
 import { useVacancyActivity } from './use-vacancy-activity';
-import { PersonalSpace, usePersonalSpace } from './personal-space';
 import type { SearchFilters } from '@/lib/personal-space';
 import type { PublicJob as Job } from '@/lib/types';
 import { categories, listingSourceNames } from '@/lib/types';
@@ -224,7 +218,6 @@ const JobCard = memo(function JobCard({
   demo,
   saved,
   seen,
-  status,
   returnPath,
   onToggleSave,
   onOpen,
@@ -235,7 +228,6 @@ const JobCard = memo(function JobCard({
   demo: boolean;
   saved: boolean;
   seen: boolean;
-  status?: Application['status'];
   returnPath: string;
   onToggleSave: (id: string) => void;
   onOpen: (job: Job) => void;
@@ -332,7 +324,7 @@ const JobCard = memo(function JobCard({
               disabled={swipe.dragging}
               fallback={j.placement?.priority ? 'initial' : 'illustration'}
             />
-            {!demo && <VacancyStatus seen={seen} status={status} />}
+            {!demo && <VacancyStatus seen={seen} />}
           </div>
           {salary && (
             <span className="salary card-pay-inline" title={salary}>
@@ -459,18 +451,7 @@ export default function JobBoard({
   );
   const activity = useVacancyActivity();
   const excluded = demo ? '' : activity.hidden.map((item) => item.id).join(',');
-  const personal = usePersonalSpace();
-  const [personalOpen, setPersonalOpen] = useState(false);
   const searchBeforeSaved = useRef<SearchFilters | null>(null);
-  const applicationsById = useMemo(
-    () =>
-      new Map(
-        personal.records
-          .filter((r): r is Application => r.kind === 'application')
-          .map((r) => [r.id, r.status]),
-      ),
-    [personal.records],
-  );
   const [loadedResult, setLoadedResult] = useState({
     key: seed?.key || '',
     page: seed?.page || 0,
@@ -1807,15 +1788,6 @@ export default function JobBoard({
                       ]}
                     />
                   </div>
-                  <PersonalSpace
-                    space={personal}
-                    filters={currentSearch}
-                    onApply={applySearch}
-                    active={activeCount > 0}
-                    disabled={demo || savedOnly}
-                    open={personalOpen}
-                    setOpen={setPersonalOpen}
-                  />
                 </div>
               </div>
               {!!activeCount && (
@@ -1895,9 +1867,11 @@ export default function JobBoard({
                       <X size={12} />
                     </button>
                   )}
-                  <button className="clear-all-filters" onClick={reset}>
-                    ყველა ფილტრის გასუფთავება
-                  </button>
+                  {activeCount >= 2 && (
+                    <button className="clear-all-filters" onClick={reset}>
+                      გასუფთავება
+                    </button>
+                  )}
                 </div>
               )}
               {savedOnly &&
@@ -2007,7 +1981,6 @@ export default function JobBoard({
                           demo={demo}
                           saved={savedSet.has(j.id)}
                           seen={seenSet.has(j.id)}
-                          status={applicationsById.get(j.id)}
                           returnPath={loadedResult.path}
                           onToggleSave={toggleSave}
                           onOpen={openJob}
@@ -2188,18 +2161,7 @@ export default function JobBoard({
             a thin page, but the reader came for the list and the sentence that
             describes it has no business standing between them. */}
         {landing && <p className="landing-copy">{landingCopy(landing)}</p>}
-        {landing && (
-          <div className="search-directory-related">
-            <h2>მსგავსი ძიებები</h2>
-            <div className="search-directory-links">
-              {relatedLandings(landing).map(({ path, label }) => (
-                <Link key={path} href={path} prefetch={false}>
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
+        {landing && <SearchDirectoryRelated landing={landing} />}
         <SearchDirectoryGroups />
       </nav>
       <footer className="site-footer jobx-footer">
@@ -2224,13 +2186,14 @@ export default function JobBoard({
           <p>
             მოძებნე ვაკანსია, გაეცანი პირობებს და განაცხადისთვის გადადი
             პირველწყაროზე. შენახული ვაკანსიები ამ ბრაუზერში რჩება და სხვა
-            მოწყობილობაზე ავტომატურად არ გადადის. თემას, შენახულ ვაკანსიებსა და
-            შენ მიერ შენახულ კონტაქტებს ამ ბრაუზერში ვინახავთ; ძიებებისა და
+            მოწყობილობაზე ავტომატურად არ გადადის. თემასა და შენახული ვაკანსიების
+            სიას ამ ბრაუზერში ვინახავთ; ძიებებისა და
             მოქმედებების ანონიმური სტატისტიკა სერვერზე ინახება, ზოგი ლოგო კი
-            გარე საიტიდან იტვირთება. საჯარო გვერდების ვიზიტებს Google
+            გარე საიტიდან იტვირთება. PDF-ად შენახვისას რეზიუმეს ასლი ფოტოსთან
+            ერთად JOBX-ზეც ინახება ბოლო შენახვიდან 12 თვემდე და CV-ის გვერდზე
+            „გასუფთავებით“ წაიშლება. საჯარო გვერდების ვიზიტებს Google
             Analytics-ითაც ვზომავთ; ის ანალიტიკურ ქუქი-ფაილებს იყენებს. ფორმებში
-            შეყვანილ პირად მონაცემებსა და შენახულ კონტაქტებს Google Analytics-ს
-            არ ვუგზავნით.{' '}
+            შეყვანილ პირად მონაცემებს Google Analytics-ს არ ვუგზავნით.{' '}
             <a
               href="https://policies.google.com/technologies/partner-sites"
               target="_blank"

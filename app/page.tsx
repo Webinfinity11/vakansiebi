@@ -5,6 +5,9 @@ import { cache, Suspense } from 'react';
 import { notFound, redirect, permanentRedirect } from 'next/navigation';
 import { canonicalSearchParams } from '@/lib/search-url';
 import JobBoard from './job-board';
+import { SearchDirectoryProvider } from './search-directory-context';
+import { landingCounts } from '@/lib/server/sitemap-data';
+import { landingFor, landingIndexable } from '@/lib/seo-landing';
 import { vacancyPath, safeReturnPath } from '@/lib/vacancy-navigation';
 import { publicJobs } from '@/lib/server/jobs';
 import type { BoardInitial } from '@/lib/board-return-cache';
@@ -18,6 +21,13 @@ import {
 const readBoardJobs = cache((query: string) =>
   publicJobs(new URLSearchParams(query)),
 );
+const readDirectory = cache(async () => {
+  try {
+    return await landingCounts();
+  } catch {
+    return null;
+  }
+});
 function boardJobs(params: URLSearchParams) {
   const request = toSearchParams(readSearch(params));
   request.set('summary', '1');
@@ -26,6 +36,7 @@ function boardJobs(params: URLSearchParams) {
 }
 
 async function InitialBoard({ params }: { params: URLSearchParams }) {
+  const directory = readDirectory();
   const filters = readSearch(params);
   const page = readSearchPage(params);
   let initial: BoardInitial | undefined;
@@ -47,7 +58,11 @@ async function InitialBoard({ params }: { params: URLSearchParams }) {
     // Keep the shell usable; the client supplies the normal retry/error UI.
     console.error('Initial vacancy list unavailable');
   }
-  return <JobBoard initial={initial} />;
+  return (
+    <SearchDirectoryProvider rows={directory}>
+      <JobBoard key={`${boardSearchKey(filters)}:${page}`} initial={initial} />
+    </SearchDirectoryProvider>
+  );
 }
 export async function generateMetadata({
   searchParams,
@@ -60,7 +75,21 @@ export async function generateMetadata({
     const first = Array.isArray(value) ? value[0] : value;
     if (first !== undefined) params.set(key, first);
   }
-  const { title, description, path, index } = searchSeo(params);
+  const { title, description, path, index: candidateIndex } = searchSeo(params);
+  const base = new URLSearchParams(params);
+  base.delete('page');
+  const landing = landingFor(base);
+  let index = candidateIndex;
+  if (index && landing) {
+    try {
+      // Reuse this page's result count rather than wait for the entire directory.
+      // The same eligibility function is used by the sitemap and footer.
+      const result = await boardJobs(params);
+      index = landingIndexable(landing, [{ ...landing, count: result.total }]);
+    } catch {
+      // A temporary database failure must not remove existing pages from search.
+    }
+  }
   // Out-of-range lists must not become an unlimited set of indexable empty
   // pages. The server seed reuses this request through React's render cache.
   if (index && readSearchPage(params) > 1) {

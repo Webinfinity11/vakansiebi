@@ -10,6 +10,10 @@ import { stageVacancy, audit } from './importer';
 import { completeDescription } from './linked-description';
 import { sourceFetch, SourceHttpError } from './http';
 import { reconcileJob } from './automation';
+import {
+  publishIndexingNotifications,
+  type IndexingNotification,
+} from '../lib/server/google-indexing';
 import type { ActiveSourceId } from '../lib/types';
 import {
   acquireSourceLease,
@@ -195,7 +199,8 @@ export async function refreshDescriptions(
 }
 
 export async function reconcileRemovedRefresh(itemId: string) {
-  return transaction(async (c) => {
+  const notifications: IndexingNotification[] = [];
+  const result = await transaction(async (c) => {
     const item = (
       await c.query('SELECT * FROM source_items WHERE id=$1 FOR UPDATE', [
         itemId,
@@ -225,6 +230,8 @@ export async function reconcileRemovedRefresh(itemId: string) {
         { reason: 'source_removed' },
         { automation_managed: true, automation_paused: false },
       );
-    return reconcileJob(c, item.job_id);
+    return reconcileJob(c, item.job_id, notifications);
   });
+  await publishIndexingNotifications(notifications);
+  return result;
 }

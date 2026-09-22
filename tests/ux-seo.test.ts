@@ -235,3 +235,15 @@ void test('pay is published as numbers only where the posting states it', () => 
   ])
     assert.equal(pay(unstated), undefined, unstated);
 });
+
+void test('the footer expands to eligible cities and roles and ranks by available jobs', async () => {
+  const { landingLinks } = await import('../lib/seo-landing');
+  const links = landingLinks([
+    { category: null, city: 'ფოთი', trait: null, count: 10 },
+    { category: null, city: null, trait: null, role: 'ბარისტა', count: 120 },
+    { category: null, city: null, trait: null, role: 'ჟურნალისტი', count: 9 },
+  ]);
+  assert.equal(links.length, 2);
+  assert.match(links[0].label, /ბარისტას/);
+  assert.match(links[1].label, /ფოთში/);
+});

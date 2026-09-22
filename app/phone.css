@@ -257,8 +257,7 @@
   }
 
   /* ---------- Results toolbar ----------
-     A two-column grid stuck to the top while the list scrolls. With active filters
-     [ძიების შენახვა] joins [ფილტრები] and [ჩემი სივრცე]. */
+     A two-column grid stuck to the top while the list scrolls. */
   .board-shell .results-tools {
     position: sticky;
     top: 0;
@@ -272,20 +271,7 @@
     background: #f6f7fa;
     box-shadow: 0 6px 12px -10px #18243b40;
   }
-  .board-shell .results-tools .personal-tools {
-    display: contents;
-  }
-  .board-shell .results-tools .personal-tools > button:first-child {
-    order: 1;
-    min-height: 44px;
-    padding: 8px 12px;
-    font-size: 13px;
-    justify-content: center;
-    margin: 0;
-  }
-  .board-shell .results-tools .personal-tools > button:first-child:disabled {
-    display: none;
-  }
+
   .board-shell .results-tools .mobile-filter-toggle {
     order: 3;
     width: auto;
@@ -308,19 +294,7 @@
     color: #fff;
     font-size: 12px;
   }
-  .board-shell .results-tools .personal-tools > button:nth-child(2) {
-    order: 4;
-    min-height: 44px;
-    padding: 8px 12px;
-    font-size: 13px;
-    justify-content: center;
-    margin: 0;
-  }
-  .board-shell .results-tools .personal-tools .personal-feedback,
-  .board-shell .results-tools .personal-tools .personal-error {
-    order: 10;
-    grid-column: 1 / -1;
-  }
+
   .board-shell .active-filters {
     gap: 6px;
   }
@@ -652,33 +626,6 @@
     box-shadow: none;
   }
 
-  /* ---------- Personal sheet ---------- */
-  .personal-sheet [data-slot='sheet-close'] {
-    top: 10px;
-    right: 10px;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-  }
-  .personal-sheet [data-slot='sheet-close'] svg {
-    width: 20px;
-    height: 20px;
-  }
-  .personal-sheet .personal-tabs button {
-    min-height: 44px;
-  }
-  .personal-sheet .personal-storage-note {
-    font-size: 13px;
-  }
-  .personal-sheet .personal-card p,
-  .personal-sheet .personal-body > p {
-    font-size: 13px;
-  }
-  .personal-sheet .personal-card small,
-  .personal-sheet .personal-snapshot-note {
-    font-size: 12px;
-  }
-
   /* ---------- Vacancy page ---------- */
   .vacancy-page .vacancy-header-link {
     min-height: 44px;
@@ -705,13 +652,7 @@
   .vacancy-summary > p {
     font-size: 12px;
   }
-  .seen-badge {
-    font-size: 12px;
-  }
-  .application-control p,
-  .vacancy-page .application-control p {
-    font-size: 12px;
-  }
+
   .vacancy-page .vacancy-hide-action {
     font-size: 13px;
     min-height: 44px;
@@ -735,10 +676,7 @@
   .vacancy-mobile-action .secondary-button {
     font-size: 13px;
   }
-  .application-stages button {
-    min-height: 44px;
-    font-size: 13px;
-  }
+
   .vacancy-page .feedback-toast {
     bottom: calc(16px + env(safe-area-inset-bottom));
   }
@@ -780,9 +718,7 @@
   .advanced-filters fieldset > label {
     font-size: 13px;
   }
-  .board-shell .personal-tools .secondary-button {
-    font-size: 13px;
-  }
+
   .board-shell .job-company .source-pill {
     font-size: 12px;
   }

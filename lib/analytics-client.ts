@@ -19,7 +19,8 @@ export type TrackedKind =
   | 'call'
   | 'cv'
   | 'apply'
-  | 'post';
+  | 'post'
+  | 'resume';
 
 export function track(kind: TrackedKind, value: string) {
   if (process.env.NODE_ENV !== 'production') return;

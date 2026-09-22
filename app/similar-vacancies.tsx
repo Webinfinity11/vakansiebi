@@ -1,7 +1,5 @@
 'use client';
 import { VacancyStatus } from './vacancy-status';
-import { usePersonalSpace } from './personal-space';
-import type { Application } from '@/lib/personal-space';
 import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -24,12 +22,6 @@ export function SimilarVacancies({
   } | null>(null);
   const [retry, setRetry] = useState(0);
   const activity = useVacancyActivity();
-  const personal = usePersonalSpace();
-  const applicationsById = new Map(
-    personal.records
-      .filter((r): r is Application => r.kind === 'application')
-      .map((r) => [r.id, r.status]),
-  );
   const excluded = activity.hidden.map((item) => item.id).join(',');
   const key = id + ':' + excluded;
   useEffect(() => {
@@ -105,10 +97,7 @@ export function SimilarVacancies({
               <h3 title={job.title}>
                 {vacancyCardTitle(job.title, job.source)}
               </h3>
-              <VacancyStatus
-                seen={activity.seen.includes(job.id)}
-                status={applicationsById.get(job.id)}
-              />
+              <VacancyStatus seen={activity.seen.includes(job.id)} />
               {vacancyCardSalary(job.salary, job.salaryPeriod, job.source) && (
                 <span className="similar-salary">
                   {vacancyCardSalary(job.salary, job.salaryPeriod, job.source)}

@@ -491,7 +491,7 @@ export const cvText: Record<CvLanguage, CvText> = {
       native: 'მშობლიური',
     },
     storageNote:
-      'რეზიუმე ინახება მხოლოდ ამ ბრაუზერში; ბრაუზერის მონაცემების გასუფთავებისას იკარგება — საჭიროებისას შეინახე PDF-ად.',
+      'რეზიუმე ინახება ამ ბრაუზერში, PDF-ად შენახვისას კი მისი ასლი JOBX-ზეც ინახება 12 თვემდე და „გასუფთავებით“ წაიშლება.',
     cleared: 'რეზიუმე გასუფთავდა.',
     saved: 'რეზიუმე შენახულია.',
     printHint: 'ჯერ შეავსე ერთი ველი მაინც',
@@ -622,7 +622,7 @@ export const cvText: Record<CvLanguage, CvText> = {
       native: 'Native',
     },
     storageNote:
-      'Your resume is saved only in this browser; clearing browser data deletes it — save a PDF copy when needed.',
+      'Your resume is saved in this browser; saving a PDF also stores a copy on JOBX for up to 12 months, and Clear deletes that copy.',
     cleared: 'Resume cleared.',
     saved: 'Resume saved.',
     printHint: 'Fill in at least one field first',

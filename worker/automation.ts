@@ -11,6 +11,11 @@ import { auditChange } from './importer';
 import { db, transaction } from '../lib/server/db';
 import { importDateReason } from './new-only';
 import { safeLogoUrl } from '../lib/vacancy-media';
+import {
+  indexingTransition,
+  publishIndexingNotifications,
+  type IndexingNotification,
+} from '../lib/server/google-indexing';
 
 export function publishable(
   raw: unknown,
@@ -54,7 +59,11 @@ export const reconciliationJobProjection = `id,status,automation_paused,automati
   draft IS NOT DISTINCT FROM published AS draft_is_published,
   CASE WHEN draft IS NOT DISTINCT FROM published THEN NULL ELSE draft END AS draft,published`;
 
-export async function reconcileJob(c: PoolClient, id: string) {
+export async function reconcileJob(
+  c: PoolClient,
+  id: string,
+  notifications: IndexingNotification[] = [],
+) {
   const job = (
     await c.query(
       `SELECT ${reconciliationJobProjection} FROM jobs WHERE id=$1 FOR UPDATE`,
@@ -179,7 +188,16 @@ export async function reconcileJob(c: PoolClient, id: string) {
     `INSERT INTO audit_log(job_id,action,actor,before_data,after_data) VALUES($1,$2,'automation',$3,$4)`,
     [id, 'automation.' + status, from, to],
   );
+  notifications.push(...indexingTransition(id, job, { status, published }));
   return status;
+}
+
+// The network side effect must run only once the write transaction commits.
+export async function reconcileAndNotify(id: string) {
+  const notifications: IndexingNotification[] = [];
+  const result = await transaction((c) => reconcileJob(c, id, notifications));
+  await publishIndexingNotifications(notifications);
+  return result;
 }
 
 export const reconciliationCandidatesSql = `SELECT j.id FROM jobs j
@@ -199,9 +217,7 @@ export async function reconcileSource(source: string) {
   const results: Record<string, number> = {};
   for (let offset = 0; offset < ids.length; offset += 4) {
     const batch = await Promise.all(
-      ids
-        .slice(offset, offset + 4)
-        .map(({ id }) => transaction((c) => reconcileJob(c, id))),
+      ids.slice(offset, offset + 4).map(({ id }) => reconcileAndNotify(id)),
     );
     for (const result of batch) results[result] = (results[result] || 0) + 1;
   }

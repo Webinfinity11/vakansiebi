@@ -55,6 +55,7 @@ import { sourceHealth } from '@/lib/scraper-status';
 import { EmployersPanel } from './employers';
 import { AnalyticsPanel } from './analytics';
 import { ReportsSection } from './reports';
+import { ResumesPanel } from './resumes';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
 import { runMessage } from '@/lib/run-messages';
 import { ScraperMetricsPanel } from './scraper-metrics';
@@ -626,6 +627,7 @@ export default function AdminPanel() {
               <History size={17} />
               <span>შემოტანის ისტორია</span>
             </TabsTrigger>
+            <TabsTrigger value="resumes">CV-ები</TabsTrigger>
             <TabsTrigger value="analytics">
               <BarChart3 size={17} />
               <span>ანალიტიკა</span>
@@ -1297,6 +1299,12 @@ export default function AdminPanel() {
               გრძელდება. ყველაფრის შესაჩერებლად გამორთე „წყაროს გამოყენება“.
               დროებითი შეცდომები რიგში რჩება და შემდეგ ციკლში მოწმდება.
             </p>
+          </TabsContent>
+          <TabsContent value="resumes">
+            <SectionHeading title="შენახული CV-ები">
+              PDF-ის ღილაკით შენახული რეზიუმეები — ნახვა და წაშლა.
+            </SectionHeading>
+            {tab === 'resumes' && <ResumesPanel />}
           </TabsContent>
           <TabsContent value="analytics">
             <SectionHeading title="ანალიტიკა">

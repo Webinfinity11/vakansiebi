@@ -906,49 +906,6 @@
   background: #3e3723;
   color: #cdbfa6;
 }
-:root[data-theme='dark'] .personal-storage-note {
-  background: #242832;
-  color: #acb0b8;
-}
-:root[data-theme='dark'] .personal-tabs button {
-  border: 1px solid #333a47;
-}
-:root[data-theme='dark'] .personal-tabs button[aria-pressed='true'] {
-  background: #434956;
-  color: #131b2c;
-}
-:root[data-theme='dark'] .personal-card {
-  border: 1px solid #323844;
-}
-:root[data-theme='dark'] .personal-card small,
-:root[data-theme='dark'] .personal-snapshot-note {
-  color: #969ca6;
-}
-:root[data-theme='dark'] .personal-card select,
-:root[data-theme='dark'] .personal-stage-filter select,
-:root[data-theme='dark'] .application-control select,
-:root[data-theme='dark'] .personal-save-dialog input {
-  border: 1px solid #3c4454;
-  background: #131b2c;
-  color: #d1d3d7;
-}
-:root[data-theme='dark'] .personal-empty {
-  color: #9ea3ac;
-}
-:root[data-theme='dark'] .personal-feedback {
-  color: #bfc2c8;
-}
-:root[data-theme='dark'] .personal-error {
-  color: #d98f8c;
-  background: #45251c;
-}
-:root[data-theme='dark'] .application-control {
-  border: 1px solid #333a47;
-  background: #21252d;
-}
-:root[data-theme='dark'] .application-control p {
-  color: #9ca0aa;
-}
 :root[data-theme='dark'] .quick-apply {
   border: 1px solid #3c4453;
   background: #22262e;
@@ -1107,9 +1064,6 @@
 :root[data-theme='dark'] .board-shell .results-head .choice {
   color: #b3b7bf;
   background: #131b2c;
-}
-:root[data-theme='dark'] .board-shell .personal-tools .secondary-button {
-  color: #afb3bb;
 }
 :root[data-theme='dark'] .board-shell .active-filters button {
   color: #c0c4ca;
@@ -1354,18 +1308,6 @@
 :root[data-theme='dark'] .contact-missing a {
   color: #6f93ff;
 }
-:root[data-theme='dark'] .application-tracker {
-  border-top: 1px solid #27303f;
-}
-:root[data-theme='dark'] .application-tracker > summary {
-  color: #9aa3b1;
-}
-:root[data-theme='dark'] .application-tracker > summary > span {
-  color: #969ca6;
-}
-:root[data-theme='dark'] .application-tracker .application-control {
-  background: #1c212b;
-}
 :root[data-theme='dark'] .vacancy-page .vacancy-header-link {
   color: #99a3b5;
 }
@@ -1462,10 +1404,6 @@
     background: #1a1d23f5;
     border-top: 1px solid #273345;
   }
-}
-:root[data-theme='dark'] .seen-badge {
-  color: #94a3b5;
-  background: #1e2837;
 }
 :root[data-theme='dark'] .similar-card:focus-visible {
   outline: 2px solid #6f93ff;
@@ -1665,81 +1603,6 @@
   color: var(--status-text, #7f97e6);
   background: var(--status-bg, #1c2e45);
   border: 1px solid var(--status-border, #afc7f3);
-}
-:root[data-theme='dark'] .status-started,
-:root[data-theme='dark'] .status-planned,
-:root[data-theme='dark'] .application-control[data-application-status='started'],
-:root[data-theme='dark'] .application-control[data-application-status='planned'] {
-  --status-text: #e7c49d;
-  --status-bg: #453d1c;
-  --status-border: #f1deb1;
-}
-:root[data-theme='dark'] .status-applied,
-:root[data-theme='dark'] .status-hired,
-:root[data-theme='dark'] .application-control[data-application-status='applied'],
-:root[data-theme='dark'] .application-control[data-application-status='hired'] {
-  --status-text: #a4dfbb;
-  --status-bg: #1e432b;
-  --status-border: #bfe4d2;
-}
-:root[data-theme='dark'] .status-interview,
-:root[data-theme='dark'] .status-offer,
-:root[data-theme='dark'] .application-control[data-application-status='interview'],
-:root[data-theme='dark'] .application-control[data-application-status='offer'] {
-  --status-text: #a780e5;
-  --status-bg: #241d44;
-  --status-border: #c8b4ef;
-}
-:root[data-theme='dark'] .status-rejected,
-:root[data-theme='dark'] .application-control[data-application-status='rejected'] {
-  --status-text: #e69db1;
-  --status-bg: #451c1f;
-  --status-border: #eeb4c3;
-}
-:root[data-theme='dark'] .status-closed,
-:root[data-theme='dark'] .application-control[data-application-status='closed'] {
-  --status-text: #a9b3c0;
-  --status-bg: #26313f;
-  --status-border: #4f5d6f;
-}
-:root[data-theme='dark'] .vacancy-page .application-control {
-  border: 0;
-  border-top: 1px solid #272f3a;
-  background: transparent;
-}
-:root[data-theme='dark'] .application-stages {
-  border: 0;
-}
-:root[data-theme='dark'] .application-stages button {
-  border: 1px solid #313948;
-  background: #131b2c;
-  color: #b3bcc9;
-}
-:root[data-theme='dark'] .application-stages button:hover:not(:disabled) {
-  border-color: #bdcbe5;
-}
-:root[data-theme='dark'] .application-stages button[aria-pressed='true'] {
-  color: var(--status-text, #c1cddd);
-  background: var(--status-bg, #202835);
-  border-color: var(--status-border, #586374);
-}
-:root[data-theme='dark'] .vacancy-page .application-control p {
-  color: #929baa;
-}
-:root[data-theme='dark'] .vacancy-page .application-confirm {
-  background: #272d3a;
-}
-:root[data-theme='dark'] .vacancy-page .application-confirm p {
-  color: #a4aec0;
-}
-:root[data-theme='dark'] .vacancy-progress-only > .application-control {
-  border: 1px solid #273040;
-  background: #131b2c;
-}
-:root[data-theme='dark'] .seen-badge {
-  color: #7f97e6;
-  background: #1c2e45;
-  border: 1px solid #afc7f3;
 }
 :root[data-theme='dark'] .board-shell .discovery-hero {
   border: 0;
@@ -2326,6 +2189,8 @@
 }
 :root[data-theme='dark'] .board-shell .active-filters .clear-all-filters {
   background: transparent;
+  border: 0;
+  box-shadow: none;
   color: #a3afc5;
 }
 :root[data-theme='dark'] .board-shell .results-progress {

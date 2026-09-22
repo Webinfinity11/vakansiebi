@@ -312,17 +312,7 @@
   font-size: 12px !important;
   min-width: 144px;
 }
-.board-shell .personal-tools {
-  margin: 0 0 15px;
-  gap: 8px;
-}
-.board-shell .personal-tools .secondary-button {
-  min-height: 36px;
-  font-size: 11px;
-  color: #53565c;
-  padding: 7px 12px;
-  border-radius: 8px;
-}
+
 .board-shell .active-filters {
   margin-bottom: 16px;
 }
@@ -688,12 +678,7 @@
   .board-shell .section-kicker {
     font-size: 9px;
   }
-  .board-shell .personal-tools {
-    flex-wrap: wrap;
-  }
-  .board-shell .personal-tools .secondary-button {
-    font-size: 10px;
-  }
+
   .board-shell .mobile-filter-toggle {
     width: 100%;
     justify-content: center;
@@ -973,25 +958,7 @@
 .board-shell .hero-copy .eyebrow > span {
   background: #2457e6;
 }
-.board-shell .personal-tools {
-  margin-bottom: 12px;
-}
-.board-shell .personal-tools > button:first-child:disabled {
-  display: none;
-}
-.board-shell .personal-tools > button:nth-child(2) {
-  display: none;
-}
-.board-shell
-  .personal-tools:not(
-    :has(
-      > button:first-child:not(:disabled),
-      .personal-feedback,
-      .personal-error
-    )
-  ) {
-  margin: 0;
-}
+
 .board-shell .active-filters button {
   color: #214dc7;
   background: #edf2ff;
@@ -1063,12 +1030,6 @@
     width: 36px;
     min-height: 40px;
   }
-  .board-shell .personal-tools > button:nth-child(2) {
-    display: inline-flex;
-  }
-  .board-shell .personal-tools {
-    margin-bottom: 12px;
-  }
 }
 
 .search-label-short {
@@ -1080,9 +1041,7 @@
   align-items: center;
   gap: 8px 12px;
 }
-.board-shell .results-tools .personal-tools {
-  margin: 0;
-}
+
 @media (max-width: 760px) {
   .board-shell .searchbar {
     grid-template-columns: 20px minmax(0, 1fr) 125px;
@@ -1120,9 +1079,7 @@
   .board-shell .results-tools {
     margin-bottom: 14px;
   }
-  .board-shell .results-tools .personal-tools {
-    flex: 1;
-  }
+
   .board-shell .results-tools .secondary-button {
     min-height: 42px;
   }
@@ -1322,25 +1279,7 @@
   cursor: pointer;
   font-size: 12px;
 }
-.application-tracker {
-  margin: 24px 0 16px;
-  border-top: 1px solid #e2e7ef;
-  padding-top: 16px;
-}
-.application-tracker > summary {
-  cursor: pointer;
-  color: #58657a;
-  font-size: 12px;
-}
-.application-tracker > summary > span {
-  margin-left: 8px;
-  font-size: 10px;
-  color: #748096;
-}
-.application-tracker .application-control {
-  background: #f8f9fb;
-  margin-bottom: 0;
-}
+
 .detail-sheet .detail-actions .source-action {
   display: inline-flex;
   align-items: center;
@@ -1645,9 +1584,7 @@
     font-size: 12px;
   }
 }
-.vacancy-page .application-tracker {
-  margin-top: 20px;
-}
+
 .vacancy-source {
   display: block;
   max-width: none;
@@ -1822,14 +1759,6 @@
   margin: 0 auto;
 }
 
-.seen-badge {
-  color: #526782;
-  background: #edf1f7;
-  border-radius: 5px;
-  padding: 2px 7px;
-  font-size: 10px;
-  white-space: nowrap;
-}
 .similar-card:focus-visible {
   outline: 2px solid #2457e6;
   outline-offset: 4px;
@@ -2316,8 +2245,7 @@
   color: #647187;
   font-size: 12px;
 }
-.vacancy-more-actions summary,
-.vacancy-page .application-tracker summary {
+.vacancy-more-actions summary {
   cursor: pointer;
   min-height: 44px;
   align-content: center;
@@ -2325,12 +2253,9 @@
 .vacancy-more-actions .vacancy-hide-action {
   margin-top: 6px;
 }
-.vacancy-page .application-tracker {
-  margin-top: 8px;
-  padding-top: 8px;
-}
+
 @media (min-width: 761px) {
-  .vacancy-page:not(.has-contact):not(.has-personal-progress) .vacancy-layout {
+  .vacancy-page:not(.has-contact) .vacancy-layout {
     grid-template-columns: minmax(0, 900px);
     justify-content: center;
   }
@@ -2400,143 +2325,16 @@
   background: var(--status-bg, #dbeafe);
   border: 1px solid var(--status-border, #93b4f2);
 }
-.status-started,
-.status-planned,
-.application-control[data-application-status='started'],
-.application-control[data-application-status='planned'] {
-  --status-text: #854d0e;
-  --status-bg: #fef3c7;
-  --status-border: #e7bf60;
-}
-.status-applied,
-.status-hired,
-.application-control[data-application-status='applied'],
-.application-control[data-application-status='hired'] {
-  --status-text: #166534;
-  --status-bg: #dcfce7;
-  --status-border: #86ceac;
-}
-.status-interview,
-.status-offer,
-.application-control[data-application-status='interview'],
-.application-control[data-application-status='offer'] {
-  --status-text: #5b21b6;
-  --status-bg: #ede9fe;
-  --status-border: #bba1ed;
-}
-.status-rejected,
-.application-control[data-application-status='rejected'] {
-  --status-text: #9f1239;
-  --status-bg: #ffe4e6;
-  --status-border: #eca2b5;
-}
-.status-closed,
-.application-control[data-application-status='closed'] {
-  --status-text: #475569;
-  --status-bg: #e2e8f0;
-  --status-border: #a8b5c6;
-}
+
 .similar-card .vacancy-status {
   width: fit-content;
 }
-.vacancy-page .application-control {
-  margin: 20px 0 0;
-  padding: 16px 0 0;
-  border: 0;
-  border-top: 1px solid #e6eaf0;
-  border-radius: 0;
-  background: transparent;
-}
-.application-control-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.application-stages {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 0;
-  margin: 10px 0 8px;
-  padding: 0;
-  border: 0;
-}
-.application-stages button {
-  min-height: 34px;
-  padding: 5px 11px;
-  border: 1px solid #d6dce6;
-  border-radius: 999px;
-  background: #fff;
-  color: #3d4a5e;
-  font: inherit;
-  font-size: 12px;
-  line-height: 1.4;
-  cursor: pointer;
-}
-.application-stages button:hover:not(:disabled) {
-  border-color: #9fb4dc;
-}
-.application-stages button[aria-pressed='true'] {
-  color: var(--status-text, #253650);
-  background: var(--status-bg, #eef1f6);
-  border-color: var(--status-border, #9aa6b8);
-  font-weight: 650;
-}
-.application-stages button:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-.vacancy-page .application-control p {
-  font-size: 11px;
-  line-height: 1.7;
-  color: #66738a;
-  margin: 8px 0 0;
-}
-.vacancy-page .application-confirm {
-  padding: 10px 12px;
-  background: #f5f7fb;
-  border-radius: 8px;
-}
-.vacancy-page .application-confirm p {
-  margin: 0 0 8px;
-  color: #465570;
-}
-.vacancy-page .application-confirm button {
-  width: 100%;
-  min-height: 44px;
-  font-size: 12px;
-  justify-content: center;
-}
-.vacancy-progress-only > .vacancy-contact-guidance {
+
+.vacancy-contact-fallback > .vacancy-contact-guidance {
   margin: 0 0 12px;
   padding: 20px;
   border-radius: 12px;
   font-size: 13px;
-}
-.vacancy-progress-only > .application-control {
-  position: sticky;
-  top: 24px;
-  margin: 0;
-  border: 1px solid #e1e6ef;
-  padding: 20px;
-  border-radius: 12px;
-  background: #fff;
-}
-@media (max-width: 760px) {
-  .vacancy-progress-only > .application-control {
-    position: static;
-  }
-}
-
-/* Reinforce personal state with readable text, icon and a colored outline. */
-.seen-badge {
-  color: #1e40af;
-  background: #dbeafe;
-  border: 1px solid #93b4f2;
-  font-size: 11px;
-  font-weight: 650;
-  padding: 3px 7px;
 }
 
 /* An editorial blue masthead and compact, useful discovery navigation. */
@@ -2979,8 +2777,7 @@
   .board-shell .search-city input,
   .advanced-filters select,
   .advanced-filters input,
-  .salary-range input,
-  .vacancy-page .application-control select {
+  .salary-range input {
     font-size: 16px;
   }
 }
@@ -2993,7 +2790,6 @@
   .board-shell .active-filters button,
   .board-shell .filter-head > button,
   .board-shell .job-side .save-button,
-  .board-shell .personal-tools .secondary-button,
   .vacancy-tools .secondary-button,
   .discovery-section-heading > button,
   .board-pagination button {
@@ -4071,8 +3867,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  background: url('/images/company-fallback-160.png') center / contain
-    no-repeat;
+  background: url('/images/company-fallback-160.png') center / contain no-repeat;
 }
 /* One quiet surface across all four shortcuts. */
 .board-shell.editorial-board.crafted-board .discovery-shortcut:nth-child(n) {

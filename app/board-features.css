@@ -316,9 +316,14 @@
 .board-shell .active-filters .clear-all-filters {
   min-height: 44px;
   background: transparent;
+  border: 0;
+  box-shadow: none;
   color: #405272;
-  text-decoration: underline;
+  text-decoration: none;
   text-underline-offset: 3px;
+}
+.board-shell .active-filters .clear-all-filters:hover {
+  text-decoration: underline;
 }
 .board-shell .results-progress {
   display: flex;
@@ -414,9 +419,6 @@
   white-space: nowrap;
   font-size: 13px;
 }
-.board-shell .results-tools .personal-tools > button:first-child:disabled {
-  display: none;
-}
 .board-shell .results-sort .choice {
   min-height: 44px;
   font-size: 13px;
@@ -495,12 +497,6 @@
   .board-shell .personal-nav span,
   .board-shell .header-search {
     display: none;
-  }
-  .board-shell .results-tools .personal-tools > button:first-child {
-    grid-column: 1;
-    grid-row: 2;
-    padding: 6px;
-    font-size: 12px;
   }
 }
 @media (max-width: 360px) {

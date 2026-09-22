@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { GET as indexGET } from '../app/sitemap.xml/route';
 import { GET as vacanciesIndexGET } from '../app/vacancies-sitemap.xml/route';
 import { GET as pagesGET } from '../app/sitemap-pages.xml/route';
@@ -30,11 +31,16 @@ void test('the sitemap index lists the four leaf sitemaps and never touches the 
     for (const get of [indexGET, vacanciesIndexGET]) {
       const response = await get();
       assert.equal(response.status, 200);
-      assert.equal(response.headers.get('Content-Type'), 'application/xml; charset=utf-8');
+      assert.equal(
+        response.headers.get('Content-Type'),
+        'application/xml; charset=utf-8',
+      );
       const body = await response.text();
       assert.match(body, /<sitemapindex /);
       for (const name of ['pages', 'categories', 'companies', 'jobs']) {
-        assert.ok(body.includes(`<loc>https://jobx.ge/sitemap-${name}.xml</loc>`));
+        assert.ok(
+          body.includes(`<loc>https://jobx.ge/sitemap-${name}.xml</loc>`),
+        );
       }
     }
   });
@@ -129,3 +135,78 @@ void test('an oversized catalogue is truncated to 50000 URLs', async () => {
   assert.ok(body.includes('<loc>https://jobx.ge/companies/49999</loc>'));
   assert.ok(!body.includes('<loc>https://jobx.ge/companies/50000</loc>'));
 });
+
+void test(
+  'landing census agrees with actual filtered results on the local database',
+  { skip: process.env.RUN_DB_TESTS !== '1' },
+  async () => {
+    assert.equal(new URL(process.env.DATABASE_URL!).hostname, 'localhost');
+    assert.equal(new URL(process.env.DATABASE_URL!).pathname, '/ertad_test');
+    const { allLandingCounts } = await import('../lib/server/sitemap-data');
+    const { searchPlan } = await import('../lib/server/search-plan');
+    const { db } = await import('../lib/server/db');
+    const { landingPath, eligibleLandings } =
+      await import('../lib/seo-landing');
+    const { searchesEntries } = await import('../lib/server/sitemap-entries');
+    const ids: string[] = [];
+    try {
+      for (const city of ['თბილისი', 'თბილისი, ბათუმი', '', 'სამგორი']) {
+        const id = randomUUID();
+        ids.push(id);
+        const vacancy = {
+          title: 'Developer',
+          company: `Catalogue fixture ${id}`,
+          city,
+          category: 'ტექნოლოგიები',
+          salary: '2000 ლარი',
+          mode: 'დისტანციური',
+          description: 'Developer needed. სამუშაო ადგილი თბილისში.',
+          deadline: '2099-01-01',
+          datePosted: '2026-09-01',
+          url: `https://example.com/catalogue-${id}`,
+          source: 'hr.ge',
+        };
+        await db().query(
+          "INSERT INTO jobs(id,draft,published,status,fingerprint,published_at) VALUES($1::uuid,$2,$2,'published',$1::text,now())",
+          [id, vacancy],
+        );
+        await db().query(
+          "INSERT INTO source_items(id,source_id,external_id,url,job_id,raw,last_checked_at) VALUES($1::uuid,'hr',$1::text,$2,$1::uuid,$3,now())",
+          [id, vacancy.url, vacancy],
+        );
+      }
+      const rows = await allLandingCounts();
+      // Cover every dimension, zero counts and nonzero combinations; the fixture
+      // includes aliases, multi-city text and city fallbacks.
+      const sample = rows.filter(
+        (row) =>
+          row.count > 0 || row.role === 'დეველოპერი' || row.city === 'გორი',
+      );
+      for (const row of sample) {
+        const plan = searchPlan(
+          new URLSearchParams(landingPath(row).slice(2)),
+          false,
+          { grouped: true },
+        );
+        const result = await db().query(
+          `${plan.cte} SELECT count(*)::int count FROM searchable j WHERE ${plan.where}`,
+          plan.args,
+        );
+        assert.equal(row.count, result.rows[0].count, landingPath(row));
+      }
+      assert.deepEqual(
+        (await searchesEntries()).map((row) => row.url).sort(),
+        eligibleLandings(rows)
+          .map((row) => 'https://jobx.ge' + landingPath(row))
+          .sort(),
+      );
+    } finally {
+      await db().query(
+        'DELETE FROM source_items WHERE job_id=ANY($1::uuid[])',
+        [ids],
+      );
+      await db().query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [ids]);
+      await db().end();
+    }
+  },
+);

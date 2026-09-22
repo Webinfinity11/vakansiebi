@@ -9,6 +9,7 @@ import { configs } from './adapters';
 import { runSourceCycle } from './cycle';
 import { reconcileSource } from './automation';
 import { purgeEnded } from './purge';
+import { purgeResumes } from '../lib/server/resumes';
 import { failureNeedsPerson, timeoutsBeforeAlarm } from './http';
 import { rollupAnalytics } from '../lib/server/analytics';
 let stopped = false;
@@ -138,6 +139,8 @@ try {
           );
           return null;
         });
+    if (purgeDue)
+      await purgeResumes().catch(() => console.warn('Resume purge skipped'));
     // Separate from the purge: an analytics failure must not hold back deleting ended vacancies.
     if (purgeDue)
       await rollupAnalytics(db()).catch((error) =>

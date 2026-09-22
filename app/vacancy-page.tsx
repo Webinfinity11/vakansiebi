@@ -17,15 +17,13 @@ import { PublicHeader } from './public-header';
 import { CompanyIdentity } from './company-identity';
 import { Description, SourceStatus, formatDate } from './vacancy-text';
 import { QuickApply, TranslationHelp } from './quick-apply';
-import { ApplicationControl, usePersonalSpace } from './personal-space';
-import { readApplicant, type Applicant } from '@/lib/personal-space';
 import {
   vacancyContacts,
   workSchedule,
   applicationDestination,
   defaultApplicationBody,
 } from '@/lib/vacancy-details';
-import { applicationBody, emailDraft } from '@/lib/application-contact';
+import { emailDraft } from '@/lib/application-contact';
 import {
   canStepBack,
   planListReturn,
@@ -54,28 +52,7 @@ function daysUntil(date: string) {
   target.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
-/* The details a person saved in their own browser, read after mount because localStorage is
-   not there during render. Absent details mean the letter is exactly what it was before. */
-function useApplicant() {
-  const [applicant, setApplicant] = useState<Applicant | null>(null);
-  useEffect(() => {
-    const read = () => {
-      try {
-        setApplicant(readApplicant(localStorage));
-      } catch {}
-    };
-    const timer = setTimeout(read, 0);
-    window.addEventListener('storage', read);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('storage', read);
-    };
-  }, []);
-  return applicant;
-}
 function ApplyAction({ job }: { job: PublicJob }) {
-  const applicant = useApplicant();
-  const letter = (base: string) => applicationBody(base, applicant);
   const contacts = vacancyContacts(job);
   const emails = contacts.emails.filter((c) => c.application);
   const external = applicationDestination(job);
@@ -93,11 +70,9 @@ function ApplyAction({ job }: { job: PublicJob }) {
           href={emailDraft(
             contacts.emails[0].email,
             job.title,
-            letter(
-              contacts.emails[0].application
-                ? defaultApplicationBody
-                : 'გამარჯობა,\n\nთქვენს ვაკანსიასთან დაკავშირებით მაქვს კითხვა.',
-            ),
+            contacts.emails[0].application
+              ? defaultApplicationBody
+              : 'გამარჯობა,\n\nთქვენს ვაკანსიასთან დაკავშირებით მაქვს კითხვა.',
           )}
         >
           {contacts.emails[0].application ? 'CV-ის გაგზავნა' : 'წერილის გახსნა'}{' '}
@@ -109,11 +84,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
     return (
       <a
         className="primary"
-        href={emailDraft(
-          emails[0].email,
-          job.title,
-          letter(defaultApplicationBody),
-        )}
+        href={emailDraft(emails[0].email, job.title, defaultApplicationBody)}
       >
         CV-ის გაგზავნა მეილით <ArrowUpRight size={17} />
       </a>
@@ -299,7 +270,6 @@ export default function VacancyPage({
   /** The employer's own page, when it has one. */
   companyPath?: string | null;
 }) {
-  const personal = usePersonalSpace();
   const activity = useVacancyActivity();
   const { markSeen } = activity;
   /* Long enough that a tap taken back is not a visit, short enough that anyone
@@ -312,18 +282,6 @@ export default function VacancyPage({
     );
     return () => clearTimeout(timer);
   }, [job.id, job.title, job.company, preview, markSeen]);
-  /* "ნანახია" answers a question about the visits before this one. Read once,
-     when the page opens, so this visit's own mark does not turn the badge on
-     while the reader is still on the page. */
-  const [seenBefore, setSeenBefore] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (!activity.ready) return;
-    const timer = setTimeout(
-      () => setSeenBefore((known) => known ?? activity.seen.includes(job.id)),
-      0,
-    );
-    return () => clearTimeout(timer);
-  }, [activity.ready, activity.seen, job.id]);
   /* One view per vacancy per page load; the ref keeps a re-run of the effect from counting twice. */
   const viewed = useRef('');
   useEffect(() => {
@@ -492,13 +450,6 @@ export default function VacancyPage({
       leftFor.current = true;
       track('outbound', job.id);
     }
-    if (
-      href &&
-      (/^(?:mailto:|tel:)/i.test(href) ||
-        href === applicationDestination(job)?.url ||
-        (!hasAction && href === job.url))
-    )
-      personal.begin(job);
   }
   const returnLabel = returnTo.startsWith('/companies/')
     ? 'კომპანიაზე დაბრუნება'
@@ -508,21 +459,13 @@ export default function VacancyPage({
         returnTo === '/'
         ? 'ყველა ვაკანსია'
         : 'შედეგებზე დაბრუნება';
-  const progress = (
-    <ApplicationControl
-      job={job}
-      space={personal}
-      disabled={preview}
-      seen={seenBefore === true}
-    />
-  );
   return (
     <div
       onClickCapture={recordContactOpen}
       onAuxClickCapture={(event) => {
         if (event.button === 1) recordContactOpen(event);
       }}
-      className="board-shell vacancy-page has-personal-progress has-contact"
+      className="board-shell vacancy-page has-contact"
     >
       <PublicHeader savedCount={saved.length} />
       <main className="vacancy-page-main">
@@ -662,7 +605,7 @@ export default function VacancyPage({
           </section>
           {!hasAction && (
             <aside
-              className="vacancy-contact vacancy-progress-only"
+              className="vacancy-contact vacancy-contact-fallback"
               aria-label="დამსაქმებელთან დაკავშირება"
             >
               {/* Without an email, phone or form, the way to apply sits where those would be. */}
@@ -679,7 +622,6 @@ export default function VacancyPage({
                 <p>გაიხსნება ორიგინალი განცხადება.</p>
                 {cvHint}
               </div>
-              {progress}
             </aside>
           )}
           {hasAction && (
@@ -687,10 +629,7 @@ export default function VacancyPage({
               className="vacancy-contact"
               aria-label="დამსაქმებელთან დაკავშირება"
             >
-              <QuickApply job={job}>
-                {progress}
-                {cvHint}
-              </QuickApply>
+              <QuickApply job={job}>{cvHint}</QuickApply>
             </aside>
           )}
           {hasDescriptionContent && (

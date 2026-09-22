@@ -36,6 +36,8 @@ jobs:
         run: npm run worker -- --source=${{ matrix.source }} --due --once
         env:
           DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
+          GOOGLE_INDEXING_CLIENT_EMAIL: ${{ secrets.GOOGLE_INDEXING_CLIENT_EMAIL }}
+          GOOGLE_INDEXING_PRIVATE_KEY: ${{ secrets.GOOGLE_INDEXING_PRIVATE_KEY }}
           # Bound transfer and historical discovery on the database plan.
           # The first listing page still gets priority; robots.txt spacing is unchanged.
           SCRAPE_CRON_MINUTES: '180'

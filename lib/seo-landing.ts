@@ -72,6 +72,32 @@ export type Landing = {
 };
 /* `role` is the newest of the four and the rarest, so it may be left out. */
 type Choice = Omit<Landing, 'path' | 'role'> & { role?: string | null };
+// Ten active results is the site's publication floor, not a search-engine rule.
+export const minimumLandingJobs = 10;
+export type LandingCount = Choice & { count: number };
+export function eligibleLandings(rows: readonly LandingCount[]) {
+  return rows.filter(
+    (row) =>
+      row.count >= minimumLandingJobs &&
+      // These vocabulary terms name fields already present as category pages.
+      !['გაყიდვები', 'მარკეტინგი'].includes(row.role ?? '') &&
+      !!landingFor(new URLSearchParams(landingPath(row).slice(2))),
+  );
+}
+
+export function landingIndexable(
+  landing: Landing,
+  rows: readonly LandingCount[] | null,
+) {
+  // Unavailable counts are not evidence that a previously indexable page is thin.
+  return (
+    rows === null ||
+    eligibleLandings(rows).some(
+      (row) =>
+        landingPath(row) === landing.path && row.count >= minimumLandingJobs,
+    )
+  );
+}
 const roleFor = (value: string) =>
   roleVocabulary.find(
     (role) => role.label === value.normalize('NFKC').trim().toLowerCase(),
@@ -200,7 +226,11 @@ export function landingCopy(landing: Choice) {
     const where = landing.city ? cityIn(landing.city) : 'საქართველოს მასშტაბით';
     return `${role?.genitive ?? landing.role} აქტიური ვაკანსიები ${where}. სია ყოველდღიურად ახლდება დამსაქმებლებისა და დასაქმების საიტებზე გამოქვეყნებული განცხადებებით — შეადარე ანაზღაურება, გრაფიკი და პირობები.`;
   }
-  if (landing.trait) return traits[landing.trait].copy;
+  if (landing.trait)
+    return (
+      (landing.category || landing.city ? `${landingHeading(landing)}. ` : '') +
+      traits[landing.trait].copy
+    );
   if (landing.category && landing.city)
     return `${genitive[landing.category]} ვაკანსიები ${cityIn(landing.city)}. სია ყოველდღიურად ახლდება დამსაქმებლებისა და დასაქმების საიტებზე გამოქვეყნებული აქტიური განცხადებებით.`;
   if (landing.category)
@@ -212,10 +242,7 @@ export function landingCopy(landing: Choice) {
 export function landingDescription(landing: Choice) {
   const heading = landingHeading(landing);
   const copy = landingCopy(landing);
-  return (copy.includes(heading) ? copy : `${heading}. ${copy}`).slice(
-    0,
-    300,
-  );
+  return (copy.includes(heading) ? copy : `${heading}. ${copy}`).slice(0, 300);
 }
 
 /** Whether the list on screen is exactly this landing page, and may name itself. */
@@ -299,10 +326,67 @@ const fieldRoles: Record<string, readonly string[]> = {
   იურიდიული: ['იურისტი'],
   სილამაზე: ['დალაქი', 'მასაჟისტი'],
 };
-/* Where this page can lead next — the same search narrowed one more way, or the
-   professions the field is made of. It is the difference between a page that
-   ends and a site that goes on, for a reader and for a crawler alike. */
-export function relatedLandings(landing: Landing) {
+type DirectoryLink = { path: string; label: string; count: number };
+const directoryIndexes = new WeakMap<
+  readonly LandingCount[],
+  {
+    links: Map<string, DirectoryLink>;
+    children: Map<string, DirectoryLink[]>;
+  }
+>();
+function parentLandingPath(choice: Choice) {
+  if (choice.trait && (choice.category || choice.city))
+    return landingPath({ ...choice, trait: null });
+  if (choice.city && (choice.category || choice.role))
+    return landingPath({ ...choice, city: null });
+  return '/';
+}
+function directoryIndex(rows: readonly LandingCount[]) {
+  const held = directoryIndexes.get(rows);
+  if (held) return held;
+  const links = new Map<string, DirectoryLink>();
+  const children = new Map<string, DirectoryLink[]>();
+  for (const row of eligibleLandings(rows)) {
+    const link = {
+      path: landingPath(row),
+      label: landingHeading(row).replace(' საქართველოში', ''),
+      count: row.count,
+    };
+    links.set(link.path, link);
+    const parent = parentLandingPath(row);
+    const group = children.get(parent) ?? [];
+    group.push(link);
+    children.set(parent, group);
+    // A city reader can narrow by field too, without returning to the footer.
+    if (row.category && row.city && !row.trait) {
+      const cityPath = landingPath({
+        category: null,
+        city: row.city,
+        trait: null,
+      });
+      const cityGroup = children.get(cityPath) ?? [];
+      cityGroup.push(link);
+      children.set(cityPath, cityGroup);
+    }
+  }
+  const index = { links, children };
+  directoryIndexes.set(rows, index);
+  return index;
+}
+/* Every combination has one broader parent. This makes all sitemap entries
+   reachable without a global list of hundreds of links on every page. */
+export function relatedLandings(
+  landing: Landing,
+  rows?: readonly LandingCount[] | null,
+) {
+  if (rows) {
+    const index = directoryIndex(rows);
+    const parent = index.links.get(parentLandingPath(landing));
+    return [
+      ...(parent ? [parent] : []),
+      ...(index.children.get(landing.path) ?? []),
+    ].sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
+  }
   const nearby: Choice[] = [];
   if (landing.role && !landing.city)
     nearby.push(
@@ -372,7 +456,23 @@ export function relatedLandings(landing: Landing) {
     }))
     .slice(0, 10);
 }
-export function landingLinks() {
+export function landingLinks(rows?: readonly LandingCount[] | null) {
+  if (rows)
+    return eligibleLandings(rows)
+      .filter(
+        (row) =>
+          [row.category, row.city, row.trait, row.role].filter(Boolean)
+            .length === 1,
+      )
+      .sort(
+        (a, b) =>
+          b.count - a.count || landingPath(a).localeCompare(landingPath(b)),
+      )
+      .map((row) => ({
+        path: landingPath(row),
+        label: landingHeading(row).replace(' საქართველოში', ''),
+        count: row.count,
+      }));
   const links: Choice[] = [
     ...categories
       .filter((category) => category !== 'სხვა')

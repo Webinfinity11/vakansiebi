@@ -1,4 +1,9 @@
 import { confirmInvoice, cancelUnusedInvoice } from './billing';
+import {
+  indexingTransition,
+  publishIndexingNotifications,
+  type IndexingNotification,
+} from './google-indexing';
 import { placementTiers } from '../placement';
 import { bonusCompanyKey } from './job-placement';
 import { approvePlacement } from './job-placement';
@@ -493,6 +498,7 @@ export async function mutateJob(input: unknown) {
     .parse(input);
   // A moderated vacancy has to show (or disappear) on the next list this server builds, not
   // after its held copy expires.
+  const notifications: IndexingNotification[] = [];
   const result = await transaction(async (c) => {
     // Consistent ordering prevents deadlocks for concurrent opposite-direction merges.
     const ids = [data.id, ...(data.targetId ? [data.targetId] : [])].sort();
@@ -568,7 +574,7 @@ export async function mutateJob(input: unknown) {
         },
         { automation_managed: true, automation_paused: false },
       );
-      const outcome = await reconcileJob(c, job.id);
+      const outcome = await reconcileJob(c, job.id, notifications);
       return { ok: true, outcome };
     }
     let draft: Vacancy = data.draft || job.draft;
@@ -684,8 +690,12 @@ export async function mutateJob(input: unknown) {
       { draft: job.draft, published: job.published, status: job.status },
       { draft, published, status },
     );
+    notifications.push(
+      ...indexingTransition(job.id, job, { status, published }),
+    );
     return { ok: true };
   });
   clearPublicJobsCache();
+  await publishIndexingNotifications(notifications);
   return result;
 }

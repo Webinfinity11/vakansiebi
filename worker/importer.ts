@@ -10,6 +10,10 @@ import {
 import { samePosting } from '../lib/job-intelligence';
 import type { SourceId, Vacancy } from '../lib/types';
 import { reconcileJob } from './automation';
+import {
+  publishIndexingNotifications,
+  type IndexingNotification,
+} from '../lib/server/google-indexing';
 import { assessVacancy } from './quality';
 import { importDateReason } from './new-only';
 export function hashVacancy(v: Vacancy) {
@@ -18,7 +22,8 @@ export function hashVacancy(v: Vacancy) {
 const clearedQualitySql = `quality_candidate=NULL,quality_signature=NULL,quality_warning=NULL,
   quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0`;
 export async function stageVacancy(itemId: string, v: Vacancy, _hours = 6) {
-  return transaction(async (c) => {
+  const notifications: IndexingNotification[] = [];
+  const result = await transaction(async (c) => {
     const item = (
       await c.query(
         `SELECT id,source_id,job_id,url,raw,content_hash,quality_signature,quality_first_seen,quality_last_seen,quality_observations,quality_warning,refresh_requested_at,refresh_completed_at FROM source_items WHERE id=$1 FOR UPDATE`,
@@ -122,9 +127,11 @@ export async function stageVacancy(itemId: string, v: Vacancy, _hours = 6) {
         item.raw,
         v,
       );
-    await reconcileJob(c, jobId);
+    await reconcileJob(c, jobId, notifications);
     return outcome;
   });
+  await publishIndexingNotifications(notifications);
+  return result;
 }
 /** Listing hints accumulate: a later page without a category keeps the one already known. */
 export async function discoverItems(

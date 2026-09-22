@@ -14,8 +14,8 @@ import {
   listingFingerprint,
   type DiscoverySource,
 } from './discovery';
-import { db, transaction } from '../lib/server/db';
-import { reconcileJob } from './automation';
+import { db } from '../lib/server/db';
+import { reconcileAndNotify } from './automation';
 import type { SourceId } from '../lib/types';
 import {
   getSourceConfig,
@@ -303,8 +303,7 @@ export async function runSource(
               "UPDATE jobs SET needs_review=true,version=version+1 WHERE id=$1 AND NOT needs_review AND status IN ('pending','published')",
               [item.job_id],
             );
-          if (item.job_id)
-            await transaction((c) => reconcileJob(c, item.job_id));
+          if (item.job_id) await reconcileAndNotify(item.job_id);
           return;
         }
         failed++;

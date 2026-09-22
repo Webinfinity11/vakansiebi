@@ -1,7 +1,13 @@
 import { db } from './db';
 import { searchPlan } from './search-plan';
-import { cities, cityStem } from '../cities';
-import { traitKeys, traits, type TraitKey } from '../seo-landing';
+import { cities } from '../cities';
+import {
+  traitKeys,
+  traits,
+  eligibleLandings,
+  type LandingCount,
+} from '../seo-landing';
+import { categories } from '../types';
 import { roleVocabulary } from '../search-language';
 
 export type DatedVacancy = { id: string; title: string; lastModified: Date };
@@ -59,106 +65,92 @@ export function newest(dates: Iterable<Date>) {
   return latest;
 }
 
-/* How many vacancies each indexable list holds today. A landing page is only
-   worth a crawl while it has something on it: an empty "ფინანსების ვაკანსიები
-   ფოთში" is a thin page that costs the whole site standing. One pass per
-   condition, because each one is a different query to the catalogue; within a
-   pass the categories, the cities and their pairs are counted together. */
-export type LandingCount = {
-  category: string | null;
-  city: string | null;
-  trait: TraitKey | null;
-  role?: string | null;
-  count: number;
-};
-async function countBy(trait: TraitKey | null): Promise<LandingCount[]> {
-  const params = new URLSearchParams(
-    trait ? [[...traits[trait].param] as [string, string]] : [],
-  );
-  const plan = searchPlan(params, false, { grouped: true });
-  const args = [...plan.args, [...cities], cities.map(cityStem)];
-  const names = `$${args.length - 1}::text[]`;
-  const stems = `$${args.length}::text[]`;
-  // A condition, a field and a city together is a real search; what keeps such
-  // a page off the index is its count, not its shape.
-  const sets = trait
-    ? '((), (category), (city), (category, city))'
-    : '((category), (city), (category, city))';
-  const { rows } = await db().query<{
-    category: string | null;
-    city: string | null;
-    count: number;
-  }>(
-    `${plan.cte}, visible AS MATERIALIZED (
-       SELECT j.p_category AS category, j.p_city AS city FROM searchable j WHERE ${plan.where}
-     ),
-     placed AS (
-       SELECT v.category, c.name AS city FROM visible v
-       LEFT JOIN LATERAL (
-         SELECT t.name FROM unnest(${names}, ${stems}) AS t(name, stem)
-         WHERE lower(v.city) LIKE '%' || t.stem || '%' LIMIT 1
-       ) c ON true
-     )
-     SELECT category, city, count(*)::int AS count FROM placed
-     GROUP BY GROUPING SETS ${sets}
-     /* A grouping set that names a dimension must not answer NULL for it: the
-        vacancies whose city is not one of the thirteen would otherwise be
-        counted as a second, smaller "this category everywhere". */
-     HAVING (GROUPING(category) = 1 OR category IS NOT NULL)
-        AND (GROUPING(city) = 1 OR city IS NOT NULL)`,
-    args,
-  );
-  return rows.map((row) => ({ ...row, trait }));
+/* Count the same canonical records as searchPlan. Intersecting independent
+   filters preserves city text fallbacks, multi-city jobs and role synonyms;
+   title ILIKE and a first-city approximation do not. The canonical group rank
+   is independent of filters, so every pass uses the same record identifiers. */
+export type { LandingCount } from '../seo-landing';
+async function readLandingCounts(): Promise<LandingCount[]> {
+  const client = await db().connect();
+  try {
+    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+    await client.query("SET LOCAL statement_timeout = '12s'");
+    const matching = async (params: URLSearchParams) => {
+      const plan = searchPlan(params, false, { grouped: true });
+      return (
+        await client.query<{ id: string; category: string }>(
+          `${plan.cte} SELECT j.id,j.p_category AS category FROM searchable j WHERE ${plan.where}`,
+          plan.args,
+        )
+      ).rows;
+    };
+    const base = await matching(new URLSearchParams());
+    const byCity = new Map<string, Set<string>>();
+    for (const city of cities)
+      byCity.set(
+        city,
+        new Set(
+          (await matching(new URLSearchParams({ city }))).map((r) => r.id),
+        ),
+      );
+    const rows: LandingCount[] = [];
+    const countPlaces = (
+      jobs: typeof base,
+      category: string | null,
+      trait: LandingCount['trait'],
+      role: string | null = null,
+    ) => {
+      if (category || trait || role)
+        rows.push({ category, city: null, trait, role, count: jobs.length });
+      for (const city of cities)
+        rows.push({
+          category,
+          city,
+          trait,
+          role,
+          count: jobs.filter((job) => byCity.get(city)!.has(job.id)).length,
+        });
+    };
+    for (const trait of [null, ...traitKeys]) {
+      const jobs = trait
+        ? await matching(new URLSearchParams([[...traits[trait].param]]))
+        : base;
+      countPlaces(jobs, null, trait);
+      for (const category of categories.filter((name) => name !== 'სხვა'))
+        countPlaces(
+          jobs.filter((job) => job.category === category),
+          category,
+          trait,
+        );
+    }
+    for (const { label } of roleVocabulary)
+      countPlaces(
+        await matching(new URLSearchParams({ q: label })),
+        null,
+        null,
+        label,
+      );
+    await client.query('COMMIT');
+    return rows;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
-/* The professions, counted the way the pages are built: a word from the
-   reviewed vocabulary against the titles the catalogue holds, alone and by
-   city. One query for all of them — 42 words over one materialised list. */
-async function countRoles(): Promise<LandingCount[]> {
-  const plan = searchPlan(new URLSearchParams(), false, { grouped: true });
-  const args = [...plan.args];
-  const roleValues = roleVocabulary
-    .map(({ label, stem }) => {
-      args.push(label, '%' + stem.replace(/[\\%_]/g, (c) => '\\' + c) + '%');
-      return `($${args.length - 1},$${args.length})`;
-    })
-    .join(',');
-  args.push([...cities], cities.map(cityStem));
-  const names = `$${args.length - 1}::text[]`;
-  const stems = `$${args.length}::text[]`;
-  const { rows } = await db().query<{
-    role: string;
-    city: string | null;
-    count: number;
-  }>(
-    `${plan.cte}, visible AS MATERIALIZED (
-       SELECT j.p_title AS title, j.p_city AS city FROM searchable j WHERE ${plan.where}
-     ),
-     placed AS (
-       SELECT r.label AS role, c.name AS city
-       FROM visible v
-       JOIN (VALUES ${roleValues}) AS r(label,pattern) ON v.title ILIKE r.pattern ESCAPE '\\'
-       LEFT JOIN LATERAL (
-         SELECT t.name FROM unnest(${names}, ${stems}) AS t(name, stem)
-         WHERE lower(v.city) LIKE '%' || t.stem || '%' LIMIT 1
-       ) c ON true
-     )
-     SELECT role, city, count(*)::int AS count FROM placed
-     GROUP BY GROUPING SETS ((role), (role, city))
-     HAVING GROUPING(city) = 1 OR city IS NOT NULL`,
-    args,
-  );
-  return rows.map((row) => ({
-    category: null,
-    city: row.city,
-    trait: null,
-    role: row.role,
-    count: row.count,
-  }));
+
+let countsHeld: { at: number; value: Promise<LandingCount[]> } | null = null;
+// Shared by the HTML directory and sitemap; coalesce concurrent reads.
+export function allLandingCounts(now = Date.now()) {
+  if (countsHeld && now - countsHeld.at < 300_000) return countsHeld.value;
+  const value = readLandingCounts();
+  countsHeld = { at: now, value };
+  void value.catch(() => {
+    if (countsHeld?.value === value) countsHeld = null;
+  });
+  return value;
 }
-export async function landingCounts(minimum = 10) {
-  const passes = await Promise.all([
-    ...[null, ...traitKeys].map((trait) => countBy(trait)),
-    countRoles(),
-  ]);
-  return passes.flat().filter((row) => row.count >= minimum);
+export async function landingCounts() {
+  return eligibleLandings(await allLandingCounts());
 }
