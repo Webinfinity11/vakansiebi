@@ -6,6 +6,7 @@ import { useSwipe } from './use-swipe';
 import { useAutoLoad } from './use-auto-load';
 import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
+import { TopGeCounter } from './top-ge-counter';
 import { rememberRecentSearch } from '@/lib/recent-searches';
 import {
   landingCopy,
@@ -2212,7 +2213,7 @@ export default function JobBoard({
               <Bookmark size={16} aria-hidden="true" /> შენახული ვაკანსიები
             </button>
             <Link href="/cv" prefetch={false}>
-              <FileText size={16} aria-hidden="true" /> რეზიუმეს შედგენა
+              <FileText size={16} aria-hidden="true" /> რეზიუმეს შექმნა
             </Link>
           </nav>
         </div>
@@ -2242,7 +2243,10 @@ export default function JobBoard({
         </details>
         <div className="footer-meta">
           <span>ვაკანსიები სხვადასხვა წყაროდან</span>
-          <span>© {new Date().getFullYear()} JOBX</span>
+          <span className="footer-copyright">
+            © {new Date().getFullYear()} JOBX
+            <TopGeCounter siteId={118973} />
+          </span>
         </div>
       </footer>
       {saveNotice && !feedback && !filtersOpen && (

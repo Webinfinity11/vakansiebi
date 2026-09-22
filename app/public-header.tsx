@@ -107,8 +107,8 @@ export function PublicHeader({
             href="/cv"
             prefetch={false}
             className="personal-nav header-cv"
-            aria-label="რეზიუმეს შედგენა"
-            title="რეზიუმეს შედგენა"
+            aria-label="რეზიუმეს შექმნა"
+            title="რეზიუმეს შექმნა"
           >
             <FileText size={18} />
             <span>CV შექმნა</span>

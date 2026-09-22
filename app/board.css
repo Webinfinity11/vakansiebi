@@ -3271,6 +3271,25 @@
   border-top: 1px solid #e3e7ef;
   font-size: 12px;
 }
+.board-shell .jobx-footer .footer-copyright {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+/* top.ge serves an 88×31 image; shown at half size and muted, it stays out of the way. */
+.board-shell .jobx-footer .top-ge-counter {
+  display: inline-flex;
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.board-shell .jobx-footer .top-ge-counter:hover {
+  opacity: 1;
+}
+.board-shell .jobx-footer .top-ge-counter img {
+  display: block;
+  width: 44px;
+  height: 16px;
+}
 .board-shell.editorial-board .discovery-shortcut > svg {
   width: 20px;
   height: 20px;

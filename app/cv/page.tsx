@@ -5,9 +5,9 @@ import { CvBuilder } from './cv-builder';
 import '../cv.css';
 
 export const metadata: Metadata = {
-  title: 'რეზიუმეს შედგენა — CV გენერატორი უფასოდ | JOBX',
+  title: 'CV | რეზიუმე | შექმენი რეზიუმე უფასოდ | JOBX',
   description:
-    'შექმენი რეზიუმე ქართულად ან ინგლისურად. აირჩიე შაბლონი, შეავსე გამოცდილება და შეინახე CV PDF-ად უფასოდ.',
+    'შეადგინე რეზიუმე (CV) ონლაინ, უფასოდ და რეგისტრაციის გარეშე. აირჩიე მზა შაბლონი, შეავსე გამოცდილება და შეინახე PDF-ად. რეზიუმე ქართულად ან ინგლისურად.',
   alternates: { canonical: 'https://jobx.ge/cv' },
   openGraph: { images: [shareImage] },
 };
