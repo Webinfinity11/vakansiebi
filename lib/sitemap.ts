@@ -58,6 +58,8 @@ export function combinedSitemapResponse(
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': options.cache ?? sitemapCacheControl,
+      'CDN-Cache-Control': options.cache ?? sitemapCacheControl,
+      'Vercel-CDN-Cache-Control': options.cache ?? sitemapCacheControl,
     },
   });
 }
@@ -77,13 +79,44 @@ export function sitemapLeaves(base: string) {
 
 export function sitemapIndexResponse(entries: readonly SitemapEntry[]) {
   const body =
-    sitemapIndexStart +
-    entries.map(sitemapXml).join('') +
-    '</sitemapindex>\n';
+    sitemapIndexStart + entries.map(sitemapXml).join('') + '</sitemapindex>\n';
   return new Response(body, {
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': sitemapCacheControl,
     },
   });
+}
+
+/** Bound the entire leaf (including pool acquisition), not just each SQL query.
+ * Failures are never cached at the edge; a warm instance can still serve its last
+ * complete list. A cold failure leaves the other index sections available. */
+export function createSitemapHandler(
+  load: () => Promise<SitemapEntry[]>,
+  timeoutMs = 9_000,
+) {
+  let lastGood: SitemapEntry[] = [];
+  return async function GET() {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const entries = await Promise.race([
+        Promise.resolve().then(load),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('Sitemap deadline exceeded')),
+            timeoutMs,
+          );
+        }),
+      ]);
+      lastGood = entries;
+      return combinedSitemapResponse(entries);
+    } catch {
+      console.warn(
+        'Sitemap section unavailable; serving the last list for a retry.',
+      );
+      return combinedSitemapResponse(lastGood, { cache: 'no-store' });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 }

@@ -104,3 +104,76 @@ void test('every landing has a distinct heading and description, including condi
   assert.equal(new Set(rows.map(landingDescription)).size, rows.length);
   for (const row of rows) assert.ok(!landingCopy(row).includes('undefined'));
 });
+
+void test('landing census groups once, coalesces readers and retries failed reads', async (t) => {
+  const { db } = await import('../lib/server/db');
+  const { allLandingCounts } = await import('../lib/server/sitemap-data');
+  const previous = process.env.DATABASE_URL;
+  process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
+  const statements: string[] = [];
+  let fail = false;
+  let releases = 0;
+  const client = {
+    async query(sql: string) {
+      statements.push(sql);
+      if (fail && sql.startsWith('WITH')) throw new Error('unavailable');
+      return { rows: [] };
+    },
+    release() {
+      releases++;
+    },
+  };
+  t.mock.method(db(), 'connect', async () => client);
+  try {
+    const first = allLandingCounts(0);
+    assert.equal(first, allLandingCounts(1));
+    await first;
+    const reads = statements.filter((sql) => sql.startsWith('WITH'));
+    assert.ok(reads.length > 10);
+    assert.match(reads[0], /row_number\(\) OVER/);
+    assert.ok(
+      reads.slice(1).every((sql) => !sql.includes('row_number() OVER')),
+    );
+    assert.ok(reads.slice(1).every((sql) => sql.includes('::uuid[]')));
+    fail = true;
+    await assert.rejects(allLandingCounts(300_001), /unavailable/);
+    fail = false;
+    await allLandingCounts(300_002);
+    assert.equal(releases, 3);
+    assert.ok(statements.includes('ROLLBACK'));
+  } finally {
+    if (previous === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous;
+  }
+});
+
+void test('landing census has one total deadline, not a fresh timeout per filter', async (t) => {
+  const { db } = await import('../lib/server/db');
+  const { allLandingCounts } = await import('../lib/server/sitemap-data');
+  const previous = process.env.DATABASE_URL;
+  process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
+  const statements: string[] = [];
+  let released = false;
+  let clock = 0;
+  t.mock.method(Date, 'now', () => (clock += 2_000));
+  t.mock.method(db(), 'connect', async () => ({
+    async query(sql: string) {
+      statements.push(sql);
+      return { rows: [] };
+    },
+    release() {
+      released = true;
+    },
+  }));
+  try {
+    await assert.rejects(allLandingCounts(900_000), /deadline exceeded/);
+    assert.ok(statements.filter((sql) => sql.startsWith('WITH')).length < 5);
+    assert.ok(statements.includes("SET LOCAL statement_timeout = '6000ms'"));
+    assert.ok(statements.includes("SET LOCAL statement_timeout = '2000ms'"));
+    assert.equal(statements.at(-1), 'ROLLBACK');
+    assert.equal(released, true);
+  } finally {
+    if (previous === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous;
+  }
+});

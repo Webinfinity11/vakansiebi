@@ -71,12 +71,25 @@ export function newest(dates: Iterable<Date>) {
    is independent of filters, so every pass uses the same record identifiers. */
 export type { LandingCount } from '../seo-landing';
 async function readLandingCounts(): Promise<LandingCount[]> {
+  const deadline = Date.now() + 8_000;
   const client = await db().connect();
+  let discard = false;
   try {
     await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-    await client.query("SET LOCAL statement_timeout = '12s'");
-    const matching = async (params: URLSearchParams) => {
-      const plan = searchPlan(params, false, { grouped: true });
+    await client.query("SET LOCAL work_mem = '32MB'");
+    // Group ranking is independent of city/trait/role. Compute it once, then
+    // apply the unchanged search filters only to those canonical identifiers.
+    const matching = async (
+      params: URLSearchParams,
+      canonicalIds?: string[],
+    ) => {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new Error('Landing census deadline exceeded');
+      await client.query(`SET LOCAL statement_timeout = '${remaining}ms'`);
+      const plan = searchPlan(params, false, {
+        grouped: canonicalIds === undefined,
+        jobIds: canonicalIds,
+      });
       return (
         await client.query<{ id: string; category: string }>(
           `${plan.cte} SELECT j.id,j.p_category AS category FROM searchable j WHERE ${plan.where}`,
@@ -85,12 +98,15 @@ async function readLandingCounts(): Promise<LandingCount[]> {
       ).rows;
     };
     const base = await matching(new URLSearchParams());
+    const canonicalIds = base.map((row) => row.id);
     const byCity = new Map<string, Set<string>>();
     for (const city of cities)
       byCity.set(
         city,
         new Set(
-          (await matching(new URLSearchParams({ city }))).map((r) => r.id),
+          (await matching(new URLSearchParams({ city }), canonicalIds)).map(
+            (r) => r.id,
+          ),
         ),
       );
     const rows: LandingCount[] = [];
@@ -113,7 +129,10 @@ async function readLandingCounts(): Promise<LandingCount[]> {
     };
     for (const trait of [null, ...traitKeys]) {
       const jobs = trait
-        ? await matching(new URLSearchParams([[...traits[trait].param]]))
+        ? await matching(
+            new URLSearchParams([[...traits[trait].param]]),
+            canonicalIds,
+          )
         : base;
       countPlaces(jobs, null, trait);
       for (const category of categories.filter((name) => name !== 'სხვა'))
@@ -125,7 +144,7 @@ async function readLandingCounts(): Promise<LandingCount[]> {
     }
     for (const { label } of roleVocabulary)
       countPlaces(
-        await matching(new URLSearchParams({ q: label })),
+        await matching(new URLSearchParams({ q: label }), canonicalIds),
         null,
         null,
         label,
@@ -133,10 +152,14 @@ async function readLandingCounts(): Promise<LandingCount[]> {
     await client.query('COMMIT');
     return rows;
   } catch (error) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      discard = true;
+    }
     throw error;
   } finally {
-    client.release();
+    client.release(discard);
   }
 }
 

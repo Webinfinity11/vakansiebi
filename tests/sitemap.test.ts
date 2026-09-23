@@ -9,6 +9,7 @@ import { GET as companiesGET } from '../app/sitemap-companies.xml/route';
 import { GET as jobsGET } from '../app/sitemap-jobs.xml/route';
 import robots from '../app/robots';
 import {
+  createSitemapHandler,
   sitemapCacheControl,
   combinedSitemapResponse,
   sitemapIndexResponse,
@@ -150,16 +151,27 @@ void test(
     const { searchesEntries } = await import('../lib/server/sitemap-entries');
     const ids: string[] = [];
     try {
-      for (const city of ['თბილისი', 'თბილისი, ბათუმი', '', 'სამგორი']) {
+      for (const city of [
+        'თბილისი',
+        'თბილისი, ბათუმი',
+        '',
+        'სამგორი',
+        'თბილისი',
+      ]) {
         const id = randomUUID();
         ids.push(id);
         const vacancy = {
           title: 'Developer',
-          company: `Catalogue fixture ${id}`,
+          // The final row duplicates the first, with different filter answers.
+          company: `Catalogue fixture ${ids.length === 5 ? ids[0] : id}`,
           city,
           category: 'ტექნოლოგიები',
           salary: '2000 ლარი',
-          mode: 'დისტანციური',
+          mode: ids.length === 5 ? 'ადგილზე' : 'დისტანციური',
+          employmentType: 'part-time',
+          salaryMin: 80,
+          salaryPeriod: 'დღე',
+          currency: 'GEL',
           description: 'Developer needed. სამუშაო ადგილი თბილისში.',
           deadline: '2099-01-01',
           datePosted: '2026-09-01',
@@ -210,3 +222,61 @@ void test(
     }
   },
 );
+
+void test('all successful leaves explicitly cache at the CDN and failures do not', async () => {
+  for (const response of [await pagesGET(), combinedSitemapResponse([])]) {
+    for (const header of [
+      'Cache-Control',
+      'CDN-Cache-Control',
+      'Vercel-CDN-Cache-Control',
+    ])
+      assert.equal(response.headers.get(header), sitemapCacheControl);
+  }
+  const get = createSitemapHandler(async () => {
+    throw new Error('database unavailable');
+  });
+  const response = await get();
+  for (const header of [
+    'Cache-Control',
+    'CDN-Cache-Control',
+    'Vercel-CDN-Cache-Control',
+  ])
+    assert.equal(response.headers.get(header), 'no-store');
+});
+
+void test('a hung cold leaf returns complete XML within its deadline and retries', async () => {
+  let hung = true;
+  const get = createSitemapHandler(
+    () =>
+      hung
+        ? new Promise(() => {})
+        : Promise.resolve([{ url: 'https://jobx.ge/?city=tbilisi' }]),
+    20,
+  );
+  const started = performance.now();
+  const response = await get();
+  assert.ok(performance.now() - started < 500);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.match(await response.text(), /<urlset[^>]*>\s*<\/urlset>/);
+  hung = false;
+  const retry = await get();
+  assert.match(await retry.text(), /city=tbilisi/);
+  assert.equal(retry.headers.get('Cache-Control'), sitemapCacheControl);
+});
+
+void test('a failed or hung refresh preserves the last good leaf but never caches failure', async () => {
+  let mode = 'ok';
+  const get = createSitemapHandler(async () => {
+    if (mode === 'hung') return new Promise(() => {});
+    if (mode === 'failed') throw new Error('database unavailable');
+    return [{ url: 'https://jobx.ge/?city=tbilisi' }];
+  }, 20);
+  await get();
+  for (mode of ['failed', 'hung']) {
+    const response = await get();
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    assert.match(await response.text(), /city=tbilisi/);
+  }
+});
