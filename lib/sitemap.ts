@@ -93,7 +93,12 @@ export function sitemapIndexResponse(entries: readonly SitemapEntry[]) {
  * complete list. A cold failure leaves the other index sections available. */
 export function createSitemapHandler(
   load: () => Promise<SitemapEntry[]>,
-  timeoutMs = 9_000,
+  timeoutMs = 25_000,
+  /* What a cold instance serves when the census runs out of time. An empty
+     urlset is a valid document saying "this section holds nothing", which is a
+     worse answer than a short, certain list: production served exactly that to
+     every crawl on 2026-09-23 until this fallback existed. */
+  floor: () => SitemapEntry[] = () => [],
 ) {
   let lastGood: SitemapEntry[] = [];
   return async function GET() {
@@ -114,7 +119,9 @@ export function createSitemapHandler(
       console.warn(
         'Sitemap section unavailable; serving the last list for a retry.',
       );
-      return combinedSitemapResponse(lastGood, { cache: 'no-store' });
+      return combinedSitemapResponse(lastGood.length ? lastGood : floor(), {
+        cache: 'no-store',
+      });
     } finally {
       clearTimeout(timer);
     }

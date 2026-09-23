@@ -244,6 +244,16 @@ void test('all successful leaves explicitly cache at the CDN and failures do not
     assert.equal(response.headers.get(header), 'no-store');
 });
 
+void test('a cold leaf that cannot count still names the curated pages', async () => {
+  const get = createSitemapHandler(
+    () => new Promise(() => {}),
+    20,
+    () => [{ url: 'https://jobx.ge/?category=gaqidvebi' }],
+  );
+  const body = await (await get()).text();
+  assert.match(body, /category=gaqidvebi/);
+});
+
 void test('a hung cold leaf returns complete XML within its deadline and retries', async () => {
   let hung = true;
   const get = createSitemapHandler(
