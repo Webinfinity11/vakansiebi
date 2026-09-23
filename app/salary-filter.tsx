@@ -36,11 +36,7 @@ export function SalaryFilter({
         <option value="month">თვეში</option>
         <option value="day">დღეში — დღიური ანაზღაურება</option>
       </select>
-      <fieldset
-        className="salary-presets"
-        aria-label="მინიმალური ანაზღაურება"
-        aria-describedby={`${prefix}-salary-help`}
-      >
+      <fieldset className="salary-presets" aria-label="მინიმალური ანაზღაურება">
         {[
           null,
           ...(value.salaryPeriod === 'day'
@@ -67,11 +63,8 @@ export function SalaryFilter({
           </button>
         ))}
       </fieldset>
-      <p className="filter-help" id={`${prefix}-salary-help`}>
-        {value.salaryPeriod === 'day'
-          ? 'ჩანს მხოლოდ ლარში მითითებული დღიური ანაზღაურება. „ნებისმიერი“ ნიშნავს ნებისმიერ დღიურ თანხას.'
-          : 'თანხის არჩევისას ჩანს მხოლოდ ლარში მითითებული თვიური ანაზღაურება. ხელფასის გარეშე განცხადებები გამოირიცხება.'}
-      </p>
+      {/* The buttons say what they do. A paragraph under every filter explaining
+          it is a sign the control needs the explanation, and this one does not. */}
     </fieldset>
   );
 }

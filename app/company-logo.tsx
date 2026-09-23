@@ -20,13 +20,11 @@ export function CompanyLogo({
   company,
   url,
   large = false,
-  fallback = 'illustration',
 }: {
   company: string;
   url?: string;
   large?: boolean;
   category?: string;
-  fallback?: 'illustration' | 'initial';
 }) {
   const [failed, setFailed] = useState('');
   const [loaded, setLoaded] = useState('');
@@ -49,16 +47,14 @@ export function CompanyLogo({
           onError={() => setFailed(src)}
         />
       )}
-      {(!showLogo || loaded !== src) &&
-        (fallback === 'initial' ? (
-          <span className="company-fallback-initial" aria-hidden="true">
-            {companyInitials(company)}
-          </span>
-        ) : (
-          /* A CSS background, not an <img>: as an image element the stand-in was the largest
-             picture on a company page, and Google showed a briefcase as that page's thumbnail. */
-          <span className="company-fallback-3d" aria-hidden="true" />
-        ))}
+      {/* Always the mark, never the company's first letter: a single Georgian
+          character told the reader nothing and read as a placeholder someone
+          forgot to fill in.
+          A CSS background, not an <img>: as an image element the stand-in was the largest
+          picture on a company page, and Google showed a briefcase as that page's thumbnail. */}
+      {(!showLogo || loaded !== src) && (
+        <span className="company-fallback-3d" aria-hidden="true" />
+      )}
     </span>
   );
 }

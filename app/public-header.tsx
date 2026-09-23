@@ -66,7 +66,7 @@ export function PublicHeader({
   return (
     <header className="topbar public-header">
       <div className="header-inner">
-        <Brand />
+        <Brand priority />
         <nav aria-label="მთავარი ნავიგაცია">
           <Link
             href="/"

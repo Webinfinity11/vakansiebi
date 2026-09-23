@@ -1792,6 +1792,9 @@
 :root[data-theme='dark'] .category-options .check-row:has(input:checked) {
   box-shadow: inset 3px 0 #6f93ff;
 }
+:root[data-theme='dark'] .category-options .facet-count {
+  color: #909bac;
+}
 :root[data-theme='dark'] .category-expand {
   border: 0;
   background: transparent;
@@ -2008,6 +2011,11 @@
 :root[data-theme='dark'] .board-shell .subcategory-options {
   border: 0;
   border-left: 1px solid #2a3444;
+}
+:root[data-theme='dark'] .board-shell .subcategory-options .check-row:has(input[value='']:checked) {
+  color: #afb3bb;
+  background: transparent;
+  box-shadow: none;
 }
 
 /* ── from app/phone.css ── */
@@ -2319,7 +2327,8 @@
 }
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .discovery-hero,
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .results-tools,
-:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .jobx-footer {
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .jobx-footer,
+:root[data-theme='dark'] .board-shell .site-footer.jobx-footer {
   background: #1e222b;
 }
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .discovery-shortcut {
@@ -2391,12 +2400,12 @@
   > svg {
   color: #6f93ff;
 }
-:root[data-theme='dark'] .refined-board .jobx-footer .footer-meta {
+:root[data-theme='dark'] .board-shell .jobx-footer .footer-meta {
   border: 0;
   color: #999ea8;
 }
 @media (max-width: 760px) {
-  :root[data-theme='dark'] .refined-board .jobx-footer .footer-meta {
+  :root[data-theme='dark'] .board-shell .jobx-footer .footer-meta {
     border-top: 1px solid #2a313f;
   }
 }

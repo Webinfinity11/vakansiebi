@@ -308,14 +308,11 @@ export default function AdminPanel() {
     const t = setTimeout(() => void load(), 250);
     return () => clearTimeout(t);
   }, [load]);
-  useEffect(() => {
-    // Full editorial snapshots are expensive; hidden tabs must not poll them.
-    const t = setInterval(() => {
-      if (document.visibilityState === 'visible' && !selected && !busy)
-        void load();
-    }, 60000);
-    return () => clearInterval(t);
-  }, [load, selected, busy]);
+  /* The list is not reloaded on a timer. A full editorial snapshot is the most
+     expensive query this application runs and it is never cached, so a tab left
+     open all day paid for a few hundred of them; worse, the list moved under
+     whoever was reading it. Every action already reloads, and the refresh
+     button is beside the search field. */
   const act = async (action: string, extras: Record<string, unknown> = {}) => {
     if (!selected) return;
     const selectedIndex = jobs.findIndex((job) => job.id === selected.id);

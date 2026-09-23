@@ -41,16 +41,18 @@ export function DirectoryLinks({
   links,
   limit = 8,
 }: {
-  links: { path: string; label: string; count?: number }[];
+  links: { path: string; label: string }[];
   limit?: number;
 }) {
+  /* The name alone. A count beside every link turns a short list of places to
+     go into a table of numbers to compare, and the number is stale the moment
+     a vacancy expires. */
   const list = (items: typeof links) => (
     <ul>
-      {items.map(({ path, label, count }) => (
+      {items.map(({ path, label }) => (
         <li key={path}>
           <Link href={path} prefetch={false}>
             {label}
-            {count !== undefined && ` (${count})`}
           </Link>
         </li>
       ))}

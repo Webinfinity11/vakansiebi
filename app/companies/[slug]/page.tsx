@@ -1,3 +1,4 @@
+import { ServerSiteFooter } from '../../server-site-footer';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
@@ -277,6 +278,7 @@ export default async function CompanyPage(props: Props) {
           )}
         </section>
       </main>
+      <ServerSiteFooter />
     </div>
   );
 }

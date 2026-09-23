@@ -1,4 +1,5 @@
 'use client';
+import { SiteFooter } from './site-footer';
 import './board-features.css';
 import { VacancySections } from './vacancy-sections';
 import { VacancyStatus } from './vacancy-status';
@@ -6,10 +7,8 @@ import { useSwipe } from './use-swipe';
 import { useAutoLoad } from './use-auto-load';
 import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
-import { TopGeCounter } from './top-ge-counter';
 import { rememberRecentSearch } from '@/lib/recent-searches';
-import { landingCopy, landingHeading, landingOf } from '@/lib/seo-landing';
-import { SearchDirectoryRelated } from './search-directory-context';
+import { landingHeading, landingOf } from '@/lib/seo-landing';
 import { nearestCity } from '@/lib/nearest-city';
 import {
   vacancyCardTitle,
@@ -17,7 +16,6 @@ import {
   vacancyCardLocation,
 } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
-import { SearchDirectoryGroups } from './search-directory-groups';
 import {
   rememberBoard,
   takeBoard,
@@ -42,7 +40,6 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import { Brand } from './brand';
 import { PublicHeader } from './public-header';
 export { Brand } from './brand';
 import { formatDate } from './vacancy-text';
@@ -64,7 +61,6 @@ import {
   ArrowUpRight,
   ArrowRight,
   Crown,
-  Gem,
   Search,
   SlidersHorizontal,
   MapPin,
@@ -79,7 +75,6 @@ import {
   LocateFixed,
   Calculator,
   GraduationCap,
-  CircleHelp,
   EyeOff,
   LayoutGrid,
   Handshake,
@@ -92,7 +87,6 @@ import {
   Scale,
   Scissors,
   Ellipsis,
-  FileText,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -275,11 +269,10 @@ const JobCard = memo(function JobCard({
         {...swipe.handlers}
       >
         <div className="job-info">
+          {/* The words carry it. A gem beside them read as a sticker on a shop
+              window rather than as a job worth reading first. */}
           {featured === 'premium' && (
-            <span className="featured-label">
-              <Gem size={13} aria-hidden="true" />
-              პრემიუმ ვაკანსია
-            </span>
+            <span className="featured-label">პრემიუმ ვაკანსია</span>
           )}
           <div className="job-title-row">
             <Link
@@ -322,7 +315,6 @@ const JobCard = memo(function JobCard({
               href={j.companyPath}
               onOpen={() => onOpen(j)}
               disabled={swipe.dragging}
-              fallback={j.placement?.priority ? 'initial' : 'illustration'}
             />
             {!demo && <VacancyStatus seen={seen} />}
           </div>
@@ -1317,7 +1309,7 @@ export default function JobBoard({
                             aria-label={`${c} — ქვემიმართულება`}
                           >
                             {[
-                              { id: '', label: `ყველა — ${c}` },
+                              { id: '', label: 'ყველა' },
                               ...subcategories.filter(
                                 (item) => item.category === c,
                               ),
@@ -2154,64 +2146,7 @@ export default function JobBoard({
           </div>
         </div>
       </main>
-      {/* Reader-facing, and the only way a crawler reaches these lists by
-          following links rather than by reading the sitemap. */}
-      <nav className="search-directory" aria-label="მსგავსი ძიებები">
-        {/* Below the vacancies, not above them: a list with nothing to read is
-            a thin page, but the reader came for the list and the sentence that
-            describes it has no business standing between them. */}
-        {landing && <p className="landing-copy">{landingCopy(landing)}</p>}
-        {landing && <SearchDirectoryRelated landing={landing} />}
-        <SearchDirectoryGroups />
-      </nav>
-      <footer className="site-footer jobx-footer">
-        <div className="footer-main">
-          <Brand />
-          <nav aria-label="ფუტერის ნავიგაცია">
-            <a href="#search-heading">
-              <Search size={16} aria-hidden="true" /> ძებნა
-            </a>
-            <button onClick={openSaved}>
-              <Bookmark size={16} aria-hidden="true" /> შენახული ვაკანსიები
-            </button>
-            <Link href="/cv" prefetch={false}>
-              <FileText size={16} aria-hidden="true" /> რეზიუმეს შექმნა
-            </Link>
-          </nav>
-        </div>
-        <details id="how-it-works" className="footer-help">
-          <summary>
-            <CircleHelp size={16} aria-hidden="true" /> როგორ მუშაობს JOBX?
-          </summary>
-          <p>
-            მოძებნე ვაკანსია, გაეცანი პირობებს და განაცხადისთვის გადადი
-            პირველწყაროზე. შენახული ვაკანსიები ამ ბრაუზერში რჩება და სხვა
-            მოწყობილობაზე ავტომატურად არ გადადის. თემასა და შენახული ვაკანსიების
-            სიას ამ ბრაუზერში ვინახავთ; ძიებებისა და
-            მოქმედებების ანონიმური სტატისტიკა სერვერზე ინახება, ზოგი ლოგო კი
-            გარე საიტიდან იტვირთება. PDF-ად შენახვისას რეზიუმეს ასლი ფოტოსთან
-            ერთად JOBX-ზეც ინახება ბოლო შენახვიდან 12 თვემდე და CV-ის გვერდზე
-            „გასუფთავებით“ წაიშლება. საჯარო გვერდების ვიზიტებს Google
-            Analytics-ითაც ვზომავთ; ის ანალიტიკურ ქუქი-ფაილებს იყენებს. ფორმებში
-            შეყვანილ პირად მონაცემებს Google Analytics-ს არ ვუგზავნით.{' '}
-            <a
-              href="https://policies.google.com/technologies/partner-sites"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              როგორ იყენებს Google მონაცემებს
-            </a>
-            .
-          </p>
-        </details>
-        <div className="footer-meta">
-          <span>ვაკანსიები სხვადასხვა წყაროდან</span>
-          <span className="footer-copyright">
-            © {new Date().getFullYear()} JOBX
-            <TopGeCounter siteId={118973} />
-          </span>
-        </div>
-      </footer>
+      <SiteFooter landing={landing} onSaved={openSaved} />
       {saveNotice && !feedback && !filtersOpen && (
         <div className="feedback-toast save-confirmation">
           <output>

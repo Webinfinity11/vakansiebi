@@ -1,3 +1,4 @@
+import { ServerSiteFooter } from '../server-site-footer';
 import type { Metadata } from 'next';
 import { PublicHeader } from '../public-header';
 import { PostJobForm } from './post-job-form';
@@ -12,6 +13,7 @@ export default function PostJobPage() {
     <div className="board-shell post-job-shell">
       <PublicHeader />
       <PostJobForm />
+      <ServerSiteFooter />
     </div>
   );
 }

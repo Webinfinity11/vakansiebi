@@ -1,4 +1,5 @@
 'use client';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { salaryDetails } from '@/lib/salary-summary';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
@@ -263,12 +264,14 @@ export default function VacancyPage({
   preview,
   returnTo,
   companyPath = null,
+  footer,
 }: {
   job: PublicJob;
   preview: boolean;
   returnTo: string;
   /** The employer's own page, when it has one. */
   companyPath?: string | null;
+  footer?: ReactNode;
 }) {
   const activity = useVacancyActivity();
   const { markSeen } = activity;
@@ -799,6 +802,7 @@ export default function VacancyPage({
           {!preview && <SimilarVacancies id={job.id} returnTo={returnTo} />}
         </article>
       </main>
+      {footer}
       {/* On a phone the contact column sits below the vacancy, so the way to apply stays in reach here. */}
       <section
         className="vacancy-mobile-action"

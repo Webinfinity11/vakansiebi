@@ -1,3 +1,4 @@
+import { ServerSiteFooter } from '../../server-site-footer';
 import { compactSalary } from '@/lib/vacancy-presentation';
 import {
   breadcrumbs,
@@ -103,6 +104,7 @@ export default async function Page(props: Props) {
         preview={preview}
         returnTo={from}
         companyPath={companyPath}
+        footer={<ServerSiteFooter />}
       />
     </>
   );

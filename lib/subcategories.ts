@@ -213,19 +213,19 @@ const roleRules = [
   {
     id: 'finance-cash',
     category: 'ფინანსები',
-    label: 'სალარო / საკასო ოპერაციები',
+    label: 'სალარო',
     pattern: 'მოლარე|საკასო|cashier|cash operations',
   },
   {
     id: 'finance-banking',
     category: 'ფინანსები',
-    label: 'ბანკირი / საბანკო მომსახურება',
+    label: 'ბანკირი',
     pattern: 'ბანკირ|ბანკინგ|banker|banking|დიჯი[ტთ]ალ.*სერვის.*ოფიცერ',
   },
   {
     id: 'finance-analysis',
     category: 'ფინანსები',
-    label: 'ფინანსური ანალიზი / მართვა',
+    label: 'ფინანსური ანალიზი',
     pattern:
       'ფინანს.*(ანალიტ|ანალიზ|მენეჯერ|დირექტორ|მართვ|სპეციალისტ|კონტროლ)|financial.*(analyst|manager|controller)|(^|[^ა-ჰa-z])cfo([^ა-ჰa-z]|$)|ხაზინ|ბიუჯეტ|treasury',
   },
@@ -296,7 +296,7 @@ const roleRules = [
   {
     id: 'service-cleaning',
     category: 'მომსახურება',
-    label: 'დასუფთავება / დიასახლისი',
+    label: 'დასუფთავება',
     pattern:
       'დამლაგებელ|დასუფთავ|დიასახლის|მწმენდავ|cleaner|cleaning|housekeep|ქიმწმენდ|dry clean',
   },
@@ -363,7 +363,7 @@ const roleRules = [
   {
     id: 'medical-doctors',
     category: 'სამედიცინო',
-    label: 'ექიმები / კლინიკური საქმე',
+    label: 'ექიმები',
     pattern:
       'ექიმ|doctor|physician|რადიოლოგ|გასტროენტეროლოგ|კარდიოლოგ|ენდოკრინოლოგ|გინეკოლოგ|უროლოგ|ნევროლოგ|პედიატრ|ქირურგ|თერაპევტ|ოფთალმოლოგ|დერმატოლოგ|ალერგოლოგ|ანესთეზიოლოგ|ოტორინოლარინგოლოგ',
   },
@@ -403,7 +403,7 @@ const roleRules = [
   {
     id: 'education-school',
     category: 'განათლება',
-    label: 'სწავლება / რეპეტიტორობა',
+    label: 'სწავლება',
     pattern: 'მასწავლებ|მასწავლებლ|პედაგოგ|რეპეტიტორ|ტუტორ|teacher|tutor',
   },
   {
@@ -470,7 +470,7 @@ const roleRules = [
   {
     id: 'security-monitoring',
     category: 'დაცვა',
-    label: 'ვიდეომონიტორინგი / დაკვირვება',
+    label: 'ვიდეომონიტორინგი',
     pattern: 'მონიტორინგ|კამერებ|მეთვალყურ|cctv|surveillance',
   },
   {

@@ -1102,3 +1102,10 @@ html:root .cv-main .cv-month select {
     display: none !important;
   }
 }
+
+@media print {
+  .cv-shell > .site-footer,
+  .cv-shell > .search-directory {
+    display: none !important;
+  }
+}

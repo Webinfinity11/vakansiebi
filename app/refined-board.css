@@ -97,7 +97,8 @@
 }
 .board-shell.editorial-board.crafted-board.refined-board .discovery-hero,
 .board-shell.editorial-board.crafted-board.refined-board .results-tools,
-.board-shell.editorial-board.crafted-board.refined-board .jobx-footer {
+.board-shell.editorial-board.crafted-board.refined-board .jobx-footer,
+.board-shell .site-footer.jobx-footer {
   background: #f7f8fa;
 }
 .board-shell.editorial-board.crafted-board.refined-board .discovery-hero h1 {
@@ -592,7 +593,8 @@
 }
 
 /* Compact footer, aligned to the same content edges as the search workspace. */
-.board-shell.editorial-board.crafted-board.refined-board .jobx-footer {
+.board-shell.editorial-board.crafted-board.refined-board .jobx-footer,
+.board-shell .site-footer.jobx-footer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: start;
@@ -601,41 +603,41 @@
   margin-top: 28px;
   padding: 20px 0;
 }
-.refined-board .jobx-footer .footer-main {
+.board-shell .jobx-footer .footer-main {
   display: contents;
 }
-.refined-board .jobx-footer .jobx-brand {
+.board-shell .jobx-footer .jobx-brand {
   display: inline-flex;
   width: 102px;
   height: 34px;
   align-self: center;
 }
-.refined-board .jobx-footer .jobx-brand img {
+.board-shell .jobx-footer .jobx-brand img {
   width: 102px;
   height: 34px;
   object-fit: contain;
 }
-.refined-board .jobx-footer nav {
+.board-shell .jobx-footer nav {
   gap: 24px;
   flex-wrap: wrap;
 }
-.refined-board .jobx-footer nav a,
-.refined-board .jobx-footer nav button {
+.board-shell .jobx-footer nav a,
+.board-shell .jobx-footer nav button {
   font-size: 12px;
 }
-.refined-board .jobx-footer .footer-help {
+.board-shell .jobx-footer .footer-help {
   margin: 0;
   max-width: 340px;
 }
-.refined-board .jobx-footer .footer-help summary {
+.board-shell .jobx-footer .footer-help summary {
   font-size: 12px;
   min-height: 44px;
 }
-.refined-board .jobx-footer .footer-help p {
+.board-shell .jobx-footer .footer-help p {
   margin: 8px 0 0;
   font-size: 12px;
 }
-.refined-board .jobx-footer .footer-meta {
+.board-shell .jobx-footer .footer-meta {
   grid-column: 1 / -1;
   margin: 0;
   padding: 8px 0 0;
@@ -647,21 +649,22 @@
   flex-wrap: wrap;
 }
 @media (max-width: 760px) {
-  .board-shell.editorial-board.crafted-board.refined-board .jobx-footer {
+  .board-shell.editorial-board.crafted-board.refined-board .jobx-footer,
+  .board-shell .site-footer.jobx-footer {
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     margin: 24px 16px 0;
     padding: 20px 0;
   }
-  .refined-board .jobx-footer .jobx-brand,
-  .refined-board .jobx-footer .jobx-brand img {
+  .board-shell .jobx-footer .jobx-brand,
+  .board-shell .jobx-footer .jobx-brand img {
     width: 96px;
     height: 32px;
   }
-  .refined-board .jobx-footer nav {
+  .board-shell .jobx-footer nav {
     gap: 8px 24px;
   }
-  .refined-board .jobx-footer .footer-meta {
+  .board-shell .jobx-footer .footer-meta {
     margin-top: 6px;
     padding-top: 12px;
     border-top: 1px solid #e1e5ed;
@@ -722,20 +725,20 @@
 .similar-placeholder i:last-child {
   width: 65%;
 }
-.refined-board .jobx-footer nav a,
-.refined-board .jobx-footer nav button {
+.board-shell .jobx-footer nav a,
+.board-shell .jobx-footer nav button {
   height: 44px;
 }
-.refined-board .jobx-footer nav {
+.board-shell .jobx-footer nav {
   margin: 0;
   justify-content: flex-start;
 }
-.refined-board .jobx-footer .footer-meta {
+.board-shell .jobx-footer .footer-meta {
   width: 100%;
   text-align: left;
 }
 @media (max-width: 760px) {
-  .refined-board .jobx-footer .footer-meta {
+  .board-shell .jobx-footer .footer-meta {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -804,7 +807,7 @@
   position: static;
 }
 /* The supplied PNG already has transparency; remove the footer's CSS backing. */
-.refined-board .jobx-footer .jobx-brand {
+.board-shell .jobx-footer .jobx-brand {
   background: transparent;
   border: 0;
   border-radius: 0;

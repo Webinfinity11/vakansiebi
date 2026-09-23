@@ -28,7 +28,6 @@ export function CompanyIdentity({
   large = false,
   onOpen,
   disabled = false,
-  fallback,
 }: {
   company: string;
   logoUrl?: string;
@@ -37,7 +36,6 @@ export function CompanyIdentity({
   large?: boolean;
   onOpen?: () => void;
   disabled?: boolean;
-  fallback?: 'illustration' | 'initial';
 }) {
   const content = (
     <>
@@ -46,7 +44,6 @@ export function CompanyIdentity({
         url={logoUrl}
         category={category}
         large={large}
-        fallback={fallback}
       />
       <span className="company-identity-name" title={company}>
         {(large ? company : vacancyCardCompany(company)) || 'კომპანია'}

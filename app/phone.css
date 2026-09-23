@@ -1249,3 +1249,10 @@
     flex: 1;
   }
 }
+
+@media (max-width: 760px) {
+  /* Keep the shared footer clear of the vacancy's fixed apply action. */
+  .board-shell.vacancy-page:has(> .vacancy-mobile-action) > .site-footer {
+    margin-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+}

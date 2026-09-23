@@ -3164,6 +3164,7 @@
 .board-shell .category-options .check-row,
 .mobile-filters-sheet .category-options .check-row {
   position: relative;
+  align-items: baseline;
   min-height: 40px;
   gap: 9px;
   padding: 7px 9px;
@@ -3171,6 +3172,8 @@
 }
 .category-options .category-icon {
   flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 1px;
   color: #70809b;
 }
 .category-options .check-row:has(input:checked) .category-icon {
@@ -3194,6 +3197,11 @@
 }
 .category-options .facet-count {
   min-width: 24px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: #70809b;
   text-align: right;
 }
 
@@ -4172,7 +4180,7 @@
 /* Children share the category radios, with compact inset rows. */
 .board-shell .subcategory-options {
   min-width: 0;
-  margin: 3px 0 6px 18px;
+  margin: 3px 0 6px 27px;
   padding: 0 0 0 6px;
   border: 0;
   border-left: 1px solid #dce2ec;
@@ -4191,6 +4199,11 @@
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
+}
+.board-shell .subcategory-options .check-row:has(input[value='']:checked) {
+  color: #55575a;
+  background: transparent;
+  box-shadow: none;
 }
 .board-shell .subcategory-options .facet-count {
   flex-shrink: 0;

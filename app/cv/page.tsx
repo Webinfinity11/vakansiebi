@@ -1,3 +1,4 @@
+import { ServerSiteFooter } from '../server-site-footer';
 import type { Metadata } from 'next';
 import { shareImage } from '../../lib/seo';
 import { PublicHeader } from '../public-header';
@@ -17,6 +18,7 @@ export default function CvPage() {
     <div className="board-shell cv-shell">
       <PublicHeader />
       <CvBuilder />
+      <ServerSiteFooter />
     </div>
   );
 }
