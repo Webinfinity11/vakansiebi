@@ -1,9 +1,9 @@
 import { siteUrl } from '../seo';
-import { landingFor, landingPath } from '../seo-landing';
+import { eligibleLandings, landingFor, landingPath } from '../seo-landing';
 import { vacancyPath } from '../vacancy-navigation';
 import { employerPages } from './employers';
 import {
-  landingCounts,
+  readLandingSnapshot,
   newest,
   publicVacancyDatesOrLast,
 } from './sitemap-data';
@@ -15,7 +15,9 @@ export function pagesEntries() {
 }
 
 export async function searchesEntries() {
-  const rows = await landingCounts();
+  const { rows: counts, computedAt } = await readLandingSnapshot();
+  const rows = eligibleLandings(counts);
+  if (!rows.length) throw new Error('No eligible landing counts');
   const paths = rows
     .map(({ category, city, trait, role }) =>
       landingPath({ category, city, trait, role }),
@@ -24,9 +26,7 @@ export async function searchesEntries() {
     .filter(
       (path) => !!landingFor(new URLSearchParams(path.split('?')[1] || '')),
     );
-  // The list itself has no single natural "changed at": it is a materialized
-  // count of live vacancies, re-verified whenever this route rebuilds.
-  const lastModified = new Date();
+  const lastModified = computedAt;
   return [...new Set(paths)]
     .sort()
     .map((path) => ({ url: siteUrl + path, lastModified }));

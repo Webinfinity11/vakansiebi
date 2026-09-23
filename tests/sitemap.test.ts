@@ -137,6 +137,52 @@ void test('an oversized catalogue is truncated to 50000 URLs', async () => {
   assert.ok(!body.includes('<loc>https://jobx.ge/companies/50000</loc>'));
 });
 
+void test('categories sitemap reads stored counts and uses curated fallback for stale, empty or thin snapshots', async (t) => {
+  const { db } = await import('../lib/server/db');
+  const { landingLinks } = await import('../lib/seo-landing');
+  const previous = process.env.DATABASE_URL;
+  process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
+  const computedAt = new Date(Date.now() - 60_000);
+  const row = {
+    category: null,
+    city: 'თბილისი',
+    trait: null,
+    role: null,
+    count: 10,
+    computed_at: computedAt,
+  };
+  let rows = [row];
+  t.mock.method(db(), 'query', async () => ({ rows }));
+  try {
+    const fresh = await categoriesGET();
+    const body = await fresh.text();
+    assert.equal(fresh.headers.get('Cache-Control'), sitemapCacheControl);
+    assert.equal(body.match(/<loc>/g)?.length, 1);
+    assert.ok(body.includes(computedAt.toISOString()));
+    for (const unavailable of [
+      [],
+      [{ ...row, count: 9 }],
+      [{ ...row, computed_at: new Date(Date.now() - 86_400_001) }],
+    ]) {
+      rows = unavailable;
+      const response = await categoriesGET();
+      assert.equal(response.headers.get('Cache-Control'), 'no-store');
+      assert.equal(
+        (await response.text()).match(/<loc>/g)?.length,
+        landingLinks().length,
+      );
+    }
+    rows = [row];
+    assert.equal(
+      (await categoriesGET()).headers.get('Cache-Control'),
+      sitemapCacheControl,
+    );
+  } finally {
+    if (previous === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous;
+  }
+});
+
 void test(
   'landing census agrees with actual filtered results on the local database',
   { skip: process.env.RUN_DB_TESTS !== '1' },
@@ -145,6 +191,7 @@ void test(
     assert.equal(new URL(process.env.DATABASE_URL!).pathname, '/ertad_test');
     const { allLandingCounts } = await import('../lib/server/sitemap-data');
     const { searchPlan } = await import('../lib/server/search-plan');
+    const { refreshLandingCounts } = await import('../worker/landing-counts');
     const { db } = await import('../lib/server/db');
     const { landingPath, eligibleLandings } =
       await import('../lib/seo-landing');
@@ -157,6 +204,7 @@ void test(
         '',
         'სამგორი',
         'თბილისი',
+        ...Array<string>(10).fill('თბილისი'),
       ]) {
         const id = randomUUID();
         ids.push(id);
@@ -187,6 +235,7 @@ void test(
           [id, vacancy.url, vacancy],
         );
       }
+      await refreshLandingCounts({ force: true });
       const rows = await allLandingCounts();
       // Cover every dimension, zero counts and nonzero combinations; the fixture
       // includes aliases, multi-city text and city fallbacks.
@@ -218,6 +267,7 @@ void test(
         [ids],
       );
       await db().query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [ids]);
+      await refreshLandingCounts({ force: true });
       await db().end();
     }
   },

@@ -12,6 +12,7 @@ import { purgeEnded } from './purge';
 import { purgeResumes } from '../lib/server/resumes';
 import { failureNeedsPerson, timeoutsBeforeAlarm } from './http';
 import { rollupAnalytics } from '../lib/server/analytics';
+import { refreshLandingCounts } from './landing-counts';
 let stopped = false;
 let lastPurge = 0;
 process.on('SIGTERM', () => {
@@ -149,6 +150,14 @@ try {
           error instanceof Error ? error.message : error,
         ),
       );
+    // Check persisted freshness after each import cycle, including --once jobs.
+    // The database lock and hourly gate coordinate parallel worker processes.
+    await refreshLandingCounts().catch((error) =>
+      console.warn(
+        'Landing counts refresh skipped:',
+        error instanceof Error ? error.message : error,
+      ),
+    );
     if (purged?.applied && purged.expired + purged.removed > 0)
       console.log(
         `Purged ended vacancies: ${purged.expired} expired, ${purged.removed} removed`,

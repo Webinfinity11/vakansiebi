@@ -105,29 +105,81 @@ void test('every landing has a distinct heading and description, including condi
   for (const row of rows) assert.ok(!landingCopy(row).includes('undefined'));
 });
 
-void test('landing census groups once, coalesces readers and retries failed reads', async (t) => {
+void test('stored counts use one SELECT and reject empty, stale and failed reads', async (t) => {
   const { db } = await import('../lib/server/db');
-  const { allLandingCounts } = await import('../lib/server/sitemap-data');
+  const { allLandingCounts, landingCountsMaxAgeMs } =
+    await import('../lib/server/sitemap-data');
+  const previous = process.env.DATABASE_URL;
+  process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
+  const now = Date.now();
+  const row = {
+    category: 'გაყიდვები',
+    city: null,
+    trait: null,
+    role: null,
+    count: 12,
+    computed_at: new Date(now),
+  };
+  let rows = [row];
+  let fail = false;
+  const statements: string[] = [];
+  t.mock.method(db(), 'query', async (query: { text: string }) => {
+    statements.push(query.text);
+    if (fail) throw new Error('unavailable');
+    return { rows };
+  });
+  try {
+    assert.deepEqual(await allLandingCounts(now), [row]);
+    assert.equal(statements.length, 1);
+    assert.match(statements[0], /FROM landing_counts$/);
+    assert.doesNotMatch(statements[0], /jobs|searchable/);
+    assert.deepEqual(await allLandingCounts(now + landingCountsMaxAgeMs), [
+      row,
+    ]);
+    await assert.rejects(
+      allLandingCounts(now + landingCountsMaxAgeMs + 1),
+      /stale/,
+    );
+    rows = [];
+    await assert.rejects(allLandingCounts(now), /unavailable/);
+    rows = [row];
+    fail = true;
+    await assert.rejects(allLandingCounts(now), /unavailable/);
+    fail = false;
+    assert.deepEqual(await allLandingCounts(now), [row], 'failure is retried');
+  } finally {
+    if (previous === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous;
+  }
+});
+
+void test('background census groups once and publishes atomically, only when due', async (t) => {
+  const { db } = await import('../lib/server/db');
+  const { refreshLandingCounts } = await import('../worker/landing-counts');
   const previous = process.env.DATABASE_URL;
   process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
   const statements: string[] = [];
+  let fresh = false;
+  let locked = true;
   let fail = false;
   let releases = 0;
-  const client = {
+  t.mock.method(db(), 'connect', async () => ({
     async query(sql: string) {
       statements.push(sql);
-      if (fail && sql.startsWith('WITH')) throw new Error('unavailable');
+      if (sql.includes('pg_try_advisory_xact_lock'))
+        return { rows: [{ ok: locked }] };
+      if (sql.startsWith('SELECT 1 FROM landing_counts'))
+        return { rowCount: fresh ? 1 : 0 };
+      if (fail && sql.includes('INSERT INTO landing_counts'))
+        throw new Error('write failed');
       return { rows: [] };
     },
     release() {
       releases++;
     },
-  };
-  t.mock.method(db(), 'connect', async () => client);
+  }));
   try {
-    const first = allLandingCounts(0);
-    assert.equal(first, allLandingCounts(1));
-    await first;
+    assert.ok((await refreshLandingCounts())! > 100);
     const reads = statements.filter((sql) => sql.startsWith('WITH'));
     assert.ok(reads.length > 10);
     assert.match(reads[0], /row_number\(\) OVER/);
@@ -135,51 +187,52 @@ void test('landing census groups once, coalesces readers and retries failed read
       reads.slice(1).every((sql) => !sql.includes('row_number() OVER')),
     );
     assert.ok(reads.slice(1).every((sql) => sql.includes('::uuid[]')));
+    assert.ok(statements.includes('DELETE FROM landing_counts'));
+    assert.equal(statements.at(-1), 'COMMIT');
+    statements.length = 0;
+    fresh = true;
+    assert.equal(await refreshLandingCounts(), null);
+    assert.ok(!statements.some((sql) => sql.startsWith('WITH')));
+    statements.length = 0;
+    locked = false;
+    assert.equal(await refreshLandingCounts(), null);
+    assert.ok(!statements.some((sql) => sql.includes('FROM landing_counts')));
+    locked = true;
     fail = true;
-    await assert.rejects(allLandingCounts(300_001), /unavailable/);
-    fail = false;
-    await allLandingCounts(300_002);
-    assert.equal(releases, 3);
-    assert.ok(statements.includes('ROLLBACK'));
+    await assert.rejects(refreshLandingCounts({ force: true }), /write failed/);
+    assert.equal(statements.at(-1), 'ROLLBACK');
+    assert.equal(releases, 4);
   } finally {
     if (previous === undefined) delete process.env.DATABASE_URL;
     else process.env.DATABASE_URL = previous;
   }
 });
 
-void test('landing census has one total deadline, not a fresh timeout per filter', async (t) => {
+void test('background census has one bounded total deadline and rolls back on timeout', async (t) => {
   const { db } = await import('../lib/server/db');
-  const { allLandingCounts } = await import('../lib/server/sitemap-data');
+  const { refreshLandingCounts, censusBudgetMs } =
+    await import('../worker/landing-counts');
   const previous = process.env.DATABASE_URL;
   process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
   const statements: string[] = [];
-  let released = false;
   let clock = 0;
-  t.mock.method(Date, 'now', () => (clock += 2_000));
+  let released = false;
+  t.mock.method(Date, 'now', () => (clock += censusBudgetMs / 2));
   t.mock.method(db(), 'connect', async () => ({
     async query(sql: string) {
       statements.push(sql);
-      return { rows: [] };
+      if (sql.includes('pg_try_advisory_xact_lock'))
+        return { rows: [{ ok: true }] };
+      return { rows: [], rowCount: 0 };
     },
     release() {
       released = true;
     },
   }));
   try {
-    const { censusBudgetMs } = await import('../lib/server/sitemap-data');
-    // The mocked clock jumps two seconds per reading, so the whole budget is
-    // spent after that many passes however many filters are still waiting.
-    const passes = censusBudgetMs / 2_000;
-    await assert.rejects(allLandingCounts(900_000), /deadline exceeded/);
-    assert.ok(
-      statements.filter((sql) => sql.startsWith('WITH')).length < passes,
-    );
-    assert.ok(
-      statements.includes(
-        `SET LOCAL statement_timeout = '${censusBudgetMs - 2_000}ms'`,
-      ),
-    );
-    assert.ok(statements.includes("SET LOCAL statement_timeout = '2000ms'"));
+    await assert.rejects(refreshLandingCounts(), /deadline exceeded/);
+    assert.equal(statements.filter((sql) => sql.startsWith('WITH')).length, 1);
+    assert.ok(!statements.includes('DELETE FROM landing_counts'));
     assert.equal(statements.at(-1), 'ROLLBACK');
     assert.equal(released, true);
   } finally {

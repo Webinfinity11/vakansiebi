@@ -1,14 +1,6 @@
 import { db } from './db';
 import { searchPlan } from './search-plan';
-import { cities } from '../cities';
-import {
-  traitKeys,
-  traits,
-  eligibleLandings,
-  type LandingCount,
-} from '../seo-landing';
-import { categories } from '../types';
-import { roleVocabulary } from '../search-language';
+import { eligibleLandings, type LandingCount } from '../seo-landing';
 
 export type DatedVacancy = { id: string; title: string; lastModified: Date };
 
@@ -65,121 +57,29 @@ export function newest(dates: Iterable<Date>) {
   return latest;
 }
 
-/* Count the same canonical records as searchPlan. Intersecting independent
-   filters preserves city text fallbacks, multi-city jobs and role synonyms;
-   title ILIKE and a first-city approximation do not. The canonical group rank
-   is independent of filters, so every pass uses the same record identifiers. */
 export type { LandingCount } from '../seo-landing';
+export const landingCountsMaxAgeMs = 24 * 60 * 60 * 1000;
 
-/* Production carries twice the rows of the local copy and answers through a
-   pooler, so the eight seconds this census was first given ran out on every
-   cold crawl and the leaf fell back to the curated list. A sitemap is read by
-   crawlers, not by readers waiting on a page: twenty seconds spent once an hour
-   is cheaper than a catalogue Google never sees. */
-export const censusBudgetMs = 20_000;
-async function readLandingCounts(): Promise<LandingCount[]> {
-  const deadline = Date.now() + censusBudgetMs;
-  const client = await db().connect();
-  let discard = false;
-  try {
-    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
-    await client.query("SET LOCAL work_mem = '32MB'");
-    // Group ranking is independent of city/trait/role. Compute it once, then
-    // apply the unchanged search filters only to those canonical identifiers.
-    const matching = async (
-      params: URLSearchParams,
-      canonicalIds?: string[],
-    ) => {
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) throw new Error('Landing census deadline exceeded');
-      await client.query(`SET LOCAL statement_timeout = '${remaining}ms'`);
-      const plan = searchPlan(params, false, {
-        grouped: canonicalIds === undefined,
-        jobIds: canonicalIds,
-      });
-      return (
-        await client.query<{ id: string; category: string }>(
-          `${plan.cte} SELECT j.id,j.p_category AS category FROM searchable j WHERE ${plan.where}`,
-          plan.args,
-        )
-      ).rows;
-    };
-    const base = await matching(new URLSearchParams());
-    const canonicalIds = base.map((row) => row.id);
-    const byCity = new Map<string, Set<string>>();
-    for (const city of cities)
-      byCity.set(
-        city,
-        new Set(
-          (await matching(new URLSearchParams({ city }), canonicalIds)).map(
-            (r) => r.id,
-          ),
-        ),
-      );
-    const rows: LandingCount[] = [];
-    const countPlaces = (
-      jobs: typeof base,
-      category: string | null,
-      trait: LandingCount['trait'],
-      role: string | null = null,
-    ) => {
-      if (category || trait || role)
-        rows.push({ category, city: null, trait, role, count: jobs.length });
-      for (const city of cities)
-        rows.push({
-          category,
-          city,
-          trait,
-          role,
-          count: jobs.filter((job) => byCity.get(city)!.has(job.id)).length,
-        });
-    };
-    for (const trait of [null, ...traitKeys]) {
-      const jobs = trait
-        ? await matching(
-            new URLSearchParams([[...traits[trait].param]]),
-            canonicalIds,
-          )
-        : base;
-      countPlaces(jobs, null, trait);
-      for (const category of categories.filter((name) => name !== 'სხვა'))
-        countPlaces(
-          jobs.filter((job) => job.category === category),
-          category,
-          trait,
-        );
-    }
-    for (const { label } of roleVocabulary)
-      countPlaces(
-        await matching(new URLSearchParams({ q: label }), canonicalIds),
-        null,
-        null,
-        label,
-      );
-    await client.query('COMMIT');
-    return rows;
-  } catch (error) {
-    try {
-      await client.query('ROLLBACK');
-    } catch {
-      discard = true;
-    }
-    throw error;
-  } finally {
-    client.release(discard);
-  }
+/** One small SELECT, with no job search or census on the request path. */
+export async function readLandingSnapshot(now = Date.now()) {
+  const query = {
+    text: 'SELECT category, city, trait, role, count, computed_at FROM landing_counts',
+    query_timeout: 2_000,
+  };
+  const result = await db().query<LandingCount & { computed_at: Date }>(query);
+  if (!result.rows.length) throw new Error('Landing counts unavailable');
+  const computedAt = new Date(
+    Math.min(...result.rows.map((row) => new Date(row.computed_at).getTime())),
+  );
+  if (
+    !Number.isFinite(computedAt.getTime()) ||
+    now - computedAt.getTime() > landingCountsMaxAgeMs
+  )
+    throw new Error('Landing counts stale');
+  return { rows: result.rows, computedAt };
 }
-
-let countsHeld: { at: number; value: Promise<LandingCount[]> } | null = null;
-// Shared by the HTML directory and sitemap; coalesce concurrent reads.
-export function allLandingCounts(now = Date.now()) {
-  if (countsHeld && now - countsHeld.at < 300_000) return countsHeld.value;
-  const value = readLandingCounts();
-  countsHeld = { at: now, value };
-  void value.catch(() => {
-    if (countsHeld?.value === value) countsHeld = null;
-  });
-  return value;
+export async function allLandingCounts(now = Date.now()) {
+  return (await readLandingSnapshot(now)).rows;
 }
 export async function landingCounts() {
   return eligibleLandings(await allLandingCounts());
