@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState, type MouseEvent } from 'react';
-import { Bookmark, Search, Plus, FileText } from 'lucide-react';
+import { Bookmark, Search, Plus, FilePlus2 } from 'lucide-react';
 import { Brand } from './brand';
 import { ThemeToggle } from './theme-toggle';
 import { enterTab } from '@/lib/vacancy-navigation';
@@ -27,12 +27,15 @@ function localAction(
 export function PublicHeader({
   savedCount,
   savedOnly = false,
+  showSearch = true,
   onVacancies,
   onSaved,
   onSearch,
 }: {
   savedCount?: number;
   savedOnly?: boolean;
+  /* The board carries the search field itself, so the masthead does not repeat it. */
+  showSearch?: boolean;
   onVacancies?: () => void;
   onSaved?: () => void;
   onSearch?: () => void;
@@ -80,16 +83,18 @@ export function PublicHeader({
           </Link>
         </nav>
         <div className="header-actions">
-          <Link
-            href="/#search-heading"
-            prefetch={false}
-            className="header-search"
-            aria-label="ძიება"
-            onClick={(event) => localAction(event, onSearch)}
-          >
-            <Search size={18} />
-            <span>ძებნა</span>
-          </Link>
+          {showSearch && (
+            <Link
+              href="/#search-heading"
+              prefetch={false}
+              className="header-search"
+              aria-label="ძიება"
+              onClick={(event) => localAction(event, onSearch)}
+            >
+              <Search size={18} />
+              <span>ძებნა</span>
+            </Link>
+          )}
           <Link
             href="/?saved=1"
             prefetch={false}
@@ -110,7 +115,7 @@ export function PublicHeader({
             aria-label="რეზიუმეს შექმნა"
             title="რეზიუმეს შექმნა"
           >
-            <FileText size={18} />
+            <FilePlus2 size={18} />
             <span>CV შექმნა</span>
           </Link>
 

@@ -1484,6 +1484,9 @@ export default function JobBoard({
       <PublicHeader
         savedCount={saved.length}
         savedOnly={savedOnly}
+        /* The field is right below the masthead here; two searches on one
+           screen made the reader choose between identical doors. */
+        showSearch={savedOnly}
         onVacancies={() => {
           reset();
           setSavedOnly(false);

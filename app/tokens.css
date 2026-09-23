@@ -5,6 +5,12 @@
    Main semantic names come first; color-<hex>-<role> preserves the remaining legacy shades.
    Aliases use the final globals.css + generated dark cascade, not shadcn defaults. */
 :root {
+  /* Theme-specific masthead and raised shortcut surfaces. */
+  --jobx-hero-start: #1032a5;
+  --jobx-hero-middle: #2457e6;
+  --jobx-hero-end: #0e8de9;
+  --jobx-surface-raised: #fff;
+
   /* color */
   --jobx-surface: var(--card);
   --jobx-white-fixed-keyword: white;
@@ -241,10 +247,15 @@
 }
 
 :root[data-theme='dark'] {
+  --jobx-hero-start: #132747;
+  --jobx-hero-middle: #1c3b70;
+  --jobx-hero-end: #205477;
+  --jobx-surface-raised: #243248;
+
   --jobx-accent-alt: #6f93ff;
-  --jobx-text-muted: #969ca6;
+  --jobx-text-muted: #b2bccb;
   --jobx-surface-keyword: #131b2c;
-  --jobx-text-placeholder: #969ca6;
+  --jobx-text-placeholder: #aab6c8;
   --jobx-accent-tint: #1c2745;
   --jobx-accent-tint-soft: #1c2a45;
   --jobx-color-7c8aa0-text: #929baa;
@@ -274,7 +285,7 @@
   --jobx-color-5e6166-text: #a5aab3;
   --jobx-color-cfd1d4-surface: #3c4453;
   --jobx-text: #aebcd5;
-  --jobx-text-secondary: #999ea8;
+  --jobx-text-secondary: #b2bccb;
   --jobx-page-cool: #0e1523;
   --jobx-color-dce4f6-surface: #242b3d;
   --jobx-color-4c5d7b-text: #9ba6bb;
@@ -290,7 +301,7 @@
   --jobx-color-536078-text: #9ca5b5;
   --jobx-color-64676c-text: #9fa4ae;
   --jobx-color-e1e2e3-surface: #303642;
-  --jobx-border: #283244;
+  --jobx-border: #6d7c94;
   --jobx-color-a3a7af-border: #5a6272;
   --jobx-color-edf0f5-surface: #212935;
   --jobx-color-606c80-text: #949daa;
@@ -299,7 +310,7 @@
   --jobx-color-e2e7f0-surface: #262f3f;
   --jobx-color-647187-text: #939baa;
   --jobx-color-223554-text: #aebdd5;
-  --jobx-border-soft: #263146;
+  --jobx-border-soft: #6d7c94;
   --jobx-color-253650-text: #c1cddd;
   --jobx-color-e2e7ef-surface: #27303f;
   --jobx-color-315590-text: #abbcd8;
@@ -315,7 +326,7 @@
   --jobx-color-96b5ec-text: #b3c9ef;
   --jobx-color-e5edfc-surface: #1f2b42;
   --jobx-color-57708e-text: #8b9cb1;
-  --jobx-border-strong: #2f3748;
+  --jobx-border-strong: #6d7c94;
   --jobx-color-34415a-text: #b8c0d1;
   --jobx-color-70809b-text: #909bac;
   --jobx-page-warm: #0e1523;
@@ -328,7 +339,7 @@
   --jobx-color-d6e4fa-surface: #1f2d42;
   --jobx-color-26334d-text: #c4ccdd;
   --jobx-color-f4f7fd-surface: #212b40;
-  --jobx-color-dce2ec-surface: #2a3444;
+  --jobx-color-dce2ec-surface: #6d7c94;
   --jobx-color-e2e8f2-surface: #232e40;
   --jobx-danger-text-muted: #d98f8c;
   --jobx-color-e9ecf3-surface: #232a39;
@@ -340,9 +351,9 @@
   --jobx-color-8a94a8-text: #939aaa;
   --jobx-color-f7f8fa-surface: #1e222b;
   --jobx-color-f2f4f8-surface: #1e2431;
-  --jobx-color-e1e5ed-surface: #2a313f;
+  --jobx-color-e1e5ed-surface: #6d7c94;
   --jobx-color-d1dfff-surface: #1c2845;
-  --jobx-color-647089-text: #929aaa;
+  --jobx-color-647089-text: #b2bccb;
   --jobx-danger-text: #ea837b;
   --jobx-color-e6eaf0-surface: #272f3a;
   --jobx-text-strong: #afbcd5;

@@ -1877,10 +1877,10 @@
     box-shadow: 0 4px 16px #05070a0d;
   }
 }
-:root[data-theme='dark'][data-theme='dark']
+:root[data-theme='dark']
   .board-shell.editorial-board.crafted-board
   .header-search {
-  color: #bccbe6;
+  color: #b9c9e6;
 }
 :root[data-theme='dark'] .board-shell .company-page-link {
   color: var(--jobx-accent);
@@ -2461,6 +2461,16 @@
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-skeleton > span {
   background: url('/brand/jobx-mark.png') center / 34px no-repeat var(--jobx-accent-tint-soft);
 }
+:root[data-theme='dark']
+  .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-hero {
+  background-image: linear-gradient(
+    115deg,
+    var(--jobx-hero-start),
+    var(--jobx-hero-middle) 65%,
+    var(--jobx-hero-end)
+  ) !important;
+}
 :root[data-theme='dark'] .similar-placeholder > span {
   background: url('/brand/jobx-mark.png') center / 30px no-repeat var(--jobx-accent-tint-soft);
 }
@@ -2553,6 +2563,28 @@
 :root[data-theme='dark'] .landing-copy {
   color: var(--jobx-color-6a7588-text);
 }
+:root[data-theme='dark']
+  .board-shell.editorial-board.crafted-board.refined-board .discovery-hero {
+  border-color: var(--jobx-border);
+}
+:root[data-theme='dark']
+  .board-shell.editorial-board.crafted-board.refined-board .discovery-shortcut {
+  background: var(--jobx-surface-raised);
+  border: 1px solid var(--jobx-border);
+}
+:root[data-theme='dark']
+  .board-shell.editorial-board.crafted-board.refined-board .discovery-shortcut:is(:hover, [aria-pressed='true']) {
+  background: var(--jobx-accent-tint);
+  border-color: var(--jobx-accent);
+}
+:root[data-theme='dark'] .filter-help,
+:root[data-theme='dark'] .filter-subcategory-help {
+  color: var(--jobx-text-secondary);
+}
+:root[data-theme='dark'] .vacancy-overview,
+:root[data-theme='dark'] .vacancy-description-panel {
+  border-color: var(--jobx-border);
+}
 
 /* ── from app/public-header.css ── */
 :root[data-theme='dark'] .board-shell .topbar.public-header {
@@ -2578,6 +2610,13 @@
 }
 :root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav {
   background: var(--jobx-color-f2f4f8-surface);
+}
+:root[data-theme='dark'] .board-shell .topbar.public-header .header-cv {
+  color: var(--jobx-accent-fixed);
+  background: var(--jobx-accent-tint);
+}
+:root[data-theme='dark'] .board-shell .topbar.public-header .header-cv:hover {
+  background: var(--jobx-accent-tint-soft);
 }
 :root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav.is-active {
   color: var(--jobx-accent);

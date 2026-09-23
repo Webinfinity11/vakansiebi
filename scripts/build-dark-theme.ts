@@ -255,6 +255,8 @@ function readBlocks(css: string): Block[] {
 }
 
 function prefix(selector: string) {
+  // Already scoped author rules are emitted verbatim, including commas inside :is().
+  if (selector.includes("[data-theme='dark']")) return selector;
   const scope = ":root[data-theme='dark']";
   return selector
     .split(',')
@@ -342,7 +344,9 @@ function build() {
       /* The hero element itself only when the selector ends on it: `.discovery-hero .searchbar`
          contains the name too, and matching that kept the search button's light blue while its
          white text was mapped to navy (2.9:1). */
-      const masthead = block.selector
+      // An explicit dark palette is an author decision, not a light color to invert.
+      const explicitDark = block.selector.includes("[data-theme='dark']");
+      const masthead = !explicitDark && block.selector
         .split(',')
         .every((part) =>
           mastheadOwn.some((own) =>
@@ -395,7 +399,7 @@ function build() {
               ? 'surface'
               : 'border';
         kept.push(
-          `  ${property}:${value.replace(/var\(--jobx-[a-z0-9-]+\)|#[0-9a-fA-F]{3,8}\b|\b(?:white|black)\b/g, (part) => (part.startsWith('var(') ? part : darken(part, role)))};`,
+          `  ${property}:${value.replace(/var\(--jobx-[a-z0-9-]+\)|#[0-9a-fA-F]{3,8}\b|\b(?:white|black)\b/g, (part) => (explicitDark || part.startsWith('var(') ? part : darken(part, role)))};`,
         );
       }
       if (!kept.length) continue;

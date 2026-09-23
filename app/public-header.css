@@ -97,6 +97,16 @@
 .board-shell .topbar.public-header .saved-nav {
   background: var(--jobx-color-f2f4f8-surface);
 }
+/* The CV builder is the one thing here a reader cannot get anywhere else, and
+   as another grey link nobody saw it. Tinted, not shouted: the blue is the
+   accent already used for what the site wants read first. */
+.board-shell .topbar.public-header .header-cv {
+  color: var(--jobx-accent-fixed);
+  background: var(--jobx-accent-tint);
+}
+.board-shell .topbar.public-header .header-cv:hover {
+  background: var(--jobx-accent-tint-soft);
+}
 .board-shell .topbar.public-header .saved-nav.is-active {
   color: var(--jobx-accent);
   background: var(--jobx-accent-tint);
