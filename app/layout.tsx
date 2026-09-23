@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { GoogleAnalytics } from './google-analytics';
 import { YandexMetrika } from './yandex-metrika';
+import './tokens.css';
 import './globals.css';
 import './board.css';
 import './phone.css';

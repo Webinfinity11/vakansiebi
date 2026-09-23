@@ -8,10 +8,10 @@
   right: 0;
   top: 100%;
   z-index: 30;
-  margin-top: 6px;
-  background: #fff;
+  margin-top: var(--jobx-space-6px);
+  background: var(--jobx-surface);
   border: 1px solid #d9e0ec;
-  border-radius: 12px;
+  border-radius: var(--jobx-radius-12px);
   box-shadow: 0 14px 34px #18243b1f;
   overflow: hidden;
   text-align: left;
@@ -22,28 +22,28 @@
      long title used to be cut off flat against the panel's edge instead of
      ending in an ellipsis. */
   grid-template-columns: minmax(0, 1fr);
-  gap: 2px;
-  padding: 6px;
+  gap: var(--jobx-space-2px);
+  padding: var(--jobx-space-6px);
 }
 .search-suggest [role='option'] {
   display: flex;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--jobx-space-12px);
   width: 100%;
   min-height: 36px;
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: var(--jobx-space-6px) var(--jobx-space-10px);
+  border-radius: var(--jobx-radius-8px);
   font: inherit;
-  font-size: 14px;
-  color: #18243b;
+  font-size: var(--jobx-font-size-14px);
+  color: var(--jobx-text);
   text-align: left;
   background: transparent;
 }
 .search-suggest [role='option']:hover,
 .search-suggest [role='option'][aria-selected='true'] {
-  background: #edf2ff;
+  background: var(--jobx-accent-tint);
 }
 .search-suggest .suggest-value {
   min-width: 0;
@@ -53,48 +53,48 @@
 }
 .search-suggest mark {
   background: transparent;
-  color: #2457e6;
+  color: var(--jobx-accent);
   font-weight: 700;
 }
 @media (max-width: 760px) {
   .search-suggest {
-    margin-top: 4px;
-    border-radius: 10px;
+    margin-top: var(--jobx-space-4px);
+    border-radius: var(--jobx-radius-10px);
   }
   .search-suggest [role='option'] {
     min-height: 44px;
-    font-size: 15px;
+    font-size: var(--jobx-font-size-15px);
   }
 }
 
 /* Each field has its own boundary and focus; suggestions belong directly to the text field. */
 .board-shell .discovery-hero .search-panel {
-  padding: 12px;
+  padding: var(--jobx-space-12px);
 }
 .board-shell .discovery-hero .searchbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 210px auto;
   align-items: center;
   padding: 0;
-  gap: 10px;
+  gap: var(--jobx-space-10px);
 }
 .board-shell .search-query-field {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--jobx-space-8px);
   min-width: 0;
-  padding: 0 12px;
-  border: 1px solid #d7e0ee;
-  border-radius: 10px;
-  background: #f7f9fc;
+  padding: 0 var(--jobx-space-12px);
+  border: 1px solid var(--jobx-color-d7e0ee-surface);
+  border-radius: var(--jobx-radius-10px);
+  background: var(--jobx-page-blue);
 }
 .board-shell .search-query-field > svg {
   flex-shrink: 0;
-  color: #60748f;
+  color: var(--jobx-color-60748f-text);
 }
 .board-shell .search-query-field:has(input:focus) {
-  outline: 2px solid #2457e6;
+  outline: 2px solid var(--jobx-accent);
   outline-offset: 2px;
 }
 .board-shell .discovery-hero .search-query-field input {
@@ -105,7 +105,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: 16px;
+  font-size: var(--jobx-font-size-16px);
 }
 .board-shell .search-query-field input::-webkit-search-cancel-button {
   -webkit-appearance: none;
@@ -118,18 +118,18 @@
   width: 44px;
   height: 44px;
   margin-right: -8px;
-  border-radius: 8px;
+  border-radius: var(--jobx-radius-8px);
   background: transparent;
-  color: #60748f;
+  color: var(--jobx-color-60748f-text);
 }
 .board-shell .discovery-hero .searchbar .search-city {
   min-width: 0;
   min-height: 52px;
   margin: 0;
-  padding: 0 10px;
-  border: 1px solid #d7e0ee;
-  border-radius: 10px;
-  background: #f7f9fc;
+  padding: 0 var(--jobx-space-10px);
+  border: 1px solid var(--jobx-color-d7e0ee-surface);
+  border-radius: var(--jobx-radius-10px);
+  background: var(--jobx-page-blue);
 }
 .board-shell .discovery-hero .searchbar .search-city .choice {
   width: 100%;
@@ -177,8 +177,8 @@
   overflow: visible;
   clip-path: none;
   white-space: normal;
-  margin-top: 6px;
-  font-size: 13px;
+  margin-top: var(--jobx-space-6px);
+  font-size: var(--jobx-font-size-13px);
   color: #5a6478;
 }
 .board-shell .results-head p.search-scope:empty,
@@ -187,7 +187,7 @@
 }
 .board-shell .results-head p.search-scope button {
   font: inherit;
-  color: #2457e6;
+  color: var(--jobx-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
   background: none;
@@ -199,46 +199,46 @@
 /* ---------- The panel before the first keystroke ---------- */
 .search-start {
   display: grid;
-  gap: 14px;
-  padding: 14px;
+  gap: var(--jobx-space-14px);
+  padding: var(--jobx-space-14px);
   max-height: min(66vh, 520px);
   overflow: auto;
   overscroll-behavior: contain;
 }
 .search-start h2 {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--jobx-font-size-12px);
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: #6a7588;
+  color: var(--jobx-color-6a7588-text);
 }
 .search-start-recent header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
+  gap: var(--jobx-space-12px);
+  margin-bottom: var(--jobx-space-6px);
 }
 .search-start-recent header button {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 6px;
+  gap: var(--jobx-space-5px);
+  padding: var(--jobx-space-4px) var(--jobx-space-6px);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--jobx-radius-8px);
   background: transparent;
   font: inherit;
-  font-size: 12px;
-  color: #6a7588;
+  font-size: var(--jobx-font-size-12px);
+  color: var(--jobx-color-6a7588-text);
   cursor: pointer;
 }
 .search-start-recent header button:hover {
-  color: #18243b;
-  background: #f1f4fa;
+  color: var(--jobx-text);
+  background: var(--jobx-color-f1f4fa-surface);
 }
 .search-start-recent ul {
   display: grid;
-  gap: 1px;
+  gap: var(--jobx-space-1px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -246,32 +246,32 @@
 .search-start-recent li {
   display: flex;
   align-items: center;
-  gap: 4px;
-  border-radius: 9px;
+  gap: var(--jobx-space-4px);
+  border-radius: var(--jobx-radius-9px);
 }
 .search-start-recent li:hover {
-  background: #f4f7fd;
+  background: var(--jobx-color-f4f7fd-surface);
 }
 .search-start-term {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--jobx-space-9px);
   flex: 1;
   min-width: 0;
   min-height: 40px;
-  padding: 6px 8px;
+  padding: var(--jobx-space-6px) var(--jobx-space-8px);
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--jobx-radius-9px);
   background: transparent;
   font: inherit;
-  font-size: 14px;
-  color: #18243b;
+  font-size: var(--jobx-font-size-14px);
+  color: var(--jobx-text);
   text-align: left;
   cursor: pointer;
 }
 .search-start-term svg {
   flex: none;
-  color: #8a94a8;
+  color: var(--jobx-color-8a94a8-text);
 }
 .search-start-term span {
   overflow: hidden;
@@ -284,55 +284,55 @@
   flex: none;
   width: 34px;
   height: 34px;
-  margin-right: 4px;
+  margin-right: var(--jobx-space-4px);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--jobx-radius-8px);
   background: transparent;
-  color: #8a94a8;
+  color: var(--jobx-color-8a94a8-text);
   cursor: pointer;
 }
 .search-start-forget:hover {
-  color: #18243b;
+  color: var(--jobx-text);
   background: #e7ecf6;
 }
 .search-start-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 8px;
+  gap: var(--jobx-space-7px);
+  margin-top: var(--jobx-space-8px);
 }
 .search-start-chips button {
   min-height: 34px;
-  padding: 6px 13px;
+  padding: var(--jobx-space-6px) var(--jobx-space-13px);
   border: 0;
-  border-radius: 999px;
-  background: #f1f4fa;
+  border-radius: var(--jobx-radius-999px);
+  background: var(--jobx-color-f1f4fa-surface);
   font: inherit;
-  font-size: 13px;
-  color: #26334d;
+  font-size: var(--jobx-font-size-13px);
+  color: var(--jobx-color-26334d-text);
   cursor: pointer;
 }
 .search-start-chips button:hover {
   background: #e2e9f7;
-  color: #18243b;
+  color: var(--jobx-text);
 }
 @media (max-width: 760px) {
   .search-start {
-    gap: 16px;
-    padding: 14px 12px;
+    gap: var(--jobx-space-16px);
+    padding: var(--jobx-space-14px) var(--jobx-space-12px);
   }
   .search-start-term {
     min-height: 40px;
-    font-size: 14px;
+    font-size: var(--jobx-font-size-14px);
   }
   /* Three to a row at 390px: a wall of one-per-line reads as a menu to work
      through rather than a handful of ideas to glance at. */
   .search-start-chips {
-    gap: 6px;
+    gap: var(--jobx-space-6px);
   }
   .search-start-chips button {
     min-height: 38px;
-    padding: 6px 11px;
-    font-size: 13px;
+    padding: var(--jobx-space-6px) var(--jobx-space-11px);
+    font-size: var(--jobx-font-size-13px);
   }
 }

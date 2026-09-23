@@ -54,6 +54,10 @@ import { categories, listingSourceNames } from '@/lib/types';
 import { sourceHealth } from '@/lib/scraper-status';
 import { EmployersPanel } from './employers';
 import { AnalyticsPanel } from './analytics';
+import {
+  useVacancyAnalytics,
+  VacancyAnalyticsBlock,
+} from './vacancy-analytics';
 import { ReportsSection } from './reports';
 import { ResumesPanel } from './resumes';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
@@ -428,6 +432,13 @@ export default function AdminPanel() {
     setError('');
   };
   const submission = !!selected?.submitted_at;
+  const vacancyStats = useVacancyAnalytics(
+    [
+      ...(tab === 'submissions' && !loading ? jobs.map((job) => job.id) : []),
+      ...(selected ? [selected.id] : []),
+    ],
+    jobs,
+  );
   const jobList = () => (
     <>
       {loading ? (
@@ -472,6 +483,17 @@ export default function AdminPanel() {
                 </small>
               </div>
               <div className="admin-job-status">
+                {tab === 'submissions' && (
+                  <small
+                    title={
+                      vacancyStats?.error ||
+                      'ნახვები — სულ, შეგროვებული ისტორია'
+                    }
+                  >
+                    ნახვები (სულ):{' '}
+                    {vacancyStats?.data?.[j.id]?.total.view ?? '—'}
+                  </small>
+                )}
                 {j.submitted_at && j.status === 'pending' ? (
                   <span className="status status-pending">
                     დადასტურებას ელოდება
@@ -1371,6 +1393,10 @@ export default function AdminPanel() {
           </SheetHeader>
           {selected && draft && (
             <div className="edit-body">
+              <VacancyAnalyticsBlock
+                data={vacancyStats?.data?.[selected.id]}
+                error={vacancyStats?.error}
+              />
               {submission && <SubmissionSummary job={selected} draft={draft} />}
               {submission && (
                 <section className="notice placement-choice">

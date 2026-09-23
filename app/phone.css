@@ -19,11 +19,11 @@
 .board-shell .job-new {
   display: inline-flex;
   align-items: center;
-  padding: 3px 7px;
-  border-radius: 999px;
+  padding: var(--jobx-space-3px) var(--jobx-space-7px);
+  border-radius: var(--jobx-radius-999px);
   background: #e3ecff;
   color: #1e4bbf;
-  font-size: 12px;
+  font-size: var(--jobx-font-size-12px);
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: 0.1px;
@@ -41,23 +41,23 @@
 @media (max-width: 760px) {
   /* ---------- Header ---------- */
   .board-shell .header-inner {
-    padding-left: max(18px, env(safe-area-inset-left));
-    padding-right: max(18px, env(safe-area-inset-right));
+    padding-left: max(var(--jobx-space-18px), env(safe-area-inset-left));
+    padding-right: max(var(--jobx-space-18px), env(safe-area-inset-right));
   }
   .board-shell .header-inner {
-    gap: 10px;
+    gap: var(--jobx-space-10px);
   }
   .board-shell .saved-nav {
     min-height: 44px;
-    font-size: 12px;
-    padding: 8px 10px;
-    gap: 6px;
+    font-size: var(--jobx-font-size-12px);
+    padding: var(--jobx-space-8px) var(--jobx-space-10px);
+    gap: var(--jobx-space-6px);
   }
   .board-shell .saved-nav > span {
     display: none;
   }
   .board-shell .saved-nav b {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
 
   /* ---------- Hero ---------- */
@@ -65,11 +65,11 @@
     display: none;
   }
   .board-shell .discovery-hero .hero-inner {
-    padding: 18px 18px 12px;
+    padding: var(--jobx-space-18px) var(--jobx-space-18px) var(--jobx-space-12px);
   }
   .board-shell .discovery-hero h1,
   .board-shell .hero h1 {
-    font-size: 26px;
+    font-size: var(--jobx-font-size-26px);
     line-height: 1.35;
     letter-spacing: -0.5px;
   }
@@ -80,11 +80,11 @@
     display: none;
   }
   .landing-copy {
-    font-size: 12.5px;
-    margin-bottom: 14px;
+    font-size: var(--jobx-font-size-12-5px);
+    margin-bottom: var(--jobx-space-14px);
   }
   .board-shell .discovery-hero .hero-search-wrap {
-    padding: 0 16px 16px;
+    padding: 0 var(--jobx-space-16px) var(--jobx-space-16px);
   }
   /* Four Georgian labels need 467px of a 332px row. Scrolling them sideways hid two behind an
      edge with no cue; wrapping them took two rows out of the space above the first vacancy.
@@ -94,13 +94,13 @@
     display: none;
   }
   .board-shell .discovery-hero .searchbar {
-    padding-top: 14px;
+    padding-top: var(--jobx-space-14px);
   }
   .board-shell .discovery-hero .searchbar > input {
     height: 44px;
   }
   .board-shell .discovery-hero .searchbar .primary {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
   /* "No registration" and "direct from the employer" are true of every vacancy below; on a phone
      they were 56px between the search field and the list, and the site shows both by doing them. */
@@ -114,23 +114,23 @@
   .discovery-shortcuts {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin: 12px 16px 0;
+    gap: var(--jobx-space-8px);
+    margin: var(--jobx-space-12px) var(--jobx-space-16px) 0;
     padding: 0;
     overflow: visible;
   }
   .discovery-shortcut {
     min-height: 44px;
-    padding: 6px 12px;
-    gap: 8px;
-    border-radius: 12px;
-    border: 1px solid #e2e8f2;
-    background: #f2f6fc;
+    padding: var(--jobx-space-6px) var(--jobx-space-12px);
+    gap: var(--jobx-space-8px);
+    border-radius: var(--jobx-radius-12px);
+    border: 1px solid var(--jobx-color-e2e8f2-surface);
+    background: var(--jobx-color-f2f6fc-surface);
   }
   .discovery-shortcut:hover,
   .discovery-shortcut[aria-pressed='true'] {
-    border-color: #96b5ec;
-    background: #e5edfc;
+    border-color: var(--jobx-color-96b5ec-text);
+    background: var(--jobx-color-e5edfc-surface);
   }
   /* Without the icon each label fits one line, so a tile is a 44px target and not two lines. */
   .shortcut-icon {
@@ -140,7 +140,7 @@
     min-width: 0;
   }
   .discovery-shortcut strong {
-    font-size: 12.5px;
+    font-size: var(--jobx-font-size-12-5px);
     line-height: 1.35;
     overflow-wrap: anywhere;
   }
@@ -177,10 +177,10 @@
   }
   .board-shell main > .discovery-categories {
     order: 4;
-    margin-bottom: 20px;
+    margin-bottom: var(--jobx-space-20px);
   }
   .discovery-categories {
-    margin: 12px 16px 0;
+    margin: var(--jobx-space-12px) var(--jobx-space-16px) 0;
   }
   .discovery-section-heading {
     display: none;
@@ -188,7 +188,7 @@
   .category-gallery {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: var(--jobx-space-6px);
     padding: 0;
     border: 0;
     background: transparent;
@@ -199,18 +199,18 @@
     flex-direction: row;
     min-height: 44px;
     min-width: 0;
-    gap: 7px;
-    padding: 8px 12px;
-    border: 1px solid #e2e8f2;
-    border-radius: 999px;
-    background: #fff;
+    gap: var(--jobx-space-7px);
+    padding: var(--jobx-space-8px) var(--jobx-space-12px);
+    border: 1px solid var(--jobx-color-e2e8f2-surface);
+    border-radius: var(--jobx-radius-999px);
+    background: var(--jobx-surface);
   }
   .category-gallery button svg {
     width: 17px;
     height: 17px;
   }
   .category-gallery button > span {
-    font-size: 12.5px;
+    font-size: var(--jobx-font-size-12-5px);
   }
 
   /* ---------- Recently viewed ----------
@@ -218,7 +218,7 @@
      vertically; board-features.css loads later, so these selectors carry one extra class. */
   .board-shell .recent-strip .recent-track {
     flex-direction: column;
-    gap: 6px;
+    gap: var(--jobx-space-6px);
     overflow: visible;
     padding-bottom: 0;
   }
@@ -226,8 +226,8 @@
     flex: none;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    column-gap: 10px;
-    padding: 8px 12px;
+    column-gap: var(--jobx-space-10px);
+    padding: var(--jobx-space-8px) var(--jobx-space-12px);
   }
   .board-shell .recent-track .recent-card strong {
     display: block;
@@ -243,17 +243,17 @@
 
   /* ---------- Results head ---------- */
   .board-shell .results-head h2 {
-    font-size: 20px;
+    font-size: var(--jobx-font-size-20px);
   }
   .board-shell .result-count {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
   .board-shell .results-head .choice {
     width: auto;
     min-width: 0;
     max-width: 170px;
     min-height: 44px;
-    font-size: 13px !important;
+    font-size: var(--jobx-font-size-13px) !important;
   }
 
   /* ---------- Results toolbar ----------
@@ -265,10 +265,10 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 8px;
-    margin: 0 0 10px;
-    padding: 8px 0;
-    background: #f6f7fa;
+    gap: var(--jobx-space-8px);
+    margin: 0 0 var(--jobx-space-10px);
+    padding: var(--jobx-space-8px) 0;
+    background: var(--jobx-page-cool);
     box-shadow: 0 6px 12px -10px #18243b40;
   }
 
@@ -277,10 +277,10 @@
     width: auto;
     min-height: 44px;
     margin: 0;
-    font-size: 14px;
+    font-size: var(--jobx-font-size-14px);
     font-weight: 600;
     justify-content: center;
-    gap: 8px;
+    gap: var(--jobx-space-8px);
   }
   .board-shell .results-tools .mobile-filter-toggle b {
     display: inline-flex;
@@ -288,24 +288,24 @@
     justify-content: center;
     min-width: 22px;
     height: 22px;
-    padding: 0 7px;
-    border-radius: 999px;
-    background: #2457e6;
-    color: #fff;
-    font-size: 12px;
+    padding: 0 var(--jobx-space-7px);
+    border-radius: var(--jobx-radius-999px);
+    background: var(--jobx-accent);
+    color: var(--jobx-surface);
+    font-size: var(--jobx-font-size-12px);
   }
 
   .board-shell .active-filters {
-    gap: 6px;
+    gap: var(--jobx-space-6px);
   }
   .board-shell .active-filters button {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
 
   /* ---------- Vacancy cards ---------- */
   .board-shell .job-card {
-    padding: 14px;
-    gap: 8px 10px;
+    padding: var(--jobx-space-14px);
+    gap: var(--jobx-space-8px) var(--jobx-space-10px);
   }
   /* The save button sits beside the company line only. Held down the whole card it took 50px
      from every row, which broke salary, direction and deadline onto two lines. Its negative
@@ -332,19 +332,19 @@
     grid-column: 1 / 3;
   }
   .board-shell .job-title {
-    font-size: 16px;
+    font-size: var(--jobx-font-size-16px);
     line-height: 1.45;
   }
   .board-shell .job-company {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   /* Three facts under the title wrapped onto three lines on a 390px card, which pushed the
      salary and the deadline a screenful apart. The first two carry the decision — where and
      on what terms — and the third, the work mode, is on the vacancy page a tap away. */
   .board-shell .job-meta {
     flex-wrap: nowrap;
-    font-size: 12px;
-    gap: 10px;
+    font-size: var(--jobx-font-size-12px);
+    gap: var(--jobx-space-10px);
     min-width: 0;
   }
   .board-shell .job-meta > span {
@@ -359,39 +359,39 @@
     text-overflow: ellipsis;
   }
   .board-shell .salary {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
   .board-shell .category-tag,
   .category-tag {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .board-shell .filters h3 small {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .vacancy-page .vacancy-summary dt,
   .vacancy-page .extra-facts dt {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .board-shell .no-salary {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   /* The date already says how fresh a vacancy is; a second badge saying so wrapped the row. */
   .board-shell .job-new {
     display: none;
   }
   .board-shell .card-bottom {
-    gap: 6px 10px;
-    margin-top: 8px;
+    gap: var(--jobx-space-6px) var(--jobx-space-10px);
+    margin-top: var(--jobx-space-8px);
   }
   .board-shell .job-when {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    color: #64676c;
+    gap: var(--jobx-space-4px);
+    font-size: var(--jobx-font-size-12px);
+    color: var(--jobx-color-64676c-text);
   }
   .board-shell .job-when.is-urgent {
-    color: #9a332f;
+    color: var(--jobx-danger-text-muted);
     font-weight: 600;
   }
   .board-shell .job-side .save-button {
@@ -410,11 +410,11 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
-    font-size: 13px;
+    gap: var(--jobx-space-10px);
+    font-size: var(--jobx-font-size-13px);
   }
   .board-shell .board-pagination > span {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
     flex: 1 1 100%;
     text-align: center;
   }
@@ -422,9 +422,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: var(--jobx-space-6px);
     min-height: 48px;
-    font-size: 14px;
+    font-size: var(--jobx-font-size-14px);
     font-weight: 600;
   }
   .board-shell .board-pagination button:first-of-type {
@@ -434,21 +434,21 @@
   }
   .board-shell .board-pagination button:last-of-type {
     flex: 1 1 auto;
-    padding: 0 18px;
-    background: #2457e6;
-    color: #fff;
-    border-color: #2457e6;
+    padding: 0 var(--jobx-space-18px);
+    background: var(--jobx-accent);
+    color: var(--jobx-surface);
+    border-color: var(--jobx-accent);
   }
   .board-shell .board-pagination button:last-of-type:disabled {
-    background: #e9ecf3;
+    background: var(--jobx-color-e9ecf3-surface);
     color: #8a93a5;
-    border-color: #e9ecf3;
+    border-color: var(--jobx-color-e9ecf3-surface);
   }
   .board-pagination .page-prev-label {
     display: none;
   }
   .board-shell .results-foot {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
 
   /* ---------- Filter sheet: a bottom sheet ---------- */
@@ -461,12 +461,12 @@
     inset-inline: 0;
     bottom: 0;
     top: auto;
-    border-radius: 18px 18px 0 0;
-    background: #fff;
+    border-radius: var(--jobx-radius-18px) var(--jobx-radius-18px) 0 0;
+    background: var(--jobx-surface);
     color: #1c2944;
     overflow: hidden;
     overscroll-behavior: contain;
-    padding: 14px 0 0 !important;
+    padding: var(--jobx-space-14px) 0 0 !important;
     gap: 0;
   }
   .mobile-filters-sheet::before {
@@ -477,19 +477,19 @@
     width: 36px;
     height: 4px;
     margin-left: -18px;
-    border-radius: 999px;
+    border-radius: var(--jobx-radius-999px);
     background: #cfd6e2;
   }
   .mobile-filters-sheet [data-slot='sheet-header'] {
     flex: 0 0 auto;
     min-height: 52px;
     justify-content: center;
-    padding: 0 190px 0 18px;
+    padding: 0 190px 0 var(--jobx-space-18px);
     border-bottom: 1px solid var(--border);
-    gap: 2px;
+    gap: var(--jobx-space-2px);
   }
   .mobile-filters-sheet [data-slot='sheet-title'] {
-    font-size: 17px;
+    font-size: var(--jobx-font-size-17px);
     line-height: 1.4;
   }
   .mobile-filters-sheet [data-slot='sheet-description'] {
@@ -500,7 +500,7 @@
     right: 10px;
     width: 44px;
     height: 44px;
-    border-radius: 10px;
+    border-radius: var(--jobx-radius-10px);
   }
   .mobile-filters-sheet [data-slot='sheet-close'] svg {
     width: 20px;
@@ -516,15 +516,15 @@
     top: 10px;
     right: 60px;
     min-height: 44px;
-    padding: 6px 12px;
-    font-size: 13px;
+    padding: var(--jobx-space-6px) var(--jobx-space-12px);
+    font-size: var(--jobx-font-size-13px);
   }
   .mobile-filters-sheet .filters {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 16px 18px;
+    padding: var(--jobx-space-16px) var(--jobx-space-18px);
     scroll-padding-block: 16px;
   }
   .mobile-filters-clear:disabled {
@@ -532,7 +532,7 @@
   }
   .mobile-filters-sheet .choice {
     min-height: 48px !important;
-    font-size: 16px !important;
+    font-size: var(--jobx-font-size-16px) !important;
     background: var(--popover) !important;
     color: inherit;
   }
@@ -545,38 +545,38 @@
   .mobile-filters-sheet .filters select {
     min-height: 48px;
     height: auto;
-    font-size: 16px;
+    font-size: var(--jobx-font-size-16px);
   }
   .mobile-filter-options [data-slot='select-item'] {
     min-height: 48px;
-    padding-block: 12px;
-    font-size: 14px;
+    padding-block: var(--jobx-space-12px);
+    font-size: var(--jobx-font-size-14px);
   }
   .mobile-filters-sheet .salary-filter {
-    margin: 20px 0 12px;
-    padding-bottom: 12px;
+    margin: var(--jobx-space-20px) 0 var(--jobx-space-12px);
+    padding-bottom: var(--jobx-space-12px);
   }
   .mobile-filters-sheet .salary-presets {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .mobile-filters-sheet .salary-presets button {
     min-height: 44px;
-    padding-inline: 3px;
+    padding-inline: var(--jobx-space-3px);
   }
   .mobile-filters-sheet .filter-extra summary {
     min-height: 48px;
   }
   .mobile-filters-footer {
     flex: 0 0 auto;
-    padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+    padding: var(--jobx-space-12px) var(--jobx-space-18px) calc(var(--jobx-space-12px) + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
   }
   .mobile-filters-sheet .filters h3 {
-    font-size: 14px;
+    font-size: var(--jobx-font-size-14px);
   }
   /* The sheet is portaled outside .board-shell, so board-scoped rules never reach it. */
   .mobile-filters-sheet .filters h3 small {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .mobile-filters-sheet .filter-subcategory {
     min-width: 0;
@@ -588,13 +588,13 @@
     min-width: 0;
     min-height: 44px;
     height: 48px;
-    padding: 10px 36px 10px 12px;
-    font-size: 16px;
+    padding: var(--jobx-space-10px) var(--jobx-space-36px) var(--jobx-space-10px) var(--jobx-space-12px);
+    font-size: var(--jobx-font-size-16px);
   }
   .mobile-filters-sheet .check-row {
     min-height: 48px;
-    font-size: 14px;
-    padding: 6px 8px;
+    font-size: var(--jobx-font-size-14px);
+    padding: var(--jobx-space-6px) var(--jobx-space-8px);
   }
   .mobile-filters-sheet .check-row input[type='radio'],
   .mobile-filters-sheet input[type='radio'],
@@ -603,13 +603,13 @@
     height: 20px;
   }
   .mobile-filters-sheet .facet-count {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .mobile-filters-sheet .filter-divider {
-    margin: 14px 0;
+    margin: var(--jobx-space-14px) 0;
   }
   .mobile-filters-sheet .source-note {
-    margin-top: 12px;
+    margin-top: var(--jobx-space-12px);
   }
   .mobile-filters-sheet > .primary,
   .mobile-filters-sheet .filters-apply {
@@ -618,11 +618,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: var(--jobx-space-8px);
     width: 100%;
     min-height: 50px;
     margin: 0;
-    font-size: 15px;
+    font-size: var(--jobx-font-size-15px);
     box-shadow: none;
   }
 
@@ -630,7 +630,7 @@
   .vacancy-page .vacancy-header-link {
     min-height: 44px;
     max-width: none;
-    font-size: 14px;
+    font-size: var(--jobx-font-size-14px);
     white-space: nowrap;
     line-height: 1.4;
   }
@@ -641,40 +641,40 @@
     display: inline;
   }
   .vacancy-page .detail-dates {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
   .vacancy-tools .secondary-button {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
   .vacancy-page .detail-facts dt {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .vacancy-summary > p {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
 
   .vacancy-page .vacancy-hide-action {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
     min-height: 44px;
   }
   .vacancy-source .job-evidence,
   .vacancy-page .job-evidence {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .similar-card p {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .vacancy-page .quick-apply-note {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
   .application-email > span {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .vacancy-mobile-action .primary {
-    font-size: 14px;
+    font-size: var(--jobx-font-size-14px);
   }
   .vacancy-mobile-action .secondary-button {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
 
   .vacancy-page .feedback-toast {
@@ -684,17 +684,17 @@
     bottom: calc(88px + env(safe-area-inset-bottom));
   }
   .feedback-toast {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
 
   /* ---------- Type floor ---------- */
   .board-shell .section-kicker {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .site-footer > span,
   .site-footer > div,
   .site-footer a {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .site-footer a {
     display: inline-flex;
@@ -703,32 +703,32 @@
   }
   .how-grid p,
   .board-shell .how-grid p {
-    font-size: 14px;
+    font-size: var(--jobx-font-size-14px);
   }
   .board-shell .source-note p {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .filter-help,
   .filter-error,
   .salary-range label {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .advanced-filters > label,
   .advanced-filters legend,
   .advanced-filters fieldset > label {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
 
   .board-shell .job-company .source-pill {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .board-shell .hidden-vacancies,
   .board-shell .hidden-vacancies summary {
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
   .board-shell .hidden-vacancies .secondary-button {
     min-height: 44px;
-    font-size: 13px;
+    font-size: var(--jobx-font-size-13px);
   }
   /* The masthead leads to the unfiltered list; the reader's own list — their
      search, their page, the place they had scrolled to — is only behind this
@@ -742,7 +742,7 @@
        link rather than the way out. */
     width: 100%;
     justify-content: flex-start;
-    margin: 0 0 4px;
+    margin: 0 0 var(--jobx-space-4px);
   }
   .vacancy-page .vacancy-breadcrumb > span {
     display: none;
@@ -750,16 +750,16 @@
   .vacancy-page .vacancy-breadcrumb a {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--jobx-space-4px);
     min-height: 44px;
     margin-left: -4px;
-    font-size: 13px !important;
+    font-size: var(--jobx-font-size-13px) !important;
     font-weight: 600;
   }
   .contact-phone small,
   .vacancy-page .contact-call,
   .similar-open {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
 }
 
@@ -767,10 +767,10 @@
    shortcut label overruns by a few pixels at 12.5px. */
 @media (max-width: 359px) {
   .discovery-shortcut strong {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .category-gallery button > span {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
 }
 
@@ -799,7 +799,7 @@
 @media (max-width: 760px) {
   .board-shell .discovery-hero .search-city {
     min-width: 0;
-    gap: 6px;
+    gap: var(--jobx-space-6px);
   }
   .board-shell .discovery-hero .search-city .choice {
     min-width: 0;
@@ -808,7 +808,7 @@
   .board-shell .discovery-shortcut {
     min-height: 52px;
     height: 100%;
-    padding: 8px 10px;
+    padding: var(--jobx-space-8px) var(--jobx-space-10px);
     align-items: center;
   }
 }
@@ -816,7 +816,7 @@
 @media (max-width: 760px) {
   .board-shell .discovery-hero .search-panel .searchbar {
     grid-template-columns: minmax(0, 1fr) 96px;
-    gap: 10px;
+    gap: var(--jobx-space-10px);
   }
   .board-shell .discovery-hero .searchbar .search-query-field {
     grid-column: 1 / -1;
@@ -834,10 +834,10 @@
 
 @media (max-width: 760px) {
   .board-shell.editorial-board .hero-inner {
-    padding: 26px 16px 24px;
+    padding: var(--jobx-space-26px) var(--jobx-space-16px) var(--jobx-space-24px);
   }
   .board-shell.editorial-board .discovery-hero h1 {
-    font-size: clamp(30px, 8.2vw, 44px);
+    font-size: clamp(var(--jobx-font-size-30px), 8.2vw, var(--jobx-font-size-44px));
     letter-spacing: -0.8px;
     line-height: 1.18;
     max-width: 540px;
@@ -851,23 +851,23 @@
     background: linear-gradient(90deg, #102238cc, #10223855);
   }
   .board-shell.editorial-board .hero-search-wrap {
-    padding: 0 16px 28px;
+    padding: 0 var(--jobx-space-16px) var(--jobx-space-28px);
   }
   .board-shell.editorial-board .discovery-shortcuts {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin: 18px 16px 0;
+    gap: var(--jobx-space-8px);
+    margin: var(--jobx-space-18px) var(--jobx-space-16px) 0;
   }
   .board-shell.editorial-board .discovery-shortcut {
     min-height: 48px;
-    padding: 10px;
-    gap: 6px;
-    border-radius: 10px;
+    padding: var(--jobx-space-10px);
+    gap: var(--jobx-space-6px);
+    border-radius: var(--jobx-radius-10px);
     justify-content: space-between;
   }
   .board-shell.editorial-board .discovery-shortcut strong {
-    font-size: 11px;
+    font-size: var(--jobx-font-size-11px);
     line-height: 1.5;
     text-align: left;
   }
@@ -878,8 +878,8 @@
     --header-height: 64px;
   }
   .board-shell .header-inner {
-    gap: 12px;
-    padding: 0 16px;
+    gap: var(--jobx-space-12px);
+    padding: 0 var(--jobx-space-16px);
   }
   .board-shell .results-tools {
     top: var(--header-height);
@@ -891,25 +891,25 @@
     order: 0;
   }
   .board-shell .jobx-footer {
-    margin: 28px 16px 0;
-    padding: 20px 0;
+    margin: var(--jobx-space-28px) var(--jobx-space-16px) 0;
+    padding: var(--jobx-space-20px) 0;
   }
   .board-shell .jobx-footer .footer-main {
     flex-direction: column;
     align-items: flex-start;
-    gap: 14px;
+    gap: var(--jobx-space-14px);
   }
   .board-shell .jobx-footer nav {
     flex-wrap: wrap;
-    gap: 8px 20px;
+    gap: var(--jobx-space-8px) var(--jobx-space-20px);
   }
   .board-shell .jobx-footer .footer-meta {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--jobx-space-8px);
   }
   .board-shell.editorial-board .discovery-shortcut {
     justify-content: flex-start;
-    gap: 8px;
+    gap: var(--jobx-space-8px);
   }
   .board-shell.editorial-board .discovery-shortcut > svg {
     width: 18px;
@@ -919,8 +919,8 @@
 
 @media (max-width: 760px) {
   .board-shell .header-inner {
-    gap: 8px;
-    padding: 0 12px;
+    gap: var(--jobx-space-8px);
+    padding: 0 var(--jobx-space-12px);
   }
   .board-shell .header-search {
     width: 44px;
@@ -938,36 +938,36 @@
 /* ---------- Post-job form ---------- */
 @media (max-width: 760px) {
   .post-job-shell .post-job-main {
-    padding: 16px 14px 32px;
+    padding: var(--jobx-space-16px) var(--jobx-space-14px) var(--jobx-space-32px);
   }
   .post-job-shell .post-intro {
-    margin: 16px 0 24px;
-    padding-right: 48px;
+    margin: var(--jobx-space-16px) 0 var(--jobx-space-24px);
+    padding-right: var(--jobx-space-48px);
   }
   .post-job-shell .post-brand-mark {
     width: 36px;
     height: 36px;
   }
   .post-job-shell .post-intro h1 {
-    font-size: 23px;
+    font-size: var(--jobx-font-size-23px);
   }
   .post-job-shell .post-section {
-    padding: 20px 16px;
-    border-radius: 12px;
+    padding: var(--jobx-space-20px) var(--jobx-space-16px);
+    border-radius: var(--jobx-radius-12px);
   }
   .post-job-shell .post-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    gap: var(--jobx-space-20px);
   }
   .post-job-shell .post-field input,
   .post-job-shell .post-field select,
   .post-job-shell .post-field textarea {
-    font-size: 16px;
+    font-size: var(--jobx-font-size-16px);
   }
   .post-job-shell .post-field small,
   .post-job-shell .post-plan-note,
   .post-job-shell .post-draft-note {
-    font-size: 12px;
+    font-size: var(--jobx-font-size-12px);
   }
   .post-job-shell .post-details > summary {
     min-height: 44px;
@@ -978,7 +978,7 @@
   }
   .post-job-shell .post-plan-pills > label {
     width: 100%;
-    border-radius: 10px;
+    border-radius: var(--jobx-radius-10px);
   }
   .post-job-shell .post-actions {
     flex-direction: column;
@@ -988,8 +988,8 @@
     width: 100%;
   }
   .post-job-shell .post-success {
-    padding: 24px 20px;
-    margin: 28px auto;
+    padding: var(--jobx-space-24px) var(--jobx-space-20px);
+    margin: var(--jobx-space-28px) auto;
   }
 }
 /* Loading placeholders share the normal card's minimum height. The first eight
@@ -1003,8 +1003,8 @@
   /* Only the placeholder reserves the taller phone height; a real card keeps its natural
      size (target 110–140px) so short vacancies never carry empty space. */
   .board-shell.editorial-board.crafted-board.refined-board .job-skeleton {
-    padding: 16px;
-    gap: 12px;
+    padding: var(--jobx-space-16px);
+    gap: var(--jobx-space-12px);
     min-height: 220px;
     height: 220px;
   }
@@ -1012,7 +1012,7 @@
     min-height: 0;
   }
   .board-shell .results-updating {
-    font-size: 11px;
+    font-size: var(--jobx-font-size-11px);
   }
 }
 
@@ -1031,7 +1031,7 @@
 
 @media (max-width: 760px) {
   .search-directory {
-    padding: 20px 14px 4px;
+    padding: var(--jobx-space-20px) var(--jobx-space-14px) var(--jobx-space-4px);
   }
   .search-directory-links a {
     min-height: 36px;
@@ -1050,15 +1050,15 @@
   }
   .board-shell .search-query-field .search-start {
     display: block;
-    padding: 10px;
+    padding: var(--jobx-space-10px);
   }
   .board-shell .search-start > section + section {
-    margin-top: 12px;
+    margin-top: var(--jobx-space-12px);
   }
   .board-shell .search-start-recent header {
     flex-wrap: wrap;
-    gap: 4px 8px;
-    margin-bottom: 2px;
+    gap: var(--jobx-space-4px) var(--jobx-space-8px);
+    margin-bottom: var(--jobx-space-2px);
   }
   .board-shell .search-start-recent header button,
   .board-shell .search-start-term {
@@ -1072,13 +1072,13 @@
   .board-shell .search-start-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--jobx-space-8px);
     align-items: flex-start;
   }
   .board-shell .search-start-chips button {
     min-height: 44px;
     max-width: 100%;
-    padding: 8px 10px;
+    padding: var(--jobx-space-8px) var(--jobx-space-10px);
     overflow-wrap: anywhere;
   }
 }
@@ -1097,20 +1097,20 @@
     max-width: none;
     height: 48px;
     min-height: 48px !important;
-    border: 1px solid #dce1ea !important;
-    border-radius: 10px !important;
-    background: #fff !important;
-    color: #46526b;
+    border: 1px solid var(--jobx-color-dce1ea-surface) !important;
+    border-radius: var(--jobx-radius-10px) !important;
+    background: var(--jobx-surface) !important;
+    color: var(--jobx-color-46526b-text);
     font-family: inherit;
-    font-size: 14px !important;
+    font-size: var(--jobx-font-size-14px) !important;
     font-weight: 600;
     line-height: 1.4;
-    padding: 10px 12px !important;
+    padding: var(--jobx-space-10px) var(--jobx-space-12px) !important;
     box-shadow: none;
   }
   .board-shell .results-tools .mobile-filter-toggle:focus-visible,
   .board-shell .results-tools .results-sort .choice:focus-visible {
-    outline: 2px solid #2457e6;
+    outline: 2px solid var(--jobx-accent);
     outline-offset: 2px;
     box-shadow: none;
   }
@@ -1124,14 +1124,14 @@
     min-width: min(260px, calc(100vw - 32px));
     max-width: calc(100vw - 32px);
     max-height: min(360px, var(--available-height));
-    padding: 4px;
-    border-radius: 12px;
+    padding: var(--jobx-space-4px);
+    border-radius: var(--jobx-radius-12px);
     overscroll-behavior: contain;
   }
   .job-choice-options [data-slot='select-item'] {
     min-height: 48px;
-    padding: 12px 30px 12px 12px;
-    font-size: 14px;
+    padding: var(--jobx-space-12px) var(--jobx-space-30px) var(--jobx-space-12px) var(--jobx-space-12px);
+    font-size: var(--jobx-font-size-14px);
     line-height: 1.5;
   }
   .job-choice-options [data-slot='select-item'] > span {
@@ -1142,10 +1142,10 @@
 /* ── CV builder ── */
 @media screen and (max-width: 760px) {
   .cv-shell .cv-main {
-    padding: 22px 14px 40px;
+    padding: var(--jobx-space-22px) var(--jobx-space-14px) var(--jobx-space-40px);
   }
   .cv-shell .cv-intro h1 {
-    font-size: 24px;
+    font-size: var(--jobx-font-size-24px);
   }
   .cv-shell .cv-toolbar {
     align-items: stretch;
@@ -1162,7 +1162,7 @@
   }
   .cv-shell .cv-gallery-track {
     margin-right: -14px;
-    padding-right: 14px;
+    padding-right: var(--jobx-space-14px);
     overflow-x: auto;
     scroll-snap-type: x mandatory;
   }
@@ -1175,11 +1175,11 @@
     position: sticky;
     top: 64px;
     z-index: 5;
-    margin: 0 0 20px;
+    margin: 0 0 var(--jobx-space-20px);
   }
   .cv-shell .cv-mobile-tabs button {
     flex: 1;
-    font-size: 16px;
+    font-size: var(--jobx-font-size-16px);
   }
   .cv-shell .cv-layout[data-view='form'] .cv-preview,
   .cv-shell .cv-layout[data-view='preview'] .cv-editor-column {
@@ -1190,13 +1190,13 @@
   }
   .cv-shell .cv-fields {
     grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
+    gap: var(--jobx-space-4px);
   }
   .cv-shell .cv-field input,
   .cv-shell .cv-field textarea,
   .cv-shell .cv-field select {
     min-height: 44px;
-    font-size: 16px;
+    font-size: var(--jobx-font-size-16px);
   }
   .cv-shell .cv-main button,
   .cv-shell .cv-file-button {
@@ -1215,26 +1215,26 @@
     height: 32px;
   }
   .cv-shell .cv-section-body {
-    padding: 0 16px 20px;
+    padding: 0 var(--jobx-space-16px) var(--jobx-space-20px);
   }
   .cv-shell .cv-section h2 > button {
-    padding: 18px 16px;
+    padding: var(--jobx-space-18px) var(--jobx-space-16px);
   }
 }
 @media screen and (max-width: 760px) {
   .cv-shell .cv-segment > span {
-    font-size: 11px;
+    font-size: var(--jobx-font-size-11px);
   }
 }
 /* photo editor */
 @media screen and (max-width: 760px) {
   .cv-photo-editor {
-    padding: 12px;
+    padding: var(--jobx-space-12px);
   }
   .cv-photo-editor__dialog {
     width: 100%;
     max-height: calc(100dvh - 24px);
-    padding: 20px 12px;
+    padding: var(--jobx-space-20px) var(--jobx-space-12px);
   }
   .cv-photo-editor__viewport {
     width: min(80vw, 280px);
@@ -1243,7 +1243,7 @@
   .cv-photo-editor__zoom input,
   .cv-photo-editor__actions button {
     min-height: 44px;
-    font-size: 16px;
+    font-size: var(--jobx-font-size-16px);
   }
   .cv-photo-editor__actions button {
     flex: 1;

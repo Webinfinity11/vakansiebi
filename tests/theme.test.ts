@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { readTheme, storeTheme, themeKey, themeScript } from '../lib/theme';
-import { darkTheme } from '../scripts/build-dark-theme';
+import { darkTheme, publicTokens } from '../scripts/build-dark-theme';
 
 function fakeStorage(initial: Record<string, string> = {}) {
   const map = new Map(Object.entries(initial));
@@ -67,4 +67,47 @@ void test('the checked-in dark stylesheet matches its source stylesheets', () =>
     darkTheme(),
     'app/theme-dark.css is stale — run: npx tsx scripts/build-dark-theme.ts',
   );
+});
+
+/* A missing token invalidates the entire consuming CSS declaration, which can silently
+   remove spacing or colors. Cover every public stylesheet, including hand-authored themes. */
+void test('public styles only reference defined JOBX tokens, loaded before other styles', () => {
+  const { light } = publicTokens();
+  const files = [
+    'globals',
+    'board',
+    'phone',
+    'board-features',
+    'search-features',
+    'refined-board',
+    'public-header',
+    'post-job',
+    'invoices',
+    'cv',
+    'featured-vacancies',
+    'theme-dark',
+  ];
+  for (const file of files) {
+    const css = readFileSync(`app/${file}.css`, 'utf8');
+    for (const match of css.matchAll(/var\((--jobx-[a-z0-9-]+)\)/g)) {
+      assert.ok(light.has(match[1]), `${file}: undefined ${match[1]}`);
+    }
+  }
+  const layout = readFileSync('app/layout.tsx', 'utf8');
+  const tokenImport = layout.indexOf("import './tokens.css'");
+  assert.ok(tokenImport >= 0, 'the public tokens stylesheet must be imported');
+  assert.ok(tokenImport < layout.indexOf("import './globals.css'"));
+});
+
+void test('the hybrid theme retains token references and fixed artwork colors', () => {
+  const { light, dark } = publicTokens();
+  const generated = darkTheme();
+  assert.ok(generated.includes('var(--jobx-accent)'));
+  assert.ok(generated.includes('var(--jobx-surface)'));
+  assert.equal(light.get('--jobx-white-fixed'), '#fff');
+  assert.equal(light.get('--jobx-accent-fixed'), '#2457e6');
+  assert.ok(!dark.has('--jobx-white-fixed'));
+  assert.ok(!dark.has('--jobx-accent-fixed'));
+  for (const name of dark.keys())
+    assert.ok(light.has(name), `dark-only token: ${name}`);
 });

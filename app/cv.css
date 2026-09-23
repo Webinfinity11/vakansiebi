@@ -1,57 +1,57 @@
 /* CV workspace */
 .cv-shell {
   min-height: 100vh;
-  background: #f6f7fa;
-  color: #19253c;
+  background: var(--jobx-page-cool);
+  color: var(--jobx-text-strong);
 }
 .cv-main {
   max-width: 1420px;
   margin: auto;
-  padding: 32px 28px 64px;
+  padding: var(--jobx-space-32px) var(--jobx-space-28px) var(--jobx-space-64px);
 }
 .cv-intro {
-  margin-bottom: 24px;
+  margin-bottom: var(--jobx-space-24px);
 }
 .cv-intro h1 {
-  margin: 0 0 8px;
-  font-size: 30px;
+  margin: 0 0 var(--jobx-space-8px);
+  font-size: var(--jobx-font-size-30px);
   font-weight: 750;
   letter-spacing: -0.6px;
 }
 .cv-note {
-  color: #536078;
-  font-size: 12px;
+  color: var(--jobx-color-536078-text);
+  font-size: var(--jobx-font-size-12px);
   line-height: 1.8;
-  margin: 0 0 16px;
+  margin: 0 0 var(--jobx-space-16px);
 }
 .cv-intro .cv-note {
-  font-size: 14px;
+  font-size: var(--jobx-font-size-14px);
 }
 .cv-toolbar,
 .cv-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--jobx-space-8px);
 }
 .cv-toolbar {
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--jobx-space-16px);
 }
 .cv-main button,
 .cv-file-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: var(--jobx-space-7px);
   min-height: 40px;
-  padding: 9px 13px;
-  border: 1px solid #dce2ec;
-  border-radius: 8px;
-  background: #fff;
-  color: #19253c;
+  padding: var(--jobx-space-9px) var(--jobx-space-13px);
+  border: 1px solid var(--jobx-color-dce2ec-surface);
+  border-radius: var(--jobx-radius-8px);
+  background: var(--jobx-surface);
+  color: var(--jobx-text-strong);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--jobx-font-size-12px);
   font-weight: 600;
   cursor: pointer;
 }
@@ -68,35 +68,35 @@
 .cv-main input:focus-visible,
 .cv-main textarea:focus-visible,
 .cv-main select:focus-visible {
-  outline: 2px solid #2457e6;
+  outline: 2px solid var(--jobx-accent);
   outline-offset: 3px;
 }
 .cv-main button.cv-primary {
-  background: #2457e6;
-  border-color: #2457e6;
-  color: #fff;
+  background: var(--jobx-accent);
+  border-color: var(--jobx-accent);
+  color: var(--jobx-surface);
 }
 .cv-segment {
   display: flex;
-  padding: 4px;
+  padding: var(--jobx-space-4px);
   background: #e9edf5;
-  border-radius: 10px;
-  gap: 4px;
+  border-radius: var(--jobx-radius-10px);
+  gap: var(--jobx-space-4px);
 }
 .cv-segment button {
   background: transparent;
   border-color: transparent;
 }
 .cv-segment button[aria-pressed='true'] {
-  background: #fff;
-  color: #2457e6;
+  background: var(--jobx-surface);
+  color: var(--jobx-accent);
   box-shadow: 0 1px 3px #19253c12;
 }
 .cv-message {
   min-height: 30px;
-  padding: 6px 0;
-  color: #536078;
-  font-size: 12px;
+  padding: var(--jobx-space-6px) 0;
+  color: var(--jobx-color-536078-text);
+  font-size: var(--jobx-font-size-12px);
 }
 .cv-mobile-tabs {
   display: none;
@@ -104,7 +104,7 @@
 .cv-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
-  gap: 36px;
+  gap: var(--jobx-space-36px);
   align-items: start;
 }
 .cv-editor-column {
@@ -112,15 +112,15 @@
 }
 .cv-gallery h2,
 .cv-style h2 {
-  font-size: 13px;
+  font-size: var(--jobx-font-size-13px);
   font-weight: 700;
-  margin: 0 0 12px;
+  margin: 0 0 var(--jobx-space-12px);
 }
 .cv-gallery-track {
   display: flex;
-  gap: 16px;
+  gap: var(--jobx-space-16px);
   overflow-x: auto;
-  padding: 3px 3px 12px;
+  padding: var(--jobx-space-3px) var(--jobx-space-3px) var(--jobx-space-12px);
   scroll-snap-type: x proximity;
 }
 .cv-template-option {
@@ -133,13 +133,13 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: 10px;
+  padding: var(--jobx-space-10px);
   width: 100%;
   height: 100%;
   justify-content: flex-start;
-  border: 2px solid #dce2ec;
+  border: 2px solid var(--jobx-color-dce2ec-surface);
   text-align: left;
-  border-radius: 8px;
+  border-radius: var(--jobx-radius-8px);
   overflow: hidden;
   gap: 0;
 }
@@ -152,7 +152,7 @@
   width: 132px;
   height: 187px;
   overflow: hidden;
-  background: #fff;
+  background: var(--jobx-surface);
   box-shadow: 0 1px 4px #19253c1f;
   pointer-events: none;
 }
@@ -170,23 +170,23 @@
   place-items: center;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--jobx-radius-circle);
   background: var(--cv-selected-accent);
-  color: #fff;
+  color: var(--jobx-surface);
 }
 .cv-style {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
-  padding: 22px 0;
-  margin-bottom: 16px;
-  border-bottom: 1px solid #dce2ec;
+  gap: var(--jobx-space-20px);
+  padding: var(--jobx-space-22px) 0;
+  margin-bottom: var(--jobx-space-16px);
+  border-bottom: 1px solid var(--jobx-color-dce2ec-surface);
 }
 .cv-text-contrast-warning {
   display: block;
-  margin: 10px 0 0;
+  margin: var(--jobx-space-10px) 0 0;
   color: #b91c1c;
-  font-size: 12px;
+  font-size: var(--jobx-font-size-12px);
 }
 .cv-style-colors {
   flex-basis: 100%;
@@ -194,16 +194,16 @@
 .cv-swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: var(--jobx-space-9px);
   align-items: center;
 }
 .cv-main .cv-swatches button {
   min-height: 32px;
   width: 32px;
   padding: 0;
-  border: 3px solid #fff;
-  border-radius: 50%;
-  color: #fff;
+  border: 3px solid var(--jobx-surface);
+  border-radius: var(--jobx-radius-circle);
+  color: var(--jobx-surface);
   background: var(--swatch);
   box-shadow: 0 0 0 1px #dce2ec;
 }
@@ -217,9 +217,9 @@
   place-items: center;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: var(--jobx-radius-circle);
   background: conic-gradient(
-    #e5484d,
+    var(--jobx-color-e5484d-surface),
     #f5a524,
     #eab308,
     #22c55e,
@@ -227,7 +227,7 @@
     #3b82f6,
     #8b5cf6,
     #ec4899,
-    #e5484d
+    var(--jobx-color-e5484d-surface)
   );
   cursor: pointer;
 }
@@ -236,20 +236,20 @@
   place-items: center;
   width: 22px;
   height: 22px;
-  border-radius: 50%;
-  background: #fff;
+  border-radius: var(--jobx-radius-circle);
+  background: var(--jobx-surface);
   color: #3d4a61;
 }
 .cv-custom-color[data-active] .cv-custom-color-dot {
   background: var(--swatch);
-  color: #fff;
+  color: var(--jobx-surface);
 }
 .cv-custom-color[data-active] {
   outline: 2px solid var(--swatch);
   outline-offset: 2px;
 }
 .cv-custom-color:focus-within {
-  outline: 2px solid #2457e6;
+  outline: 2px solid var(--jobx-accent);
   outline-offset: 2px;
 }
 .cv-custom-color input {
@@ -264,13 +264,13 @@
 }
 .cv-style-options {
   display: flex;
-  gap: 6px;
+  gap: var(--jobx-space-6px);
   flex-wrap: wrap;
 }
 .cv-style-options button[aria-pressed='true'] {
-  color: #2457e6;
-  background: #edf2ff;
-  border-color: #2457e6;
+  color: var(--jobx-accent);
+  background: var(--jobx-accent-tint);
+  border-color: var(--jobx-accent);
 }
 .cv-style-options [data-font='system'] {
   font-family:
@@ -285,38 +285,38 @@
     'Sylfaen', 'Noto Serif Georgian', Georgia, 'Times New Roman', serif;
 }
 .cv-progress {
-  padding: 0 2px;
+  padding: 0 var(--jobx-space-2px);
 }
 .cv-progress > div {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  margin-bottom: 8px;
+  font-size: var(--jobx-font-size-12px);
+  margin-bottom: var(--jobx-space-8px);
 }
 .cv-progress progress {
   display: block;
   width: 100%;
   height: 6px;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--jobx-radius-10px);
   overflow: hidden;
-  background: #e1e5ed;
-  accent-color: #2457e6;
+  background: var(--jobx-color-e1e5ed-surface);
+  accent-color: var(--jobx-accent);
 }
 .cv-progress progress::-webkit-progress-bar {
-  background: #e1e5ed;
+  background: var(--jobx-color-e1e5ed-surface);
 }
 .cv-progress progress::-webkit-progress-value {
-  background: #2457e6;
+  background: var(--jobx-accent);
 }
 .cv-storage-note {
-  margin: 12px 0 20px;
+  margin: var(--jobx-space-12px) 0 var(--jobx-space-20px);
 }
 .cv-section {
-  background: #fff;
-  border: 1px solid #e1e5ed;
-  border-radius: 12px;
-  margin-bottom: 12px;
+  background: var(--jobx-surface);
+  border: 1px solid var(--jobx-color-e1e5ed-surface);
+  border-radius: var(--jobx-radius-12px);
+  margin-bottom: var(--jobx-space-12px);
   overflow: hidden;
 }
 .cv-section h2 {
@@ -327,8 +327,8 @@
   width: 100%;
   justify-content: flex-start;
   border: 0;
-  padding: 20px;
-  font-size: 15px;
+  padding: var(--jobx-space-20px);
+  font-size: var(--jobx-font-size-15px);
   border-radius: 0;
 }
 .cv-section h2 > button > span {
@@ -342,7 +342,7 @@
   transform: rotate(180deg);
 }
 .cv-section-body {
-  padding: 0 20px 24px;
+  padding: 0 var(--jobx-space-20px) var(--jobx-space-24px);
 }
 .cv-section-body[hidden] {
   display: none;
@@ -350,15 +350,15 @@
 .cv-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 16px;
+  gap: var(--jobx-space-20px) var(--jobx-space-16px);
 }
 .cv-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--jobx-space-8px);
   min-width: 0;
-  margin-bottom: 16px;
-  font-size: 12px;
+  margin-bottom: var(--jobx-space-16px);
+  font-size: var(--jobx-font-size-12px);
   font-weight: 600;
 }
 .cv-field input,
@@ -366,13 +366,13 @@
 .cv-field select {
   width: 100%;
   min-height: 44px;
-  padding: 11px 12px;
-  border: 1px solid #dce2ec;
-  border-radius: 8px;
-  background: #fff;
-  color: #19253c;
+  padding: var(--jobx-space-11px) var(--jobx-space-12px);
+  border: 1px solid var(--jobx-color-dce2ec-surface);
+  border-radius: var(--jobx-radius-8px);
+  background: var(--jobx-surface);
+  color: var(--jobx-text-strong);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--jobx-font-size-14px);
   font-weight: 400;
 }
 .cv-field textarea {
@@ -382,12 +382,12 @@
 }
 .cv-field small {
   color: #647087;
-  font-size: 11px;
+  font-size: var(--jobx-font-size-11px);
   font-weight: 400;
   line-height: 1.6;
 }
 .cv-field input:disabled {
-  background: #f6f7fa;
+  background: var(--jobx-page-cool);
 }
 .cv-month {
   min-width: 0;
@@ -397,25 +397,25 @@
 }
 .cv-month legend {
   padding: 0;
-  margin-bottom: 8px;
+  margin-bottom: var(--jobx-space-8px);
 }
 .cv-month > div {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: 8px;
+  gap: var(--jobx-space-8px);
 }
 .cv-main .cv-month select {
   width: 100%;
   min-width: 0;
   min-height: 44px;
   /* The same box as the text inputs beside it: padding, border and type size. */
-  padding: 11px 34px 11px 12px;
-  border: 1px solid #dce2ec;
-  border-radius: 8px;
-  background-color: #fff;
-  color: #19253c;
+  padding: var(--jobx-space-11px) var(--jobx-space-34px) var(--jobx-space-11px) var(--jobx-space-12px);
+  border: 1px solid var(--jobx-color-dce2ec-surface);
+  border-radius: var(--jobx-radius-8px);
+  background-color: var(--jobx-surface);
+  color: var(--jobx-text-strong);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--jobx-font-size-14px);
   font-weight: 400;
   appearance: none;
   cursor: pointer;
@@ -428,12 +428,12 @@ html:root .cv-main .cv-month select {
   background-position: right 12px center;
 }
 .cv-main .cv-month select:focus-visible {
-  outline: 2px solid #2457e6;
+  outline: 2px solid var(--jobx-accent);
   outline-offset: 1px;
 }
 .cv-main .cv-month:disabled select {
-  background: #f6f7fa;
-  color: #8a94a6;
+  background: var(--jobx-page-cool);
+  color: var(--jobx-text-muted);
   cursor: default;
 }
 .cv-wide {
@@ -442,50 +442,50 @@ html:root .cv-main .cv-month select {
 .cv-check {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-size: 12px;
+  gap: var(--jobx-space-9px);
+  font-size: var(--jobx-font-size-12px);
   min-height: 44px;
 }
 .cv-check input {
   width: 17px;
   height: 17px;
-  accent-color: #2457e6;
+  accent-color: var(--jobx-accent);
 }
 .cv-photo-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding-top: 8px;
+  gap: var(--jobx-space-8px);
+  padding-top: var(--jobx-space-8px);
 }
 .cv-photo-controls img {
   object-fit: cover;
 }
 .cv-photo-controls[data-photo-shape='circle'] img {
-  border-radius: 50%;
+  border-radius: var(--jobx-radius-circle);
 }
 .cv-photo-controls[data-photo-shape='rounded'] img {
-  border-radius: 14px;
+  border-radius: var(--jobx-radius-14px);
 }
 .cv-entry {
-  padding: 20px 0;
-  border-top: 1px solid #e1e5ed;
+  padding: var(--jobx-space-20px) 0;
+  border-top: 1px solid var(--jobx-color-e1e5ed-surface);
 }
 .cv-entry-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  gap: var(--jobx-space-6px);
 }
 .cv-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: var(--jobx-space-8px);
+  margin-bottom: var(--jobx-space-16px);
 }
 .cv-main .cv-chip {
-  border-radius: 20px;
-  background: #edf2ff;
-  color: #2457e6;
+  border-radius: var(--jobx-radius-20px);
+  background: var(--jobx-accent-tint);
+  color: var(--jobx-accent);
 }
 .cv-preview {
   position: sticky;
@@ -495,14 +495,14 @@ html:root .cv-main .cv-month select {
 .cv-preview-heading {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: #536078;
-  margin: 0 0 14px;
+  font-size: var(--jobx-font-size-12px);
+  color: var(--jobx-color-536078-text);
+  margin: 0 0 var(--jobx-space-14px);
 }
 .cv-preview-viewport {
   position: relative;
   width: 100%;
-  background: #fff;
+  background: var(--jobx-surface);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
 }
 .cv-preview-paper {
@@ -521,8 +521,8 @@ html:root .cv-main .cv-month select {
   border-top: 2px dashed #8998b3;
   text-align: right;
   color: #536078;
-  font-size: 12px;
-  padding: 6px 12px;
+  font-size: var(--jobx-font-size-12px);
+  padding: var(--jobx-space-6px) var(--jobx-space-12px);
 }
 /* The document keeps its own colors and typography in both site themes. */
 .cv-page {
@@ -531,11 +531,11 @@ html:root .cv-main .cv-month select {
   box-sizing: border-box;
   width: 794px;
   min-height: 1123px;
-  padding: 54px 58px;
-  background: #fff;
-  color: var(--cv-text, #111111);
+  padding: var(--jobx-space-54px) var(--jobx-space-58px);
+  background: var(--jobx-white-fixed);
+  color: var(--cv-text, var(--jobx-color-111111-fixed));
   font-family: 'FiraGO', 'FiraGO Fallback', Arial, sans-serif;
-  font-size: 12px;
+  font-size: var(--jobx-font-size-12px);
   line-height: 1.65;
   overflow-wrap: anywhere;
   text-align: left;
@@ -560,20 +560,20 @@ html:root .cv-main .cv-month select {
     'Sylfaen', 'Noto Serif Georgian', Georgia, 'Times New Roman', serif;
 }
 .cv-page h1 {
-  font-size: 40px;
+  font-size: var(--jobx-font-size-40px);
   line-height: 1.16;
   font-weight: 750;
   letter-spacing: -1.2px;
   margin: 0;
-  color: var(--cv-text, #111111);
+  color: var(--cv-text, var(--jobx-color-111111-fixed));
 }
 .cv-page h2 {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin: 26px 0 13px;
+  gap: var(--jobx-space-14px);
+  margin: var(--jobx-space-26px) 0 var(--jobx-space-13px);
   color: var(--cv-accent);
-  font-size: 13px;
+  font-size: var(--jobx-font-size-13px);
   font-weight: 750;
   letter-spacing: 1.1px;
   text-transform: uppercase;
@@ -582,14 +582,14 @@ html:root .cv-main .cv-month select {
 .cv-page h3 {
   margin: 0;
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--jobx-font-size-14px);
   line-height: 1.5;
 }
 .cv-page p {
   margin: 0;
 }
 .cv-page .cv-document-header {
-  padding: 4px 0 25px;
+  padding: var(--jobx-space-4px) 0 var(--jobx-space-25px);
   border-bottom: 3px solid var(--cv-accent);
   min-height: 100px;
 }
@@ -598,9 +598,9 @@ html:root .cv-main .cv-month select {
   min-height: 135px;
 }
 .cv-page .cv-document-title {
-  margin-top: 10px;
-  color: color-mix(in srgb, var(--cv-text, #111111) 70%, white);
-  font-size: 17px;
+  margin-top: var(--jobx-space-10px);
+  color: color-mix(in srgb, var(--cv-text, var(--jobx-color-111111-fixed)) 70%, var(--jobx-white-fixed-keyword));
+  font-size: var(--jobx-font-size-17px);
   font-weight: 500;
 }
 .cv-page .cv-document-photo {
@@ -614,27 +614,27 @@ html:root .cv-main .cv-month select {
   width: 112px;
   height: 112px;
   object-fit: cover;
-  border: 3px solid #fff;
+  border: 3px solid var(--jobx-white-fixed);
   box-shadow: 0 0 0 1px #dce2ec;
 }
 .cv-page[data-photo-shape='circle'] .cv-document-photo img {
-  border-radius: 50%;
+  border-radius: var(--jobx-radius-circle);
 }
 .cv-page[data-photo-shape='rounded'] .cv-document-photo img {
-  border-radius: 18px;
+  border-radius: var(--jobx-radius-18px);
 }
 .cv-page .cv-document-contact {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 22px;
-  padding-top: 18px;
-  font-size: 10px;
-  color: var(--cv-text, #111111);
+  gap: var(--jobx-space-8px) var(--jobx-space-22px);
+  padding-top: var(--jobx-space-18px);
+  font-size: var(--jobx-font-size-10px);
+  color: var(--cv-text, var(--jobx-color-111111-fixed));
 }
 .cv-page .cv-document-contact > div {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--jobx-space-7px);
   min-width: 0;
 }
 .cv-page .cv-document-contact svg {
@@ -649,35 +649,35 @@ html:root .cv-main .cv-month select {
   white-space: pre-line;
 }
 .cv-page .cv-document-entry {
-  margin-bottom: 22px;
+  margin-bottom: var(--jobx-space-22px);
   break-inside: avoid;
 }
 .cv-page .cv-entry-heading {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 18px;
+  gap: var(--jobx-space-18px);
 }
 .cv-page .cv-entry-heading > div {
   min-width: 0;
 }
 .cv-page .cv-period {
-  color: color-mix(in srgb, var(--cv-text, #111111) 70%, white);
-  font-size: 10px;
+  color: color-mix(in srgb, var(--cv-text, var(--jobx-color-111111-fixed)) 70%, var(--jobx-white-fixed-keyword));
+  font-size: var(--jobx-font-size-10px);
   flex-shrink: 0;
 }
 .cv-page .cv-organization {
-  color: color-mix(in srgb, var(--cv-text, #111111) 70%, white);
-  margin-top: 3px;
+  color: color-mix(in srgb, var(--cv-text, var(--jobx-color-111111-fixed)) 70%, var(--jobx-white-fixed-keyword));
+  margin-top: var(--jobx-space-3px);
 }
 .cv-page .cv-document-bullets {
   list-style: disc;
-  padding-left: 17px;
-  margin: 9px 0 0;
+  padding-left: var(--jobx-space-17px);
+  margin: var(--jobx-space-9px) 0 0;
 }
 .cv-page .cv-document-bullets li {
-  padding-left: 2px;
-  margin: 4px 0;
+  padding-left: var(--jobx-space-2px);
+  margin: var(--jobx-space-4px) 0;
 }
 .cv-page .cv-document-bullets li::marker {
   color: var(--cv-accent);
@@ -685,45 +685,45 @@ html:root .cv-main .cv-month select {
 .cv-page .cv-document-skills ul {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: var(--jobx-space-7px);
   padding: 0;
   margin: 0;
   list-style: none;
 }
 .cv-page .cv-document-skills li {
-  padding: 4px 11px;
-  border: 1px solid color-mix(in srgb, var(--cv-accent) 22%, white);
-  background: color-mix(in srgb, var(--cv-accent) 6%, white);
-  border-radius: 4px;
+  padding: var(--jobx-space-4px) var(--jobx-space-11px);
+  border: 1px solid color-mix(in srgb, var(--cv-accent) 22%, var(--jobx-white-fixed-keyword));
+  background: color-mix(in srgb, var(--cv-accent) 6%, var(--jobx-white-fixed-keyword));
+  border-radius: var(--jobx-radius-4px);
 }
 .cv-page .cv-document-languages ul {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px 36px;
+  gap: var(--jobx-space-20px) var(--jobx-space-36px);
   list-style: none;
   padding: 0;
   margin: 0;
 }
 .cv-page .cv-document-languages li > div:first-child {
   display: flex;
-  gap: 12px;
+  gap: var(--jobx-space-12px);
   align-items: baseline;
 }
 .cv-page .cv-document-languages li span {
-  color: color-mix(in srgb, var(--cv-text, #111111) 70%, white);
-  font-size: 10px;
+  color: color-mix(in srgb, var(--cv-text, var(--jobx-color-111111-fixed)) 70%, var(--jobx-white-fixed-keyword));
+  font-size: var(--jobx-font-size-10px);
 }
 .cv-page .cv-language-dots {
   display: flex;
-  gap: 5px;
-  margin-top: 7px;
+  gap: var(--jobx-space-5px);
+  margin-top: var(--jobx-space-7px);
 }
 .cv-page .cv-language-dots i {
   display: block;
   width: 7px;
   height: 7px;
-  border-radius: 50%;
-  background: #e1e5ed;
+  border-radius: var(--jobx-radius-circle);
+  background: var(--jobx-color-e1e5ed-fixed);
 }
 .cv-page .cv-language-dots i[data-filled='true'] {
   background: var(--cv-accent);
@@ -746,31 +746,31 @@ html:root .cv-main .cv-month select {
   grid-column: 2;
   grid-row: 1;
   border: 0;
-  padding: 54px 34px 22px;
+  padding: var(--jobx-space-54px) var(--jobx-space-34px) var(--jobx-space-22px);
   min-height: 190px;
 }
 .cv-page[data-template='modern'] .cv-document-photo {
   position: static;
   grid-column: 1;
   grid-row: 1;
-  margin: 50px auto 24px;
+  margin: 50px auto var(--jobx-space-24px);
 }
 .cv-page[data-template='modern'] .cv-document-contact {
   grid-column: 1;
   grid-row: 2;
-  padding: 0 28px 24px;
+  padding: 0 var(--jobx-space-28px) var(--jobx-space-24px);
   display: flex;
   flex-direction: column;
-  color: #fff;
-  gap: 14px;
+  color: var(--jobx-white-fixed);
+  gap: var(--jobx-space-14px);
 }
 .cv-page[data-template='modern'] .cv-document-contact svg {
-  color: #fff;
+  color: var(--jobx-white-fixed);
 }
 .cv-page[data-template='modern'] .cv-document-main {
   grid-column: 2;
   grid-row: 2 / 5;
-  padding: 0 34px 48px;
+  padding: 0 var(--jobx-space-34px) var(--jobx-space-48px);
 }
 .cv-page[data-template='modern'] .cv-document-main > section:first-child h2 {
   margin-top: 0;
@@ -778,19 +778,19 @@ html:root .cv-main .cv-month select {
 .cv-page[data-template='modern'] .cv-document-skills {
   grid-column: 1;
   grid-row: 3;
-  padding: 0 28px 22px;
-  color: #fff;
+  padding: 0 var(--jobx-space-28px) var(--jobx-space-22px);
+  color: var(--jobx-white-fixed);
 }
 .cv-page[data-template='modern'] .cv-document-languages {
   grid-column: 1;
   grid-row: 4;
-  padding: 0 28px 48px;
-  color: #fff;
+  padding: 0 var(--jobx-space-28px) var(--jobx-space-48px);
+  color: var(--jobx-white-fixed);
 }
 .cv-page[data-template='modern'] .cv-document-skills h2,
 .cv-page[data-template='modern'] .cv-document-languages h2 {
-  color: #fff;
-  margin-top: 10px;
+  color: var(--jobx-white-fixed);
+  margin-top: var(--jobx-space-10px);
 }
 .cv-page[data-template='modern'] .cv-document-skills li {
   background: #ffffff15;
@@ -798,34 +798,34 @@ html:root .cv-main .cv-month select {
 }
 .cv-page[data-template='modern'] .cv-document-languages ul {
   flex-direction: column;
-  gap: 18px;
+  gap: var(--jobx-space-18px);
 }
 .cv-page[data-template='modern'] .cv-document-languages li > div:first-child {
   display: block;
 }
 .cv-page[data-template='modern'] .cv-document-languages li span {
   display: block;
-  color: #fff;
+  color: var(--jobx-white-fixed);
   opacity: 0.85;
 }
 .cv-page[data-template='modern'] .cv-language-dots i {
   background: #ffffff44;
 }
 .cv-page[data-template='modern'] .cv-language-dots i[data-filled='true'] {
-  background: #fff;
+  background: var(--jobx-white-fixed);
 }
 .cv-page[data-template='modern'] .cv-entry-heading {
   flex-direction: column;
-  gap: 3px;
+  gap: var(--jobx-space-3px);
 }
 /* Compact: restrained type and inline supporting sections. */
 .cv-page[data-template='compact'] {
-  padding: 42px 48px;
+  padding: var(--jobx-space-42px) var(--jobx-space-48px);
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-content: start;
-  column-gap: 26px;
-  font-size: 11px;
+  column-gap: var(--jobx-space-26px);
+  font-size: var(--jobx-font-size-11px);
   line-height: 1.5;
 }
 .cv-page[data-template='compact'] .cv-document-header,
@@ -836,15 +836,15 @@ html:root .cv-main .cv-month select {
 .cv-page[data-template='compact'] .cv-document-header {
   min-height: 0;
   border-bottom-width: 1px;
-  padding-bottom: 16px;
+  padding-bottom: var(--jobx-space-16px);
 }
 .cv-page[data-template='compact'] h1 {
   font-size: 37.333px;
 }
 .cv-page[data-template='compact'] h2 {
-  margin-top: 18px;
-  margin-bottom: 10px;
-  font-size: 12px;
+  margin-top: var(--jobx-space-18px);
+  margin-bottom: var(--jobx-space-10px);
+  font-size: var(--jobx-font-size-12px);
 }
 .cv-page[data-template='compact'] h2::after {
   content: '';
@@ -854,10 +854,10 @@ html:root .cv-main .cv-month select {
   opacity: 0.3;
 }
 .cv-page[data-template='compact'] .cv-document-entry {
-  margin-bottom: 14px;
+  margin-bottom: var(--jobx-space-14px);
 }
 .cv-page[data-template='compact'] .cv-document-languages ul {
-  gap: 12px;
+  gap: var(--jobx-space-12px);
 }
 /* Bold: a single confident color band. */
 .cv-page[data-template='bold'] {
@@ -865,7 +865,7 @@ html:root .cv-main .cv-month select {
 }
 .cv-page[data-template='bold'] .cv-document-header {
   margin: 0 -58px;
-  padding: 48px 58px 36px;
+  padding: var(--jobx-space-48px) var(--jobx-space-58px) var(--jobx-space-36px);
   background: var(--cv-accent);
   border: 0;
   min-height: 182px;
@@ -875,7 +875,7 @@ html:root .cv-main .cv-month select {
 }
 .cv-page[data-template='bold'] h1,
 .cv-page[data-template='bold'] .cv-document-title {
-  color: #fff;
+  color: var(--jobx-white-fixed);
 }
 .cv-page[data-template='bold'] .cv-document-photo {
   top: 42px;
@@ -943,7 +943,7 @@ html:root .cv-main .cv-month select {
   color: rgb(255 255 255);
 }
 :root .cv-preview-viewport:has(.cv-page) {
-  background: #fff;
+  background: var(--jobx-white-fixed);
 }
 :root .cv-main .cv-template[aria-pressed='true'] {
   border-color: var(--cv-selected-accent);
@@ -951,18 +951,18 @@ html:root .cv-main .cv-month select {
 
 /* Inline template controls */
 .cv-gallery-heading {
-  margin-bottom: 10px;
+  margin-bottom: var(--jobx-space-10px);
 }
 .cv-gallery-heading h2 {
   margin: 0;
 }
 .cv-segment > span {
   align-self: center;
-  padding: 0 8px;
-  font-size: 12px;
+  padding: 0 var(--jobx-space-8px);
+  font-size: var(--jobx-font-size-12px);
 }
 :root .cv-main .cv-template:hover:not(:disabled) {
-  border-color: #dce2ec;
+  border-color: var(--jobx-color-dce2ec-surface);
   box-shadow: 0 2px 7px #19253c14;
 }
 :root .cv-main button.cv-template[aria-pressed='true']:hover:not(:disabled) {
@@ -981,7 +981,7 @@ html:root .cv-main .cv-month select {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--jobx-space-24px);
   overflow-y: auto;
   background: rgba(15, 23, 42, 0.6);
 }
@@ -994,20 +994,20 @@ html:root .cv-main .cv-month select {
   max-width: 100%;
   max-height: calc(100dvh - 48px);
   overflow-y: auto;
-  padding: 24px;
-  border-radius: 18px;
-  background: #fff;
-  color: #17243b;
+  padding: var(--jobx-space-24px);
+  border-radius: var(--jobx-radius-18px);
+  background: var(--jobx-surface);
+  color: var(--jobx-text-heading);
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.25);
   font-family: 'FiraGO', 'FiraGO Fallback', Arial, sans-serif;
 }
 .cv-photo-editor__dialog h2 {
-  margin: 0 0 8px;
-  font-size: 20px;
+  margin: 0 0 var(--jobx-space-8px);
+  font-size: var(--jobx-font-size-20px);
 }
 .cv-photo-editor__dialog p {
-  margin: 0 0 18px;
-  font-size: 13px;
+  margin: 0 0 var(--jobx-space-18px);
+  font-size: var(--jobx-font-size-13px);
   line-height: 1.7;
 }
 .cv-photo-editor__viewport {
@@ -1043,7 +1043,7 @@ html:root .cv-main .cv-month select {
   pointer-events: none;
 }
 .cv-photo-editor__mask[data-shape='circle'] {
-  border-radius: 50%;
+  border-radius: var(--jobx-radius-circle);
 }
 .cv-photo-editor__mask[data-shape='rounded'] {
   border-radius: 14%;
@@ -1053,9 +1053,9 @@ html:root .cv-main .cv-month select {
 }
 .cv-photo-editor__zoom {
   display: grid;
-  gap: 4px;
-  margin: 20px 0 12px;
-  font-size: 13px;
+  gap: var(--jobx-space-4px);
+  margin: var(--jobx-space-20px) 0 var(--jobx-space-12px);
+  font-size: var(--jobx-font-size-13px);
 }
 .cv-photo-editor__zoom input {
   width: 100%;
@@ -1065,18 +1065,18 @@ html:root .cv-main .cv-month select {
 }
 .cv-photo-editor__actions {
   display: flex;
-  gap: 12px;
+  gap: var(--jobx-space-12px);
   justify-content: flex-end;
 }
 .cv-photo-editor__actions button {
   min-height: 48px;
-  padding: 12px 18px;
-  border: 1px solid #ccd4e2;
-  border-radius: 9px;
-  background: #fff;
-  color: #536078;
+  padding: var(--jobx-space-12px) var(--jobx-space-18px);
+  border: 1px solid var(--jobx-color-ccd4e2-surface);
+  border-radius: var(--jobx-radius-9px);
+  background: var(--jobx-surface);
+  color: var(--jobx-color-536078-text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--jobx-font-size-13px);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1094,7 +1094,7 @@ html:root .cv-main .cv-month select {
   outline-offset: 3px;
 }
 .cv-photo-editor__dialog .cv-photo-editor__error {
-  color: #b42332;
+  color: var(--jobx-danger-text-alt);
   overflow-wrap: anywhere;
 }
 @media print {
