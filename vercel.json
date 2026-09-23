@@ -9,6 +9,18 @@
     {
       "path": "/api/cron/invoice-email",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/sitemap-categories.xml",
+      "schedule": "7 * * * *"
+    },
+    {
+      "path": "/sitemap-jobs.xml",
+      "schedule": "17 * * * *"
+    },
+    {
+      "path": "/sitemap-companies.xml",
+      "schedule": "27 * * * *"
     }
   ]
 }

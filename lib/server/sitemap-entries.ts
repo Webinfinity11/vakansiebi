@@ -5,7 +5,7 @@ import { employerPages } from './employers';
 import {
   readLandingSnapshot,
   newest,
-  publicVacancyDatesOrLast,
+  publicVacancyDates,
 } from './sitemap-data';
 
 export function pagesEntries() {
@@ -33,7 +33,7 @@ export async function searchesEntries() {
 }
 
 export async function vacanciesEntries() {
-  const vacancies = await publicVacancyDatesOrLast();
+  const vacancies = await publicVacancyDates();
   return vacancies.map(({ id, title, lastModified }) => ({
     url: siteUrl + vacancyPath({ id, title }),
     lastModified,
@@ -43,7 +43,7 @@ export async function vacanciesEntries() {
 export async function companiesEntries() {
   const [employers, vacancies] = await Promise.all([
     employerPages(),
-    publicVacancyDatesOrLast(),
+    publicVacancyDates(),
   ]);
   // A company page changes when one of its vacancies does.
   const changed = new Map(vacancies.map((v) => [v.id, v.lastModified]));

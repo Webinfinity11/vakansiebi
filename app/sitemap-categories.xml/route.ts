@@ -14,5 +14,5 @@ const curated = () =>
 
 // A stale or missing snapshot always uses the curated floor, including on warm instances.
 export async function GET() {
-  return createSitemapHandler(searchesEntries, 3_000, curated)();
+  return createSitemapHandler(searchesEntries, 3_000, curated, 'categories')();
 }
