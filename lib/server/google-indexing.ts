@@ -31,17 +31,12 @@ export function indexingTransition(
         type: 'URL_UPDATED',
       },
     ];
-  if (
-    before.status === 'published' &&
-    after.status === 'archived' &&
-    before.published
-  )
-    return [
-      {
-        url: vacancyUrl({ id, title: before.published.title }),
-        type: 'URL_DELETED',
-      },
-    ];
+  /* An archived vacancy is not announced. A listing lives about a month and then
+     goes on its own, so removals are both predictable and far more numerous than
+     publications — on the first live night 317 vacancies were archived against
+     150 published, and the deletions spent the whole daily budget before a single
+     new vacancy could be announced. The sitemap drops the URL and the page stops
+     answering, which is how Google learns it is gone. */
   return [];
 }
 

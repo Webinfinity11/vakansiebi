@@ -113,7 +113,7 @@ void test('deletion requires 404/410 or an actual robots noindex meta element on
     );
 });
 
-void test('only new publication and previously published archival generate events with the correct title', () => {
+void test('only a new publication generates an event; archival spends nothing', () => {
   const id = '11111111-1111-4111-8111-111111111111';
   const live = { status: 'published', published: { title: 'Developer' } };
   const pending = { status: 'pending', published: null };
@@ -121,10 +121,10 @@ void test('only new publication and previously published archival generate event
   assert.deepEqual(indexingTransition(id, pending, live), [
     { url, type: 'URL_UPDATED' },
   ]);
-  assert.deepEqual(indexingTransition(id, live, archived), [
-    { url, type: 'URL_DELETED' },
-  ]);
   for (const [before, after] of [
+    // Archival is left to the sitemap and the page itself: removals outnumber
+    // publications several times over and would eat the whole daily budget.
+    [live, archived],
     [live, live],
     [pending, archived],
     [archived, archived],

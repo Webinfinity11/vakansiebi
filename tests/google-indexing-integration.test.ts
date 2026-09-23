@@ -204,16 +204,16 @@ void test(
         "UPDATE source_items SET raw=jsonb_set(raw,'{deadline}','\"2000-01-01\"'::jsonb) WHERE id=$1",
         [itemId],
       );
+      // Archival announces nothing and spends no budget: the sitemap and the
+      // page itself already tell Google the vacancy is gone.
       assert.equal(await reconcileAndNotify(jobId), 'archived');
-      assert.equal(sent.length, 2);
-      assert.equal(sent[1].type, 'URL_DELETED');
-      assert.equal(sent[1].url, sent[0].url);
+      assert.equal(sent.length, 1);
       await reconcileAndNotify(jobId);
-      assert.equal(sent.length, 2);
+      assert.equal(sent.length, 1);
       assert.equal(
         (await pool.query('SELECT requests FROM google_indexing_daily')).rows[0]
           .requests,
-        2,
+        1,
       );
       // Force the import transaction to fail before it can commit.
       await pool.query(
