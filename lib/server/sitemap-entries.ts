@@ -9,7 +9,7 @@ import {
 } from './sitemap-data';
 
 export function pagesEntries() {
-  return ['/', '/post-job', '/cv'].map((path) => ({
+  return ['/', '/cv'].map((path) => ({
     url: `${siteUrl}${path}`,
   }));
 }

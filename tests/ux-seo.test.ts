@@ -165,6 +165,16 @@ void test('a vacancy without a city of its own still says where the work is', ()
     ['GE'],
     'a village outside the list keeps the posting, at country level',
   );
+  assert.deepEqual(
+    address(at({ city: '', facts: [{label: 'მისამართი', value: 'თბილისი, რუსთავი და ქუთაისი'}] })),
+    ['თბილისი', 'ქუთაისი', 'რუსთავი'],
+    'explicit workplace addresses preserve every named city',
+  );
+  assert.deepEqual(
+    address(at({ city: '', description: 'სამუშაო ადგილი: თბილისი და ბათუმი' })),
+    ['თბილისი', 'ბათუმი'],
+    'a labelled work address in the description supports multiple cities',
+  );
   const home = at({ mode: 'დისტანციური' });
   assert.equal(home.jobLocationType, 'TELECOMMUTE');
   assert.deepEqual(home.applicantLocationRequirements, {

@@ -5,6 +5,7 @@ import { safeExternalUrl } from './vacancy-media';
 import { genericCompanyKeys, logoCompanyKey } from './company-logo-identity';
 import { vacancySegment } from './vacancy-navigation';
 import { salaryFacts } from './salary-summary';
+import { vacancySummary } from './vacancy-summary';
 
 export const siteUrl = 'https://jobx.ge';
 export const homeTitle = 'ვაკანსიები საქართველოში — სამსახურის ძებნა | JOBX';
@@ -102,7 +103,13 @@ export function jobPosting(
   )
     return null;
   const located = namedCity(job);
-  const working = located.length ? located : citiesInText(job);
+  // Explicit work-address facts can name several valid locations. Do not infer
+  // multiple workplaces from incidental city mentions elsewhere in the text.
+  const address = vacancySummary(job).find((item) => item.label === 'მისამართი')?.value || '';
+  const addressCities = cities.filter((city) =>
+    new RegExp(`(^|[^ა-ჰa-z])${cityStem(city)}`).test(address.normalize('NFKC').toLowerCase()),
+  );
+  const working = located.length ? located : addressCities.length ? addressCities : citiesInText(job);
   /* A remote vacancy on a Georgian board is open to people in Georgia; that is
      the one requirement the source does support, and without it Google refuses
      a telecommute posting outright. An office city, where the posting names one,

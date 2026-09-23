@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { CompanyLogo } from './company-logo';
 import { useVacancyActivity } from './use-vacancy-activity';
-import { vacancyPath } from '@/lib/vacancy-navigation';
+import { markListHop, vacancyPath } from '@/lib/vacancy-navigation';
 import type { SimilarVacancy } from '@/lib/similar-vacancies';
 export function SimilarVacancies({
   id,
@@ -86,7 +86,8 @@ export function SimilarVacancies({
           {current.jobs.map(({ job, reasons }) => (
             <Link
               key={job.id}
-              href={vacancyPath(job, { from: returnTo })}
+              href={vacancyPath(job)}
+              onNavigate={() => markListHop(returnTo, false)}
               prefetch={false}
               className="similar-card"
             >

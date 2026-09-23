@@ -7,6 +7,7 @@ import {
   readSearchPosition,
   markListHop,
   planListReturn,
+  resolveReturnPath,
   enterTab,
   canStepBack,
   vacancyIdFrom,
@@ -35,7 +36,8 @@ void test('vacancy links keep search context separate from their stable share UR
     vacancyPath({ id }, { from, preview: true }),
     'https://example.com',
   );
-  assert.equal(url.searchParams.get('from'), from);
+  assert.equal(url.searchParams.has('from'), false);
+  assert.equal(vacancyPath({ id }, { from }), '/vacancies/' + id);
   assert.equal(url.searchParams.get('preview'), '1');
   assert.equal(
     new URL(from, 'https://example.com').searchParams.get('page'),
@@ -234,5 +236,74 @@ void test('an unclaimed mark goes stale instead of turning a later visit into a 
   );
   history.push();
   enterTab();
+  assert.equal(planListReturn('/'), false);
+});
+
+void test('clean links recover list, company and recent context on their own history entry', () => {
+  for (const from of [
+    '/?city=kutaisi&category=lojistika&page=3',
+    '/companies/acme?page=2',
+    '/?saved=1',
+  ]) {
+    const history = tab();
+    enterTab();
+    markListHop(from);
+    history.push();
+    assert.equal(resolveReturnPath(), from);
+    assert.equal(planListReturn(from), true);
+    assert.equal(sessionStorage.getItem('ertad-list-hop'), null);
+    // Re-render, reload and forward retain the entry's context after consuming the mark.
+    assert.equal(resolveReturnPath(), from);
+    history.go(-1);
+    history.go(1);
+    assert.equal(resolveReturnPath(), from);
+  }
+});
+void test('direct and new-tab visits ignore old search context, with a safe legacy fallback', () => {
+  tab();
+  sessionStorage.setItem(
+    'ertad-search-return',
+    JSON.stringify({ url: '/?q=old' }),
+  );
+  assert.equal(resolveReturnPath(), '/');
+  assert.equal(planListReturn('/'), false);
+  tab();
+  assert.equal(resolveReturnPath('/?q=legacy&page=2'), '/?q=legacy&page=2');
+  assert.equal(planListReturn('/?q=legacy&page=2'), false);
+  tab();
+  assert.equal(resolveReturnPath('https://evil.test'), '/');
+});
+void test('similar vacancies inherit the list link without stepping back onto another vacancy', () => {
+  const history = tab();
+  enterTab();
+  markListHop('/?q=dev&page=2', false);
+  history.push();
+  const path = resolveReturnPath();
+  assert.equal(path, '/?q=dev&page=2');
+  assert.equal(planListReturn(path), false);
+});
+void test('expired and nonadjacent context cannot replace the default return link', () => {
+  const history = tab();
+  enterTab();
+  markListHop('/?q=old');
+  const mark = JSON.parse(sessionStorage.getItem('ertad-list-hop')!);
+  sessionStorage.setItem(
+    'ertad-list-hop',
+    JSON.stringify({ ...mark, at: Date.now() - 200000 }),
+  );
+  history.push();
+  assert.equal(resolveReturnPath(), '/');
+  markListHop('/?q=detour');
+  history.push();
+  enterTab();
+  history.push();
+  assert.equal(resolveReturnPath(), '/');
+});
+void test('unavailable session storage still leaves a usable return link', () => {
+  tab();
+  sessionStorage.getItem = () => {
+    throw Error('blocked');
+  };
+  assert.equal(resolveReturnPath(), '/');
   assert.equal(planListReturn('/'), false);
 });

@@ -282,7 +282,7 @@ export function CvSheet({
     >
       <header className="cv-document-header">
         <div className="cv-identity">
-          {cv.fullName && <h1>{cv.fullName}</h1>}
+          {cv.fullName && <p className="cv-person-name">{cv.fullName}</p>}
           {cv.title && <p className="cv-document-title">{cv.title}</p>}
         </div>
       </header>
@@ -709,7 +709,9 @@ export function CvBuilder() {
     );
   }
 
-  if (!mounted) return <main className="cv-main" aria-busy="true" />;
+  if (!mounted) return <main className="cv-main" aria-busy="true">
+    <div className="cv-intro"><h1>{cvText.ka.heading}</h1><p className="cv-note">{cvText.ka.intro}</p></div>
+  </main>;
   const contactKeys = [
     'fullName',
     'title',

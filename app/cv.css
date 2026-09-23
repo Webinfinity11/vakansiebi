@@ -553,13 +553,13 @@ html:root .cv-main .cv-month select {
     Arial,
     sans-serif;
 }
-.cv-page[data-font='serif'] h1,
+.cv-page[data-font='serif'] .cv-person-name,
 .cv-page[data-font='serif'] h2,
 .cv-page[data-font='serif'] h3 {
   font-family:
     'Sylfaen', 'Noto Serif Georgian', Georgia, 'Times New Roman', serif;
 }
-.cv-page h1 {
+.cv-page .cv-person-name {
   font-size: var(--jobx-font-size-40px);
   line-height: 1.16;
   font-weight: 750;
@@ -838,7 +838,7 @@ html:root .cv-main .cv-month select {
   border-bottom-width: 1px;
   padding-bottom: var(--jobx-space-16px);
 }
-.cv-page[data-template='compact'] h1 {
+.cv-page[data-template='compact'] .cv-person-name {
   font-size: 37.333px;
 }
 .cv-page[data-template='compact'] h2 {
@@ -873,7 +873,7 @@ html:root .cv-main .cv-month select {
 .cv-page[data-template='bold']:has(.cv-document-photo) .cv-document-header {
   padding-right: 208px;
 }
-.cv-page[data-template='bold'] h1,
+.cv-page[data-template='bold'] .cv-person-name,
 .cv-page[data-template='bold'] .cv-document-title {
   color: var(--jobx-white-fixed);
 }

@@ -29,8 +29,7 @@ export function vacancyPath(
 ) {
   const params = new URLSearchParams();
   if (options.preview) params.set('preview', '1');
-  if (options.from && options.from !== '/')
-    params.set('from', safeReturnPath(options.from));
+  // `from` remains accepted for older callers, but never enters a public URL.
   return (
     `/vacancies/${encodeURIComponent(vacancySegment(job))}` +
     (params.size ? '?' + params : '')
@@ -107,13 +106,14 @@ const cursor = 'ertad-entry-at';
    mark names the list it was left from and expires: a tap that never became a
    visit, or a vacancy opened later from a search engine, finds nothing to claim
    and keeps the plain link. */
-export function markListHop(from: string) {
+export function markListHop(from: string, fromList = true) {
   sameDocument = true;
   try {
     sessionStorage.setItem(
       hop,
       JSON.stringify({
         from: safeReturnPath(from),
+        fromList,
         index: stampEntry(),
         at: Date.now(),
       }),
@@ -126,27 +126,57 @@ export function markListHop(from: string) {
    tap that did not become a visit leaves its mark behind, and a vacancy reached
    afterwards from a search result would otherwise claim it and step back off
    jobx.ge, which is being thrown out of the site. */
+function pendingListHop() {
+  const mark = JSON.parse(sessionStorage.getItem(hop) || 'null');
+  return sameDocument &&
+    mark &&
+    typeof mark.from === 'string' &&
+    mark.index === stampEntry() - 1 &&
+    Number.isFinite(mark.at) &&
+    Date.now() >= mark.at &&
+    Date.now() - mark.at < 120000
+    ? mark
+    : null;
+}
 function takeListHop(expected: string) {
   try {
-    const raw = sessionStorage.getItem(hop);
+    const mark = pendingListHop();
     sessionStorage.removeItem(hop);
-    const mark = JSON.parse(raw || 'null');
     return (
-      sameDocument &&
       !!mark &&
-      mark.from === safeReturnPath(expected) &&
-      mark.index === stampEntry() - 1 &&
-      Number.isFinite(mark.at) &&
-      Date.now() - mark.at < 120000
+      mark.fromList !== false &&
+      mark.from === safeReturnPath(expected)
     );
   } catch {
     return false;
   }
 }
+/** Resolve context only for this history entry, never from an old search in the tab.
+ * The pending mark is consumed by planListReturn after this path is resolved. */
+export function resolveReturnPath(fallback = '/') {
+  try {
+    const state = window.history.state as EntryState | null;
+    if (typeof state?.jobxReturnTo === 'string')
+      return safeReturnPath(state.jobxReturnTo);
+    const mark = pendingListHop();
+    const path = safeReturnPath(mark?.from ?? fallback);
+    window.history.replaceState(
+      { ...window.history.state, jobxReturnTo: path },
+      '',
+    );
+    return path;
+  } catch {
+    return safeReturnPath(fallback);
+  }
+}
 /* A soft navigation keeps the document, and with it this flag: a mark made here
    can only be claimed by a page the reader reached without leaving. */
 let sameDocument = false;
-type EntryState = { jobxAt?: number; jobxFromList?: boolean };
+type EntryState = {
+  jobxAt?: number;
+  jobxFromList?: boolean;
+  jobxReturnTo?: string;
+};
 /* The address this document was served at. A reader who taps a card before the
    page has woken up gets an ordinary browser navigation instead of a soft one,
    and then the only evidence of what lies below is the referrer. It describes

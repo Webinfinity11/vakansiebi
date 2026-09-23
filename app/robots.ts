@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { siteUrl } from '@/lib/seo';
+import { sitemapLeaves } from '@/lib/sitemap';
 
 // Every one of these is already covered by the User-agent: * block below — an
 // AI crawler with no name of its own here still gets Allow: /. Naming them is
@@ -28,6 +29,12 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: '*', ...open },
       { userAgent: aiBots, ...open },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
+    /* The index first, then every leaf on its own line. A crawler that cannot
+       process the index — which is what Search Console reported for days — can
+       still reach each section directly. Repetition costs nothing here. */
+    sitemap: [
+      `${siteUrl}/sitemap.xml`,
+      ...sitemapLeaves(siteUrl).map((leaf) => leaf.url),
+    ],
   };
 }

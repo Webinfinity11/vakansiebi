@@ -54,7 +54,7 @@ void test('sitemap-pages.xml has no database dependency', async () => {
     const body = await response.text();
     assert.match(body, /<urlset /);
     assert.ok(body.includes('<loc>https://jobx.ge/</loc>'));
-    assert.ok(body.includes('<loc>https://jobx.ge/post-job</loc>'));
+    assert.ok(!body.includes('<loc>https://jobx.ge/post-job</loc>'), 'noindex form is excluded');
     assert.ok(body.includes('<loc>https://jobx.ge/cv</loc>'));
   });
 });
@@ -128,7 +128,12 @@ void test('a leaf sitemap is a flat, escaped, deduplicated URL list', async () =
   assert.match(body, /category=a&amp;city=b/);
   assert.match(body, /<lastmod>2026-09-18T00:00:00.000Z<\/lastmod>/);
   assert.ok(body.endsWith('</urlset>\n'));
-  assert.equal(robots().sitemap, 'https://jobx.ge/sitemap.xml');
+  // The index and every leaf, so a crawler that cannot read the index still
+  // finds each section on its own line.
+  assert.deepEqual(robots().sitemap, [
+    'https://jobx.ge/sitemap.xml',
+    ...sitemapLeaves('https://jobx.ge').map((leaf) => leaf.url),
+  ]);
 });
 
 void test('an oversized catalogue is truncated to 50000 URLs', async () => {

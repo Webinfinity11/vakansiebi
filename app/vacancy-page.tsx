@@ -28,6 +28,7 @@ import { emailDraft } from '@/lib/application-contact';
 import {
   canStepBack,
   planListReturn,
+  resolveReturnPath,
   vacancyPath,
 } from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
@@ -262,7 +263,7 @@ function JobReportForm({ jobId }: { jobId: string }) {
 export default function VacancyPage({
   job,
   preview,
-  returnTo,
+  returnTo: initialReturnTo,
   companyPath = null,
   footer,
 }: {
@@ -299,10 +300,14 @@ export default function VacancyPage({
      forward again; a vacancy opened from a search engine or a shared link has
      no step to go back to and keeps the plain link. */
   const router = useRouter();
+  const [returnTo, setReturnTo] = useState(initialReturnTo);
   const steppedFromList = useRef(false);
   useEffect(() => {
-    steppedFromList.current = planListReturn(returnTo);
-  }, [job.id, returnTo]);
+    const path = resolveReturnPath(initialReturnTo);
+    steppedFromList.current = planListReturn(path);
+    const frame = requestAnimationFrame(() => setReturnTo(path));
+    return () => cancelAnimationFrame(frame);
+  }, [job.id, initialReturnTo]);
   const leftFor = useRef(false);
   const [saved, setSaved] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
