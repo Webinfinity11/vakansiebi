@@ -4,10 +4,11 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db } from '../lib/server/db';
 import { stageVacancy } from '../worker/importer';
+import { tbilisiDate } from '../worker/adapters';
 import { reconcileRemovedRefresh } from '../worker/refresh';
 import type { Vacancy } from '../lib/types';
 void test(
-  'requested refresh publishes complete text for old paused jobs but preserves a newer editorial change',
+  'legacy refresh requests preserve stored text and editorial pauses in the new-only worker',
   { skip: process.env.RUN_DB_TESTS !== '1' },
   async () => {
     assert.equal(new URL(process.env.DATABASE_URL!).pathname, '/ertad_test');
@@ -31,8 +32,8 @@ void test(
         'კომპანია აცხადებს ვაკანსიას მოლარის პოზიციაზე. სრული ინფორმაცია მოცემულია ბმულზე.',
       url: 'https://jobs.ge/ge/?view=jobs&id=9992341',
       source: 'jobs.ge',
-      deadline: '2099-01-01',
-      datePosted: '2026-09-01',
+      deadline: tbilisiDate(new Date(Date.now() + 30 * 86400000)),
+      datePosted: tbilisiDate(new Date(Date.now() - 20 * 86400000)),
     };
     try {
       await db().query(
@@ -58,18 +59,22 @@ void test(
           '\n\nხელფასი: 1500 ლარი თვეში.\nსრული მოვალეობები.\nბოლო პირობა უცვლელად.',
         fullTextUrl: 'https://app.helio-ai.com/apply/test',
       };
-      for (const id of ids) await stageVacancy(id, next);
+      // 64a5c0e deliberately removed historical refreshes: even an old queued
+      // request cannot overwrite an imported snapshot or resume editorial work.
+      for (const id of ids)
+        assert.equal(await stageVacancy(id, next), 'unchanged');
       const rows = (
         await db().query(
-          'SELECT j.id,j.published,j.automation_paused,j.automation_managed,i.refresh_completed_at FROM jobs j JOIN source_items i ON i.job_id=j.id WHERE j.id=ANY($1::uuid[])',
+          'SELECT j.id,j.published,j.automation_paused,j.automation_managed,i.raw,i.refresh_completed_at FROM jobs j JOIN source_items i ON i.job_id=j.id WHERE j.id=ANY($1::uuid[])',
           [ids],
         )
       ).rows;
       const updated = rows.find((r) => r.id === ids[0]);
-      assert.equal(updated.published.description, next.description);
-      assert.equal(updated.automation_paused, false);
-      assert.equal(updated.automation_managed, true);
-      assert.ok(updated.refresh_completed_at);
+      assert.deepEqual(updated.published, v);
+      assert.deepEqual(updated.raw, v);
+      assert.equal(updated.automation_paused, true);
+      assert.equal(updated.automation_managed, false);
+      assert.equal(updated.refresh_completed_at, null);
       const edited = rows.find((r) => r.id === ids[1]);
       assert.equal(edited.published.description, v.description);
       assert.equal(edited.automation_paused, true);

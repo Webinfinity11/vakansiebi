@@ -86,7 +86,7 @@ void test(
 );
 
 void test(
-  'worker import and archive notify after commit, while unchanged and rolled-back imports send nothing',
+  'worker publication notifies after commit, while archive, unchanged and rolled-back imports send nothing',
   { skip: process.env.RUN_DB_TESTS !== '1' },
   async () => {
     const url = new URL(process.env.DATABASE_URL!);
@@ -201,8 +201,8 @@ void test(
       assert.equal(await stageVacancy(itemId, vacancy), 'unchanged');
       assert.equal(sent.length, 1);
       await pool.query(
-        "UPDATE source_items SET raw=jsonb_set(raw,'{deadline}','\"2000-01-01\"'::jsonb) WHERE id=$1",
-        [itemId],
+        "UPDATE source_items SET raw=jsonb_set(raw,'{deadline}',$2::jsonb) WHERE id=$1",
+        [itemId, JSON.stringify(tbilisiDate(new Date(Date.now() - 86400000)))],
       );
       // Archival announces nothing and spends no budget: the sitemap and the
       // page itself already tell Google the vacancy is gone.
@@ -244,7 +244,12 @@ void test(
         ).rows[0].job_id,
         null,
       );
-      assert.equal(sent.length, 2);
+      // Archival intentionally spends no indexing quota (592b97c); rollback
+      // must leave only the initial committed publication's URL_UPDATED.
+      assert.deepEqual(
+        sent.map((notification) => notification.type),
+        ['URL_UPDATED'],
+      );
     } finally {
       globalThis.fetch = originalFetch;
       globals.ertadPool = previousPool;

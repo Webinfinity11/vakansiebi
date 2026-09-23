@@ -7,6 +7,7 @@ import {
 import { placementTiers } from '../placement';
 import { bonusCompanyKey } from './job-placement';
 import { approvePlacement } from './job-placement';
+import { approveSubmissionLogo } from './submission-logos';
 import { employerlessSources, privateListingLabel } from '../types';
 import { z } from 'zod';
 import type { QueryResultRow } from 'pg';
@@ -611,6 +612,14 @@ export async function mutateJob(input: unknown) {
         await approvePlacement(c, job, draft.company, placement);
         if (placement !== 'premium') await cancelUnusedInvoice(c, job.id);
       }
+      // Approve uploads atomically with publication; an invalid upload must not
+      // leave a published vacancy pointing at a private or missing image.
+      await approveSubmissionLogo(
+        c,
+        draft.company,
+        draft.logoUrl || '',
+        job.published?.logoUrl || '',
+      );
       published = draft;
       status = 'published';
       review = false;

@@ -34,7 +34,7 @@ export function SalaryFilter({
         }
       >
         <option value="month">თვეში</option>
-        <option value="day">დღეში — დღიური ანაზღაურება</option>
+        <option value="day">დღეში</option>
       </select>
       <fieldset className="salary-presets" aria-label="მინიმალური ანაზღაურება">
         {[

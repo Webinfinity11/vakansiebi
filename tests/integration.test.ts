@@ -2,6 +2,9 @@ import 'dotenv/config';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { readFileSync, readdirSync } from 'node:fs';
+import { Client, Pool } from 'pg';
+import { tbilisiDate } from '../worker/adapters';
 import { db, transaction } from '../lib/server/db';
 import { reconcileJob } from '../worker/automation';
 import { runSource } from '../worker/run';
@@ -9,6 +12,7 @@ import { discoverItems, stageVacancy } from '../worker/importer';
 import {
   mutateJob,
   publicJobs,
+  clearPublicJobsCache,
   bulkPublishCandidates,
   bulkPublishJobs,
 } from '../lib/server/jobs';
@@ -18,9 +22,52 @@ const enabled = process.env.RUN_DB_TESTS === '1';
 void test(
   'moderation preserves public snapshot, detects conflicts, merges provenance and excludes expired jobs',
   { skip: !enabled },
-  async () => {
+  async (t) => {
     // Only a separate database explicitly named ertad_test may be mutated by this test.
-    assert.equal(new URL(process.env.DATABASE_URL!).pathname, '/ertad_test');
+    const connection = new URL(process.env.DATABASE_URL!);
+    assert.equal(connection.pathname, '/ertad_test');
+    assert.ok(['localhost', '127.0.0.1'].includes(connection.hostname));
+    // Isolate records and source settings so retries never depend on a prior run.
+    const schema = 'moderation_' + randomUUID().replaceAll('-', '');
+    const client = new Client({ connectionString: connection.href });
+    const pool = new Pool({
+      connectionString: connection.href,
+      options: `-c search_path=${schema}`,
+    });
+    const globals = globalThis as unknown as { ertadPool?: Pool };
+    const previousPool = globals.ertadPool;
+    await client.connect();
+    t.after(async () => {
+      globals.ertadPool = previousPool;
+      clearPublicJobsCache();
+      await pool.end();
+      await client.query('SET search_path TO public');
+      await client.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
+      await client.end();
+    });
+    await client.query(`CREATE SCHEMA ${schema}`);
+    await client.query(`SET search_path TO ${schema}`);
+    for (const name of readdirSync('db/migrations')
+      .filter((name) => name.endsWith('.sql'))
+      .sort())
+      await client.query(readFileSync('db/migrations/' + name, 'utf8'));
+    globals.ertadPool = pool;
+    await db().query(
+      "INSERT INTO sources(id,name) VALUES('hr','hr.ge'),('jobs','jobs.ge'),('hrgov','hr.gov.ge') ON CONFLICT(id) DO UPDATE SET enabled=true,retired=false,auto_publish=false",
+    );
+    const day = (offset: number) =>
+      tbilisiDate(new Date(Date.now() + offset * 86400000));
+    const georgianDay = (offset: number) => {
+      const parts = new Intl.DateTimeFormat('ka-GE', {
+        timeZone: 'Asia/Tbilisi',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).formatToParts(new Date(Date.now() + offset * 86400000));
+      return ['day', 'month', 'year']
+        .map((type) => parts.find((part) => part.type === type)!.value)
+        .join(' ');
+    };
     const external = randomUUID();
     const v: Vacancy = {
       title: 'TEST-' + external,
@@ -36,8 +83,8 @@ void test(
         'This is a dedicated integration test record, never a real vacancy.',
       url: 'https://www.hr.ge/announcement/999999999/test',
       source: 'hr.ge',
-      deadline: '2099-01-01',
-      datePosted: '2026-09-07',
+      deadline: day(30),
+      datePosted: day(0),
     };
     await discoverItems('hr', [{ externalId: external, url: v.url }]);
     const item = (
@@ -103,6 +150,8 @@ void test(
       logoUrl: 'https://www.hr.ge/test-logo.png',
       description: 'Verified company profile',
     });
+    // This checks database projection, not the public list's bounded cache TTL.
+    clearPublicJobsCache();
     assert.equal(
       (await publicJobs(params)).jobs[0].companyProfile.website,
       'https://example.com/',
@@ -128,16 +177,27 @@ void test(
         .total,
       0,
     );
-    await stageVacancy(item.id, { ...v, title: v.title + ' source changed' });
+    // 64a5c0e: completed IDs never rewrite snapshots or create review tasks.
+    assert.equal(
+      await stageVacancy(item.id, {
+        ...v,
+        title: v.title + ' source changed',
+      }),
+      'unchanged',
+    );
     job = (await db().query('SELECT * FROM jobs WHERE id=$1', [job.id]))
       .rows[0];
     assert.equal(job.draft.title, edited.title);
-    assert.equal((await publicJobs(params)).jobs[0].sourceChanged, true);
+    assert.equal((await publicJobs(params)).jobs[0].sourceChanged, false);
     assert.equal(job.published.title, edited.title);
-    assert.equal(job.needs_review, true);
+    assert.equal(job.needs_review, false);
     await assert.rejects(
       () =>
-        mutateJob({ id: job.id, version: job.version - 1, action: 'archive' }),
+        mutateJob({
+          id: job.id,
+          version: job.version - 1,
+          action: 'archive',
+        }),
       /შეიცვალა/,
     );
     const revised = { ...edited, company: 'Edited Company' };
@@ -184,9 +244,10 @@ void test(
     await mutateJob({ id: job.id, version: job.version, action: 'archive' });
     assert.equal((await publicJobs(params)).total, 0);
     await db().query(
-      "UPDATE jobs SET status='published',published=jsonb_set(published,'{deadline}','\"2020-01-01\"') WHERE id=$1",
-      [job.id],
+      "UPDATE jobs SET status='published',published=jsonb_set(published,'{deadline}',$2::jsonb) WHERE id=$1",
+      [job.id, JSON.stringify(day(-1))],
     );
+    clearPublicJobsCache();
     assert.equal((await publicJobs(params)).total, 0);
     // Concurrent, identical imports on different sources share one pending draft.
     const marker = randomUUID().replaceAll('-', '');
@@ -267,7 +328,7 @@ void test(
     await stageVacancy(secondaryItem.id, {
       ...exact,
       title: 'Coordinator ' + marker,
-      deadline: '2098-01-01',
+      deadline: day(15),
       description: exact.description + ' Backend Engineer support.',
     });
     const secondaryJob = (
@@ -281,10 +342,13 @@ void test(
       version: secondaryJob.version,
       action: 'publish',
     });
+    // Search now defaults to title/employer/city; description relevance is
+    // tested through the explicit wider-search option, preserving both matches.
     const ranked = await publicJobs(
       new URLSearchParams({
         q: 'Engineer ' + marker + ' Backend',
         sort: 'relevance',
+        deep: 'true',
       }),
     );
     assert.equal(ranked.total, 2);
@@ -306,6 +370,8 @@ void test(
       pair[0],
       'private internal error',
     ]);
+    // Direct fixture writes bypass the moderation API's cache invalidation.
+    clearPublicJobsCache();
     const withFailure = await publicJobs(new URLSearchParams({ q: marker }));
     assert.ok(
       withFailure.jobs
@@ -328,7 +394,7 @@ void test(
       ])
     ).rows[0];
     assert.equal(
-      await stageVacancy(expiredItem.id, { ...v, deadline: '2000-01-01' }),
+      await stageVacancy(expiredItem.id, { ...v, deadline: day(-1) }),
       'expired',
     );
     const expiredRecord = (
@@ -338,10 +404,19 @@ void test(
       )
     ).rows[0];
     assert.equal(expiredRecord.job_id, null);
-    assert.equal(expiredRecord.raw.deadline, '2000-01-01');
-    assert.ok(expiredRecord.next_check_at > new Date());
-    // A renewed deadline can be imported on the next check.
-    assert.equal(await stageVacancy(expiredItem.id, v), 'imported');
+    assert.equal(expiredRecord.raw.deadline, day(-1));
+    assert.equal(expiredRecord.next_check_at, Infinity);
+    // New-only keeps completed IDs as tombstones, even after deadline renewal.
+    assert.equal(await stageVacancy(expiredItem.id, v), 'unchanged');
+    assert.deepEqual(
+      (
+        await db().query(
+          'SELECT job_id,raw,next_check_at FROM source_items WHERE id=$1',
+          [expiredItem.id],
+        )
+      ).rows[0],
+      expiredRecord,
+    );
     await db().query("UPDATE sources SET auto_publish=true WHERE id='hr'");
     try {
       const autoExternal = randomUUID();
@@ -372,13 +447,13 @@ void test(
         ...automatic,
         description: automatic.description + ' Updated requirements.',
       };
-      await stageVacancy(autoItem.id, changed);
+      assert.equal(await stageVacancy(autoItem.id, changed), 'unchanged');
       autoJob = await readAuto();
-      assert.equal(autoJob.published.description, changed.description);
+      assert.equal(autoJob.published.description, automatic.description);
       assert.equal(
         autoJob.published_at.toISOString(),
         firstPublished,
-        'refresh must not bump a job above newly published vacancies',
+        'completed imports keep both their content and publication time',
       );
       await db().query(
         "UPDATE source_items SET error='Source request failed: timeout' WHERE id=$1",
@@ -396,13 +471,13 @@ void test(
       );
       await transaction((c) => reconcileJob(c, autoJob.id));
       assert.equal((await readAuto()).status, 'archived');
-      await stageVacancy(autoItem.id, changed);
+      assert.equal(await stageVacancy(autoItem.id, changed), 'unchanged');
       assert.equal(
         (await readAuto()).status,
-        'published',
-        'reappearing source is restored automatically',
+        'archived',
+        'completed source IDs are not automatically resurrected',
       );
-      await stageVacancy(autoItem.id, { ...changed, deadline: '2000-01-01' });
+      await stageVacancy(autoItem.id, { ...changed, deadline: day(-1) });
       assert.equal((await readAuto()).status, 'archived');
       await stageVacancy(autoItem.id, { ...changed, company: '' });
       const heldSource = (
@@ -412,19 +487,19 @@ void test(
         )
       ).rows[0];
       assert.equal(heldSource.raw.company, changed.company);
-      assert.equal(heldSource.raw.deadline, '2000-01-01');
-      assert.equal(heldSource.quality_candidate.company, '');
+      assert.equal(heldSource.raw.deadline, automatic.deadline);
+      assert.equal(heldSource.quality_candidate, null);
       assert.equal(
         (await readAuto()).status,
         'archived',
-        'invalid employer is held without replacing the previous archived snapshot',
+        'a later invalid candidate cannot replace a completed snapshot',
       );
       assert.equal(
         (await readAuto()).needs_review,
         false,
-        'quarantine does not create a manual review task',
+        'ignored reimports do not create a manual review task',
       );
-      await stageVacancy(autoItem.id, changed);
+      assert.equal(await stageVacancy(autoItem.id, changed), 'unchanged');
       autoJob = await readAuto();
       await mutateJob({
         id: autoJob.id,
@@ -478,7 +553,7 @@ void test(
             `<a href="/ge/?view=jobs&id=${url.searchParams.get('page') === '2' ? secondId : firstId}">Vacancy</a><script>if(loaded_page<2){loaded_page++; request('for_scroll=yes');}</script>`,
           );
         return new Response(
-          `<table><tr><td class="dtitle"><b>Discovery test vacancy ${url.searchParams.get('id')}</b></td><td class="dtitle"><b>Test employer</b></td><td class="dtitle"><b>01 სექტემბერი 2099</b><b>30 სექტემბერი 2099</b></td></tr><tr><td>Join our experienced team and create excellent services for our customers.</td></tr></table>`,
+          `<table><tr><td class="dtitle"><b>Discovery test vacancy ${url.searchParams.get('id')}</b></td><td class="dtitle"><b>Test employer</b></td><td class="dtitle"><b>${georgianDay(0)}</b><b>${georgianDay(30)}</b></td></tr><tr><td>Join our experienced team and create excellent services for our customers.</td></tr></table>`,
         );
       };
       await db().query("UPDATE sources SET discovery_cursor=0 WHERE id='jobs'");
@@ -514,6 +589,5 @@ void test(
     } finally {
       globalThis.fetch = originalFetch;
     }
-    await db().end();
   },
 );

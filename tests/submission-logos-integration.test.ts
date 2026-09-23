@@ -23,6 +23,7 @@ void test(
     const { submitJob } = await import('../lib/server/job-submissions');
     const { submissionDate, submissionSchema } =
       await import('../lib/job-submission');
+    const yesterday = submissionDate(new Date(Date.now() - 86400000));
     const { mutateJob, publicJobs } = await import('../lib/server/jobs');
     const { sessionToken } = await import('../lib/server/auth');
     const { GET } = await import('../app/api/logos/[hash]/route');
@@ -138,7 +139,7 @@ void test(
         new Request(`${origin}/api/submissions`, {
           method: 'POST',
           headers: { origin, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...base, deadline: '2000-01-01' }),
+          body: JSON.stringify({ ...base, deadline: yesterday }),
         }),
       );
       assert.equal(retry.status, 200);
@@ -148,7 +149,7 @@ void test(
           headers: { origin, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...base,
-            deadline: '2000-01-01',
+            deadline: yesterday,
             logo: 'data:image/png;base64,PHN2Zy8+',
           }),
         }),
@@ -165,6 +166,43 @@ void test(
         ).rows[0].n,
         1,
       );
+      // A missing upload rejects publication and rolls back placement changes
+      // from the same transaction, without approving the original private logo.
+      const missingLogo =
+        '/api/logos/' + createHash('sha256').update(randomUUID()).digest('hex');
+      await assert.rejects(
+        mutateJob({
+          id: ids[0],
+          version: row.version,
+          action: 'publish',
+          placement: 'vip',
+          draft: { ...row.draft, logoUrl: missingLogo },
+        }),
+        /ლოგო ვერ მოიძებნა/,
+      );
+      assert.deepEqual(
+        (await db().query('SELECT * FROM jobs WHERE id=$1', [ids[0]])).rows[0],
+        row,
+      );
+      assert.equal(
+        (
+          await db().query(
+            'SELECT bonus_company_key FROM job_submissions WHERE job_id=$1',
+            [ids[0]],
+          )
+        ).rows[0].bonus_company_key,
+        null,
+      );
+      assert.equal(
+        (
+          await db().query(
+            'SELECT approved_at FROM submission_logos WHERE hash=$1',
+            [hash],
+          )
+        ).rows[0].approved_at,
+        null,
+      );
+      assert.equal((await getLogo(url)).status, 404);
       await mutateJob({
         id: ids[0],
         version: row.version,
@@ -202,12 +240,31 @@ void test(
         hash,
       );
       assert.equal((await getLogo(`${url}?x=1`)).status, 404);
+      // Saving a draft removal leaves the public logo alone. Publication must
+      // compare against the previous published logo, not the already-edited draft.
+      await mutateJob({
+        id: ids[0],
+        version: row.version,
+        action: 'save',
+        draft: { ...row.draft, logoUrl: '' },
+      });
+      row = (await db().query('SELECT * FROM jobs WHERE id=$1', [ids[0]]))
+        .rows[0];
+      assert.equal(row.published.logoUrl, url);
+      assert.equal(
+        (
+          await db().query(
+            'SELECT logo_url FROM company_profiles WHERE company_key=$1',
+            [companyKey(key)],
+          )
+        ).rows[0].logo_url,
+        url,
+      );
       await mutateJob({
         id: ids[0],
         version: row.version,
         action: 'publish',
         placement: 'standard',
-        draft: { ...row.draft, logoUrl: '' },
       });
       assert.equal(
         (

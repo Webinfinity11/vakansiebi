@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 
-/* A jobs.ge vacancy imported before its listing named the city and the category gets both as
-   soon as the listing is read again, and automation publishes them — without a detail re-read. */
+/* Since 64a5c0e, listing hints apply only on first import. Known IDs and their
+   snapshots remain immutable (docs/new-only-scraping.md). */
 void test(
-  'a late listing hint reaches the stored copy and the published vacancy',
+  'initial listing hints publish, while late hints leave known vacancies untouched',
   { skip: process.env.RUN_DB_TESTS !== '1' },
   async () => {
     assert.equal(new URL(process.env.DATABASE_URL!).pathname, '/ertad_test');
@@ -13,17 +13,30 @@ void test(
     const { discoverItems, stageVacancy } = await import('../worker/importer');
     const { reconcileJob } = await import('../worker/automation');
     const { transaction } = await import('../lib/server/db');
-    const { parseDetail } = await import('../worker/adapters');
+    const { parseDetail, tbilisiDate } = await import('../worker/adapters');
     const external = String(Date.now()).slice(-9);
     const url = `https://jobs.ge/ge/?view=jobs&id=${external}`;
-    // Same shape as the jobs.ge detail fixture in parsers.test.ts, with a deadline far ahead.
-    const html = `<table><tr><td class="dtitle"><b>Designer ${randomUUID()}</b></td><td class="dtitle"><b>Studio</b></td><td class="dtitle"><b>01 სექტემბერი</b><b>30 დეკემბერი</b></td></tr><tr><td><p>We are seeking an experienced designer to join our growing team.</p></td></tr></table>`;
+    const date = (days: number) => {
+      const parts = new Intl.DateTimeFormat('ka-GE', {
+        timeZone: 'Asia/Tbilisi',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).formatToParts(new Date(Date.now() + days * 86400000));
+      return ['day', 'month', 'year']
+        .map((type) => parts.find((part) => part.type === type)!.value)
+        .join(' ');
+    };
+    const html = `<table><tr><td class="dtitle"><b>Designer ${randomUUID()}</b></td><td class="dtitle"><b>Studio</b></td><td class="dtitle"><b>${date(0)}</b><b>${date(30)}</b></td></tr><tr><td><p>We are seeking an experienced designer to join our growing team.</p></td></tr></table>`;
     // Other integration tests share this database and expect the source as the migrations left it.
     const saved = (
       await db().query(
         "SELECT auto_publish, enabled FROM sources WHERE id='jobs'",
       )
     ).rows[0];
+    let jobId: string | undefined;
+    let hintedJobId: string | undefined;
+    const hintedExternal = external + '1';
     await db().query(
       "UPDATE sources SET auto_publish=true, enabled=true WHERE id='jobs'",
     );
@@ -41,23 +54,26 @@ void test(
         '',
         'the fixture must parse with no city, or this test proves nothing',
       );
-      await stageVacancy(item.id, bare, 24);
+      assert.equal(bare.datePosted, tbilisiDate());
+      assert.equal(await stageVacancy(item.id, bare, 24), 'imported');
       await db().query(
         'UPDATE source_items SET last_verified_at=now() WHERE id=$1',
         [item.id],
       );
-      const jobId = (
+      jobId = (
         await db().query('SELECT job_id FROM source_items WHERE id=$1', [
           item.id,
         ])
       ).rows[0].job_id;
-      await transaction((c) => reconcileJob(c, jobId));
+      await transaction((c) => reconcileJob(c, jobId!));
       const before = (
-        await db().query('SELECT status, published FROM jobs WHERE id=$1', [
-          jobId,
-        ])
+        await db().query(
+          'SELECT status, published, automation_checked_at FROM jobs WHERE id=$1',
+          [jobId],
+        )
       ).rows[0];
-      assert.equal(before.published?.city ?? '', '', 'imported without a city');
+      assert.equal(before.status, 'published');
+      assert.equal(before.published.city, '', 'imported without a city');
 
       await discoverItems('jobs', [
         {
@@ -76,17 +92,16 @@ void test(
           [item.id],
         )
       ).rows[0];
-      assert.equal(stored.raw.city, 'ბათუმი');
-      assert.equal(stored.raw.category, 'ტექნოლოგიები');
+      assert.deepEqual(stored.raw, bare);
       const queued = (
         await db().query('SELECT automation_checked_at FROM jobs WHERE id=$1', [
           jobId,
         ])
       ).rows[0];
       assert.equal(
-        queued.automation_checked_at,
-        null,
-        'moved to the front of reconcile',
+        queued.automation_checked_at.getTime(),
+        before.automation_checked_at.getTime(),
+        'late hints do not queue a rewrite',
       );
       assert.equal(
         (
@@ -95,19 +110,14 @@ void test(
             [jobId],
           )
         ).rows[0].n,
-        1,
+        0,
       );
 
-      await transaction((c) => reconcileJob(c, jobId));
+      await transaction((c) => reconcileJob(c, jobId!));
       const after = (
         await db().query('SELECT published FROM jobs WHERE id=$1', [jobId])
       ).rows[0];
-      assert.equal(
-        after.published.city,
-        'ბათუმი',
-        'published with the city its listing named',
-      );
-      assert.equal(after.published.category, 'ტექნოლოგიები');
+      assert.deepEqual(after.published, before.published);
 
       // Reading the listing again with the same hint changes nothing further.
       await discoverItems('jobs', [
@@ -137,10 +147,51 @@ void test(
             [jobId],
           )
         ).rows[0].n,
-        1,
-        'a repeated listing is not a second change',
+        0,
+        'repeated listings do not rewrite stored snapshots',
       );
+      // New IDs still receive the listing's city/category during their first parse.
+      const hints = {
+        city: 'ბათუმი',
+        categoryLabel: 'IT/პროგრამირება',
+        category: 'ტექნოლოგიები',
+      };
+      const hintedUrl = `https://jobs.ge/ge/?view=jobs&id=${hintedExternal}`;
+      await discoverItems('jobs', [
+        { externalId: hintedExternal, url: hintedUrl, hints },
+      ]);
+      const hinted = (
+        await db().query(
+          "SELECT id,listing_hints FROM source_items WHERE source_id='jobs' AND external_id=$1",
+          [hintedExternal],
+        )
+      ).rows[0];
+      const initial = parseDetail(
+        'jobs',
+        html,
+        hintedUrl,
+        hinted.listing_hints,
+      );
+      assert.equal(await stageVacancy(hinted.id, initial), 'imported');
+      const published = (
+        await db().query(
+          'SELECT j.id,j.published FROM jobs j JOIN source_items i ON i.job_id=j.id WHERE i.id=$1',
+          [hinted.id],
+        )
+      ).rows[0];
+      hintedJobId = published.id;
+      assert.equal(published.published.city, 'ბათუმი');
+      assert.equal(published.published.category, 'ტექნოლოგიები');
     } finally {
+      const ids = [jobId, hintedJobId].filter(Boolean);
+      await db().query('DELETE FROM audit_log WHERE job_id=ANY($1::uuid[])', [
+        ids,
+      ]);
+      await db().query(
+        "DELETE FROM source_items WHERE source_id='jobs' AND external_id=ANY($1::text[])",
+        [[external, hintedExternal]],
+      );
+      await db().query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [ids]);
       await db().query(
         "UPDATE sources SET auto_publish=$1, enabled=$2 WHERE id='jobs'",
         [saved.auto_publish, saved.enabled],

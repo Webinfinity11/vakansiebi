@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db } from '../lib/server/db';
-import { parseDetail, fingerprint } from '../worker/adapters';
+import { parseDetail, fingerprint, tbilisiDate } from '../worker/adapters';
 import { reconcileJob } from '../worker/automation';
 void test(
   'verified short and empty SS details automatically publish without invented description',
@@ -20,9 +20,11 @@ void test(
         const id = randomUUID(),
           item = randomUUID();
         const url = 'https://jobs.ss.ge/ka/details/test-999888777';
+        // New-only publication requires a real, recent source date. Minimal
+        // descriptions remain valid; an undated fixture tests a different rule.
         const v = parseDetail(
           'ss',
-          `<script id="__NEXT_DATA__">${JSON.stringify({ props: { pageProps: { detailsInitData: { id: 999888777, status: 0, jobsDealType: 1, title: { ka: 'Test ' + id }, publisherName: 'Verified employer', description: { ka: description } } } } })}</script>`,
+          `<script id="__NEXT_DATA__">${JSON.stringify({ props: { pageProps: { detailsInitData: { id: 999888777, status: 0, jobsDealType: 1, startDate: tbilisiDate(), title: { ka: 'Test ' + id }, publisherName: 'Verified employer', description: { ka: description } } } } })}</script>`,
           url,
         );
         await c.query(

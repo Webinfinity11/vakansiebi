@@ -5,10 +5,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { Client } from 'pg';
 import { db } from '../lib/server/db';
 import { runSource } from '../worker/run';
+import { tbilisiDate } from '../worker/adapters';
 import { refreshDescriptions } from '../worker/refresh';
 
 void test(
-  'closed Worknet pages advance within the budget, while repeated or unreadable pages retain the cursor',
+  'new-only Worknet discovery starts at page one and stops on known, repeated or unreadable pages',
   { skip: process.env.RUN_DB_TESTS !== '1' },
   async () => {
     const url = new URL(process.env.DATABASE_URL!);
@@ -33,17 +34,38 @@ void test(
       const detail = JSON.parse(
         readFileSync('tests/fixtures/worknet/detail.json', 'utf8'),
       );
+      detail.startDate = tbilisiDate();
+      detail.endDate = tbilisiDate(new Date(Date.now() + 30 * 86400000));
+      let scenario = 0;
       for (const mode of [
         'closed',
         'firstClosed',
         'repeated',
         'empty',
         'malformed',
+        'known',
       ]) {
         const listingRequests: number[] = [];
+        const first = 700001 + scenario++ * 100;
+        const second = first + 1;
+        const third = first + 2;
+        const closedFirst = first + 3;
         await db().query(
-          "UPDATE sources SET discovery_cursor=0,reported_total=NULL,quality_warning=NULL WHERE id='worknet'",
+          "UPDATE sources SET discovery_cursor=7,reported_total=NULL,quality_warning=NULL WHERE id='worknet'",
         );
+        // Existing IDs must also stop pagination, independently of malformed pages.
+        if (mode === 'known') {
+          for (const id of [first, second])
+            await db().query(
+              "INSERT INTO source_items(id,source_id,external_id,url,raw,next_check_at) VALUES($1,'worknet',$2,$3,$4,'infinity')",
+              [
+                randomUUID(),
+                String(id),
+                `https://worknet.moh.gov.ge/ka-ge/vacancy/${id}`,
+                detail,
+              ],
+            );
+        }
         globalThis.fetch = async (input) => {
           const u = new URL(input instanceof Request ? input.url : input);
           if (u.pathname === '/robots.txt')
@@ -55,15 +77,20 @@ void test(
             const items =
               page === 1
                 ? mode === 'firstClosed'
-                  ? [{ id: 700004, vacancyStatusId: 8 }]
-                  : [{ id: 700001, vacancyStatusId: 1 }]
+                  ? [{ id: closedFirst, vacancyStatusId: 8 }]
+                  : [{ id: first, vacancyStatusId: 1 }]
                 : page === 2
                   ? mode === 'empty'
                     ? []
-                    : [{ id: 700002, vacancyStatusId: 8 }]
+                    : [
+                        {
+                          id: second,
+                          vacancyStatusId: mode === 'known' ? 1 : 8,
+                        },
+                      ]
                   : mode === 'repeated'
-                    ? [{ id: 700002, vacancyStatusId: 8 }]
-                    : [{ id: 700003, vacancyStatusId: 1 }];
+                    ? [{ id: second, vacancyStatusId: 8 }]
+                    : [{ id: third, vacancyStatusId: 1 }];
             return new Response(
               JSON.stringify({ items, totalCount: 4, totalPages: 4 }),
             );
@@ -81,32 +108,47 @@ void test(
         ).rows[0];
         assert.equal(
           row.discovery_cursor,
-          ['closed', 'firstClosed'].includes(mode)
-            ? 2
-            : mode === 'repeated'
-              ? 1
-              : 0,
+          7, // 64a5c0e starts from page one and never rotates the legacy cursor.
           mode,
         );
         assert.deepEqual(
           listingRequests,
-          mode === 'empty' || mode === 'malformed' ? [1, 2] : [1, 2, 3],
+          ['empty', 'malformed', 'firstClosed', 'known'].includes(mode)
+            ? [1, 2]
+            : [1, 2, 3],
           mode,
         );
         assert.equal(
           (
             await db().query(
-              "SELECT count(*)::int n FROM source_items WHERE external_id IN ('700002','700004')",
+              'SELECT count(*)::int n FROM source_items WHERE external_id=ANY($1::text[])',
+              [
+                [
+                  String(closedFirst),
+                  ...(mode === 'known' ? [] : [String(second)]),
+                ],
+              ],
             )
           ).rows[0].n,
           0,
           'closed records are never imported',
         );
+        if (['empty', 'malformed', 'repeated'].includes(mode)) {
+          const warning = (
+            await db().query(
+              "SELECT error FROM source_runs WHERE source_id='worknet' ORDER BY started_at DESC LIMIT 1",
+            )
+          ).rows[0].error;
+          // Worknet's parser returns no links for malformed JSON, so the
+          // runner reports the same empty-page stop without advancing further.
+          assert.match(warning, mode === 'repeated' ? /repeated/ : /empty/);
+        }
         if (mode === 'closed') {
           assert.equal(
             (
               await db().query(
-                "SELECT count(*)::int n FROM source_items WHERE external_id IN ('700001','700003')",
+                'SELECT count(*)::int n FROM source_items WHERE external_id=ANY($1::text[])',
+                [[String(first), String(third)]],
               )
             ).rows[0].n,
             2,
