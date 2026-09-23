@@ -99,10 +99,12 @@ export function createSitemapHandler(
      worse answer than a short, certain list: production served exactly that to
      every crawl on 2026-09-23 until this fallback existed. */
   floor: () => SitemapEntry[] = () => [],
+  name = 'sitemap',
 ) {
   let lastGood: SitemapEntry[] = [];
   return async function GET() {
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const started = Date.now();
     try {
       const entries = await Promise.race([
         Promise.resolve().then(load),
@@ -113,14 +115,35 @@ export function createSitemapHandler(
           );
         }),
       ]);
+      if (!entries.length)
+        throw new Error('Sitemap generation returned no URLs');
       lastGood = entries;
       return combinedSitemapResponse(entries);
-    } catch {
-      console.warn(
-        'Sitemap section unavailable; serving the last list for a retry.',
-      );
-      return combinedSitemapResponse(lastGood.length ? lastGood : floor(), {
-        cache: 'no-store',
+    } catch (error) {
+      const fallback = lastGood.length ? lastGood : floor();
+      console.warn('Sitemap generation failed', {
+        name,
+        durationMs: Date.now() - started,
+        error: error instanceof Error ? error.message : String(error),
+        urls: fallback.length,
+        source: lastGood.length
+          ? 'memory'
+          : fallback.length
+            ? 'curated'
+            : 'unavailable',
+      });
+      if (fallback.length)
+        return combinedSitemapResponse(fallback, { cache: 'no-store' });
+      // An unavailable catalogue must never look like a successfully empty one.
+      return new Response('Sitemap temporarily unavailable. Please retry.', {
+        status: 503,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-store',
+          'CDN-Cache-Control': 'no-store',
+          'Vercel-CDN-Cache-Control': 'no-store',
+          'Retry-After': '300',
+        },
       });
     } finally {
       clearTimeout(timer);

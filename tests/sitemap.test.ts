@@ -63,11 +63,16 @@ void test('sitemap-categories.xml, sitemap-companies.xml and sitemap-jobs.xml re
   await withoutDatabase(async () => {
     for (const get of [categoriesGET, companiesGET, jobsGET]) {
       const response = await get();
-      assert.equal(response.status, 200);
       assert.equal(response.headers.get('Cache-Control'), 'no-store');
       const body = await response.text();
-      assert.match(body, /<urlset /);
-      assert.match(body, /<\/urlset>/);
+      if (get === categoriesGET) {
+        assert.equal(response.status, 200);
+        assert.match(body, /<url><loc>/);
+      } else {
+        assert.equal(response.status, 503);
+        assert.equal(response.headers.get('Retry-After'), '300');
+        assert.doesNotMatch(body, /<urlset/);
+      }
     }
   });
 });
@@ -304,7 +309,7 @@ void test('a cold leaf that cannot count still names the curated pages', async (
   assert.match(body, /category=gaqidvebi/);
 });
 
-void test('a hung cold leaf returns complete XML within its deadline and retries', async () => {
+void test('a hung cold leaf reports temporary failure within its deadline and retries', async () => {
   let hung = true;
   const get = createSitemapHandler(
     () =>
@@ -316,9 +321,10 @@ void test('a hung cold leaf returns complete XML within its deadline and retries
   const started = performance.now();
   const response = await get();
   assert.ok(performance.now() - started < 500);
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 503);
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
-  assert.match(await response.text(), /<urlset[^>]*>\s*<\/urlset>/);
+  assert.equal(response.headers.get('Retry-After'), '300');
+  assert.doesNotMatch(await response.text(), /<urlset/);
   hung = false;
   const retry = await get();
   assert.match(await retry.text(), /city=tbilisi/);
@@ -339,4 +345,30 @@ void test('a failed or hung refresh preserves the last good leaf but never cache
     assert.equal(response.headers.get('Cache-Control'), 'no-store');
     assert.match(await response.text(), /city=tbilisi/);
   }
+});
+
+void test('an empty refresh cannot replace the previous complete sitemap', async () => {
+  let entries = [{ url: 'https://jobx.ge/vacancies/example' }];
+  const get = createSitemapHandler(async () => entries);
+  await get();
+  entries = [];
+  const response = await get();
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.match(await response.text(), /vacancies\/example/);
+  assert.equal((await createSitemapHandler(async () => [])()).status, 503);
+});
+
+void test('persistent snapshots preserve dates and fit a large catalogue in one cache entry', async () => {
+  const { encodeSitemapSnapshot, decodeSitemapSnapshot } =
+    await import('../lib/server/sitemap-snapshot');
+  const entries = Array.from({ length: 45_000 }, (_, i) => ({
+    url: `https://jobx.ge/vacancies/example-${i}-${randomUUID()}`,
+    lastModified: new Date('2026-09-23T07:00:00.000Z'),
+  }));
+  const snapshot = encodeSitemapSnapshot(entries);
+  assert.ok(Buffer.byteLength(JSON.stringify(entries)) > 2_000_000);
+  assert.ok(Buffer.byteLength(snapshot) < 1_900_000);
+  assert.deepEqual(decodeSitemapSnapshot(snapshot), entries);
+  assert.throws(() => encodeSitemapSnapshot([]), /no URLs/);
 });
