@@ -70,13 +70,15 @@ export function newest(dates: Iterable<Date>) {
    title ILIKE and a first-city approximation do not. The canonical group rank
    is independent of filters, so every pass uses the same record identifiers. */
 export type { LandingCount } from '../seo-landing';
+
+/* Production carries twice the rows of the local copy and answers through a
+   pooler, so the eight seconds this census was first given ran out on every
+   cold crawl and the leaf fell back to the curated list. A sitemap is read by
+   crawlers, not by readers waiting on a page: twenty seconds spent once an hour
+   is cheaper than a catalogue Google never sees. */
+export const censusBudgetMs = 20_000;
 async function readLandingCounts(): Promise<LandingCount[]> {
-  /* Production carries twice the rows of the local copy and answers from a
-     pooler, so the eight seconds this census was first given ran out on every
-     cold crawl and the leaf fell back to the curated list. A sitemap is read by
-     crawlers, not by readers waiting on a page: twenty seconds spent once an
-     hour is cheaper than a catalogue Google never sees. */
-  const deadline = Date.now() + 20_000;
+  const deadline = Date.now() + censusBudgetMs;
   const client = await db().connect();
   let discard = false;
   try {

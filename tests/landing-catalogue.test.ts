@@ -166,9 +166,19 @@ void test('landing census has one total deadline, not a fresh timeout per filter
     },
   }));
   try {
+    const { censusBudgetMs } = await import('../lib/server/sitemap-data');
+    // The mocked clock jumps two seconds per reading, so the whole budget is
+    // spent after that many passes however many filters are still waiting.
+    const passes = censusBudgetMs / 2_000;
     await assert.rejects(allLandingCounts(900_000), /deadline exceeded/);
-    assert.ok(statements.filter((sql) => sql.startsWith('WITH')).length < 5);
-    assert.ok(statements.includes("SET LOCAL statement_timeout = '6000ms'"));
+    assert.ok(
+      statements.filter((sql) => sql.startsWith('WITH')).length < passes,
+    );
+    assert.ok(
+      statements.includes(
+        `SET LOCAL statement_timeout = '${censusBudgetMs - 2_000}ms'`,
+      ),
+    );
     assert.ok(statements.includes("SET LOCAL statement_timeout = '2000ms'"));
     assert.equal(statements.at(-1), 'ROLLBACK');
     assert.equal(released, true);
