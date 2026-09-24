@@ -21,12 +21,14 @@ import {
 import { worknet } from './worknet';
 import { myjobs } from './myjobs';
 import { awork } from './awork';
+import { dk } from './dk';
 export type { ListedLink, ListingHints } from './module';
 /** JSON-backed boards live in their own modules; the HTML boards below share this file. */
 export const modules: Partial<Record<SourceId, SourceModule>> = {
   worknet,
   myjobs,
   awork,
+  dk,
 };
 
 type HrAnnouncement = {
@@ -123,6 +125,7 @@ const legacyConfigs = {
   worknet: worknet.config,
   myjobs: myjobs.config,
   awork: awork.config,
+  dk: dk.config,
 };
 // Legacy parsing remains for existing audit records; no retired source can be fetched.
 export const configs = {
@@ -134,6 +137,7 @@ export const configs = {
   worknet: legacyConfigs.worknet,
   myjobs: legacyConfigs.myjobs,
   awork: legacyConfigs.awork,
+  dk: legacyConfigs.dk,
 };
 /** The document fetched for a public vacancy URL; JSON boards read their public API instead. */
 export function detailRequestUrl(source: SourceId, url: string) {
@@ -1146,6 +1150,7 @@ export const sourceLockIds: Record<SourceId, number> = {
   worknet: 917416,
   myjobs: 917417,
   awork: 917418,
+  dk: 917419,
 };
 
 // Georgian listings omit the year; compare against their local calendar date, including around midnight/New Year.
