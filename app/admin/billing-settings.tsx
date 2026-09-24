@@ -1,4 +1,5 @@
 'use client';
+import { adminDate } from '@/lib/admin-format';
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { InvoiceEmailTest } from './invoice-email-test';
 import {
@@ -135,10 +136,7 @@ export function BillingSettings({
                     ` · ${invoiceStatuses[p.invoice_status]}`}
                 </p>
                 <span data-soon={left <= 3 || undefined}>
-                  დარჩა {left} დღე ·{' '}
-                  {new Date(p.expires_at).toLocaleDateString('ka-GE', {
-                    timeZone: 'Asia/Tbilisi',
-                  })}
+                  დარჩა {left} დღე · {adminDate(p.expires_at)}
                   -მდე
                 </span>
               </div>

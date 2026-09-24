@@ -346,6 +346,8 @@ export function SubmissionPerformance({
   );
   const views = sorted.reduce((total, r) => total + r.total.view, 0);
   const reached = sorted.reduce((total, r) => total + contacts(r.total), 0);
+  const active = sorted.filter((r) => r.status === 'published').length;
+  const week = sorted.reduce((total, r) => total + r.last7.view, 0);
   return (
     <section
       className="reports-section vacancy-performance"
@@ -353,6 +355,10 @@ export function SubmissionPerformance({
     >
       <div className="reports-heading">
         <h2>ეფექტურობა</h2>
+        <span className="vacancy-performance-note">
+          მხოლოდ ნამდვილი, საიტზე გამოქვეყნებული განცხადებები — ტესტები არ
+          ითვლება
+        </span>
         <button
           type="button"
           className="secondary-button"
@@ -366,12 +372,28 @@ export function SubmissionPerformance({
       {rows && !rows.length && <p>ფორმით გაგზავნილი ვაკანსია ჯერ არ არის.</p>}
       {!!sorted.length && (
         <>
-          <p className="admin-analytics-hint">
-            სულ: {whole.format(views)} ნახვა · {whole.format(reached)} კონტაქტის
-            მცდელობა
-            {conversion(views, reached) &&
-              ` · კონვერსია ${conversion(views, reached)}`}
-          </p>
+          <dl className="vacancy-performance-kpis">
+            <div>
+              <dt>აქტიური ახლა</dt>
+              <dd>{whole.format(active)}</dd>
+            </div>
+            <div>
+              <dt>ნახვები</dt>
+              <dd>{whole.format(views)}</dd>
+              <small>7 დღე: {whole.format(week)}</small>
+            </div>
+            <div>
+              <dt>კონტაქტის მცდელობა</dt>
+              <dd>{whole.format(reached)}</dd>
+            </div>
+            <div>
+              <dt>კონვერსია</dt>
+              <dd>{conversion(views, reached) ?? '—'}</dd>
+              {!conversion(views, reached) && (
+                <small>{enoughViews} ნახვამდე არ ითვლება</small>
+              )}
+            </div>
+          </dl>
           <div className="vacancy-performance-scroll">
             <table>
               <thead>
@@ -409,7 +431,7 @@ export function SubmissionPerformance({
                         </button>
                         <small>{r.company}</small>
                       </th>
-                      <td>
+                      <td data-label="სტატუსი">
                         <span className={`status status-${r.status}`}>
                           {statusNames[r.status] ?? r.status}
                         </span>
@@ -419,11 +441,14 @@ export function SubmissionPerformance({
                           </span>
                         )}
                       </td>
-                      <td className="num">{whole.format(r.total.view)}</td>
-                      <td>
+                      <td data-label="ნახვები" className="num">
+                        {whole.format(r.total.view)}
+                      </td>
+                      <td data-label="30 დღე">
                         <Sparkline days={r.series} />
                       </td>
                       <td
+                        data-label="კონტაქტი"
                         className="num"
                         title={contactKinds
                           .map((k) => `${labels[k]}: ${r.total[k]}`)
@@ -432,6 +457,7 @@ export function SubmissionPerformance({
                         {whole.format(reach)}
                       </td>
                       <td
+                        data-label="კონვერსია"
                         className={`num${rate ? '' : ' muted'}`}
                         title={
                           rate
@@ -441,7 +467,9 @@ export function SubmissionPerformance({
                       >
                         {rate ?? '—'}
                       </td>
-                      <td className="num">{whole.format(r.total.save)}</td>
+                      <td data-label="შენახვა" className="num">
+                        {whole.format(r.total.save)}
+                      </td>
                     </tr>
                   );
                 })}

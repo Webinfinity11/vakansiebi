@@ -1,4 +1,5 @@
 'use client';
+import { adminClock, adminDay } from '@/lib/admin-format';
 import { useEffect, useState } from 'react';
 import { placementLabels, type PlacementTier } from '@/lib/placement';
 import type { AuditEntry } from '@/lib/server/audit-history';
@@ -20,6 +21,7 @@ const actions: Record<string, string> = {
   'employer.decide': 'კომპანიის სახელები',
   'scraper.dispatch': 'სკრეიპერის გაშვება',
   'submission.received': 'დამსაქმებლის განცხადება',
+  'submission.test': 'ტესტის ნიშანი შეიცვალა',
   'automation.published': 'ავტომატურად გამოქვეყნდა',
   'automation.archived': 'ავტომატურად დაარქივდა',
   'automation.pending': 'ავტომატურად შეჩერდა',
@@ -55,32 +57,80 @@ const scopes = [
   ['all', 'ყველა'],
 ] as const;
 
+/* Who made a change decides its colour: people first, then the machines. */
 function actor(value: string) {
-  if (value === 'admin') return 'ადმინი';
-  if (value === 'employer') return 'დამსაქმებელი';
+  if (value === 'admin') return { name: 'ადმინი', tone: 'admin' };
+  if (value === 'employer') return { name: 'დამსაქმებელი', tone: 'employer' };
   if (value === 'automation' || value.startsWith('requested:'))
-    return 'ავტომატიზაცია';
-  return value.replace(/^(crawler|parser):/, '');
+    return { name: 'ავტომატიზაცია', tone: 'auto' };
+  return { name: value.replace(/^(crawler|parser):/, ''), tone: 'source' };
 }
+const fieldNames: Record<string, string> = {
+  title: 'სათაური',
+  company: 'კომპანია',
+  category: 'კატეგორია',
+  city: 'ქალაქი',
+  salary: 'ხელფასი',
+  salaryMin: 'ხელფასი',
+  salaryPeriod: 'ხელფასი',
+  currency: 'ხელფასი',
+  deadline: 'ბოლო ვადა',
+  datePosted: 'გამოქვეყნების თარიღი',
+  description: 'აღწერა',
+  mode: 'სამუშაო რეჟიმი',
+  employmentType: 'განაკვეთი',
+  facts: 'კონტაქტები',
+  applicationLinks: 'განაცხადის ბმულები',
+  logoUrl: 'ლოგო',
+  source: 'წყარო',
+  url: 'ბმული',
+  warnings: 'გაფრთხილებები',
+  name: 'სახელი',
+  website: 'ვებგვერდი',
+  payee_name: 'მიმღები',
+  bank_name: 'ბანკი',
+  iban: 'IBAN',
+};
+/* Internal bookkeeping fields say nothing to a person reading the history. */
+const quietFields = new Set(['version', 'warnings', 'source', 'url']);
 
-/* One line saying what changed, from the few fields the server pulls out of each entry. */
-function change(e: AuditEntry) {
-  const parts: string[] = [];
-  if (e.afterStatus && e.afterStatus !== e.beforeStatus)
-    parts.push(
-      `${e.beforeStatus ? (statuses[e.beforeStatus] ?? e.beforeStatus) + ' → ' : ''}${statuses[e.afterStatus] ?? e.afterStatus}`,
-    );
-  if (e.reason) parts.push(reasons[e.reason] ?? e.reason);
-  if (e.tier)
-    parts.push(
-      `${placementLabels[e.tier as PlacementTier] ?? e.tier}${e.days ? `, ${e.days} დღე` : ''}`,
-    );
-  if (e.amount) parts.push(`${e.amount} ₾`);
-  if (e.fields.length)
-    parts.push(
-      `შეიცვალა: ${e.fields.slice(0, 5).join(', ')}${e.fields.length > 5 ? ` +${e.fields.length - 5}` : ''}`,
-    );
-  return parts.join(' · ');
+function Change({ e }: { e: AuditEntry }) {
+  const fields = [
+    ...new Set(
+      e.fields
+        .filter((f) => !quietFields.has(f))
+        .map((f) => fieldNames[f] ?? f),
+    ),
+  ];
+  const tier = e.tier
+    ? `${placementLabels[e.tier as PlacementTier] ?? e.tier}${e.days ? ` · ${e.days} დღე` : ''}${e.amount ? ` · ${e.amount} ₾` : ''}`
+    : e.amount
+      ? `${e.amount} ₾`
+      : '';
+  if (!fields.length && !tier && !e.reason && e.afterStatus === e.beforeStatus)
+    return null;
+  return (
+    <div className="history-diff">
+      {e.afterStatus && e.afterStatus !== e.beforeStatus && (
+        <>
+          {e.beforeStatus && (
+            <>
+              <s>{statuses[e.beforeStatus] ?? e.beforeStatus}</s>→
+            </>
+          )}
+          <ins>{statuses[e.afterStatus] ?? e.afterStatus}</ins>
+        </>
+      )}
+      {e.reason && <span>{reasons[e.reason] ?? e.reason}</span>}
+      {tier && <ins>{tier}</ins>}
+      {!!fields.length && (
+        <span>
+          შეიცვალა: {fields.slice(0, 6).join(', ')}
+          {fields.length > 6 && ` +${fields.length - 6}`}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function useHistory(scope: string, job?: string) {
@@ -134,7 +184,90 @@ function useHistory(scope: string, job?: string) {
   };
 }
 
-function Entries({
+type Row =
+  | { kind: 'one'; entry: AuditEntry }
+  | { kind: 'many'; entries: AuditEntry[] };
+
+/* Machines repeat themselves: three or more automatic entries of one kind in a row become a
+   single line that opens on request, so a person's own decisions are not buried. */
+function rows(entries: AuditEntry[], fold: boolean): Row[] {
+  const out: Row[] = [];
+  for (const entry of entries) {
+    const last = out.at(-1);
+    const same = (other: AuditEntry) =>
+      other.action === entry.action &&
+      actor(other.actor).tone === actor(entry.actor).tone &&
+      adminDay(other.createdAt) === adminDay(entry.createdAt);
+    if (
+      fold &&
+      actor(entry.actor).tone !== 'admin' &&
+      actor(entry.actor).tone !== 'employer'
+    ) {
+      if (last?.kind === 'many' && same(last.entries[0])) {
+        last.entries.push(entry);
+        continue;
+      }
+      if (last?.kind === 'one' && same(last.entry)) {
+        out[out.length - 1] = { kind: 'many', entries: [last.entry, entry] };
+        continue;
+      }
+    }
+    out.push({ kind: 'one', entry });
+  }
+  // A pair is clearer shown than folded.
+  return out.flatMap((row) =>
+    row.kind === 'many' && row.entries.length < 3
+      ? row.entries.map((entry) => ({ kind: 'one' as const, entry }))
+      : [row],
+  );
+}
+
+function Entry({
+  e,
+  showJob,
+  onOpenJob,
+}: {
+  e: AuditEntry;
+  showJob: boolean;
+  onOpenJob?: (id: string) => void;
+}) {
+  const who = actor(e.actor);
+  return (
+    <li className="history-row">
+      <time dateTime={e.createdAt}>{adminClock(e.createdAt)}</time>
+      <span className="history-who" data-tone={who.tone}>
+        {who.name}
+      </span>
+      <div className="history-body">
+        <p>
+          <strong>{actions[e.action] ?? e.action}</strong>
+          {showJob && e.jobId && (
+            <>
+              {' · '}
+              {onOpenJob ? (
+                <button
+                  type="button"
+                  className="history-link"
+                  onClick={() => onOpenJob(e.jobId!)}
+                >
+                  {e.title || 'ვაკანსია'}
+                </button>
+              ) : (
+                e.title
+              )}
+              {e.company && (
+                <span className="history-company"> · {e.company}</span>
+              )}
+            </>
+          )}
+        </p>
+        <Change e={e} />
+      </div>
+    </li>
+  );
+}
+
+function Folded({
   entries,
   showJob,
   onOpenJob,
@@ -143,43 +276,103 @@ function Entries({
   showJob: boolean;
   onOpenJob?: (id: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const first = entries[0];
+  const who = actor(first.actor);
   return (
-    <ul className="reports-list">
-      {entries.map((e) => (
-        <li key={e.id} className="reports-item history-item">
-          <div className="reports-details">
-            <div className="reports-meta">
-              <strong>{actions[e.action] ?? e.action}</strong>
-              <span>{actor(e.actor)}</span>
-              <time dateTime={e.createdAt}>
-                {new Date(e.createdAt).toLocaleString('ka-GE', {
-                  timeZone: 'Asia/Tbilisi',
-                  dateStyle: 'short',
-                  timeStyle: 'short',
-                })}
-              </time>
-            </div>
-            {showJob && e.jobId && (
-              <p className="history-job">
-                {onOpenJob ? (
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => onOpenJob(e.jobId!)}
-                  >
-                    {e.title || 'ვაკანსია'}
-                  </button>
-                ) : (
-                  e.title
-                )}
-                {e.company && <span> · {e.company}</span>}
-              </p>
+    <li className="history-row history-folded">
+      <time dateTime={first.createdAt}>{adminClock(first.createdAt)}</time>
+      <span className="history-who" data-tone={who.tone}>
+        {who.name}
+      </span>
+      <div className="history-body">
+        <p>
+          <strong>
+            {actions[first.action] ?? first.action} — {entries.length} ვაკანსია
+          </strong>
+        </p>
+        <button
+          type="button"
+          className="history-link"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? 'დაკეცვა ▴' : 'ჩამონათვალის გაშლა ▾'}
+        </button>
+        {open && (
+          <ul className="history-inner">
+            {entries.map((e) => (
+              <Entry key={e.id} e={e} showJob={showJob} onOpenJob={onOpenJob} />
+            ))}
+          </ul>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function Entries({
+  entries,
+  showJob,
+  onOpenJob,
+  fold = true,
+}: {
+  entries: AuditEntry[];
+  showJob: boolean;
+  onOpenJob?: (id: string) => void;
+  fold?: boolean;
+}) {
+  const days: { day: string; entries: AuditEntry[] }[] = [];
+  for (const e of entries) {
+    const day = adminDay(e.createdAt);
+    if (days.at(-1)?.day === day) days.at(-1)!.entries.push(e);
+    else days.push({ day, entries: [e] });
+  }
+  return (
+    <div className="history-days">
+      {days.map(({ day, entries: list }) => (
+        // A day can recur when entries were written out of order, so its first entry keys it.
+        <section key={list[0].id}>
+          <h3>{day}</h3>
+          <ul>
+            {rows(list, fold).map((row) =>
+              row.kind === 'one' ? (
+                <Entry
+                  key={row.entry.id}
+                  e={row.entry}
+                  showJob={showJob}
+                  onOpenJob={onOpenJob}
+                />
+              ) : (
+                <Folded
+                  key={row.entries[0].id}
+                  entries={row.entries}
+                  showJob={showJob}
+                  onOpenJob={onOpenJob}
+                />
+              ),
             )}
-            {change(e) && <p className="history-change">{change(e)}</p>}
-          </div>
-        </li>
+          </ul>
+        </section>
       ))}
-    </ul>
+    </div>
+  );
+}
+
+/* The overview's short feed: the latest things people did, nothing from the machines. */
+export function RecentChanges({
+  onOpenJob,
+}: {
+  onOpenJob: (id: string) => void;
+}) {
+  const h = useHistory('people');
+  if (h.error) return <p role="alert">{h.error}</p>;
+  if (h.loading && !h.entries.length)
+    return <p className="overview-empty">იტვირთება…</p>;
+  if (!h.entries.length)
+    return <p className="overview-empty">ჯერ არაფერი შეცვლილა.</p>;
+  return (
+    <Entries entries={h.entries.slice(0, 7)} showJob onOpenJob={onOpenJob} />
   );
 }
 

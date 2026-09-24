@@ -104,7 +104,8 @@ export async function cancelUnusedInvoice(c: PoolClient, jobId: string) {
 }
 
 /* What the billing tab opens on: the promotions running now, soonest to end first, and the
-   money in each state. A month is counted in Tbilisi time, the way the invoices are dated. */
+   money in each state. A month is counted in Tbilisi time, the way the invoices are dated.
+   Anything on a submission marked as a test is left out, so trial payments are not income. */
 export async function billingOverview() {
   const [placements, totals] = await Promise.all([
     db().query(
@@ -113,6 +114,7 @@ export async function billingOverview() {
          j.placement_tier tier, j.placement_expires_at expires_at, i.status invoice_status
        FROM jobs j LEFT JOIN job_invoices i ON i.job_id=j.id
        WHERE j.placement_tier<>'standard' AND j.placement_expires_at>now()
+         AND NOT EXISTS (SELECT 1 FROM job_submissions s WHERE s.job_id=j.id AND s.is_test)
        ORDER BY j.placement_expires_at, j.id LIMIT 200`,
     ),
     db().query(
@@ -125,7 +127,8 @@ export async function billingOverview() {
          count(*) FILTER (WHERE status='pending')::int awaiting_count,
          coalesce(sum(amount_gel) FILTER (WHERE status='refund_required'),0)::int refunds_due,
          count(*) FILTER (WHERE status='refund_required')::int refunds_due_count
-       FROM job_invoices`,
+       FROM job_invoices i
+       WHERE NOT EXISTS (SELECT 1 FROM job_submissions s WHERE s.job_id=i.job_id AND s.is_test)`,
     ),
   ]);
   return { placements: placements.rows, totals: totals.rows[0] };

@@ -1,4 +1,5 @@
 'use client';
+import { adminTime } from '@/lib/admin-format';
 import { useEffect, useState } from 'react';
 
 const reasons = {
@@ -107,11 +108,7 @@ export function ReportsSection({
                 <div className="reports-meta">
                   <strong>{reasons[report.reason]}</strong>
                   <time dateTime={report.created_at}>
-                    {new Date(report.created_at).toLocaleString('ka-GE', {
-                      timeZone: 'Asia/Tbilisi',
-                      dateStyle: 'short',
-                      timeStyle: 'short',
-                    })}
+                    {adminTime(report.created_at)}
                   </time>
                 </div>
                 {report.note && <p className="reports-note">{report.note}</p>}

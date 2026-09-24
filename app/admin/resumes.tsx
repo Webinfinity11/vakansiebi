@@ -1,4 +1,5 @@
 'use client';
+import { adminTime } from '@/lib/admin-format';
 import { useEffect, useState } from 'react';
 import type { Cv } from '@/lib/cv';
 import { CvSheet } from '../cv/cv-builder';
@@ -104,11 +105,9 @@ export function ResumesPanel() {
         {rows.map((row) => (
           <li key={row.id}>
             <p>
-              {new Date(row.createdAt).toLocaleString('ka-GE', {
-                timeZone: 'Asia/Tbilisi',
-              })}{' '}
-              · {row.language === 'ka' ? 'ქართული' : 'ინგლისური'} ·{' '}
-              {row.template} · სისრულე: {row.completeness}%
+              {adminTime(row.createdAt)} ·{' '}
+              {row.language === 'ka' ? 'ქართული' : 'ინგლისური'} · {row.template}{' '}
+              · სისრულე: {row.completeness}%
             </p>
             <button
               type="button"

@@ -81,6 +81,8 @@ export type AdminJob = {
   requested_placement?: PlacementTier;
   /** Set only for a vacancy an employer sent through the posting form. */
   submitted_at?: string | null;
+  /** Marked by the admin as a test: listed apart and left out of every count. */
+  is_test?: boolean | null;
   /** For a submission: this company has not used its free VIP on another vacancy yet. */
   vip_available?: boolean;
   placement_tier: PlacementTier;

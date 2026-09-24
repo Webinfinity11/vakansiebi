@@ -9,29 +9,31 @@ import {
 import Link from 'next/link';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
+  Activity,
   ArrowUpRight,
-  RefreshCw,
-  ShieldCheck,
+  Building2,
+  ChartColumn,
   Check,
-  Layers3,
-  Search,
-  LogOut,
+  ChevronDown,
   Clock3,
   ExternalLink,
-  Inbox,
-  ListChecks,
-  ReceiptText,
-  DatabaseZap,
-  Gauge,
-  History,
-  BarChart3,
-  Building2,
+  FileText,
   Flag,
+  History,
+  Inbox,
+  Layers3,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  ReceiptText,
+  RefreshCw,
   ScrollText,
+  Search,
+  X,
+  type LucideIcon,
 } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { AttentionBoard } from './attention-board';
-import { attentionList } from '@/lib/admin-attention';
+import { attentionItems, OverviewPanel } from './overview';
+import { PostingInsights } from './posting-insights';
 import {
   Sheet,
   SheetContent,
@@ -65,6 +67,7 @@ import { ResumesPanel } from './resumes';
 import { HistoryPanel, JobHistory } from './history';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
 import { runMessage } from '@/lib/run-messages';
+import { adminTime } from '@/lib/admin-format';
 import { ScraperMetricsPanel } from './scraper-metrics';
 import { ScraperLimits } from './scraper-limits';
 import type { ScraperMetrics } from '@/lib/server/scraper-metrics';
@@ -101,14 +104,7 @@ const statusFilters: Record<string, string> = {
   archived: 'არქივი',
   rejected: 'უარყოფილი',
 };
-const time = (v: string | null) =>
-  v
-    ? new Date(v).toLocaleString('en-GB', {
-        timeZone: 'Asia/Tbilisi',
-        dateStyle: 'short',
-        timeStyle: 'short',
-      })
-    : 'ჯერ არ შემოწმებულა';
+const time = (v: string | null) => (v ? adminTime(v) : 'ჯერ არ შემოწმებულა');
 async function request(url: string, body?: unknown) {
   const r = await fetch(
     url,
@@ -142,6 +138,7 @@ const submissionViews = [
   ['submissions-published', 'გამოქვეყნებული'],
   ['submissions-closed', 'არქივი / უარყოფილი'],
   ['submissions-all', 'ყველა'],
+  ['submissions-test', 'ტესტები'],
 ] as const;
 type SubmissionView = (typeof submissionViews)[number][0];
 /* Every section opens the same way: what it is and what the admin does there. */
@@ -153,10 +150,10 @@ function SectionHeading({
   children: ReactNode;
 }) {
   return (
-    <div className="admin-section-heading">
-      <h2>{title}</h2>
+    <header className="admin-page-head">
+      <h1>{title}</h1>
       <p>{children}</p>
-    </div>
+    </header>
   );
 }
 /* A submission is read first and edited only if needed, so its editor starts folded away. */
@@ -241,6 +238,7 @@ export default function AdminPanel() {
     ReturnType<typeof githubScraperStatus>
   > | null>(null);
   // The panel opens on the state of things, not on a queue.
+  const [menuOpen, setMenuOpen] = useState(false);
   const [tab, setTab] = useState('control'),
     [submissionView, setSubmissionView] =
       useState<SubmissionView>('submissions'),
@@ -279,6 +277,12 @@ export default function AdminPanel() {
       itemId?: string;
       targetId?: string;
     } | null>(null);
+  /* A confirmation reads once and leaves; an error stays until the next action. */
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(''), 6000);
+    return () => clearTimeout(timer);
+  }, [message]);
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -399,12 +403,17 @@ export default function AdminPanel() {
       await load();
     }
   };
-  /* The count beside the tab: how many findings would be waiting there. */
-  const attention = observedAt
-    ? attentionList(sources, observedAt).filter(
-        (item) => item.severity !== 'note',
-      ).length
-    : 0;
+  /* The count beside the overview: the same grouped findings its attention list shows. */
+  const noop = () => {};
+  const attention = attentionItems({
+    sources,
+    now: observedAt,
+    waiting: counts.submissions ?? 0,
+    reports: counts.reports ?? 0,
+    go: noop,
+    onAct: noop,
+    onReview: noop,
+  }).items.length;
   const sourceAction = async (
     s: { id: Source['id'] | 'all' },
     body: Record<string, unknown>,
@@ -450,6 +459,21 @@ export default function AdminPanel() {
     }
   };
   const submission = !!selected?.submitted_at;
+  const markTest = async (test: boolean) => {
+    if (!selected) return;
+    setBusy(true);
+    setError('');
+    try {
+      await request('/api/admin/submissions', { id: selected.id, test });
+      setSelected({ ...selected, is_test: test });
+      setMessage(test ? 'მონიშნულია ტესტად' : 'დაბრუნდა ნამდვილ განცხადებებში');
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const vacancyStats = useVacancyAnalytics(
     tab === 'submissions' && !loading ? jobs.map((job) => job.id) : [],
     jobs,
@@ -516,6 +540,7 @@ export default function AdminPanel() {
                     {vacancyStats?.data?.[j.id]?.total.view ?? '—'}
                   </small>
                 )}
+                {j.is_test && <span className="status">ტესტი</span>}
                 {j.submitted_at && j.status === 'pending' ? (
                   <span className="status status-pending">
                     დადასტურებას ელოდება
@@ -573,124 +598,184 @@ export default function AdminPanel() {
       </div>
     </>
   );
+  const navGroups: {
+    title: string;
+    items: {
+      id: string;
+      label: string;
+      icon: LucideIcon;
+      count?: number;
+      alert?: boolean;
+    }[];
+  }[] = [
+    {
+      title: 'სამუშაო',
+      items: [
+        {
+          id: 'control',
+          label: 'მიმოხილვა',
+          icon: LayoutDashboard,
+          count: attention,
+          alert: true,
+        },
+        {
+          id: 'submissions',
+          label: 'ჩვენი ვაკანსიები',
+          icon: Inbox,
+          count: counts.submissions,
+          alert: true,
+        },
+        {
+          id: 'reports',
+          label: 'შეტყობინებები',
+          icon: Flag,
+          count: counts.reports,
+        },
+      ],
+    },
+    {
+      title: 'კატალოგი',
+      items: [
+        {
+          id: 'vacancies',
+          label: 'ვაკანსიები',
+          icon: ListChecks,
+          count: counts.review,
+        },
+        { id: 'employers', label: 'კომპანიები', icon: Building2 },
+      ],
+    },
+    {
+      title: 'წყაროები',
+      items: [
+        { id: 'sources', label: 'მონიტორინგი', icon: Activity },
+        { id: 'runs', label: 'გაშვებები', icon: History },
+      ],
+    },
+    {
+      title: 'ფინანსები',
+      items: [{ id: 'billing', label: 'ინვოისები', icon: ReceiptText }],
+    },
+    {
+      title: 'მომხმარებლები',
+      items: [
+        { id: 'analytics', label: 'ანალიტიკა', icon: ChartColumn },
+        { id: 'resumes', label: 'CV-ები', icon: FileText },
+      ],
+    },
+    {
+      title: 'სისტემა',
+      items: [{ id: 'history', label: 'ისტორია', icon: ScrollText }],
+    },
+  ];
+  const current = navGroups
+    .flatMap((g) => g.items)
+    .find((item) => item.id === tab);
+  const go = (id: string) => {
+    setPage(1);
+    setTab(id);
+    setMenuOpen(false);
+  };
   return (
-    <>
-      <header className="topbar admin-topbar">
-        <div className="header-inner">
+    <div className="admin-page admin-shell">
+      <div className="admin-mobilebar">
+        <Brand />
+        <button
+          type="button"
+          className="admin-menu-button"
+          aria-expanded={menuOpen}
+          aria-controls="admin-nav"
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {current?.label ?? 'მენიუ'}
+          {!!attention && <b>{attention}</b>}
+          <ChevronDown size={16} strokeWidth={1.75} aria-hidden="true" />
+        </button>
+      </div>
+      {menuOpen && (
+        <button
+          type="button"
+          className="admin-scrim"
+          aria-label="მენიუს დახურვა"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+      <aside className="admin-side" id="admin-nav" data-open={menuOpen}>
+        <div className="admin-side-brand">
           <Brand />
-          <nav>
-            <Link href="/">ვაკანსიები</Link>
-            <Link href="/admin" className="nav-active">
-              ადმინის სივრცე
-            </Link>
-          </nav>
+          <span>ადმინი</span>
+        </div>
+        <nav aria-label="ადმინის განყოფილებები">
+          {navGroups.map((group) => (
+            <div className="admin-nav-group" key={group.title}>
+              <h2>{group.title}</h2>
+              {group.items.map(({ id, label, icon: Icon, count, alert }) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-current={tab === id ? 'page' : undefined}
+                  onClick={() => go(id)}
+                >
+                  <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                  <span>{label}</span>
+                  {!!count && (
+                    <b className={alert ? 'admin-count-alert' : undefined}>
+                      {count}
+                    </b>
+                  )}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+        <div className="admin-side-foot">
+          <Link href="/?preview=1" target="_blank">
+            <ExternalLink size={15} strokeWidth={1.75} aria-hidden="true" />
+            საიტის ნახვა
+          </Link>
           <button
-            className="logout"
+            type="button"
             onClick={async () => {
               await fetch('/api/admin/session', { method: 'DELETE' });
               window.location.assign('/admin');
             }}
           >
-            <LogOut size={16} />
+            <LogOut size={15} strokeWidth={1.75} aria-hidden="true" />
             გასვლა
           </button>
         </div>
-      </header>
-      <main className="page admin-page">
-        <div className="admin-heading">
-          <div>
-            <div className="eyebrow">
-              <ShieldCheck size={16} />
-              მართვის სივრცე
-            </div>
-            <h1>ადმინისტრაცია</h1>
-            <p>შემოტანის შედეგები და მართვა ერთ სივრცეში.</p>
-          </div>
-          <Link href="/?preview=1" target="_blank" className="secondary-button">
-            წინასწარი ნახვა <ArrowUpRight size={17} />
-          </Link>
-        </div>
+      </aside>
+      <main className="admin-main">
         {error && (
           <div role="alert" className="notice">
             {error}
           </div>
         )}
         {message && (
-          <output className="success-note">
-            <Check size={17} />
+          <output className="admin-toast">
+            <Check size={16} strokeWidth={2} aria-hidden="true" />
             {message}
             <button
+              type="button"
               onClick={() => setMessage('')}
               aria-label="შეტყობინების დახურვა"
             >
-              ×
+              <X size={15} strokeWidth={1.75} />
             </button>
           </output>
         )}
-        <Tabs
-          value={tab}
-          orientation="vertical"
-          className="admin-layout"
-          onValueChange={(v) => {
-            setPage(1);
-            setTab(String(v));
-          }}
-        >
-          <TabsList variant="line" className="admin-tabs">
-            <TabsTrigger value="control">
-              <Gauge size={17} />
-              <span>მართვა</span>
-              {attention > 0 && <b>{attention}</b>}
-            </TabsTrigger>
-            <TabsTrigger value="submissions">
-              <Inbox size={17} />
-              <span>ჩვენი ვაკანსიები</span>
-              {counts.submissions > 0 && <b>{counts.submissions}</b>}
-            </TabsTrigger>
-            <TabsTrigger value="vacancies">
-              <ListChecks size={17} />
-              <span>ვაკანსიები</span>
-            </TabsTrigger>
-            <TabsTrigger value="reports">
-              <Flag size={17} />
-              <span>შეტყობინებები</span>
-              {counts.reports > 0 && <b>{counts.reports}</b>}
-            </TabsTrigger>
-            <TabsTrigger value="billing">
-              <ReceiptText size={17} />
-              <span>ინვოისები</span>
-            </TabsTrigger>
-            <TabsTrigger value="sources">
-              <DatabaseZap size={17} />
-              <span>წყაროები და განახლება</span>
-            </TabsTrigger>
-            <TabsTrigger value="runs">
-              <History size={17} />
-              <span>შემოტანის ისტორია</span>
-            </TabsTrigger>
-            <TabsTrigger value="resumes">CV-ები</TabsTrigger>
-            <TabsTrigger value="analytics">
-              <BarChart3 size={17} />
-              <span>ანალიტიკა</span>
-            </TabsTrigger>
-            <TabsTrigger value="history">
-              <ScrollText size={17} />
-              <span>ცვლილებების ისტორია</span>
-            </TabsTrigger>
-            <TabsTrigger value="employers">
-              <Building2 size={17} />
-              <span>კომპანიების სახელები</span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="control">
-            <SectionHeading title="მართვა">
-              რა გაჩერდა, რა ჩაიჭედა, რას სჭირდება დასვენება — და რა უნდა
-              გააკეთო. ყველა დანარჩენი ჩანართი დეტალებია.
+        {tab === 'control' && (
+          <section className="admin-panel">
+            <SectionHeading title="მიმოხილვა">
+              რა გაჩერდა და რა გასაკეთებელია — დეტალები დანარჩენ
+              განყოფილებებშია.
             </SectionHeading>
-            <AttentionBoard
+            <OverviewPanel
               sources={sources}
-              busy={busy}
               now={observedAt}
+              busy={busy}
+              counts={counts}
+              go={go}
               onReview={(source) => {
                 setStatus('review');
                 setSourceFilter(source);
@@ -699,19 +784,17 @@ export default function AdminPanel() {
                 setTab('vacancies');
               }}
               onAct={(source, body) =>
-                void sourceAction({ id: source as Source['id'] }, body)
+                void sourceAction({ id: source as Source['id'] | 'all' }, body)
               }
+              onOpenJob={(id) => void openJobById(id)}
             />
-          </TabsContent>
-          <TabsContent value="submissions">
+          </section>
+        )}
+        {tab === 'submissions' && (
+          <section className="admin-panel">
             <SectionHeading title="ჩვენი ვაკანსიები">
-              JOBX-ზე ფორმით გაგზავნილი ვაკანსიები, სხვა საიტებიდან შემოტანილის
-              გარეშე. ახალი ვაკანსია საიტზე მხოლოდ შენი დადასტურების შემდეგ
-              გამოჩნდება.
+              JOBX-ზე ფორმით გაგზავნილი; საიტზე მხოლოდ შენი დადასტურებით ჩნდება.
             </SectionHeading>
-            {tab === 'submissions' && (
-              <SubmissionPerformance onOpen={(id) => void openJobById(id)} />
-            )}
             <fieldset
               className="submission-views"
               aria-label="ჩვენი ვაკანსიების სტატუსი"
@@ -731,11 +814,15 @@ export default function AdminPanel() {
               ))}
             </fieldset>
             {jobList()}
-          </TabsContent>
-          <TabsContent value="vacancies">
+            {/* Measured only once there is something to measure: after the queue, not before it. */}
+            <SubmissionPerformance onOpen={(id) => void openJobById(id)} />
+            <PostingInsights />
+          </section>
+        )}
+        {tab === 'vacancies' && (
+          <section className="admin-panel">
             <SectionHeading title="ვაკანსიები">
-              სხვა საიტებიდან შემოტანილი ვაკანსიები. ავტომატურად ქვეყნდება; აქ
-              ჩანს, რაც შემოწმებას ან ხელით მართვას სჭირდება.
+              შემოტანილი ვაკანსიები: რაც შემოწმებას ან ხელით მართვას სჭირდება.
             </SectionHeading>
             <div className="admin-stats">
               {(
@@ -834,12 +921,12 @@ export default function AdminPanel() {
               </button>
             </div>
             {jobList()}
-          </TabsContent>
-          <TabsContent value="reports">
+          </section>
+        )}
+        {tab === 'reports' && (
+          <section className="admin-panel">
             <SectionHeading title="შეტყობინებები">
-              მომხმარებლების შეტყობინებები ვაკანსიის პრობლემის შესახებ:
-              ვადაგასული, არასწორი ინფორმაცია ან დუბლიკატი. გადაამოწმე და
-              მონიშნე გადაწყვეტილად.
+              მომხმარებლების შეტყობინებები: ვადაგასული, არასწორი ან დუბლიკატი.
             </SectionHeading>
             {tab === 'reports' && (
               <ReportsSection
@@ -852,11 +939,12 @@ export default function AdminPanel() {
                 }
               />
             )}
-          </TabsContent>
-          <TabsContent value="billing">
+          </section>
+        )}
+        {tab === 'billing' && (
+          <section className="admin-panel">
             <SectionHeading title="ინვოისები">
-              პრემიუმ განთავსების ინვოისები და ანგარიშის რეკვიზიტები, რომ
-              ინვოისზე დამსაქმებელს სწორი ანგარიში დაუჩნდეს.
+              ფასიანი განთავსებები, ინვოისები და შემოსავალი.
             </SectionHeading>
             {tab === 'billing' && (
               <BillingSettings
@@ -864,11 +952,13 @@ export default function AdminPanel() {
                 onReview={(id) => void openJobById(id)}
               />
             )}
-          </TabsContent>
-          <TabsContent value="sources">
-            <SectionHeading title="წყაროები და განახლება">
-              საიტები, საიდანაც ვაკანსიები ავტომატურად შემოდის: ბოლო შემოწმება,
-              შედეგები და პარამეტრები.
+          </section>
+        )}
+        {tab === 'sources' && (
+          <section className="admin-panel">
+            <SectionHeading title="წყაროების მონიტორინგი">
+              საიდან შემოდის ვაკანსიები: ბოლო შემოწმება, შედეგები და
+              პარამეტრები.
             </SectionHeading>
             <section className="scraper-overview" aria-label="სკრაპერის მართვა">
               <div>
@@ -1324,39 +1414,47 @@ export default function AdminPanel() {
               გრძელდება. ყველაფრის შესაჩერებლად გამორთე „წყაროს გამოყენება“.
               დროებითი შეცდომები რიგში რჩება და შემდეგ ციკლში მოწმდება.
             </p>
-          </TabsContent>
-          <TabsContent value="resumes">
-            <SectionHeading title="შენახული CV-ები">
-              PDF-ის ღილაკით შენახული რეზიუმეები — ნახვა და წაშლა.
+          </section>
+        )}
+        {tab === 'resumes' && (
+          <section className="admin-panel">
+            <SectionHeading title="CV-ები">
+              PDF-ის ღილაკით შენახული რეზიუმეები.
             </SectionHeading>
             {tab === 'resumes' && <ResumesPanel />}
-          </TabsContent>
-          <TabsContent value="analytics">
+          </section>
+        )}
+        {tab === 'analytics' && (
+          <section className="admin-panel">
             <SectionHeading title="ანალიტიკა">
-              რას ეძებენ, რომელი ვაკანსიებ ხსნიან და ვის უკავშირდებიან.
+              რას ეძებენ, რას ხსნიან და ვის უკავშირდებიან.
             </SectionHeading>
             {tab === 'analytics' && <AnalyticsPanel />}
-          </TabsContent>
-          <TabsContent value="history">
+          </section>
+        )}
+        {tab === 'history' && (
+          <section className="admin-panel">
             <SectionHeading title="ცვლილებების ისტორია">
-              ვინ რა შეცვალა და როდის: შენი გადაწყვეტილებები, დამსაქმებლების
-              განცხადებები, ავტომატიზაცია და წყაროები.
+              ვინ რა შეცვალა და როდის.
             </SectionHeading>
             {tab === 'history' && (
               <HistoryPanel onOpenJob={(id) => void openJobById(id)} />
             )}
-          </TabsContent>
-          <TabsContent value="employers">
-            <SectionHeading title="კომპანიების სახელები">
-              ერთი კომპანიის სხვადასხვა ჩარჩოში დაწერილი სახელები — გაერთიანე ან
-              გამოყავი, რომ კომპანიის გვერდი სწორი იყოს.
+          </section>
+        )}
+        {tab === 'employers' && (
+          <section className="admin-panel">
+            <SectionHeading title="კომპანიები">
+              ერთი კომპანიის სხვადასხვაგვარად დაწერილი სახელები — გაერთიანება ან
+              გამოყოფა.
             </SectionHeading>
             {tab === 'employers' && <EmployersPanel />}
-          </TabsContent>
-          <TabsContent value="runs">
-            <SectionHeading title="შემოტანის ისტორია">
-              ყოველი წყაროს ბოლო გაშვებები: რამდენი ახალი და შეცვლილი ვაკანსია
-              შემოვიდა და რა არ გამოვიდა.
+          </section>
+        )}
+        {tab === 'runs' && (
+          <section className="admin-panel">
+            <SectionHeading title="გაშვებები">
+              ყოველი წყაროს ბოლო გაშვებები და მათი შედეგი.
             </SectionHeading>
             <div className="run-list">
               {runs.map((r) => (
@@ -1381,8 +1479,8 @@ export default function AdminPanel() {
                 <p className="empty">შემოტანის ისტორია ჯერ ცარიელია.</p>
               )}
             </div>
-          </TabsContent>
-        </Tabs>
+          </section>
+        )}
       </main>
       <Sheet
         open={!!selected}
@@ -1408,6 +1506,25 @@ export default function AdminPanel() {
           </SheetHeader>
           {selected && draft && (
             <div className="edit-body">
+              {submission && (
+                <div className="submission-test">
+                  <span>
+                    {selected.is_test
+                      ? 'მონიშნულია ტესტად: სტატისტიკასა და შემოსავალში არ ითვლება.'
+                      : 'ნამდვილი დამსაქმებლის განცხადებაა? თუ ეს შენი ცდა იყო, მონიშნე ტესტად.'}
+                  </span>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={busy}
+                    onClick={() => void markTest(!selected.is_test)}
+                  >
+                    {selected.is_test
+                      ? 'ნამდვილად დაბრუნება'
+                      : 'ტესტად მონიშვნა'}
+                  </button>
+                </div>
+              )}
               {submission && (
                 <VacancyAnalyticsBlock
                   key={selected.id}
@@ -2063,6 +2180,6 @@ export default function AdminPanel() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
