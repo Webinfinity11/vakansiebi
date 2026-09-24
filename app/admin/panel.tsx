@@ -27,6 +27,7 @@ import {
   BarChart3,
   Building2,
   Flag,
+  ScrollText,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { AttentionBoard } from './attention-board';
@@ -57,9 +58,11 @@ import { AnalyticsPanel } from './analytics';
 import {
   useVacancyAnalytics,
   VacancyAnalyticsBlock,
+  SubmissionPerformance,
 } from './vacancy-analytics';
 import { ReportsSection } from './reports';
 import { ResumesPanel } from './resumes';
+import { HistoryPanel, JobHistory } from './history';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
 import { runMessage } from '@/lib/run-messages';
 import { ScraperMetricsPanel } from './scraper-metrics';
@@ -431,13 +434,32 @@ export default function AdminPanel() {
     setPlacement(defaultPlacement(j));
     setError('');
   };
+  /* Opens the editor over whichever tab is showing; a caller that wants the list behind it
+     switches tabs in `onFound`. */
+  const openJobById = async (id: string, onFound?: () => void) => {
+    try {
+      const data = await request(
+        `/api/admin/jobs?status=all&id=${encodeURIComponent(id)}`,
+      );
+      const job = data.jobs[0] as AdminJob | undefined;
+      if (!job) throw Error('ვაკანსია ვერ მოიძებნა');
+      onFound?.();
+      openJob(job);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'ჩატვირთვა ვერ მოხერხდა');
+    }
+  };
   const submission = !!selected?.submitted_at;
   const vacancyStats = useVacancyAnalytics(
-    [
-      ...(tab === 'submissions' && !loading ? jobs.map((job) => job.id) : []),
-      ...(selected ? [selected.id] : []),
-    ],
+    tab === 'submissions' && !loading ? jobs.map((job) => job.id) : [],
     jobs,
+  );
+  /* Only JOBX's own vacancies carry statistics: an imported one's employer is not ours and
+     never sees them. The open one also gets its daily series. */
+  const selectedStats = useVacancyAnalytics(
+    submission && selected ? [selected.id] : [],
+    jobs,
+    true,
   );
   const jobList = () => (
     <>
@@ -651,6 +673,10 @@ export default function AdminPanel() {
               <BarChart3 size={17} />
               <span>ანალიტიკა</span>
             </TabsTrigger>
+            <TabsTrigger value="history">
+              <ScrollText size={17} />
+              <span>ცვლილებების ისტორია</span>
+            </TabsTrigger>
             <TabsTrigger value="employers">
               <Building2 size={17} />
               <span>კომპანიების სახელები</span>
@@ -683,6 +709,9 @@ export default function AdminPanel() {
               გარეშე. ახალი ვაკანსია საიტზე მხოლოდ შენი დადასტურების შემდეგ
               გამოჩნდება.
             </SectionHeading>
+            {tab === 'submissions' && (
+              <SubmissionPerformance onOpen={(id) => void openJobById(id)} />
+            )}
             <fieldset
               className="submission-views"
               aria-label="ჩვენი ვაკანსიების სტატუსი"
@@ -815,22 +844,12 @@ export default function AdminPanel() {
             {tab === 'reports' && (
               <ReportsSection
                 onChange={() => void load()}
-                onOpenJob={async (id) => {
-                  try {
-                    const data = await request(
-                      `/api/admin/jobs?status=all&id=${encodeURIComponent(id)}`,
-                    );
-                    const job = data.jobs[0] as AdminJob | undefined;
-                    if (!job) throw Error('ვაკანსია ვერ მოიძებნა');
+                onOpenJob={(id) =>
+                  void openJobById(id, () => {
                     setPage(1);
                     setTab('vacancies');
-                    openJob(job);
-                  } catch (e) {
-                    setError(
-                      e instanceof Error ? e.message : 'ჩატვირთვა ვერ მოხერხდა',
-                    );
-                  }
-                }}
+                  })
+                }
               />
             )}
           </TabsContent>
@@ -842,20 +861,7 @@ export default function AdminPanel() {
             {tab === 'billing' && (
               <BillingSettings
                 key={billingVersion}
-                onReview={async (id) => {
-                  try {
-                    const data = await request(
-                      `/api/admin/jobs?status=all&id=${id}`,
-                    );
-                    const j = data.jobs[0] as AdminJob | undefined;
-                    if (!j) throw Error('განცხადება ვერ მოიძებნა');
-                    openJob(j);
-                  } catch (e) {
-                    setError(
-                      e instanceof Error ? e.message : 'ჩატვირთვა ვერ მოხერხდა',
-                    );
-                  }
-                }}
+                onReview={(id) => void openJobById(id)}
               />
             )}
           </TabsContent>
@@ -1331,6 +1337,15 @@ export default function AdminPanel() {
             </SectionHeading>
             {tab === 'analytics' && <AnalyticsPanel />}
           </TabsContent>
+          <TabsContent value="history">
+            <SectionHeading title="ცვლილებების ისტორია">
+              ვინ რა შეცვალა და როდის: შენი გადაწყვეტილებები, დამსაქმებლების
+              განცხადებები, ავტომატიზაცია და წყაროები.
+            </SectionHeading>
+            {tab === 'history' && (
+              <HistoryPanel onOpenJob={(id) => void openJobById(id)} />
+            )}
+          </TabsContent>
           <TabsContent value="employers">
             <SectionHeading title="კომპანიების სახელები">
               ერთი კომპანიის სხვადასხვა ჩარჩოში დაწერილი სახელები — გაერთიანე ან
@@ -1393,10 +1408,13 @@ export default function AdminPanel() {
           </SheetHeader>
           {selected && draft && (
             <div className="edit-body">
-              <VacancyAnalyticsBlock
-                data={vacancyStats?.data?.[selected.id]}
-                error={vacancyStats?.error}
-              />
+              {submission && (
+                <VacancyAnalyticsBlock
+                  key={selected.id}
+                  data={selectedStats?.data?.[selected.id]}
+                  error={selectedStats?.error}
+                />
+              )}
               {submission && <SubmissionSummary job={selected} draft={draft} />}
               {submission && (
                 <section className="notice placement-choice">
@@ -1868,6 +1886,7 @@ export default function AdminPanel() {
                   </details>
                 )}
               </EditorWrap>
+              <JobHistory jobId={selected.id} />
               {selected.duplicates.length > 0 && (
                 <div className="duplicates">
                   <h3>შესაძლო დუბლიკატები</h3>

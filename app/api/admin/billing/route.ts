@@ -1,5 +1,5 @@
 import { billingSettingsSchema } from '@/lib/billing';
-import { billingSettings } from '@/lib/server/billing';
+import { billingOverview, billingSettings } from '@/lib/server/billing';
 import { db, transaction } from '@/lib/server/db';
 import {
   apiError,
@@ -28,7 +28,12 @@ export async function GET(req: Request) {
       await db().query('SELECT count(*)::int total FROM job_invoices')
     ).rows[0].total;
     return Response.json(
-      { settings: await billingSettings(), invoices, total },
+      {
+        settings: await billingSettings(),
+        invoices,
+        total,
+        ...(await billingOverview()),
+      },
       { headers: { 'Cache-Control': 'no-store' } },
     );
   } catch (e) {

@@ -102,3 +102,31 @@ export async function cancelUnusedInvoice(c: PoolClient, jobId: string) {
     [jobId],
   );
 }
+
+/* What the billing tab opens on: the promotions running now, soonest to end first, and the
+   money in each state. A month is counted in Tbilisi time, the way the invoices are dated. */
+export async function billingOverview() {
+  const [placements, totals] = await Promise.all([
+    db().query(
+      `SELECT j.id, coalesce(j.published->>'title', j.draft->>'title') title,
+         coalesce(j.published->>'company', j.draft->>'company') company,
+         j.placement_tier tier, j.placement_expires_at expires_at, i.status invoice_status
+       FROM jobs j LEFT JOIN job_invoices i ON i.job_id=j.id
+       WHERE j.placement_tier<>'standard' AND j.placement_expires_at>now()
+       ORDER BY j.placement_expires_at, j.id LIMIT 200`,
+    ),
+    db().query(
+      `SELECT
+         coalesce(sum(amount_gel) FILTER (WHERE status='paid'
+           AND date_trunc('month', paid_at AT TIME ZONE 'Asia/Tbilisi')=date_trunc('month', now() AT TIME ZONE 'Asia/Tbilisi')),0)::int this_month,
+         coalesce(sum(amount_gel) FILTER (WHERE status='paid'
+           AND date_trunc('month', paid_at AT TIME ZONE 'Asia/Tbilisi')=date_trunc('month', now() AT TIME ZONE 'Asia/Tbilisi')-interval '1 month'),0)::int last_month,
+         coalesce(sum(amount_gel) FILTER (WHERE status='pending'),0)::int awaiting,
+         count(*) FILTER (WHERE status='pending')::int awaiting_count,
+         coalesce(sum(amount_gel) FILTER (WHERE status='refund_required'),0)::int refunds_due,
+         count(*) FILTER (WHERE status='refund_required')::int refunds_due_count
+       FROM job_invoices`,
+    ),
+  ]);
+  return { placements: placements.rows, totals: totals.rows[0] };
+}

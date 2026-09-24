@@ -7,6 +7,28 @@ import {
   invoiceStatuses,
   type JobInvoice,
 } from '@/lib/billing';
+import { placementLabels, type PlacementTier } from '@/lib/placement';
+type Placement = {
+  id: string;
+  title: string | null;
+  company: string | null;
+  tier: PlacementTier;
+  expires_at: string;
+  invoice_status: keyof typeof invoiceStatuses | null;
+};
+type Totals = {
+  this_month: number;
+  last_month: number;
+  awaiting: number;
+  awaiting_count: number;
+  refunds_due: number;
+  refunds_due_count: number;
+};
+const day = 86400000;
+/* Whole days left, rounded up, so a promotion ending tonight reads "1 დღე" rather than "0". */
+function daysLeft(expires: string, now: number) {
+  return Math.max(1, Math.ceil((Date.parse(expires) - now) / day));
+}
 export function BillingSettings({
   onReview,
 }: {
@@ -15,6 +37,9 @@ export function BillingSettings({
   const [invoices, setInvoices] = useState<JobInvoice[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [placements, setPlacements] = useState<Placement[]>([]);
+  const [totals, setTotals] = useState<Totals | null>(null);
+  const [loadedAt, setLoadedAt] = useState(0);
   const [values, setValues] = useState({
     payee_name: '',
     bank_name: '',
@@ -32,6 +57,9 @@ export function BillingSettings({
         if (d.settings) setValues(d.settings);
         setInvoices(d.invoices || []);
         setTotal(d.total || 0);
+        setPlacements(d.placements || []);
+        setTotals(d.totals || null);
+        setLoadedAt(Date.now());
         setReady(true);
       })
       .catch((e) => {
@@ -67,6 +95,69 @@ export function BillingSettings({
   }
   return (
     <>
+      {totals && (
+        <dl className="billing-totals">
+          <div>
+            <dt>ამ თვეში გადახდილი</dt>
+            <dd>{totals.this_month} ₾</dd>
+          </div>
+          <div>
+            <dt>წინა თვეში</dt>
+            <dd>{totals.last_month} ₾</dd>
+          </div>
+          <div>
+            <dt>გადახდის მოლოდინში</dt>
+            <dd>
+              {totals.awaiting} ₾ <small>({totals.awaiting_count})</small>
+            </dd>
+          </div>
+          <div data-alert={totals.refunds_due_count > 0 || undefined}>
+            <dt>დასაბრუნებელი</dt>
+            <dd>
+              {totals.refunds_due} ₾ <small>({totals.refunds_due_count})</small>
+            </dd>
+          </div>
+        </dl>
+      )}
+      <section className="billing-invoices billing-placements">
+        <h2>აქტიური განთავსებები</h2>
+        {placements.map((p) => {
+          const left = daysLeft(p.expires_at, loadedAt);
+          return (
+            <article key={p.id}>
+              <div>
+                <strong>
+                  {placementLabels[p.tier]} · {p.title || 'ვაკანსია'}
+                </strong>
+                <p>
+                  {p.company}
+                  {p.invoice_status &&
+                    ` · ${invoiceStatuses[p.invoice_status]}`}
+                </p>
+                <span data-soon={left <= 3 || undefined}>
+                  დარჩა {left} დღე ·{' '}
+                  {new Date(p.expires_at).toLocaleDateString('ka-GE', {
+                    timeZone: 'Asia/Tbilisi',
+                  })}
+                  -მდე
+                </span>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => onReview(p.id)}
+                >
+                  განცხადების მართვა
+                </button>
+              </div>
+            </article>
+          );
+        })}
+        {ready && !placements.length && (
+          <p>აქტიური VIP ან პრემიუმ განთავსება არ არის.</p>
+        )}
+      </section>
       <InvoiceEmailTest invoices={invoices} />
       <section className="billing-invoices">
         <h2>ინვოისები</h2>
