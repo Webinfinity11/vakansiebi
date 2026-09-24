@@ -22,7 +22,7 @@ jobs:
       # They are collected from a reachable network instead; see README. Keeping them here
       # would also push their next run a day out on every deferral, delaying that collection.
       matrix:
-        source: [hr, jobs, ss, gancxadebebi, myjobs, awork]
+        source: [hr, jobs, ss, gancxadebebi, myjobs, awork, dk]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
