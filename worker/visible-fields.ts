@@ -1,3 +1,4 @@
+import { salaryFacts } from '../lib/salary-summary';
 // Conservative extraction from labelled, public vacancy text. Company history,
 // contact addresses and arbitrary numbers must not become job location/pay.
 import { payExcerpts, payDisplay } from '../lib/pay-excerpts';
@@ -108,7 +109,7 @@ export function visibleFields(text: string) {
     )
     .replace(/თვეში\s+ორჯერ\s+დარიცხვით/g, '');
   const periodText = (dailyPay && pay === dailyPay ? 'დღეში ' : '') + rateText;
-  const period = /თვეში|ყოველთვ|\/\s*თვე|monthly|per month/i.test(periodText)
+  let period = /თვეში|ყოველთვ|\/\s*თვე|monthly|per month/i.test(periodText)
     ? 'თვე'
     : /საათში|\/\s*საათი|hourly|per hour/i.test(periodText)
       ? 'საათი'
@@ -126,6 +127,24 @@ export function visibleFields(text: string) {
       'დღიური ხელფასის პერიოდი ტექსტს არ ემთხვევა. გადაამოწმე პირველწყარო.';
     min = null;
     currency = '';
+  }
+  // The leading-amount rule above misses "ხელფასი ფიქსირებული 900 ლარი" or
+  // "1, 200 ლარი". The card's own label reads those; its numbers are used only
+  // when that label is one plain price with a rate the board filters by.
+  if (min === null && !currency && !warning && pay) {
+    const facts = salaryFacts(pay, period);
+    const from = facts?.value ?? facts?.min;
+    const rates: Record<string, string> = {
+      MONTH: '',
+      DAY: 'დღე',
+      HOUR: 'საათი',
+    };
+    const rate = facts ? rates[facts.unit] : undefined;
+    if (facts && from !== undefined && rate !== undefined) {
+      min = from;
+      currency = facts.currency;
+      period ||= rate;
+    }
   }
   if (
     excerpts.length > 1 ||

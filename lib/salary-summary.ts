@@ -1,7 +1,8 @@
 /** Public salary labels contain a price/range, an explicit negotiation label or nothing.
  * Keep original pay text in the source record/description; never render it as a fallback. */
-const number = String.raw`(?:\d{1,3}(?:[ \u00a0\u202f,.]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)`;
-const currency = String.raw`(?:₾|\$|€|GEL|USD|EUR|ლარ(?:იდან|ამდე|ია|ის|ი)?|ლ\.?|დოლარ(?:იდან|ამდე|ია|ის|ი)?|ევრო(?:დან|მდე)?)`;
+// Thousands may be grouped by a space, or by a comma/dot a space follows ("1, 200").
+const number = String.raw`(?:\d{1,3}(?:(?:[,.][ \u00a0\u202f]?|[ \u00a0\u202f])\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)`;
+const currency = String.raw`(?:₾|\$|€|GEL|USD|EUR|ლარ(?:იდან|ამდე|ია|ის|ს|ი)?|ლ\.?|დოლარ(?:იდან|ამდე|ია|ის|ს|ი)?|ევრო(?:დან|მდე|ს)?)`;
 const unit = (value: string) =>
   /₾|GEL|^ლ/i.test(value) ? '₾' : /\$|USD|დოლარ/i.test(value) ? '$' : '€';
 const amount = (value: string) => {
@@ -118,8 +119,10 @@ export function salarySummary(input: string, period = '') {
     )
       ? 'შეთანხმებით'
       : '';
+  // The same figure repeated ("900 ლარი · 900 ლარი") is still one offer.
+  const offers = new Set(prices.map((p) => `${p.low}|${p.high}|${p.currency}`));
   // Different roles, stages, bonuses, currencies or periods are not one range.
-  if (prices.length !== 1) return '';
+  if (offers.size !== 1) return '';
   const price = prices[0];
   const before = text.slice(0, price.start),
     after = text.slice(price.end);
@@ -131,7 +134,7 @@ export function salarySummary(input: string, period = '') {
   const detected = periodWords.find(
     ([, words]) =>
       new RegExp(
-        `(?:${words})\\s*(?:[-–—:]\\s*)?(?:(?:გამოდის|შეადგენს)\\s*)?(?:(?:დაახლოებით|საშუალოდ)\\s*)?$`,
+        `(?:${words})\\s*(?:[-–—:]\\s*)?(?:(?:გამოდის|შეადგენს)\\s*(?:[-–—:]\\s*)?)?(?:(?:დაახლოებით|საშუალოდ)\\s*)?$`,
         'iu',
       ).test(nearBefore) ||
       new RegExp(`^\\s*(?:[·/]\\s*)?(?:${words})(?![\\p{L}])`, 'iu').test(
@@ -139,6 +142,8 @@ export function salarySummary(input: string, period = '') {
       ),
   )?.[0];
   if (/^\s*\//.test(nearAfter) && !detected) return '';
+  // "900/1050 ლარი" offers two figures, not the second one.
+  if (/\d\s*\/\s*$/.test(before)) return '';
   if (/\d\s*\+\s*$/.test(before) || /^\s*\+\s*\d/.test(after)) return '';
   const rate = detected || periods[period] || '';
   const approx =
