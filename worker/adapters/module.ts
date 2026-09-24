@@ -27,6 +27,9 @@ export type ListingHints = {
   /** The source's own label, kept as a visible fact. */
   categoryLabel?: string;
   salaried?: boolean;
+  /** Tbilisi day the id first appeared on the newest listing pages, for a board that
+      publishes no posting date. Stored once; a later listing never moves it. */
+  firstListed?: string;
 };
 export type ListedLink = {
   externalId: string;

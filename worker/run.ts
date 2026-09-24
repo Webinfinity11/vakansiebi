@@ -199,8 +199,11 @@ export async function runSource(
               .urls
           : [
               ...new Set(
-                Array.from({ length: Math.min(3, pageBudget) }, (_, offset) =>
-                  additionalListing(source, html, offset),
+                // hr.gov.ge dates a vacancy by its first appearance, so it never reads
+                // past page three, where every id would already be days old.
+                Array.from(
+                  { length: Math.min(source === 'hrgov' ? 2 : 3, pageBudget) },
+                  (_, offset) => additionalListing(source, html, offset),
                 ).filter((url): url is string => !!url),
               ),
             ];

@@ -312,7 +312,11 @@ export function listLinks(
     });
     return [...result.values()];
   }
-  $('a[href]').each((_, a) => add($(a).attr('href')));
+  // vacancy.hr.gov.ge shows only a deadline. Its newest-first list is read no deeper
+  // than page three, so the day an id first appears there stands in for its posting day.
+  const listed: ListingHints | undefined =
+    source === 'hrgov' ? { firstListed: tbilisiDate() } : undefined;
+  $('a[href]').each((_, a) => add($(a).attr('href'), listed));
   return [...result.values()];
 }
 function dateOnly(value: unknown) {
@@ -1037,6 +1041,8 @@ function finishVacancy(
     throw new UnavailableVacancy();
   j.company = j.company.replace(/\s+/g, ' ').trim();
   j.city = j.city.replace(/\s+/g, ' ').trim();
+  if (source === 'hrgov' && !j.datePosted && hints?.firstListed)
+    j.datePosted = hints.firstListed;
   // A listing already named the work location when the detail page did not.
   if (!j.city && hints?.city) j.city = hints.city.replace(/\s+/g, ' ').trim();
   j.category = classify(j.title, fromSource);
