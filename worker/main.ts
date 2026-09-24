@@ -13,6 +13,7 @@ import { purgeResumes } from '../lib/server/resumes';
 import { failureNeedsPerson, timeoutsBeforeAlarm } from './http';
 import { rollupAnalytics } from '../lib/server/analytics';
 import { refreshLandingCounts } from './landing-counts';
+import { placeVacancies } from './places';
 let stopped = false;
 let lastPurge = 0;
 process.on('SIGTERM', () => {
@@ -155,6 +156,13 @@ try {
     await refreshLandingCounts().catch((error) =>
       console.warn(
         'Landing counts refresh skipped:',
+        error instanceof Error ? error.message : error,
+      ),
+    );
+    // Map pins for new vacancies, a bounded handful of geocoder requests per cycle.
+    await placeVacancies().catch((error) =>
+      console.warn(
+        'Vacancy map placement skipped:',
         error instanceof Error ? error.message : error,
       ),
     );

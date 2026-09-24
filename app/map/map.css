@@ -1,0 +1,394 @@
+/* The vacancy map: a list beside the map on a wide screen, the map with a sheet on a phone. */
+.job-map-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 560px;
+}
+.job-map {
+  --map-line: #e1e5ed;
+  --map-ink: #16213a;
+  --map-ink-2: #4a5871;
+  --map-ink-3: #6b7890;
+  --map-blue: #2457e6;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  color: var(--map-ink);
+}
+.job-map-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--map-line);
+  background: #fff;
+}
+.job-map-title h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.3;
+  font-feature-settings: normal;
+}
+.job-map-title p {
+  margin: 1px 0 0;
+  color: var(--map-ink-3);
+  font-size: 12.5px;
+}
+.job-map-search {
+  display: flex;
+  flex: 1 1 240px;
+  align-items: center;
+  gap: 8px;
+  max-width: 360px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--map-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--map-ink-3);
+}
+.job-map-search:focus-within {
+  border-color: var(--map-blue);
+  box-shadow: 0 0 0 3px rgba(36, 87, 230, 0.12);
+}
+.job-map-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--map-ink);
+  font: inherit;
+  font-size: 14px;
+}
+.job-map-chips {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.job-map-chips :is(button, .choice) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--map-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--map-ink-2);
+  font: inherit;
+  font-size: 13px;
+  font-feature-settings: normal;
+  cursor: pointer;
+}
+.job-map-chips button[aria-pressed='true'] {
+  border-color: var(--map-blue);
+  background: #eef3ff;
+  color: #1f3f96;
+  font-weight: 600;
+}
+.job-map-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 400px minmax(0, 1fr);
+  /* One row the height of the screen: the list scrolls inside it instead of stretching the
+     map box — which would draw the map far taller than the window and push the city off-view. */
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+.job-map-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  border-inline-end: 1px solid var(--map-line);
+  background: #f7f9fc;
+}
+.job-map-handle {
+  display: none;
+}
+.job-map-hint {
+  display: flex;
+  gap: 6px;
+  margin: 12px 16px 4px;
+  color: var(--map-ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.job-map-hint svg {
+  flex: none;
+  margin-top: 2px;
+}
+.job-map-empty,
+.job-map-more {
+  margin: 12px 16px;
+  color: var(--map-ink-3);
+  font-size: 13px;
+}
+.job-map-list ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px 16px;
+  list-style: none;
+}
+.job-map-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--map-line);
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.job-map-card:hover,
+.job-map-list li[data-active='true'] .job-map-card {
+  border-color: #c5d3f5;
+  box-shadow: 0 2px 12px rgba(36, 87, 230, 0.1);
+}
+.job-map-list li[data-active='true'] .job-map-card {
+  border-color: var(--map-blue);
+}
+.job-map-card .company-avatar,
+.job-map-pop .company-avatar {
+  width: 44px;
+  height: 44px;
+}
+.job-map-card-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.job-map-card-text em {
+  justify-self: start;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #fff4d6;
+  color: #8a5a00;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+}
+.job-map-card-text strong {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.job-map-card-text span {
+  color: var(--map-ink-2);
+  font-size: 12.5px;
+}
+.job-map-card-text b {
+  color: #1e7d4f;
+  font-size: 13px;
+}
+.job-map-card-text small {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+  color: var(--map-ink-3);
+  font-size: 12px;
+}
+.job-map-card-text small svg {
+  flex: none;
+  margin-top: 3px;
+}
+.job-map-canvas {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+/* maplibre-gl.css makes every map container position: relative; the box must stay absolute
+   and fill its cell, or the canvas is drawn at the wrong size and the view lands off-centre. */
+.job-map .job-map-canvas .job-map-gl {
+  position: absolute;
+  inset: 0;
+}
+.job-map-pop {
+  position: absolute;
+  z-index: 5;
+  top: 16px;
+  left: 16px;
+  display: grid;
+  gap: 8px;
+  width: min(340px, calc(100% - 32px));
+  padding: 16px;
+  border: 1px solid var(--map-line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(22, 33, 58, 0.18);
+}
+.job-map-pop-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--map-ink-3);
+  cursor: pointer;
+}
+.job-map-pop-head {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  padding-inline-end: 24px;
+}
+.job-map-pop-head strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.job-map-pop-head span {
+  color: var(--map-ink-2);
+  font-size: 13px;
+}
+.job-map-pop-salary {
+  color: #1e7d4f;
+  font-size: 15px;
+}
+.job-map-pop p {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  color: var(--map-ink-3);
+  font-size: 12.5px;
+}
+.job-map-pop p svg {
+  flex: none;
+  margin-top: 3px;
+}
+.job-map-pop .primary {
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  color: #fff;
+  font-size: 14px;
+  text-decoration: none;
+  font-feature-settings: normal;
+}
+.job-map-listbtn {
+  display: none;
+}
+.job-map .maplibregl-ctrl-group {
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(22, 33, 58, 0.12);
+}
+
+/* Phone: the map fills the screen; the list is a sheet pulled up from the bottom. */
+@media (max-width: 900px) {
+  .job-map-bar {
+    padding: 10px 16px;
+    gap: 10px;
+  }
+  .job-map-title {
+    flex: 1 1 100%;
+  }
+  .job-map-search {
+    max-width: none;
+    height: 44px;
+  }
+  .job-map-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: -16px;
+    padding: 0 16px 2px;
+    scrollbar-width: none;
+  }
+  .job-map-chips :is(button, .choice) {
+    flex: none;
+    height: 40px;
+  }
+  .job-map-body {
+    position: relative;
+    display: block;
+    min-height: 360px;
+  }
+  .job-map-canvas {
+    position: absolute;
+    inset: 0;
+  }
+  .job-map-list {
+    position: absolute;
+    z-index: 6;
+    inset: auto 0 0;
+    max-height: 56px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 18px 18px 0 0;
+    background: #f7f9fc;
+    box-shadow: 0 -8px 30px rgba(22, 33, 58, 0.18);
+    transition: max-height 0.25s ease;
+  }
+  .job-map-list[data-open='true'] {
+    max-height: 78%;
+    overflow-y: auto;
+  }
+  .job-map-handle {
+    position: sticky;
+    z-index: 1;
+    top: 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px 10px;
+    min-height: 56px;
+    padding: 8px 16px 10px;
+    border: 0;
+    border-radius: 18px 18px 0 0;
+    background: #fff;
+    color: var(--map-ink);
+    font: inherit;
+    font-size: 14px;
+    text-align: start;
+    cursor: pointer;
+  }
+  .job-map-handle > span {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--map-line);
+  }
+  .job-map-pop {
+    top: auto;
+    bottom: 68px;
+    left: 12px;
+    width: calc(100% - 24px);
+  }
+  .job-map-listbtn {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .job-map-list {
+    transition: none;
+  }
+}
+@media (max-width: 900px) {
+  /* Zoom and locate stay above the peeking sheet. */
+  .job-map .maplibregl-ctrl-bottom-right {
+    bottom: 60px;
+  }
+}

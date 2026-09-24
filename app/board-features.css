@@ -533,3 +533,9 @@
     margin-left: 0;
   }
 }
+.board-shell .results-tools .results-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}

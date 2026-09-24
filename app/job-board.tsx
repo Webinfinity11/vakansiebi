@@ -56,7 +56,8 @@ import {
   searchParams,
   listPageSize,
 } from '@/lib/search-state';
-import { track } from '@/lib/analytics-client';
+import { track, trackAction } from '@/lib/analytics-client';
+import type { ActionCode } from '@/lib/analytics-actions';
 import {
   ArrowUpRight,
   ArrowRight,
@@ -72,7 +73,6 @@ import {
   Globe2,
   Laptop,
   ShieldCheck,
-  LocateFixed,
   Calculator,
   GraduationCap,
   EyeOff,
@@ -89,13 +89,6 @@ import {
   Ellipsis,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Sheet,
   SheetContent,
@@ -130,58 +123,8 @@ const categoryIcons = {
   სხვა: Ellipsis,
 };
 
-export function Choice({
-  label,
-  id,
-  value,
-  onChange,
-  options,
-  onLocate,
-  locating = false,
-  mobile = false,
-}: {
-  label: string;
-  id?: string;
-  value: string;
-  onChange: (s: string) => void;
-  options: string[];
-  onLocate?: () => void;
-  locating?: boolean;
-  mobile?: boolean;
-}) {
-  return (
-    <Select
-      value={value}
-      onValueChange={(v) => {
-        if (v === '__near_me__') onLocate?.();
-        else onChange(v || 'ყველა');
-      }}
-    >
-      <SelectTrigger id={id} aria-label={label} className="choice">
-        <SelectValue>
-          {locating ? 'ქალაქს ვადგენთ…' : value === 'ყველა' ? label : value}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent
-        className={`job-choice-options${mobile ? ' mobile-filter-options' : ''}`}
-        alignItemWithTrigger={false}
-        align="start"
-        sideOffset={8}
-      >
-        {onLocate && (
-          <SelectItem value="__near_me__" disabled={locating}>
-            <LocateFixed size={16} aria-hidden="true" /> ჩემთან ახლოს
-          </SelectItem>
-        )}
-        {['ყველა', ...options].map((o) => (
-          <SelectItem key={o} value={o}>
-            {o}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
+import { Choice } from './choice';
+export { Choice };
 // Shared with the search plan, so "სხვა" means a city outside this very list.
 const cities: string[] = [...cityOptions];
 const dayMs = 86400000;
@@ -429,6 +372,13 @@ export default function JobBoard({
   const [allCategoriesVisible, setAllCategoriesVisible] = useState(false);
   const params = useSearchParams();
   const demo = params.get('preview') === '1';
+  // The admin's preview of the board is not a reader using it.
+  const act = useCallback(
+    (code: ActionCode) => {
+      if (!demo) trackAction(code);
+    },
+    [demo],
+  );
   const [initialSearch] = useState(() =>
     readSearch(new URLSearchParams(params.toString())),
   );
@@ -705,7 +655,9 @@ export default function JobBoard({
             }
           })
           .catch((e) => {
-            if (e.name !== 'AbortError') setError(e.message);
+            if (e.name === 'AbortError') return;
+            setError(e.message);
+            act('results_error');
           })
           .finally(() => {
             if (!controller.signal.aborted) setLoading(false);
@@ -737,6 +689,7 @@ export default function JobBoard({
     excluded,
     activity.ready,
     pendingInitial,
+    act,
   ]);
   useEffect(() => {
     if (!appendPage || appendPage.key !== filterKey || resultsPending) return;
@@ -787,6 +740,7 @@ export default function JobBoard({
       .catch((e) => {
         if (e.name === 'AbortError') return;
         setAppendError(e.message);
+        act('more_error');
         setAppendPage(null);
       });
     return () => controller.abort();
@@ -807,6 +761,7 @@ export default function JobBoard({
     savedOnly,
     savedFilter,
     excluded,
+    act,
   ]);
   useEffect(() => {
     if (!companyLinksPending || resultsPending || demo || !jobs.length) return;
@@ -867,7 +822,10 @@ export default function JobBoard({
       !filtersOpen &&
       loadedThrough - page < 49 &&
       loadedThrough < pages,
-    loadMore,
+    useCallback(() => {
+      act('more_auto');
+      loadMore();
+    }, [act, loadMore]),
   );
   const applySearch = (filters: SearchFilters) => {
     setPageState({ key: '', page: 1 });
@@ -902,6 +860,7 @@ export default function JobBoard({
   };
   const openSaved = () => {
     if (!savedOnly) {
+      act('saved_open');
       searchBeforeSaved.current = currentSearch;
       reset();
       setSort('უახლესი');
@@ -920,6 +879,10 @@ export default function JobBoard({
         .getElementById('results')
         ?.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+  const resetFilters = () => {
+    act('reset_filters');
+    reset();
   };
   const relaxFilter = (key: FilterKey) => {
     if (key === 'query') setQuery('');
@@ -955,6 +918,7 @@ export default function JobBoard({
         localStorage.setItem('ertad-saved', JSON.stringify(next));
         setSaved(next);
         if (!wasSaved) track('save', id);
+        else act('unsave');
         setFeedback('');
         setSaveNotice({
           id,
@@ -966,7 +930,7 @@ export default function JobBoard({
         setFeedback('ბრაუზერმა შენახვა ვერ შეძლო.');
       }
     },
-    [saved],
+    [saved, act],
   );
   const undoSave = () => {
     if (!saveNotice) return;
@@ -979,6 +943,7 @@ export default function JobBoard({
       localStorage.setItem('ertad-saved', JSON.stringify(next.slice(-100)));
       setSaved(next.slice(-100));
       setSaveNotice(null);
+      act('undo_save');
       setFeedback('ცვლილება გაუქმებულია');
     } catch {
       setFeedback('ბრაუზერმა ცვლილება ვერ გააუქმა. სცადე ხელახლა.');
@@ -1076,41 +1041,47 @@ export default function JobBoard({
     companyLinksPending,
   ]);
   const searchRestored = useRef(false);
-  const openJob = useCallback((job: Job) => {
-    searchRestored.current = false;
-    const context = openContext.current;
-    rememberBoard({
-      key: context.loadedResult.key,
-      page: context.loadedResult.page,
-      through: context.loadedState.through,
-      path: context.loadedResult.path,
-      jobs: context.jobs,
-      total: context.total,
-      pages: context.pages,
-      search: context.searchMeta,
-      companyLinksPending: context.companyLinksPending,
-    });
-    rememberSearch(
-      context.loadedResult.path,
-      job.id,
-      context.loadedResult.page,
-      context.loadedState.through,
-    );
-    /* Opening a vacancy is not the same as having read it. Marking it here
+  const openJob = useCallback(
+    (job: Job) => {
+      act('open_list');
+      searchRestored.current = false;
+      const context = openContext.current;
+      rememberBoard({
+        key: context.loadedResult.key,
+        page: context.loadedResult.page,
+        through: context.loadedState.through,
+        path: context.loadedResult.path,
+        jobs: context.jobs,
+        total: context.total,
+        pages: context.pages,
+        search: context.searchMeta,
+        companyLinksPending: context.companyLinksPending,
+      });
+      rememberSearch(
+        context.loadedResult.path,
+        job.id,
+        context.loadedResult.page,
+        context.loadedState.through,
+      );
+      /* Opening a vacancy is not the same as having read it. Marking it here
          stamped "ნანახია" onto the card under the reader's own finger, before
          the vacancy had even appeared; the vacancy's own page marks it once the
          reader has stayed a moment, so the badge is waiting for them when they
          come back and never flickers on the way out. */
-  }, []);
+    },
+    [act],
+  );
   const hideJob = useCallback(
     (job: Job) => {
+      const hidden = hideVacancy(job.id, job.title);
+      if (hidden) act('hide');
       setFeedback(
-        hideVacancy(job.id, job.title)
+        hidden
           ? 'ვაკანსია დამალულია · აღდგენა სიის თავში'
           : 'ბრაუზერმა დამალვა ვერ შეძლო.',
       );
     },
-    [hideVacancy],
+    [hideVacancy, act],
   );
   useEffect(() => {
     if (
@@ -1233,7 +1204,7 @@ export default function JobBoard({
             <h2>
               <SlidersHorizontal size={17} /> ფილტრები
             </h2>
-            <button onClick={reset} disabled={!activeCount}>
+            <button onClick={resetFilters} disabled={!activeCount}>
               გასუფთავება
             </button>
           </div>
@@ -1589,6 +1560,7 @@ export default function JobBoard({
                       inputRef={searchInputRef}
                       listId="search-suggest"
                       onPick={(value) => {
+                        act('suggest_pick');
                         setQuery(value);
                         searchInputRef.current?.blur();
                         document.getElementById('results')?.scrollIntoView({
@@ -1688,6 +1660,7 @@ export default function JobBoard({
                   onClear={() => {
                     if (!activity.clearRecent())
                       setFeedback('ბრაუზერმა გასუფთავება ვერ შეძლო.');
+                    else act('recent_clear');
                   }}
                 />
               )}
@@ -1760,6 +1733,14 @@ export default function JobBoard({
                   </div>
                 </div>
                 <div className="results-tools">
+                  <Link
+                    href="/map"
+                    prefetch={false}
+                    className="secondary-button results-map-link"
+                  >
+                    <MapPin size={16} />
+                    რუკაზე
+                  </Link>
                   <button
                     className="mobile-filter-toggle secondary-button"
                     onClick={() => {
@@ -1863,7 +1844,10 @@ export default function JobBoard({
                     </button>
                   )}
                   {activeCount >= 2 && (
-                    <button className="clear-all-filters" onClick={reset}>
+                    <button
+                      className="clear-all-filters"
+                      onClick={resetFilters}
+                    >
                       გასუფთავება
                     </button>
                   )}
@@ -1920,6 +1904,7 @@ export default function JobBoard({
                     onClick={() => {
                       if (!activity.restore())
                         setFeedback('ბრაუზერმა აღდგენა ვერ შეძლო.');
+                      else act('restore');
                     }}
                   >
                     ყველას აღდგენა
@@ -1934,6 +1919,7 @@ export default function JobBoard({
                           onClick={() => {
                             if (!activity.restore(item.id))
                               setFeedback('ბრაუზერმა აღდგენა ვერ შეძლო.');
+                            else act('restore');
                           }}
                         >
                           აღდგენა
@@ -2012,7 +1998,10 @@ export default function JobBoard({
                   {searchMeta?.suggestion && (
                     <button
                       className="secondary-button"
-                      onClick={() => setQuery(searchMeta.suggestion!.query)}
+                      onClick={() => {
+                        act('did_you_mean');
+                        setQuery(searchMeta.suggestion!.query);
+                      }}
                     >
                       {searchMeta.suggestion.kind === 'fewer-words'
                         ? 'ვცადოთ '
@@ -2028,7 +2017,10 @@ export default function JobBoard({
                         <button
                           className="secondary-button"
                           key={item.key}
-                          onClick={() => relaxFilter(item.key)}
+                          onClick={() => {
+                            act(`relax_${item.key}`);
+                            relaxFilter(item.key);
+                          }}
                         >
                           მოხსენი „{item.label}“ — {item.count} შედეგი
                         </button>
@@ -2038,6 +2030,7 @@ export default function JobBoard({
                   <button
                     className="primary"
                     onClick={() => {
+                      act('empty_reset');
                       reset();
                       if (savedOnly) setSavedOnly(false);
                     }}
@@ -2078,7 +2071,9 @@ export default function JobBoard({
                       )
                         return;
                       event.preventDefault();
-                      if (!appending) loadMore();
+                      if (appending) return;
+                      act('more_click');
+                      loadMore();
                     }}
                   >
                     {appending
@@ -2125,6 +2120,7 @@ export default function JobBoard({
                         )
                           return;
                         event.preventDefault();
+                        act('page_prev');
                         paginate(page - 1);
                       }}
                     >
@@ -2134,7 +2130,10 @@ export default function JobBoard({
                   {page > 2 && (
                     <button
                       className="secondary-button"
-                      onClick={() => paginate(1)}
+                      onClick={() => {
+                        act('page_first');
+                        paginate(1);
+                      }}
                     >
                       სიის დასაწყისში დაბრუნება
                     </button>

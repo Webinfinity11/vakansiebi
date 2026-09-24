@@ -81,6 +81,13 @@ export function PublicHeader({
             <span className="header-label-full">ყველა ვაკანსია</span>
             <span className="header-label-short">ყველა</span>
           </Link>
+          <Link
+            href="/map"
+            prefetch={false}
+            className="all-vacancies-link header-map-link"
+          >
+            რუკა
+          </Link>
         </nav>
         <div className="header-actions">
           {showSearch && (

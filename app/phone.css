@@ -1256,3 +1256,18 @@
     margin-bottom: calc(100px + env(safe-area-inset-bottom));
   }
 }
+@media (max-width: 760px) {
+  /* The phone header has no room for a second link; the map is reached from the board. */
+  .board-shell .topbar.public-header .all-vacancies-link.header-map-link {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  /* The map entry sits under filters and sort, across both columns. */
+  .board-shell.editorial-board.crafted-board .results-tools .results-map-link {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: center;
+    min-height: 44px;
+  }
+}
