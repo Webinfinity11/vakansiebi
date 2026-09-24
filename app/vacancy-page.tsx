@@ -32,7 +32,7 @@ import {
   vacancyPath,
 } from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
-import { track } from '@/lib/analytics-client';
+import { track, trackAction } from '@/lib/analytics-client';
 import type { PublicJob } from '@/lib/types';
 import { vacancySummary } from '@/lib/vacancy-summary';
 import {
@@ -64,11 +64,13 @@ function ApplyAction({ job }: { job: PublicJob }) {
         <a
           className="secondary-button"
           href={`tel:${contacts.phones[0].number}`}
+          onClick={() => track('call', job.id)}
         >
           დარეკვა
         </a>
         <a
           className="primary"
+          onClick={() => track('cv', job.id)}
           href={emailDraft(
             contacts.emails[0].email,
             job.title,
@@ -87,6 +89,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
       <a
         className="primary"
         href={emailDraft(emails[0].email, job.title, defaultApplicationBody)}
+        onClick={() => track('cv', job.id)}
       >
         CV-ის გაგზავნა მეილით <ArrowUpRight size={17} />
       </a>
@@ -98,13 +101,18 @@ function ApplyAction({ job }: { job: PublicJob }) {
         href={external.url}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => track('apply', job.id)}
       >
         განაცხადი კომპანიის საიტზე <ArrowUpRight size={17} />
       </a>
     );
   if (!contacts.emails.length && contacts.phones.length === 1)
     return (
-      <a className="primary" href={`tel:${contacts.phones[0].number}`}>
+      <a
+        className="primary"
+        href={`tel:${contacts.phones[0].number}`}
+        onClick={() => track('call', job.id)}
+      >
         დარეკვა <ArrowUpRight size={17} />
       </a>
     );
@@ -149,7 +157,10 @@ function JobReportForm({ jobId }: { jobId: string }) {
           aria-expanded={open}
           aria-controls="job-report-form"
           disabled={busy}
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => {
+            if (!open) trackAction('report_open');
+            setOpen((value) => !value);
+          }}
         >
           შეცდომის შეტყობინება
         </button>
@@ -176,6 +187,7 @@ function JobReportForm({ jobId }: { jobId: string }) {
                   body.error || 'გაგზავნა ვერ მოხერხდა. სცადე ხელახლა.',
                 );
               setSent(true);
+              trackAction('report_sent');
             } catch (e) {
               setError(
                 e instanceof Error ? e.message : 'გაგზავნა ვერ მოხერხდა.',
@@ -337,12 +349,17 @@ export default function VacancyPage({
     };
   }, []);
   function toggleSave() {
-    const next = saved.includes(job.id)
+    const wasSaved = saved.includes(job.id);
+    const next = wasSaved
       ? saved.filter((id) => id !== job.id)
       : [...saved, job.id].slice(-100);
     try {
       localStorage.setItem('ertad-saved', JSON.stringify(next));
       setSaved(next);
+      // The board counts a save the same way; a vacancy page used to save it uncounted.
+      if (preview) return;
+      if (wasSaved) trackAction('unsave');
+      else track('save', job.id);
     } catch {
       setFeedback('ბრაუზერმა შენახვა ვერ შეძლო.');
     }
@@ -355,6 +372,14 @@ export default function VacancyPage({
         .filter(Boolean)
         .join(' · ') || undefined,
     );
+    if (!preview)
+      trackAction(
+        outcome === 'shared'
+          ? 'share_native'
+          : outcome === 'copied'
+            ? 'share_copy'
+            : 'share_failed',
+      );
     setFeedback(
       outcome === 'shared'
         ? 'ვაკანსია გაზიარებულია'
@@ -446,6 +471,14 @@ export default function VacancyPage({
   function recordContactOpen(event: MouseEvent<HTMLDivElement>) {
     if (preview || !(event.target instanceof Element)) return;
     const href = event.target.closest('a')?.getAttribute('href');
+    /* Where a reader goes next inside the site, from any of the page's links to it. Going
+       back to the company the reader came from is a return, not a new visit. */
+    if (
+      href?.startsWith('/companies/') &&
+      !event.target.closest('.vacancy-breadcrumb')
+    )
+      trackAction('company_open');
+    else if (href === '/cv') trackAction('cv_hint');
     /* Leaving for the employer — a mail, a call, the application form or the original posting —
        is the nearest sign of an application the site can see. Counted once per page load. */
     if (

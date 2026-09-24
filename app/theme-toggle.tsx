@@ -2,6 +2,7 @@
 import { useSyncExternalStore } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { applyTheme, storeTheme, themeChanged } from '@/lib/theme';
+import { trackAction } from '@/lib/analytics-client';
 
 /* The document is the source of truth: the inline script in the head has already written the
    theme onto <html> before the first paint, so the button reads it from there rather than
@@ -35,6 +36,7 @@ export function ThemeToggle() {
         storeTheme(window.localStorage, next);
         applyTheme(next);
         window.dispatchEvent(new Event(themeChanged));
+        trackAction(next === 'dark' ? 'theme_dark' : 'theme_light');
       }}
     >
       {next === 'dark' ? <Moon size={17} /> : <Sun size={17} />}

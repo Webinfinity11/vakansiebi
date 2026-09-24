@@ -64,6 +64,38 @@ export const postLadder = [
 export const postLabels: Record<string, string> =
   Object.fromEntries(postLadder);
 
+/* The posting form's fields as the form itself names them, for "which field stopped it". */
+export const postFieldLabels: Record<string, string> = {
+  title: 'პოზიციის დასახელება',
+  company: 'კომპანიის დასახელება',
+  city: 'ქალაქი',
+  cityOther: 'დასახლების სახელი',
+  description: 'ვაკანსიის აღწერა',
+  contact: 'კანდიდატების მიმართვის გზა',
+  logo: 'კომპანიის ლოგო',
+  salaryFrom: 'ხელფასი — მინიმუმი',
+  salaryTo: 'ხელფასი — მაქსიმუმი',
+  salaryPeriod: 'ანაზღაურების სიხშირე',
+  salaryBasis: 'ანაზღაურების ტიპი',
+  mode: 'მუშაობის ფორმატი',
+  employmentType: 'დასაქმების ტიპი',
+  deadline: 'განაცხადების ბოლო ვადა',
+  category: 'კატეგორია',
+  placement: 'განთავსების ტიპი',
+  billingEmail: 'ელფოსტა ინვოისისთვის',
+  consent: 'თანხმობა',
+  requestId: 'მოთხოვნის ნომერი (გვერდის განახლება)',
+};
+
+/* What else the posting form reports, beside its steps. */
+export const postExtraLabels: Record<string, string> = {
+  draft_restored: 'მონახაზი აღდგა',
+  logo_added: 'ლოგო აიტვირთა',
+  logo_failed: 'ლოგო ვერ დამუშავდა',
+  refused: 'სერვერმა ველები არ მიიღო',
+  failed: 'გაგზავნა ჩავარდა (კავშირი ან სერვერი)',
+};
+
 export const resumeLadder = [
   ['opened', 'გვერდი გაიხსნა'],
   ['started', 'შევსება დაიწყო'],

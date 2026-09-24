@@ -1,12 +1,16 @@
 'use client';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import './analytics.css';
 import {
   buildFunnel,
+  postExtraLabels,
+  postFieldLabels,
   postLadder,
   postLabels,
   resumeLadder,
   resumeLabels,
 } from '@/lib/analytics-funnel';
+import { groupActions } from '@/lib/analytics-actions';
 import type {
   ActivityPoint,
   AnalyticsSummary,
@@ -190,7 +194,9 @@ export function AnalyticsPanel() {
               rows={data!.steps}
               ladder={postLadder}
               labels={postLabels}
+              fieldLabels={postFieldLabels}
               empty="ამ პერიოდში ფორმა არ გაუხსნიათ."
+              extras={<PostExtras rows={data!.steps} />}
             />
             <Funnel
               title="CV კონსტრუქტორი"
@@ -237,6 +243,7 @@ export function AnalyticsPanel() {
               )}
             </div>
           </section>
+          <Actions rows={data!.actions} />
           <div className="admin-analytics-lists">
             <RankedList
               title="გამოყენებული ფილტრები"
@@ -536,6 +543,7 @@ function Funnel({
   rows,
   ladder,
   labels,
+  fieldLabels = {},
   empty,
   extras,
 }: {
@@ -543,6 +551,8 @@ function Funnel({
   rows: Ranked[];
   ladder: readonly (readonly [string, string])[];
   labels: Record<string, string>;
+  /** Readable names for the fields in "ფორმამ არ მიიღო". */
+  fieldLabels?: Record<string, string>;
   empty: string;
   extras?: ReactNode;
 }) {
@@ -591,12 +601,81 @@ function Funnel({
             <p className="admin-analytics-hint">
               ფორმამ არ მიიღო:{' '}
               {report.refused
-                .map((step) => `${step.name} — ${whole.format(step.count)}`)
+                .map(
+                  (step) =>
+                    `${fieldLabels[step.name] ?? step.name} — ${whole.format(step.count)}`,
+                )
                 .join(' · ')}
             </p>
           )}
         </>
       )}
+    </section>
+  );
+}
+
+function PostExtras({ rows }: { rows: Ranked[] }) {
+  const extras = rows
+    .filter(({ value }) => value in postExtraLabels)
+    .sort((a, b) => b.count - a.count);
+  if (!extras.length) return null;
+  return (
+    <p className="admin-analytics-hint">
+      სხვა:{' '}
+      {extras
+        .map(
+          ({ value, count }) =>
+            `${postExtraLabels[value]} — ${whole.format(count)}`,
+        )
+        .join(' · ')}
+    </p>
+  );
+}
+
+/* Public controls and the errors readers meet, by group. Each row is a count of presses:
+   one reader pressing twice is two, and nobody is recognised between presses. */
+function Actions({ rows }: { rows: Ranked[] }) {
+  const groups = groupActions(
+    rows,
+    (filter) => `ფილტრის მოხსნა უშედეგოდან: ${filterNames[filter] ?? filter}`,
+  );
+  return (
+    <section className="admin-analytics-list aa-actions">
+      <h3>ღილაკები, ნავიგაცია და შეცდომები</h3>
+      <p className="admin-analytics-hint">
+        რამდენჯერ დააჭირეს ან შეხვდა — არა რამდენმა ადამიანმა. 0 ნიშნავს, რომ ამ
+        პერიოდში ეს არავის გამოუყენებია.
+      </p>
+      <div className="aa-groups">
+        {groups.map((group) => {
+          const highest = group.rows[0]?.count || 1;
+          const errors = group.title === 'შეცდომები';
+          return (
+            <section
+              key={group.title}
+              className={`aa-group${errors ? ' aa-errors' : ''}`}
+            >
+              <h4>
+                {group.title}
+                <span>{whole.format(group.total)}</span>
+              </h4>
+              <ol>
+                {group.rows.map((row) => (
+                  <li key={row.code} className={row.count ? '' : 'aa-zero'}>
+                    <span
+                      className="aa-bar"
+                      style={{ width: `${(row.count / highest) * 100}%` }}
+                      aria-hidden="true"
+                    />
+                    <span className="aa-label">{row.label}</span>
+                    <b>{whole.format(row.count)}</b>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          );
+        })}
+      </div>
     </section>
   );
 }

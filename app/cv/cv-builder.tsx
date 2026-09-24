@@ -571,6 +571,8 @@ export function CvBuilder() {
         // print or leaving counts against a start rather than against nothing.
         if (stored && hasCvContent(stored)) once('started');
       } catch {
+        // A browser that refuses storage loses the CV on reload; worth knowing how often.
+        once('storage_error');
         setError(cvText.ka.storageError);
       }
       setMounted(true);
@@ -585,11 +587,12 @@ export function CvBuilder() {
         writeCv(window.localStorage, cv);
         setStatus(cvText.ka.saved);
       } catch {
+        once('storage_error');
         setError(cvText.ka.storageError);
       }
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [cv, mounted]);
+  }, [cv, mounted, once]);
 
   useEffect(() => {
     const beforePrint = () => flushSync(() => setPrinting(true));
@@ -709,9 +712,15 @@ export function CvBuilder() {
     );
   }
 
-  if (!mounted) return <main className="cv-main" aria-busy="true">
-    <div className="cv-intro"><h1>{cvText.ka.heading}</h1><p className="cv-note">{cvText.ka.intro}</p></div>
-  </main>;
+  if (!mounted)
+    return (
+      <main className="cv-main" aria-busy="true">
+        <div className="cv-intro">
+          <h1>{cvText.ka.heading}</h1>
+          <p className="cv-note">{cvText.ka.intro}</p>
+        </div>
+      </main>
+    );
   const contactKeys = [
     'fullName',
     'title',

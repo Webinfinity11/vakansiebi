@@ -7,6 +7,7 @@ import { ArrowUpRight, ChevronLeft, MapPin, ExternalLink } from 'lucide-react';
 import { PublicHeader } from '../../public-header';
 import { CompanyLogo } from '../../company-logo';
 import { ListHopLink } from '../../list-hop-link';
+import { TrackOnce } from '../../track-once';
 import { formatDate } from '../../vacancy-text';
 import { db } from '@/lib/server/db';
 import { publicJobs } from '@/lib/server/jobs';
@@ -153,6 +154,7 @@ export default async function CompanyPage(props: Props) {
         }}
       />
       <PublicHeader />
+      <TrackOnce code="company_page" />
       <main className="vacancy-page-main">
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
           <Link href="/" prefetch={false}>
@@ -203,6 +205,7 @@ export default async function CompanyPage(props: Props) {
                 key={job.id}
                 href={vacancyPath(job, { from: here })}
                 from={here}
+                event="open_company"
                 className="similar-card"
               >
                 <h3 title={job.title}>

@@ -8,6 +8,7 @@ import { CompanyLogo } from './company-logo';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { markListHop, vacancyPath } from '@/lib/vacancy-navigation';
 import type { SimilarVacancy } from '@/lib/similar-vacancies';
+import { trackAction } from '@/lib/analytics-client';
 export function SimilarVacancies({
   id,
   returnTo,
@@ -41,8 +42,9 @@ export function SimilarVacancies({
           setResult({ key, jobs: data.jobs, error: false });
       })
       .catch(() => {
-        if (!controller.signal.aborted)
-          setResult({ key, jobs: [], error: true });
+        if (controller.signal.aborted) return;
+        setResult({ key, jobs: [], error: true });
+        trackAction('similar_error');
       });
     return () => controller.abort();
   }, [activity.ready, id, excluded, key, retry]);
@@ -87,7 +89,10 @@ export function SimilarVacancies({
             <Link
               key={job.id}
               href={vacancyPath(job)}
-              onNavigate={() => markListHop(returnTo, false)}
+              onNavigate={() => {
+                markListHop(returnTo, false);
+                trackAction('open_similar');
+              }}
               prefetch={false}
               className="similar-card"
             >

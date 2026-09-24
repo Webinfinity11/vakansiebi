@@ -8,7 +8,7 @@ import {
   vacancyContacts,
 } from '@/lib/vacancy-details';
 import type { PublicJob } from '@/lib/types';
-import { track } from '@/lib/analytics-client';
+import { track, trackAction } from '@/lib/analytics-client';
 
 export function QuickApply({
   job,
@@ -85,6 +85,7 @@ export function QuickApply({
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(contact.email);
+                    trackAction('copy_email');
                     setMessage('ელფოსტა დაკოპირებულია');
                   } catch {
                     setMessage(
@@ -141,6 +142,7 @@ export function TranslationHelp({ job }: { job: PublicJob }) {
         className="secondary-button"
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => trackAction('translate')}
         href={
           'https://translate.google.com/translate?sl=auto&tl=ka&u=' +
           encodeURIComponent(job.url)

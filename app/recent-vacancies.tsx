@@ -32,6 +32,7 @@ export function RecentVacancies({
             key={item.id}
             href={vacancyPath(item, { from: returnPath })}
             from={returnPath}
+            event="open_recent"
           >
             <strong title={item.title}>{vacancyCardTitle(item.title)}</strong>
             <span>{item.company || 'კერძო განცხადება'}</span>

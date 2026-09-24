@@ -51,6 +51,16 @@ void test('the process events keep their two shapes: a vacancy, or a step name',
     });
   for (const value of ['რეზიუმე', 'a', 'a'.repeat(25), 'section-skills'])
     assert.equal(normalizeEvent('resume', value), null);
+  for (const value of ['share_copy', 'relax_postedWithin'])
+    assert.deepEqual(normalizeEvent('action', value), {
+      kind: 'action',
+      value,
+    });
+  assert.equal(
+    normalizeEvent('action', id),
+    null,
+    'a public control is counted by name, never with the vacancy it was on',
+  );
 });
 void test('a view or an outbound click must name a vacancy', () => {
   assert.deepEqual(normalizeEvent('view', id.toUpperCase()), {

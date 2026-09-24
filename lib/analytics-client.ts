@@ -1,3 +1,5 @@
+import type { ActionCode } from './analytics-actions';
+
 /* Sends an event without adding a tracking id or setting a cookie; the body is only the kind
    and the value. sendBeacon survives the page being left, which is exactly
    when an outbound click happens; fetch with keepalive is the fallback where it is missing.
@@ -20,7 +22,8 @@ export type TrackedKind =
   | 'cv'
   | 'apply'
   | 'post'
-  | 'resume';
+  | 'resume'
+  | 'action';
 
 export function track(kind: TrackedKind, value: string) {
   if (process.env.NODE_ENV !== 'production') return;
@@ -43,3 +46,6 @@ export function track(kind: TrackedKind, value: string) {
       }).catch(() => {});
   } catch {}
 }
+
+/* A control or an error on a public page, by its code name alone. */
+export const trackAction = (code: ActionCode) => track('action', code);

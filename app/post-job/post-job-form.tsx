@@ -202,6 +202,7 @@ export function PostJobForm() {
             setMessage(interruptedMessage);
           } else {
             setDraftNote('შენახული მონახაზი აღდგენილია.');
+            track('post', 'draft_restored');
           }
         }
       } catch {
@@ -316,7 +317,9 @@ export function PostJobForm() {
     setLogoBusy(true);
     try {
       change('logo', await prepareSubmissionLogo(file));
+      track('post', 'logo_added');
     } catch (error) {
+      track('post', 'logo_failed');
       setErrors((current) => ({
         ...current,
         logo:
@@ -461,6 +464,7 @@ export function PostJobForm() {
               }),
             );
           } catch {}
+          track('post', 'refused');
           showErrors(result.fields || { description: result.error });
           setMessage(result.error || 'შეამოწმე მონიშნული ველები.');
           return;
@@ -478,6 +482,8 @@ export function PostJobForm() {
         sessionStorage.removeItem(draftKey);
       } catch {}
     } catch {
+      // The server or the connection failed after a valid form: the form is not to blame.
+      track('post', 'failed');
       setMessage(retryMessage);
     } finally {
       inFlight.current = false;
