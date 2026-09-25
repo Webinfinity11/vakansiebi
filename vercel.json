@@ -8,19 +8,19 @@
   "crons": [
     {
       "path": "/api/cron/invoice-email",
-      "schedule": "*/10 * * * *"
+      "schedule": "50 * * * *"
     },
     {
       "path": "/sitemap-categories.xml",
-      "schedule": "7 * * * *"
+      "schedule": "50 */3 * * *"
     },
     {
       "path": "/sitemap-jobs.xml",
-      "schedule": "17 * * * *"
+      "schedule": "50 */3 * * *"
     },
     {
       "path": "/sitemap-companies.xml",
-      "schedule": "27 * * * *"
+      "schedule": "50 */3 * * *"
     }
   ]
 }

@@ -608,7 +608,7 @@ export function JobMap() {
           <div ref={box} className="job-map-gl" />
           {ripple && (
             <span
-              key={ripple.n}
+              key={`ripple:${ripple.n}`}
               className="job-map-ripple"
               style={{ left: ripple.x, top: ripple.y }}
               aria-hidden="true"
@@ -618,7 +618,8 @@ export function JobMap() {
           {grouped && grouped.length > 0 && !selected && (
             <section
               className="job-map-group ds-appear"
-              key={group!.join()}
+              // Siblings share one key space: each panel's key names its kind.
+              key={`group:${group!.join()}`}
               aria-label="ვაკანსიები ამ წერტილში"
             >
               <header>
@@ -660,7 +661,10 @@ export function JobMap() {
             </section>
           )}
           {selected && (
-            <article className="job-map-pop ds-appear" key={selected.id}>
+            <article
+              className="job-map-pop ds-appear"
+              key={`pop:${selected.id}`}
+            >
               <button
                 type="button"
                 className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm job-map-pop-close"
@@ -723,7 +727,7 @@ export function JobMap() {
             <div
               className="job-map-rail"
               data-group={!!grouped?.length}
-              key={grouped?.length ? group!.join() : 'area'}
+              key={grouped?.length ? `rail:${group!.join()}` : 'rail'}
               ref={rail}
               onScroll={onRailScroll}
               aria-label="ვაკანსიები რუკის ამ ნაწილში"
