@@ -1,6 +1,7 @@
 import { cities } from './cities';
-/* Approximate centres of the cities offered as filter options. Used only to pick the closest
-   option to a device position; nothing here is precise enough for anything else. */
+/* Approximate centres of the cities offered as filter options. Used to pick the closest option
+   to a device position, and to check that a source's map pin lies near its vacancy's city;
+   nothing here is precise enough to place anything. */
 const centres: Record<(typeof cities)[number], [number, number]> = {
   თბილისი: [41.7151, 44.8271],
   ბათუმი: [41.6168, 41.6367],
@@ -16,6 +17,12 @@ const centres: Record<(typeof cities)[number], [number, number]> = {
   ბორჯომი: [41.8404, 43.3894],
   ოზურგეთი: [41.9244, 42.0066],
 };
+/** A listed city's approximate centre as [lat, lng], or undefined for any other place. */
+export function cityCentre(city: string): [number, number] | undefined {
+  return Object.hasOwn(centres, city)
+    ? (centres as Record<string, [number, number]>)[city]
+    : undefined;
+}
 const earthKm = 6371;
 const rad = (deg: number) => (deg * Math.PI) / 180;
 export function distanceKm(

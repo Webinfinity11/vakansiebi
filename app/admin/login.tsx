@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
-import { ShieldCheck, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ShieldCheck } from 'lucide-react';
 import { Brand } from '../job-board';
 export default function Login() {
   const [password, setPassword] = useState(''),
@@ -32,12 +32,13 @@ export default function Login() {
           }
         }}
       >
-        <ShieldCheck size={34} />
+        <ShieldCheck size={20} aria-hidden="true" />
         <h1>ადმინის სივრცე</h1>
         <p>წყაროების, ვაკანსიებისა და გამოქვეყნების მართვა.</p>
         <label>
           პაროლი
           <input
+            className="ds-input"
             type="password"
             autoComplete="current-password"
             required
@@ -51,11 +52,13 @@ export default function Login() {
             {error}
           </p>
         )}
-        <button className="primary" disabled={busy}>
+        <button className="ds-btn ds-btn--primary" disabled={busy}>
+          {busy && <span className="ds-spinner" aria-hidden="true" />}
           {busy ? 'შესვლა…' : 'შესვლა'}
         </button>
-        <Link href="/">
-          <ArrowLeft size={15} /> ვაკანსიებზე დაბრუნება
+        <Link href="/" className="ds-btn ds-btn--ghost ds-btn--sm login-back">
+          <ChevronLeft size={16} aria-hidden="true" />
+          ვაკანსიებზე დაბრუნება
         </Link>
       </form>
     </main>

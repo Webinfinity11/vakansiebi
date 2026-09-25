@@ -1,12 +1,16 @@
 'use client';
+import { SkeletonNumber, SkeletonRows } from '../skeleton';
 import { useEffect, useState } from 'react';
 import {
   CircleAlert,
+  CircleCheck,
   Clock3,
   Flag,
   Inbox,
   Pause,
   RefreshCw,
+  RotateCcw,
+  Timer,
   Terminal,
   type LucideIcon,
 } from 'lucide-react';
@@ -71,7 +75,7 @@ function Spark({ values, alert }: { values: number[]; alert?: boolean }) {
       <polyline
         points={points}
         fill="none"
-        stroke={alert ? '#c8322b' : '#2457e6'}
+        style={{ stroke: alert ? 'var(--ds-danger)' : 'var(--ds-accent)' }}
         strokeWidth="1.6"
         vectorEffect="non-scaling-stroke"
       />
@@ -86,7 +90,13 @@ type Item = {
   title: string;
   detail: string;
   chips?: string[];
-  action?: { label: string; run: () => void; primary?: boolean };
+  action?: {
+    label: string;
+    run: () => void;
+    primary?: boolean;
+    /** Only a meaningful mark: the action re-runs or retries something. */
+    icon?: LucideIcon;
+  };
 };
 
 /* The findings, grouped so seven stopped scrapers read as one problem with one button, and the
@@ -144,6 +154,7 @@ export function attentionItems({
       chips: stopped.map(name),
       action: {
         label: stopped.length === 1 ? 'შემოწმება' : 'ყველას შემოწმება',
+        icon: RefreshCw,
         run: () =>
           stopped.length === 1
             ? onAct(stopped[0].action!.source, { action: 'run' })
@@ -168,6 +179,7 @@ export function attentionItems({
       detail: a.detail,
       action: {
         label: 'ხელახლა',
+        icon: RotateCcw,
         run: () => onAct(a.action!.source, { action: 'retry' }),
       },
     });
@@ -180,6 +192,7 @@ export function attentionItems({
       detail: a.detail,
       action: {
         label: 'ინტერვალის გაზრდა',
+        icon: Timer,
         run: () => {
           const current =
             sources.find((s) => s.id === a.action!.source)?.interval_minutes ||
@@ -267,11 +280,12 @@ export function OverviewPanel({
   return (
     <div className="overview">
       <div className="overview-bar">
-        <fieldset className="overview-periods" aria-label="პერიოდი">
+        <fieldset className="admin-chips" aria-label="პერიოდი">
           {periods.map(([value, label]) => (
             <button
               key={value}
               type="button"
+              className="ds-chip"
               aria-pressed={days === value}
               onClick={() => setDays(value)}
             >
@@ -281,18 +295,24 @@ export function OverviewPanel({
         </fieldset>
         <button
           type="button"
-          className="primary"
+          className="ds-btn ds-btn--primary ds-btn--sm"
           onClick={() => go('vacancies')}
         >
           შესამოწმებელი ვაკანსიები · {whole.format(counts.review ?? 0)}
         </button>
       </div>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" className="notice">
+          {error}
+        </p>
+      )}
 
       <div className="overview-kpis">
         <button type="button" onClick={() => go('runs')}>
           <span>ახალი ვაკანსიები</span>
-          <strong>{shown ? whole.format(shown.imported.now) : '…'}</strong>
+          <strong>
+            {shown ? whole.format(shown.imported.now) : <SkeletonNumber />}
+          </strong>
           {shown && <Change {...shown.imported} />}
           {shown && (
             <Spark values={shown.imported.series.map((d) => d.count)} />
@@ -300,7 +320,9 @@ export function OverviewPanel({
         </button>
         <button type="button" onClick={() => go('history')}>
           <span>არქივში გადავიდა</span>
-          <strong>{shown ? whole.format(shown.archived.now) : '…'}</strong>
+          <strong>
+            {shown ? whole.format(shown.archived.now) : <SkeletonNumber />}
+          </strong>
           {shown && (
             <small>
               ვადა გავიდა: {whole.format(shown.archived.expired)} · წყაროზე აღარ
@@ -310,7 +332,9 @@ export function OverviewPanel({
         </button>
         <button type="button" onClick={() => go('submissions')}>
           <span>ახალი განცხადება</span>
-          <strong>{shown ? whole.format(shown.submissions.now) : '…'}</strong>
+          <strong>
+            {shown ? whole.format(shown.submissions.now) : <SkeletonNumber />}
+          </strong>
           {shown && (
             <small>
               {shown.submissions.waiting
@@ -339,7 +363,11 @@ export function OverviewPanel({
         <button type="button" onClick={() => go('billing')}>
           <span>შემოსავალი</span>
           <strong>
-            {shown ? `${whole.format(shown.revenue.now)} ₾` : '…'}
+            {shown ? (
+              `${whole.format(shown.revenue.now)} ₾`
+            ) : (
+              <SkeletonNumber />
+            )}
           </strong>
           {shown && (
             <small>
@@ -359,16 +387,19 @@ export function OverviewPanel({
             <span>{items.length ? `${items.length} საკითხი` : ''}</span>
           </header>
           {!now ? (
-            <p className="overview-empty">მდგომარეობა იტვირთება…</p>
+            <div className="overview-empty">
+              <SkeletonRows rows={3} />
+            </div>
           ) : !items.length ? (
-            <p className="overview-empty">
+            <p className="overview-empty overview-clear">
+              <CircleCheck size={20} aria-hidden="true" />
               ყველაფერი რიგზეა: წყაროები მუშაობს და არაფერი ელოდება.
             </p>
           ) : (
-            <ul className="overview-attention">
+            <ul className="overview-attention ds-appear-list">
               {items.map((item) => (
                 <li key={item.id} data-tone={item.tone}>
-                  <item.icon size={17} strokeWidth={1.75} aria-hidden="true" />
+                  <item.icon size={16} aria-hidden="true" />
                   <div>
                     <b>{item.title}</b>
                     <p>{item.detail}</p>
@@ -385,18 +416,14 @@ export function OverviewPanel({
                       type="button"
                       className={
                         item.action.primary
-                          ? 'primary'
-                          : 'secondary-button'
+                          ? 'ds-btn ds-btn--primary ds-btn--sm'
+                          : 'ds-btn ds-btn--secondary ds-btn--sm'
                       }
                       disabled={busy}
                       onClick={item.action.run}
                     >
-                      {!item.action.primary && (
-                        <RefreshCw
-                          size={14}
-                          strokeWidth={1.75}
-                          aria-hidden="true"
-                        />
+                      {item.action.icon && (
+                        <item.action.icon size={16} aria-hidden="true" />
                       )}
                       {item.action.label}
                     </button>
@@ -416,10 +443,10 @@ export function OverviewPanel({
             <h2>ბოლო ცვლილებები</h2>
             <button
               type="button"
-              className="overview-link"
+              className="ds-btn ds-btn--ghost ds-btn--sm"
               onClick={() => go('history')}
             >
-              ისტორია →
+              სრული ისტორია
             </button>
           </header>
           <RecentChanges onOpenJob={onOpenJob} />
@@ -431,13 +458,17 @@ export function OverviewPanel({
           <h2>წყაროების მდგომარეობა</h2>
           <button
             type="button"
-            className="overview-link"
+            className="ds-btn ds-btn--ghost ds-btn--sm"
             onClick={() => go('sources')}
           >
-            მონიტორინგი →
+            ყველა წყარო
           </button>
         </header>
-        {!now && <p className="overview-empty">მდგომარეობა იტვირთება…</p>}
+        {!now && (
+          <div className="overview-empty">
+            <SkeletonRows rows={3} />
+          </div>
+        )}
         <div className="overview-health">
           {(now ? live : []).map((s) => {
             const health = sourceHealth(s, now);

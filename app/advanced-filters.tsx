@@ -1,5 +1,7 @@
 'use client';
 import { SalaryFilter } from './salary-filter';
+import { SelectField } from './select-field';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { SearchFilters } from '../lib/personal-space';
 import { advancedValues } from '@/lib/advanced-filter-values';
 export type AdvancedFilters = Pick<
@@ -27,6 +29,13 @@ export const employmentLabels = {
   internship: 'სტაჟირება',
   daily: 'დღიური / ერთჯერადი სამუშაო',
 };
+const postedOptions = [
+  { value: '0', label: 'ნებისმიერ დროს' },
+  { value: '1', label: 'დღეს' },
+  { value: '3', label: 'ბოლო 3 დღეში' },
+  { value: '7', label: 'ბოლო 7 დღეში' },
+  { value: '30', label: 'ბოლო 30 დღეში' },
+];
 export default function AdvancedFilterControls({
   value,
   onChange,
@@ -49,50 +58,39 @@ export default function AdvancedFilterControls({
       {showEmployment && (
         <>
           <label htmlFor={`${prefix}-employment`}>განაკვეთი</label>
-          <select
+          <SelectField
             id={`${prefix}-employment`}
             value={value.employment}
-            onChange={(e) =>
-              change(
-                'employment',
-                e.target.value as AdvancedFilters['employment'],
-              )
+            onChange={(next) =>
+              change('employment', next as AdvancedFilters['employment'])
             }
-          >
-            {Object.entries(employmentLabels).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
+            options={Object.entries(employmentLabels).map(([key, label]) => ({
+              value: key,
+              label,
+            }))}
+          />
         </>
       )}
       <label className="check-row" htmlFor={`${prefix}-entry-level`}>
-        <input
-          type="checkbox"
+        <Checkbox
           id={`${prefix}-entry-level`}
           checked={value.entryLevel}
-          onChange={(e) => change('entryLevel', e.target.checked)}
+          onCheckedChange={(checked) => change('entryLevel', checked)}
         />
         გამოცდილების გარეშე
       </label>
       <label htmlFor={`${prefix}-posted`}>გამოქვეყნებულია</label>
-      <select
+      <SelectField
         id={`${prefix}-posted`}
-        value={value.postedWithin}
-        onChange={(e) =>
+        value={String(value.postedWithin)}
+        onChange={(next) =>
           change(
             'postedWithin',
-            Number(e.target.value) as AdvancedFilters['postedWithin'],
+            Number(next) as AdvancedFilters['postedWithin'],
           )
         }
-      >
-        <option value={0}>ნებისმიერ დროს</option>
-        <option value={1}>დღეს</option>
-        <option value={3}>ბოლო 3 დღეში</option>
-        <option value={7}>ბოლო 7 დღეში</option>
-        <option value={30}>ბოლო 30 დღეში</option>
-      </select>
+        options={postedOptions}
+      />
       {showSalary && (
         <SalaryFilter value={value} onChange={onChange} prefix={prefix} />
       )}

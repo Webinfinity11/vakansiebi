@@ -3,7 +3,15 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { cache } from 'react';
-import { ArrowUpRight, ChevronLeft, MapPin, ExternalLink } from 'lucide-react';
+import {
+  CalendarClock,
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Globe2,
+  MapPin,
+} from 'lucide-react';
 import { PublicHeader } from '../../public-header';
 import { CompanyLogo } from '../../company-logo';
 import { ListHopLink } from '../../list-hop-link';
@@ -18,6 +26,7 @@ import { logoCompanyKey } from '@/lib/company-logo-identity';
 import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import { safeExternalUrl } from '@/lib/vacancy-media';
+import './company.css';
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -158,7 +167,7 @@ export default async function CompanyPage(props: Props) {
       <main className="vacancy-page-main">
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
           <Link href="/" prefetch={false}>
-            <ChevronLeft size={15} aria-hidden="true" />
+            <ChevronLeft size={16} aria-hidden="true" />
             ყველა ვაკანსია
           </Link>
           <span aria-hidden="true">/</span>
@@ -174,7 +183,7 @@ export default async function CompanyPage(props: Props) {
           </div>
           {employer.cities.length > 0 && (
             <p className="company-page-cities">
-              <MapPin size={15} aria-hidden="true" />{' '}
+              <MapPin size={14} aria-hidden="true" />
               {employer.cities.map((c) => c.name).join(' · ')}
             </p>
           )}
@@ -182,13 +191,22 @@ export default async function CompanyPage(props: Props) {
             <div className="company-about">
               {profile?.description && (
                 <details className="company-description">
-                  <summary>კომპანიის შესახებ</summary>
+                  <summary>
+                    <ChevronDown aria-hidden="true" />
+                    კომპანიის შესახებ
+                  </summary>
                   <p>{profile.description}</p>
                 </details>
               )}
               {website && (
-                <a href={website} target="_blank" rel="noopener noreferrer">
-                  ვებსაიტი <ExternalLink size={14} />
+                <a
+                  className="ds-btn ds-btn--secondary ds-btn--sm company-website"
+                  href={website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Globe2 aria-hidden="true" />
+                  ვებსაიტი
                 </a>
               )}
             </div>
@@ -197,7 +215,9 @@ export default async function CompanyPage(props: Props) {
         <section className="similar-vacancies" aria-labelledby="company-jobs">
           <h2 id="company-jobs">
             აქტიური ვაკანსიები{' '}
-            <span className="company-job-count">{result.total}</span>
+            <span className="ds-badge ds-badge--accent company-count">
+              {result.total}
+            </span>
           </h2>
           <div className="similar-grid">
             {result.jobs.map((job) => (
@@ -233,20 +253,17 @@ export default async function CompanyPage(props: Props) {
                   )}
                   {job.datePosted && (
                     <time dateTime={job.datePosted}>
+                      <CalendarDays size={14} aria-hidden="true" />
                       გამოქვეყნდა: {formatDate(job.datePosted)}
                     </time>
                   )}
                   {job.deadline && (
                     <time dateTime={job.deadline}>
+                      <CalendarClock size={14} aria-hidden="true" />
                       ბოლო ვადა: {formatDate(job.deadline)}
                     </time>
                   )}
                 </div>
-                <ArrowUpRight
-                  className="company-job-arrow"
-                  size={18}
-                  aria-hidden="true"
-                />
               </ListHopLink>
             ))}
           </div>
@@ -258,12 +275,13 @@ export default async function CompanyPage(props: Props) {
                   href={page === 2 ? path : `${path}?page=${page - 1}`}
                   prefetch={false}
                 >
+                  <ChevronLeft aria-hidden="true" />
                   წინა
                 </Link>
               ) : (
                 <span />
               )}
-              <span>
+              <span className="company-page-count">
                 {page} / {result.pages}
               </span>
               {page < result.pages ? (
@@ -273,6 +291,7 @@ export default async function CompanyPage(props: Props) {
                   prefetch={false}
                 >
                   შემდეგი
+                  <ChevronRight aria-hidden="true" />
                 </Link>
               ) : (
                 <span />

@@ -2,6 +2,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { db } from '../lib/server/db';
 import { geocode, type Geocoded } from '../lib/server/geocode';
 import { streetAddresses } from '../lib/street-address';
+import { sourcePoint } from '../lib/source-point';
 import { vacancySummary } from '../lib/vacancy-summary';
 import type { Vacancy } from '../lib/types';
 
@@ -28,6 +29,7 @@ export async function placeVacancies({
   // lock is unreliable, and every write below is idempotent — two runs at once only ask twice.
   let asked = 0;
   let placed = 0;
+  let failures = 0;
   {
     const { rows } = await db().query<{
       id: string;
@@ -42,11 +44,19 @@ export async function placeVacancies({
        LIMIT $1`,
       [vacancies],
     );
+    // Unchanged vacancies are marked read too, or the same rows would fill every run's batch.
+    const unchanged: string[] = [];
     for (const row of rows) {
       const text =
         vacancySummary(row.published).find((item) => item.label === 'მისამართი')
           ?.value ?? '';
-      if (row.source === text) continue;
+      // A pin the source published is part of what was read: a moved pin is read again.
+      const point = sourcePoint(row.published);
+      const read = point ? `${text} @${point.lat},${point.lon}` : text;
+      if (row.source === read) {
+        unchanged.push(row.id);
+        continue;
+      }
       const addresses = text
         ? streetAddresses(text, row.published.city || '')
         : [];
@@ -86,7 +96,16 @@ export async function placeVacancies({
           }
           if (asked) await delay(pauseMs);
           asked++;
-          answer = await lookup(address);
+          try {
+            answer = await lookup(address);
+            failures = 0;
+          } catch (error) {
+            // A dropped connection is not an answer: nothing is cached, the vacancy is read again
+            // next time, and a run that keeps failing stops instead of hammering the service.
+            complete = false;
+            if (++failures >= 3) throw error;
+            break;
+          }
           await db().query(
             `INSERT INTO geocode_cache(query, status, lat, lon, label) VALUES($1, $2, $3, $4, $5)
              ON CONFLICT (query) DO UPDATE SET status = $2, lat = $3, lon = $4, label = $5, checked_at = now()`,
@@ -108,6 +127,16 @@ export async function placeVacancies({
           });
       }
       if (!complete) continue;
+      /* The building the geocoder matches comes first: an employer's pin on a board map was
+         seen 250 m from the building the geocoder matched to that same vacancy's address. The
+         pin places the vacancy only when the written address cannot — no house number, or a
+         street the geocoder finds twice or not at all. */
+      if (point && !found.length)
+        found.push({
+          query: `pin:${point.lat},${point.lon}`,
+          ...point,
+          label: sourcePointLabel(addresses, text, row.published.city),
+        });
       await db().query('DELETE FROM job_places WHERE job_id = $1', [row.id]);
       for (const place of found)
         await db().query(
@@ -118,9 +147,27 @@ export async function placeVacancies({
       await db().query(
         `INSERT INTO job_place_checks(job_id, source) VALUES($1, $2)
          ON CONFLICT (job_id) DO UPDATE SET source = $2, checked_at = now()`,
-        [row.id, text],
+        [row.id, read],
       );
     }
+    if (unchanged.length)
+      await db().query(
+        'UPDATE job_place_checks SET checked_at = now() WHERE job_id = ANY($1::uuid[])',
+        [unchanged],
+      );
     return { asked, placed };
   }
+}
+
+/** What a source's pin is called on the map: its one street address, else the written text. */
+export function sourcePointLabel(
+  addresses: { street: string; number: string; city: string }[],
+  text: string,
+  city: string,
+) {
+  if (addresses.length === 1) {
+    const [a] = addresses;
+    return `${a.street} ${a.number}, ${a.city}`;
+  }
+  return (text || city).slice(0, 200);
 }

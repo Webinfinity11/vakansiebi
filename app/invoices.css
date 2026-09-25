@@ -12,33 +12,40 @@
   margin-bottom: var(--jobx-space-24px);
 }
 .invoice-toolbar a {
-  color: var(--jobx-accent);
-  font-size: var(--jobx-font-size-13px);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  min-height: var(--ds-control-touch);
+  margin-inline-start: calc(-1 * var(--ds-space-1));
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
   text-decoration: none;
+  transition: color var(--ds-duration-fast) var(--ds-ease);
+}
+.invoice-toolbar a > svg.lucide {
+  width: var(--ds-icon-md);
+  height: var(--ds-icon-md);
+}
+.invoice-toolbar a:hover {
+  color: var(--ds-accent);
+}
+.invoice-toolbar a:focus-visible,
+.invoice-paper a:focus-visible {
+  outline: none;
+  border-radius: var(--ds-radius-sm);
+  box-shadow: 0 0 0 3px var(--ds-focus);
 }
 .invoice-actions {
   display: flex;
-  gap: var(--jobx-space-8px);
-}
-.invoice-actions button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--jobx-space-6px);
-  min-height: 44px;
-  padding: var(--jobx-space-10px) var(--jobx-space-12px);
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
-  border-radius: var(--jobx-radius-8px);
-  background: var(--jobx-surface);
-  font-size: var(--jobx-font-size-12px);
-  cursor: pointer;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
 }
 .invoice-paper {
-  background: var(--jobx-surface);
-  border: 1px solid var(--jobx-color-e1e5ed-surface);
-  border-top: 4px solid var(--jobx-accent);
-  border-radius: var(--jobx-radius-16px);
-  padding: var(--jobx-space-40px);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-top: 4px solid var(--ds-accent);
+  border-radius: var(--ds-radius-xl);
+  padding: var(--ds-space-6);
 }
 .invoice-heading {
   display: flex;
@@ -54,24 +61,36 @@
   margin: 0 0 var(--jobx-space-8px);
 }
 .invoice-heading p {
-  color: var(--jobx-color-536078-text);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  color: var(--ds-ink-3);
   font-size: var(--jobx-font-size-12px);
   margin: 0;
 }
 .invoice-meta {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  font-variant-numeric: tabular-nums;
   gap: var(--jobx-space-16px);
   font-size: var(--jobx-font-size-12px);
   margin: var(--jobx-space-32px) 0;
   padding-bottom: var(--jobx-space-20px);
-  border-bottom: 1px solid var(--jobx-color-e1e5ed-surface);
+  border-bottom: 1px solid var(--ds-line);
 }
 .invoice-status {
-  color: var(--jobx-warning-text);
+  background: var(--ds-warning-soft);
+  color: var(--ds-warning);
 }
-.invoice-status-paid {
-  color: #197645;
+.invoice-status-paid,
+.invoice-status-refunded {
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+}
+.invoice-status-cancelled,
+.invoice-status-refund_required {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
 }
 .invoice-parties {
   display: grid;
@@ -80,8 +99,8 @@
   margin-bottom: var(--jobx-space-32px);
 }
 .invoice-paper h2 {
-  font-size: var(--jobx-font-size-12px);
-  color: var(--jobx-color-536078-text);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
   margin: 0 0 var(--jobx-space-12px);
 }
 .invoice-parties p {
@@ -90,24 +109,26 @@
   overflow-wrap: anywhere;
 }
 .invoice-iban {
-  font-family: monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: var(--ds-text-md);
   letter-spacing: 0.2px;
 }
 .invoice-paper table {
+  font-variant-numeric: tabular-nums;
   width: 100%;
   border-collapse: collapse;
   font-size: var(--jobx-font-size-13px);
   text-align: left;
 }
 .invoice-paper th {
-  background: var(--jobx-accent-tint);
+  background: var(--ds-accent-soft);
   font-size: var(--jobx-font-size-11px);
   font-weight: 600;
 }
 .invoice-paper th,
 .invoice-paper td {
   padding: var(--jobx-space-14px) var(--jobx-space-12px);
-  border-bottom: 1px solid var(--jobx-color-e1e5ed-surface);
+  border-bottom: 1px solid var(--ds-line);
 }
 .invoice-paper td:last-child,
 .invoice-paper th:last-child {
@@ -121,13 +142,17 @@
   padding: var(--jobx-space-18px) var(--jobx-space-12px);
   font-size: var(--jobx-font-size-14px);
 }
+.invoice-total {
+  align-items: baseline;
+}
 .invoice-total strong {
   font-size: var(--jobx-font-size-24px);
+  font-variant-numeric: tabular-nums;
 }
 .invoice-payment {
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
-  border-radius: var(--jobx-radius-10px);
-  padding: var(--jobx-space-18px);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-4);
   font-size: var(--jobx-font-size-13px);
   line-height: 1.8;
   margin-top: var(--jobx-space-28px);
@@ -135,15 +160,42 @@
 .invoice-payment p {
   margin: var(--jobx-space-8px) 0 0;
 }
+/* A plain centred block: the site footer's flex row and border must not reach it. */
 .invoice-paper footer {
+  display: grid;
+  justify-items: center;
+  gap: var(--ds-space-1);
+  margin: var(--jobx-space-40px) 0 0;
+  padding: var(--ds-space-4) 0 0;
+  border: 0;
+  border-top: 1px solid var(--ds-line);
+  background: none;
   text-align: center;
-  color: var(--jobx-color-536078-text);
-  font-size: var(--jobx-font-size-11px);
-  margin-top: var(--jobx-space-40px);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+}
+.invoice-paper footer p {
+  margin: 0;
+}
+.invoice-paper footer a {
+  color: var(--ds-accent);
+  font-weight: var(--ds-weight-strong);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+.invoice-paper footer a:hover {
+  text-decoration: underline;
+}
+/* The wordmark is dark ink; on the dark screen it is drawn light, as in the header. */
+@media screen {
+  :root[data-theme='dark'] .invoice-heading img {
+    filter: invert(1) hue-rotate(180deg);
+  }
 }
 @media (max-width: 600px) {
   .invoice-page {
-    padding: var(--jobx-space-16px) var(--jobx-space-12px) var(--jobx-space-32px);
+    padding: var(--jobx-space-16px) var(--jobx-space-12px)
+      var(--jobx-space-32px);
   }
   .invoice-toolbar {
     align-items: flex-start;
@@ -167,7 +219,8 @@
     gap: var(--jobx-space-20px);
   }
   .invoice-meta {
-    flex-direction: column;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2);
   }
   .invoice-paper th,
   .invoice-paper td {
@@ -203,9 +256,10 @@
   }
 }
 .invoice-test-notice {
-  color: var(--jobx-warning-text);
-  background: #fff1ce;
-  padding: var(--jobx-space-12px);
+  color: var(--ds-warning);
+  background: var(--ds-warning-soft);
+  border-radius: var(--ds-radius-md);
+  padding: var(--ds-space-3);
   font-size: var(--jobx-font-size-12px);
   margin: 0 0 var(--jobx-space-24px);
 }

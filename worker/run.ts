@@ -307,6 +307,19 @@ export async function runSource(
               [item.job_id],
             );
           if (item.job_id) await reconcileAndNotify(item.job_id);
+          /* A record an editor once changed by hand leaves automation, so nothing above archives
+             it and it waited in the review queue. Gone from every source means gone: archive it
+             here. JOBX's own submissions have no scraped source and are never touched. */
+          if (item.job_id)
+            await db().query(
+              `UPDATE jobs SET status='archived',automation_reason='removed',needs_review=false,
+                version=version+1,updated_at=now()
+               WHERE id=$1 AND automation_paused AND status IN ('pending','published')
+                 AND NOT EXISTS (SELECT 1 FROM job_submissions sub WHERE sub.job_id=$1)
+                 AND NOT EXISTS (SELECT 1 FROM source_items o JOIN sources s ON s.id=o.source_id
+                   WHERE o.job_id=$1 AND o.id<>$2 AND o.error IS NULL AND s.enabled AND NOT s.retired)`,
+              [item.job_id, item.id],
+            );
           return;
         }
         failed++;

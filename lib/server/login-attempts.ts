@@ -8,10 +8,33 @@ import { ApiError } from './auth';
 export const perClientLimit = 8;
 export const totalLimit = 100;
 
+/* An IPv6 visitor usually holds a whole /64 and can pick a fresh address per request, so the
+   network counts as one client; otherwise one machine could fill the total ceiling alone. */
+export function clientNetwork(address: string) {
+  if (!address.includes(':') || address.includes('.')) return address;
+  const [head, tail = ''] = address.toLowerCase().split('::');
+  const left = head ? head.split(':') : [];
+  const right = address.includes('::') && tail ? tail.split(':') : [];
+  const groups = address.includes('::')
+    ? [
+        ...left,
+        ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'),
+        ...right,
+      ]
+    : left;
+  if (groups.length !== 8) return address;
+  return (
+    groups
+      .slice(0, 4)
+      .map((g) => g.replace(/^0+(?=.)/, ''))
+      .join(':') + '::/64'
+  );
+}
+
 /* Stored keyed, so the table never holds visitor addresses. */
 export function clientTag(address: string) {
   return createHmac('sha256', process.env.SESSION_SECRET || '')
-    .update(address)
+    .update(clientNetwork(address))
     .digest('hex')
     .slice(0, 32);
 }

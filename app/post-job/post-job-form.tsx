@@ -16,7 +16,25 @@ import {
   type SubmitEvent,
   type ReactNode,
 } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, Send } from 'lucide-react';
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  FileText,
+  ImagePlus,
+  Plus,
+  Send,
+  X,
+} from 'lucide-react';
+import { ka } from 'date-fns/locale/ka';
+import { SelectField } from '../select-field';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { cities, otherCity } from '@/lib/cities';
 import { categories } from '@/lib/types';
 import {
@@ -109,6 +127,102 @@ function Field({
     </div>
   );
 }
+/* YYYY-MM-DD in Tbilisi ↔ a local calendar day; the picker works in local days. */
+const toDay = (value: string) => {
+  const [y, m, d] = value.split('-').map(Number);
+  return y && m && d ? new Date(y, m - 1, d) : undefined;
+};
+const fromDay = (day: Date) =>
+  `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+/* Spelled out here: not every browser carries Georgian month names for Intl. */
+const months = [
+  'იანვარი',
+  'თებერვალი',
+  'მარტი',
+  'აპრილი',
+  'მაისი',
+  'ივნისი',
+  'ივლისი',
+  'აგვისტო',
+  'სექტემბერი',
+  'ოქტომბერი',
+  'ნოემბერი',
+  'დეკემბერი',
+];
+const longDate = (day: Date) =>
+  `${day.getDate()} ${months[day.getMonth()]}, ${day.getFullYear()}`;
+
+/* The deadline: the site's own calendar in place of the browser's date input, whose English
+   mask and system popup matched nothing else on the form. The value stays YYYY-MM-DD. */
+function DateField({
+  id,
+  name,
+  value,
+  min,
+  max,
+  disabled,
+  invalid,
+  describedBy,
+  onChange,
+}: {
+  id: string;
+  name: string;
+  value: string;
+  min: string;
+  max: string;
+  disabled: boolean;
+  invalid: boolean;
+  describedBy?: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = toDay(value);
+  const from = toDay(min);
+  const to = toDay(max);
+  return (
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          id={id}
+          type="button"
+          disabled={disabled}
+          aria-invalid={invalid || undefined}
+          aria-describedby={describedBy}
+          className="ds-select post-date"
+        >
+          {selected ? (
+            <span>{longDate(selected)}</span>
+          ) : (
+            <span className="ds-select-placeholder">აირჩიე თარიღი</span>
+          )}
+          <CalendarDays aria-hidden="true" />
+        </PopoverTrigger>
+        <PopoverContent className="ds-select-menu post-date-menu" align="start">
+          <Calendar
+            mode="single"
+            locale={ka}
+            weekStartsOn={1}
+            selected={selected}
+            defaultMonth={selected ?? from}
+            startMonth={from}
+            endMonth={to}
+            disabled={[
+              ...(from ? [{ before: from }] : []),
+              ...(to ? [{ after: to }] : []),
+            ]}
+            onSelect={(day) => {
+              if (!day) return;
+              onChange(fromDay(day));
+              setOpen(false);
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+      <input type="hidden" name={name} value={value} />
+    </>
+  );
+}
+
 export function PostJobForm() {
   const [values, setValues] = useState<Values>(initial);
   const [consent, setConsent] = useState(false);
@@ -363,6 +477,16 @@ export function PostJobForm() {
         change(name, e.currentTarget.value);
     },
   });
+  /* The same wiring as props(), for the site's own dropdowns. */
+  const selectProps = (name: FieldName) => ({
+    id: `post-${name}`,
+    name,
+    value: values[name],
+    disabled: locked,
+    invalid: !!errors[name],
+    describedBy: errors[name] || hints[name] ? `post-${name}-hint` : undefined,
+    onChange: (value: string) => change(name, value),
+  });
   function showErrors(fields: Record<string, string>) {
     const mapped = Object.fromEntries(
       Object.entries(fields).map(([name, error]) => [
@@ -527,6 +651,7 @@ export function PostJobForm() {
                 შემდეგ.
               </p>
               <Link className="post-primary" href={invoiceUrl}>
+                <FileText aria-hidden="true" />
                 ინვოისის ნახვა
               </Link>
               <p>
@@ -539,10 +664,12 @@ export function PostJobForm() {
               </p>
             </div>
           )}
-          <small>განაცხადის ნომერი: {receipt}</small>
+          <small>
+            განაცხადის ნომერი: <code>{receipt}</code>
+          </small>
           <div className="post-actions">
             <Link href="/" className="post-primary">
-              ვაკანსიებზე დაბრუნება <ArrowRight size={18} />
+              ვაკანსიებზე დაბრუნება
             </Link>
             <button
               type="button"
@@ -565,6 +692,7 @@ export function PostJobForm() {
                 setDraftNote('');
               }}
             >
+              <Plus aria-hidden="true" />
               ახალი განცხადების დამატება
             </button>
           </div>
@@ -575,7 +703,8 @@ export function PostJobForm() {
   return (
     <main className="post-job-main">
       <Link className="post-back" href="/">
-        <ArrowLeft size={16} /> ვაკანსიებზე დაბრუნება
+        <ChevronLeft aria-hidden="true" />
+        ვაკანსიებზე დაბრუნება
       </Link>
       <div className="post-intro">
         <Image
@@ -630,13 +759,10 @@ export function PostJobForm() {
                 />
               </Field>
               <Field name="city" label="ქალაქი *" error={errors.city}>
-                <select {...props('city')} required>
-                  {cities.map((city) => (
-                    <option key={city}>{city}</option>
-                  ))}
-                  <option>დისტანციური</option>
-                  <option>{otherCity}</option>
-                </select>
+                <SelectField
+                  {...selectProps('city')}
+                  options={[...cities, 'დისტანციური', otherCity]}
+                />
               </Field>
               {values.city === otherCity && (
                 <Field
@@ -715,7 +841,7 @@ export function PostJobForm() {
                         unoptimized
                       />
                     ) : (
-                      <span aria-hidden="true">+</span>
+                      <ImagePlus aria-hidden="true" />
                     )}
                   </span>
                   <div className="post-logo-actions">
@@ -723,6 +849,11 @@ export function PostJobForm() {
                       className="post-secondary post-logo-choose"
                       htmlFor="post-logo"
                     >
+                      {logoBusy ? (
+                        <span className="ds-spinner" aria-hidden="true" />
+                      ) : (
+                        <ImagePlus aria-hidden="true" />
+                      )}
                       {logoBusy
                         ? 'მუშავდება…'
                         : values.logo
@@ -750,6 +881,7 @@ export function PostJobForm() {
                         disabled={locked || logoBusy}
                         onClick={() => change('logo', '')}
                       >
+                        <X aria-hidden="true" />
                         ლოგოს მოცილება
                       </button>
                     )}
@@ -789,61 +921,69 @@ export function PostJobForm() {
                 label="ანაზღაურების სიხშირე"
                 error={errors.salaryPeriod}
               >
-                <select {...props('salaryPeriod')}>
-                  <option value="თვე">თვეში</option>
-                  <option value="დღე">დღეში</option>
-                </select>
+                <SelectField
+                  {...selectProps('salaryPeriod')}
+                  options={[
+                    { value: 'თვე', label: 'თვეში' },
+                    { value: 'დღე', label: 'დღეში' },
+                  ]}
+                />
               </Field>
               <Field
                 name="salaryBasis"
                 label="ანაზღაურების ტიპი"
                 error={errors.salaryBasis}
               >
-                <select {...props('salaryBasis')}>
-                  <option value="ხელზე">ხელზე</option>
-                  <option value="დარიცხული">დარიცხული</option>
-                </select>
+                <SelectField
+                  {...selectProps('salaryBasis')}
+                  options={['ხელზე', 'დარიცხული']}
+                />
               </Field>
               <Field name="mode" label="მუშაობის ფორმატი" error={errors.mode}>
-                <select
-                  {...props('mode')}
+                <SelectField
+                  {...selectProps('mode')}
                   disabled={locked || values.city === 'დისტანციური'}
-                >
-                  {workModes.map((v) => (
-                    <option key={v}>{v}</option>
-                  ))}
-                </select>
+                  options={[...workModes]}
+                />
               </Field>
               <Field
                 name="employmentType"
                 label="დასაქმების ტიპი"
                 error={errors.employmentType}
               >
-                <select {...props('employmentType')}>
-                  {employmentOptions.map((v) => (
-                    <option key={v}>{v}</option>
-                  ))}
-                </select>
+                <SelectField
+                  {...selectProps('employmentType')}
+                  options={[...employmentOptions]}
+                />
               </Field>
               <Field
                 name="deadline"
                 label="განაცხადების ბოლო ვადა"
                 error={errors.deadline}
               >
-                <input
-                  {...props('deadline')}
-                  type="date"
-                  min={dateBounds.min || undefined}
-                  max={dateBounds.max || undefined}
+                <DateField
+                  id="post-deadline"
+                  name="deadline"
+                  value={values.deadline}
+                  min={dateBounds.min}
+                  max={dateBounds.max}
+                  disabled={locked}
+                  invalid={!!errors.deadline}
+                  describedBy={
+                    errors.deadline ? 'post-deadline-hint' : undefined
+                  }
+                  onChange={(value) => change('deadline', value)}
                 />
               </Field>
               <Field name="category" label="კატეგორია" error={errors.category}>
-                <select {...props('category')}>
-                  <option value="">ავტომატურად (სათაურის მიხედვით)</option>
-                  {categories.map((v) => (
-                    <option key={v}>{v}</option>
-                  ))}
-                </select>
+                <SelectField
+                  {...selectProps('category')}
+                  placeholder="ავტომატურად (სათაურის მიხედვით)"
+                  options={[
+                    { value: '', label: 'ავტომატურად (სათაურის მიხედვით)' },
+                    ...categories,
+                  ]}
+                />
               </Field>
             </div>
           </details>
@@ -853,7 +993,8 @@ export function PostJobForm() {
               {placementTiers.map((t) => (
                 <label
                   key={t}
-                  className={values.placement === t ? 'is-selected' : undefined}
+                  className={`ds-chip${values.placement === t ? ' is-selected' : ''}`}
+                  data-active={values.placement === t}
                 >
                   <input
                     type="radio"
@@ -929,19 +1070,18 @@ export function PostJobForm() {
             </label>
           </div>
           <div className="post-submit-area">
-            <label className="post-consent">
-              <input
+            <label className="post-consent" htmlFor="post-consent">
+              <Checkbox
                 id="post-consent"
-                type="checkbox"
                 checked={consent}
                 disabled={locked}
                 aria-invalid={!!errors.consent}
                 aria-describedby={
                   errors.consent ? 'post-consent-error' : undefined
                 }
-                onChange={(e) => {
+                onCheckedChange={(checked) => {
                   choosePlan();
-                  setConsent(e.target.checked);
+                  setConsent(checked);
                   setErrors((v) => ({ ...v, consent: '' }));
                 }}
               />
@@ -966,7 +1106,11 @@ export function PostJobForm() {
                 type="submit"
                 disabled={busy || logoBusy || !ready}
               >
-                <Send size={17} />
+                {busy ? (
+                  <span className="ds-spinner" aria-hidden="true" />
+                ) : (
+                  <Send aria-hidden="true" />
+                )}
                 {busy
                   ? 'იგზავნება…'
                   : sent

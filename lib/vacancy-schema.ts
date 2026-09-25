@@ -44,6 +44,12 @@ export const vacancySchema = z
       .optional()
       .default([]),
     warnings: z.array(z.string().max(500)).max(10).optional().default([]),
+    coordinates: z
+      .object({
+        lat: z.number().min(-90).max(90),
+        lon: z.number().min(-180).max(180),
+      })
+      .optional(),
     title: z.string().trim().min(2).max(300),
     company: z.string().trim().max(300),
     city: z.string().max(300),

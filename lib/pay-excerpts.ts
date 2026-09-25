@@ -50,8 +50,11 @@ export function payExcerpts(text: string) {
           next.length <= 600 &&
           amount.test(next) &&
           !/ბონუსი\s*[:–—-]|რეფერალ|ტრანსპორტ|საწვავ/i.test(next)
-        )
+        ) {
           result.push(line.replace(/[:–—-]\s*$/, '') + ': ' + next);
+          // The amount line now belongs to its label; read alone it would be counted twice.
+          i++;
+        }
       } else if (
         amount.test(line) ||
         /შეთანხმებით|კვალიფიკაცი|გამოცდილების მიხედვით|გამომუშავებით|საკომისიო|ფიქსირებული\s*\+|ხელფასი\s*\+|negotiable|commission/i.test(

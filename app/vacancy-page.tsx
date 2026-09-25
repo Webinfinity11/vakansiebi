@@ -5,9 +5,13 @@ import { salaryDetails } from '@/lib/salary-summary';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowUpRight,
   Bookmark,
+  Mail,
+  Phone,
+  Send,
+  ChevronDown,
   ChevronLeft,
+  CalendarDays,
   Share2,
   Clock3,
   Globe2,
@@ -44,6 +48,7 @@ import { explicitWorkCity } from '@/lib/work-location';
 import { vacancyLinks } from '@/lib/vacancy-links';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { SimilarVacancies } from './similar-vacancies';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import './search-features.css';
 
 /* Whole days from today's local midnight to the deadline's; negative once it has passed. */
@@ -66,6 +71,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
           href={`tel:${contacts.phones[0].number}`}
           onClick={() => track('call', job.id)}
         >
+          <Phone aria-hidden="true" />
           დარეკვა
         </a>
         <a
@@ -79,8 +85,8 @@ function ApplyAction({ job }: { job: PublicJob }) {
               : 'გამარჯობა,\n\nთქვენს ვაკანსიასთან დაკავშირებით მაქვს კითხვა.',
           )}
         >
-          {contacts.emails[0].application ? 'CV-ის გაგზავნა' : 'წერილის გახსნა'}{' '}
-          <ArrowUpRight size={16} />
+          <Mail aria-hidden="true" />
+          {contacts.emails[0].application ? 'CV-ის გაგზავნა' : 'წერილის გახსნა'}
         </a>
       </>
     );
@@ -91,7 +97,8 @@ function ApplyAction({ job }: { job: PublicJob }) {
         href={emailDraft(emails[0].email, job.title, defaultApplicationBody)}
         onClick={() => track('cv', job.id)}
       >
-        CV-ის გაგზავნა მეილით <ArrowUpRight size={17} />
+        <Mail aria-hidden="true" />
+        CV-ის გაგზავნა მეილით
       </a>
     );
   if (external)
@@ -103,7 +110,8 @@ function ApplyAction({ job }: { job: PublicJob }) {
         rel="noopener noreferrer"
         onClick={() => track('apply', job.id)}
       >
-        განაცხადი კომპანიის საიტზე <ArrowUpRight size={17} />
+        <Send aria-hidden="true" />
+        განაცხადი კომპანიის საიტზე
       </a>
     );
   if (!contacts.emails.length && contacts.phones.length === 1)
@@ -113,7 +121,8 @@ function ApplyAction({ job }: { job: PublicJob }) {
         href={`tel:${contacts.phones[0].number}`}
         onClick={() => track('call', job.id)}
       >
-        დარეკვა <ArrowUpRight size={17} />
+        <Phone aria-hidden="true" />
+        დარეკვა
       </a>
     );
   if (contacts.emails.length || contacts.phones.length)
@@ -129,7 +138,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
             ?.focus({ preventScroll: true });
         }}
       >
-        კონტაქტების ნახვა <ArrowUpRight size={17} />
+        კონტაქტების ნახვა
       </button>
     );
   return null;
@@ -148,12 +157,11 @@ function JobReportForm({ jobId }: { jobId: string }) {
     success.current?.scrollIntoView({ block: 'center' });
   }, [sent]);
   return (
-    <div style={{ marginTop: 12, maxWidth: 520 }}>
+    <div className="job-report">
       {!sent && (
         <button
           type="button"
           className="secondary-button"
-          style={{ minHeight: 44 }}
           aria-expanded={open}
           aria-controls="job-report-form"
           disabled={busy}
@@ -169,7 +177,7 @@ function JobReportForm({ jobId }: { jobId: string }) {
         <form
           id="job-report-form"
           aria-label="ვაკანსიის პრობლემის შეტყობინება"
-          style={{ display: 'grid', gap: 12, marginTop: 12 }}
+          className="job-report-form"
           onSubmit={async (event) => {
             event.preventDefault();
             if (busy) return;
@@ -197,37 +205,26 @@ function JobReportForm({ jobId }: { jobId: string }) {
             }
           }}
         >
-          <fieldset
-            disabled={busy}
-            style={{ minWidth: 0, margin: 0, padding: 0, border: 0 }}
-          >
-            <legend>რა პრობლემაა?</legend>
-            {[
-              ['expired', 'ვადაგასულია'],
-              ['wrong', 'არასწორი ინფორმაცია'],
-              ['duplicate', 'დუბლიკატია'],
-              ['other', 'სხვა'],
-            ].map(([value, label]) => (
-              <label
-                key={value}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  minHeight: 44,
-                }}
-              >
-                <input
-                  type="radio"
-                  name="report-reason"
-                  value={value}
-                  checked={reason === value}
-                  onChange={() => setReason(value)}
-                  required
-                />
-                {label}
-              </label>
-            ))}
+          <fieldset className="job-report-reasons">
+            <legend id="job-report-reason-label">რა პრობლემაა?</legend>
+            <RadioGroup
+              aria-labelledby="job-report-reason-label"
+              value={reason}
+              disabled={busy}
+              onValueChange={(value) => setReason(String(value))}
+            >
+              {[
+                ['expired', 'ვადაგასულია'],
+                ['wrong', 'არასწორი ინფორმაცია'],
+                ['duplicate', 'დუბლიკატია'],
+                ['other', 'სხვა'],
+              ].map(([value, label]) => (
+                <label key={value} className="job-report-reason">
+                  <RadioGroupItem value={value} />
+                  {label}
+                </label>
+              ))}
+            </RadioGroup>
           </fieldset>
           <label htmlFor="job-report-note">შენიშვნა (არასავალდებულო)</label>
           <textarea
@@ -238,34 +235,23 @@ function JobReportForm({ jobId }: { jobId: string }) {
             maxLength={300}
             rows={3}
             aria-describedby="job-report-note-hint"
-            style={{
-              width: '100%',
-              minWidth: 0,
-              boxSizing: 'border-box',
-              resize: 'vertical',
-              padding: 12,
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              background: 'var(--background)',
-              color: 'inherit',
-              fontSize: 16,
-            }}
+            className="ds-input job-report-note"
           />
           <small id="job-report-note-hint">
             {note.length}/300 · პირად მონაცემებს ნუ მიუთითებ.
           </small>
           {error && <p role="alert">{error}</p>}
           <button
-            className="primary"
+            className="primary job-report-submit"
             type="submit"
-            disabled={busy}
-            style={{ minHeight: 44, justifySelf: 'start' }}
+            disabled={busy || !reason}
           >
-            {busy ? 'იგზავნება…' : 'გაგზავნა'}
+            {busy && <span className="ds-spinner" aria-hidden="true" />}
+            {busy ? 'იგზავნება' : 'გაგზავნა'}
           </button>
         </form>
       )}
-      <output ref={success} tabIndex={-1} style={{ display: 'block' }}>
+      <output ref={success} tabIndex={-1} className="job-report-done">
         {sent ? 'მადლობა — გადავამოწმებთ.' : ''}
       </output>
     </div>
@@ -525,7 +511,7 @@ export default function VacancyPage({
               router.back();
             }}
           >
-            <ChevronLeft size={15} aria-hidden="true" />
+            <ChevronLeft size={16} aria-hidden="true" />
             {returnLabel}
           </Link>
           {job.category !== 'სხვა' && (
@@ -562,7 +548,10 @@ export default function VacancyPage({
             <div className="vacancy-title-tools">
               <div className="detail-dates">
                 {job.datePosted && (
-                  <span>გამოქვეყნდა {formatDate(job.datePosted)}</span>
+                  <span>
+                    <CalendarDays aria-hidden="true" />
+                    გამოქვეყნდა {formatDate(job.datePosted)}
+                  </span>
                 )}
                 {job.deadline &&
                   (() => {
@@ -570,7 +559,7 @@ export default function VacancyPage({
                     const urgent = left >= 0 && left <= 3;
                     return (
                       <span className={urgent ? 'deadline-urgent' : undefined}>
-                        <Clock3 size={14} />
+                        <Clock3 aria-hidden="true" />
                         ბოლო ვადა: {formatDate(job.deadline)}
                         {urgent && ' · იწურება'}
                       </span>
@@ -658,7 +647,8 @@ export default function VacancyPage({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  განაცხადის გაგზავნა <ArrowUpRight size={16} />
+                  <Send aria-hidden="true" />
+                  განაცხადის გაგზავნა
                 </a>
                 <p>გაიხსნება ორიგინალი განცხადება.</p>
                 {cvHint}
@@ -707,15 +697,19 @@ export default function VacancyPage({
                           className={
                             l.application
                               ? 'primary vacancy-apply-link'
-                              : 'vacancy-employer-link'
+                              : 'secondary-button vacancy-employer-link'
                           }
                           key={l.url}
                           href={l.url}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
+                          {l.application ? (
+                            <Send aria-hidden="true" />
+                          ) : (
+                            <Globe2 aria-hidden="true" />
+                          )}
                           {l.label}
-                          <ArrowUpRight size={15} />
                           <small>{l.host}</small>
                         </a>
                       ))}
@@ -752,13 +746,19 @@ export default function VacancyPage({
                       rel="noopener noreferrer"
                     >
                       <Globe2 size={14} />
-                      კომპანიის ვებსაიტი <ArrowUpRight size={14} />
+                      კომპანიის ვებსაიტი
                     </a>
                   )}
                 </section>
               )}
               <details className="vacancy-more-actions">
-                <summary>მეტი მოქმედება</summary>{' '}
+                <summary>
+                  მეტი მოქმედება
+                  <ChevronDown
+                    className="disclosure-chevron"
+                    aria-hidden="true"
+                  />
+                </summary>
                 {!preview && (
                   <button
                     className="secondary-button vacancy-hide-action"
@@ -855,7 +855,8 @@ export default function VacancyPage({
             target="_blank"
             rel="noopener noreferrer"
           >
-            განაცხადის გაგზავნა <ArrowUpRight size={16} />
+            <Send aria-hidden="true" />
+            განაცხადის გაგზავნა
           </a>
         )}
       </section>

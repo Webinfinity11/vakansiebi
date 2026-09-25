@@ -8,6 +8,7 @@ const logoHosts = new Set([
   'www.jobs.ge',
   'helio-ai-assets-prod.s3.amazonaws.com',
   'c.smartrecruiters.com',
+  'recruting.dkcapital.ge',
 ]);
 
 export function isLocalLogoUrl(value: unknown): value is string {

@@ -44,7 +44,9 @@ export async function auditHistory({
   before?: string | null;
 }) {
   const where: string[] = [
-    auditScopes[scope as AuditScope] ?? auditScopes.people,
+    Object.hasOwn(auditScopes, scope)
+      ? auditScopes[scope as AuditScope]
+      : auditScopes.people,
   ];
   const args: unknown[] = [];
   if (job) {

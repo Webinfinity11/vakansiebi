@@ -68,6 +68,8 @@ const cities = [
   'შუახევი',
   'ხულო',
 ];
+/** The towns a workplace label may name. */
+export const workTowns: readonly string[] = cities;
 /** Only explicit workplace labels, never cities in an employer's general introduction. */
 export function explicitWorkCity(
   job: Pick<Vacancy, 'description' | 'facts'>,

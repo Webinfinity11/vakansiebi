@@ -1,0 +1,165 @@
+/* Employer page details on top of the board's vacancy-page look: every colour from the design
+   system, so the dark theme needs no second list. `:root .board-shell` lifts these rules over the
+   generated dark-theme overrides of the older board rules. */
+:root .board-shell.company-page .company-page-head {
+  border-color: var(--ds-accent-border);
+  background: var(--ds-accent-soft);
+}
+:root .board-shell.company-page .detail-company > div > span {
+  color: var(--ds-ink-3);
+}
+:root .board-shell.company-page .company-page-head h1 {
+  overflow-wrap: anywhere;
+}
+:root .board-shell.company-page .company-page-cities {
+  align-items: center;
+  gap: var(--ds-space-2);
+  color: var(--ds-ink-2);
+}
+:root .board-shell.company-page .company-page-cities svg {
+  margin-top: 0;
+}
+
+/* About and website: a quiet row under a hairline, not a grey box inside the blue one. */
+:root .board-shell.company-page .company-about {
+  align-items: center;
+  margin: var(--ds-space-5) 0 0;
+  padding: var(--ds-space-3) 0 0;
+  border: 0;
+  border-top: 1px solid var(--ds-accent-border);
+  border-radius: 0;
+  background: none;
+}
+:root .board-shell.company-page .company-description summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-height: var(--ds-control-touch);
+  list-style: none;
+  color: var(--ds-ink);
+  border-radius: var(--ds-radius-sm);
+  transition: color var(--ds-duration-fast) var(--ds-ease);
+}
+:root
+  .board-shell.company-page
+  .company-description
+  summary::-webkit-details-marker {
+  display: none;
+}
+:root .board-shell.company-page .company-description summary:hover {
+  color: var(--ds-accent);
+}
+:root .board-shell.company-page .company-description summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+:root .board-shell.company-page .company-description summary > svg.lucide {
+  width: var(--ds-icon-md);
+  height: var(--ds-icon-md);
+  color: var(--ds-ink-3);
+  transition: transform var(--ds-duration) var(--ds-ease);
+}
+:root
+  .board-shell.company-page
+  .company-description[open]
+  summary
+  > svg.lucide {
+  transform: rotate(180deg);
+}
+:root .board-shell.company-page .company-description p {
+  margin: var(--ds-space-1) 0 var(--ds-space-3);
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-md);
+  animation: ds-appear var(--ds-duration-slow) var(--ds-ease) both;
+}
+:root .board-shell.company-page .company-about a.company-website {
+  margin: 0 0 0 auto;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-sm);
+}
+:root .board-shell.company-page .company-about a.company-website > svg.lucide {
+  width: var(--ds-icon-md);
+  height: var(--ds-icon-md);
+  color: var(--ds-ink-3);
+}
+
+/* The vacancy count is a badge; numbers line up. */
+:root .board-shell.company-page .company-count {
+  font-size: var(--ds-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Vacancy rows: system line, hover lift, focus ring; meta grouped on the left. */
+:root .board-shell.company-page .similar-card {
+  padding: var(--ds-space-5);
+  min-height: 0;
+  border-color: var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  color: var(--ds-ink);
+  text-decoration: none;
+  transition:
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration) var(--ds-ease);
+}
+:root .board-shell.company-page .similar-card:hover {
+  border-color: var(--ds-line-strong);
+  box-shadow: var(--ds-shadow-md);
+}
+:root .board-shell.company-page .similar-card:hover h3 {
+  color: var(--ds-accent);
+}
+:root .board-shell.company-page .similar-card:focus-visible {
+  outline: none;
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+:root .board-shell.company-page .similar-card h3 {
+  overflow-wrap: anywhere;
+  transition: color var(--ds-duration-fast) var(--ds-ease);
+}
+:root .board-shell.company-page .similar-salary {
+  color: var(--ds-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+:root .board-shell.company-page .company-job-meta {
+  gap: var(--ds-space-2) var(--ds-space-5);
+  color: var(--ds-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+:root .board-shell.company-page .company-job-meta > :is(span, time) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+:root .board-shell.company-page .company-job-meta time {
+  margin-left: 0;
+}
+
+:root .board-shell.company-page .company-page-pages {
+  align-items: center;
+}
+:root .board-shell.company-page .company-page-count {
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 760px) {
+  :root .board-shell.company-page .similar-card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--ds-space-4);
+    gap: var(--ds-space-2);
+  }
+  :root .board-shell.company-page .company-job-meta {
+    gap: var(--ds-space-1) var(--ds-space-4);
+  }
+  :root .board-shell.company-page .company-about a.company-website {
+    margin-left: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .board-shell.company-page .company-description p {
+    animation: none;
+  }
+}

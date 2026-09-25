@@ -1,6 +1,14 @@
 'use client';
 import { useState, type ReactNode } from 'react';
-import { Mail, Phone, Copy, ArrowUpRight, Languages } from 'lucide-react';
+import {
+  ChevronDown,
+  Copy,
+  Globe2,
+  Languages,
+  Mail,
+  Phone,
+  Send,
+} from 'lucide-react';
 import { emailDraft, hasEnglishDescription } from '@/lib/application-contact';
 import {
   applicationDestination,
@@ -37,7 +45,8 @@ export function QuickApply({
           rel="noopener noreferrer"
           onClick={reached('apply')}
         >
-          განაცხადი კომპანიის საიტზე <ArrowUpRight size={16} />
+          <Send aria-hidden="true" />
+          განაცხადი კომპანიის საიტზე
         </a>
       )}
       <div className="contact-options">
@@ -48,7 +57,7 @@ export function QuickApply({
             href={`tel:${phone.number}`}
             onClick={reached('call')}
           >
-            <Phone size={18} />
+            <Phone size={16} />
             <span>
               <small>ტელეფონი</small>
               <strong>{phone.display}</strong>
@@ -94,7 +103,7 @@ export function QuickApply({
                   }
                 }}
               >
-                <Copy size={15} />
+                <Copy size={16} />
                 <span className="email-copy-label">კოპირება</span>
               </button>
             </div>
@@ -116,7 +125,8 @@ export function QuickApply({
       {!phones.length && !emails.length && !application && (
         <p className="contact-missing">
           <a href={job.url} target="_blank" rel="noopener noreferrer">
-            კონტაქტი ნახე პირველწყაროზე <ArrowUpRight size={13} />
+            <Globe2 size={14} aria-hidden="true" />
+            კონტაქტი ნახე პირველწყაროზე
           </a>
         </p>
       )}
@@ -132,7 +142,9 @@ export function TranslationHelp({ job }: { job: PublicJob }) {
   return (
     <details className="translation-help">
       <summary>
-        <Languages size={16} /> ინგლისური აღწერის ქართულად ნახვა
+        <Languages size={16} aria-hidden="true" />
+        ინგლისური აღწერის ქართულად ნახვა
+        <ChevronDown className="disclosure-chevron" aria-hidden="true" />
       </summary>
       <p>
         წყაროს ავტომატური თარგმანი შეგიძლია Google Translate-ში გახსნა;
@@ -148,7 +160,8 @@ export function TranslationHelp({ job }: { job: PublicJob }) {
           encodeURIComponent(job.url)
         }
       >
-        ქართულად ნახვა <ArrowUpRight size={15} />
+        <Languages aria-hidden="true" />
+        ქართულად ნახვა
       </a>
     </details>
   );

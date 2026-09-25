@@ -1,6 +1,8 @@
 'use client';
+import { ChevronDown } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CompanyLogo } from '../company-logo';
+import { SkeletonRows } from '../skeleton';
 import { safeExternalUrl } from '../../lib/vacancy-media';
 
 // The server rejects the same shapes (companySchema in lib/server/companies.ts); catching them
@@ -69,7 +71,10 @@ export function CompanyEditor({
   }
   return (
     <details className="raw-details company-profile-editor">
-      <summary>კომპანიის საერთო პროფილი და ლოგო</summary>
+      <summary>
+        <ChevronDown className="admin-summary-mark" aria-hidden="true" />
+        კომპანიის საერთო პროფილი და ლოგო
+      </summary>
       <p className="admin-helper">
         აქ შენახული ლოგო და ინფორმაცია ამავე კომპანიის ყველა ვაკანსიაზე
         გამოჩნდება, მათ შორის უკვე გამოქვეყნებულზე.
@@ -150,7 +155,9 @@ export function CompanyEditor({
             </>
           );
         })()}
-      {!profile && !error && <p className="admin-helper">იტვირთება…</p>}
+      {!profile && !error && (
+        <SkeletonRows rows={3} label="კომპანიის პროფილი იტვირთება" />
+      )}
       {error && (
         <p className="notice" role="alert">
           {error}

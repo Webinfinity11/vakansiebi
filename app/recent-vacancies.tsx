@@ -1,6 +1,6 @@
 'use client';
 import { vacancyCardTitle } from '@/lib/vacancy-card-labels';
-import { History } from 'lucide-react';
+import { ChevronDown, History } from 'lucide-react';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import { ListHopLink } from './list-hop-link';
 import type { RecentVacancy } from '@/lib/vacancy-activity';
@@ -16,10 +16,17 @@ export function RecentVacancies({
   return (
     <details className="recent-strip">
       <summary className="recent-summary">
-        <History size={15} aria-hidden="true" /> ბოლოს ნანახი ({items.length})
+        <History size={16} aria-hidden="true" />
+        ბოლოს ნანახი
+        <span className="recent-count">{items.length}</span>
+        <ChevronDown className="disclosure-chevron" aria-hidden="true" />
       </summary>
       <div className="recent-head">
-        <button type="button" onClick={onClear}>
+        <button
+          type="button"
+          className="ds-btn ds-btn--ghost ds-btn--sm"
+          onClick={onClear}
+        >
           გასუფთავება
         </button>
       </div>

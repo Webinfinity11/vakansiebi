@@ -1,6 +1,6 @@
 'use client';
 import Link, { useLinkStatus } from 'next/link';
-import { ArrowRight, LoaderCircle } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import { vacancyCardCompany } from '@/lib/vacancy-card-labels';
 import { CompanyLogo } from './company-logo';
 
@@ -12,11 +12,8 @@ function NavigationHint() {
       data-pending={pending || undefined}
       aria-label={pending ? 'კომპანიის გვერდი იტვირთება' : undefined}
     >
-      {pending ? (
-        <LoaderCircle size={14} aria-hidden="true" />
-      ) : (
-        <ArrowRight size={14} aria-hidden="true" />
-      )}
+      {/* Only the wait is shown; the name itself is the link. */}
+      {pending && <LoaderCircle size={14} aria-hidden="true" />}
     </output>
   );
 }

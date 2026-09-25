@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { itemClass, menuClass } from './select-field';
 
 /* The one dropdown the site uses — never the browser's own <select>, whose menu is drawn by the
    operating system and ignores the site's type, colour and spacing. "ყველა" is prepended and
@@ -44,18 +45,22 @@ export function Choice({
         </SelectValue>
       </SelectTrigger>
       <SelectContent
-        className={`job-choice-options${mobile ? ' mobile-filter-options' : ''}`}
+        className={`job-choice-options ${menuClass}${mobile ? ' mobile-filter-options' : ''}`}
         alignItemWithTrigger={false}
         align="start"
         sideOffset={8}
       >
         {onLocate && (
-          <SelectItem value="__near_me__" disabled={locating}>
+          <SelectItem
+            value="__near_me__"
+            disabled={locating}
+            className={itemClass}
+          >
             <LocateFixed size={16} aria-hidden="true" /> ჩემთან ახლოს
           </SelectItem>
         )}
         {['ყველა', ...options].map((o) => (
-          <SelectItem key={o} value={o}>
+          <SelectItem key={o} value={o} className={itemClass}>
             {o}
           </SelectItem>
         ))}

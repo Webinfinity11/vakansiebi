@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState, type MouseEvent } from 'react';
 import { Bookmark, Search, Plus, FilePlus2 } from 'lucide-react';
 import { Brand } from './brand';
@@ -66,16 +67,34 @@ export function PublicHeader({
       window.removeEventListener('storage', read);
     };
   }, [savedCount]);
+  const pathname = usePathname();
+  const count = savedCount ?? storedCount;
+  /* One current place at a time: the saved list lives on "/" too, so it takes the mark from
+     "all vacancies" while it is open. */
+  const current = savedOnly
+    ? 'saved'
+    : pathname === '/'
+      ? 'all'
+      : pathname === '/map'
+        ? 'map'
+        : pathname === '/cv'
+          ? 'cv'
+          : pathname === '/post-job'
+            ? 'post'
+            : null;
+  const here = (place: string) =>
+    current === place ? ('page' as const) : undefined;
   return (
     <header className="topbar public-header">
       <div className="header-inner">
         <Brand priority />
-        <nav aria-label="მთავარი ნავიგაცია">
+        <nav aria-label="მთავარი ნავიგაცია" className="site-nav">
           <Link
             href="/"
             prefetch={false}
-            className="all-vacancies-link"
+            className="ds-btn ds-btn--ghost site-nav-link"
             aria-label="ყველა ვაკანსია"
+            aria-current={here('all')}
             onClick={(event) => localAction(event, onVacancies)}
           >
             <span className="header-label-full">ყველა ვაკანსია</span>
@@ -84,7 +103,8 @@ export function PublicHeader({
           <Link
             href="/map"
             prefetch={false}
-            className="all-vacancies-link header-map-link"
+            className="ds-btn ds-btn--ghost site-nav-link header-map-link"
+            aria-current={here('map')}
           >
             რუკა
           </Link>
@@ -94,47 +114,59 @@ export function PublicHeader({
             <Link
               href="/#search-heading"
               prefetch={false}
-              className="header-search"
+              className="ds-btn ds-btn--secondary site-action site-search"
               aria-label="ძიება"
+              title="ძიება"
               onClick={(event) => localAction(event, onSearch)}
             >
-              <Search size={18} />
-              <span>ძებნა</span>
+              <Search aria-hidden="true" />
+              <span className="site-action-label">ძებნა</span>
             </Link>
           )}
           <Link
             href="/?saved=1"
             prefetch={false}
-            className={`saved-nav${savedOnly ? ' is-active' : ''}`}
-            aria-label="შენახული ვაკანსიები"
-            aria-current={savedOnly ? 'page' : undefined}
+            className="ds-btn ds-btn--secondary site-action header-saved"
+            aria-label={
+              count > 0
+                ? `შენახული ვაკანსიები: ${count}`
+                : 'შენახული ვაკანსიები'
+            }
+            title="შენახული ვაკანსიები"
+            aria-current={here('saved')}
             onClick={(event) => localAction(event, onSaved)}
           >
-            <Bookmark size={18} />
-            <span>შენახული</span>
-            <b>{savedCount ?? storedCount}</b>
+            <Bookmark aria-hidden="true" />
+            <span className="site-action-label">შენახული</span>
+            {/* A zero says nothing; the count appears once there is something to count. */}
+            {count > 0 && (
+              <span className="site-count" aria-hidden="true">
+                {count}
+              </span>
+            )}
           </Link>
-          {/* Styled as the personal-space link was: labelled on desktop, an icon below 1100px. */}
           <Link
             href="/cv"
             prefetch={false}
-            className="personal-nav header-cv"
+            className="ds-btn ds-btn--secondary site-action"
             aria-label="რეზიუმეს შექმნა"
             title="რეზიუმეს შექმნა"
+            aria-current={here('cv')}
           >
-            <FilePlus2 size={18} />
-            <span>CV შექმნა</span>
+            <FilePlus2 aria-hidden="true" />
+            <span className="site-action-label">CV შექმნა</span>
           </Link>
-
+          {/* The one primary action in the masthead. */}
           <Link
             href="/post-job"
             prefetch={false}
-            className="header-post-job"
+            className="ds-btn ds-btn--primary site-post"
             aria-label="განცხადების დამატება"
             title="განცხადების დამატება"
+            aria-current={here('post')}
           >
-            <Plus size={19} />
-            <span>განცხადების დამატება</span>
+            <Plus aria-hidden="true" />
+            <span className="site-action-label">განცხადების დამატება</span>
           </Link>
           <ThemeToggle />
         </div>

@@ -37,6 +37,8 @@ export type Vacancy = {
   facts?: { label: string; value: string }[];
   applicationLinks?: { label: string; url: string }[];
   warnings?: string[];
+  /** A workplace point the source itself published (an employer's map pin), never a guess. */
+  coordinates?: { lat: number; lon: number };
   title: string;
   company: string;
   city: string;

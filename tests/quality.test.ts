@@ -218,3 +218,32 @@ void test('the audit trail records what changed instead of a second copy of the 
   assert.equal(text.length, 240 + '…(3000)'.length);
   assert.ok(JSON.stringify(to).length < 200);
 });
+
+void test('a held severe change books its own recheck for when it can confirm', () => {
+  const first = new Date('2026-09-25T10:00:00Z');
+  const now = new Date('2026-09-25T11:05:00Z');
+  const shortened = { ...v, title: 'Other role', company: 'Other company' };
+  const decision = assessVacancy(
+    v,
+    shortened,
+    {
+      signature: null,
+      firstSeen: first,
+      lastSeen: new Date('2026-09-25T10:35:00Z'),
+      observations: 2,
+    },
+    now,
+  );
+  assert.equal(decision.hold, true);
+  // Seen three times in about an hour: the next look is a day after the first sighting,
+  // not never, so the change can still confirm itself without a person.
+  if (decision.observations >= 3)
+    assert.ok(
+      decision.recheckAt &&
+        decision.recheckAt.getTime() >= first.getTime() + 24 * 3600000,
+    );
+  else assert.ok(decision.recheckAt && decision.recheckAt > now);
+  const invalid = assessVacancy(v, { ...v, company: '' }, noObservation, now);
+  assert.equal(invalid.structural, true);
+  assert.equal(invalid.recheckAt, null);
+});

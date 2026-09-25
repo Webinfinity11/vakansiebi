@@ -1,6 +1,7 @@
 'use client';
 import type { AdvancedFilters } from './advanced-filters';
 import { advancedValues } from '@/lib/advanced-filter-values';
+import { SelectField } from './select-field';
 export function SalaryFilter({
   value,
   onChange,
@@ -23,19 +24,17 @@ export function SalaryFilter({
     <fieldset className="salary-filter">
       <legend>ანაზღაურება (₾)</legend>
       <label htmlFor={`${prefix}-pay-period`}>ანაზღაურების პერიოდი</label>
-      <select
+      <SelectField
         id={`${prefix}-pay-period`}
         value={value.salaryPeriod}
-        onChange={(e) =>
-          change(
-            'salaryPeriod',
-            e.target.value as AdvancedFilters['salaryPeriod'],
-          )
+        onChange={(next) =>
+          change('salaryPeriod', next as AdvancedFilters['salaryPeriod'])
         }
-      >
-        <option value="month">თვეში</option>
-        <option value="day">დღეში</option>
-      </select>
+        options={[
+          { value: 'month', label: 'თვეში' },
+          { value: 'day', label: 'დღეში' },
+        ]}
+      />
       <fieldset className="salary-presets" aria-label="მინიმალური ანაზღაურება">
         {[
           null,
@@ -45,6 +44,7 @@ export function SalaryFilter({
         ].map((amount) => (
           <button
             type="button"
+            className="ds-chip"
             key={amount ?? 'any'}
             aria-pressed={
               value.salaryFrom === amount && value.salaryTo === null

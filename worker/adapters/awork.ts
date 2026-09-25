@@ -71,8 +71,14 @@ export const awork: SourceModule = {
     if (deadline && deadline < datePosted)
       deadline = georgianDate(dates[1], postedYear + 1);
     const salary = fields.get('ხელფასი') || '';
-    // Keep the explicit source label; a pay period is never assumed.
-    const amount = salary.match(/^(\d[\d ,]*)\s*₾(?:\s*\+\s*ბონუსი)?$/);
+    // Keep the explicit source label; a pay period is never assumed. The board's own field is
+    // one figure or a range, in lari or dollars; the range's lower end is the filter value.
+    const amount = salary.match(
+      /^(\d[\d ,]*?)\s*(?:[-–]\s*(\d[\d ,]*?)\s*)?([₾$])(?:\s*\+\s*ბონუსი)?$/,
+    );
+    const low = amount ? Number(amount[1].replace(/[ ,]/g, '')) : NaN;
+    const high = amount?.[2] ? Number(amount[2].replace(/[ ,]/g, '')) : low;
+    const priced = low > 0 && high >= low && high <= 100000000;
     const applicationLinks: { label: string; url: string }[] = [];
     root.find('.job-detail-description a[href]').each((_, el) => {
       const href = safeExternalUrl($(el).attr('href') || '', url);
@@ -93,8 +99,12 @@ export const awork: SourceModule = {
       }),
       category: '',
       salary,
-      salaryMin: amount ? Number(amount[1].replace(/[ ,]/g, '')) : null,
-      currency: salary.includes('₾') ? 'GEL' : '',
+      salaryMin: priced ? low : null,
+      currency: salary.includes('₾')
+        ? 'GEL'
+        : priced && amount?.[3] === '$'
+          ? 'USD'
+          : '',
       salaryPeriod: '',
       mode: fields.get('სამუშაოს ტიპი') || '',
       employmentType: fields.get('დასაქმების ტიპი') || '',

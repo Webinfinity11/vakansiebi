@@ -11,6 +11,10 @@ type Observation = {
 export type QualityDecision = {
   hold: boolean;
   warning: string | null;
+  /** The record itself is invalid; waiting will not make it publishable. */
+  structural: boolean;
+  /** When to look again so a held change can confirm itself; null when there is no point. */
+  recheckAt: Date | null;
   signature: string;
   firstSeen: Date;
   lastSeen: Date;
@@ -140,9 +144,24 @@ export function assessVacancy(
       now.getTime() - state.firstSeen.getTime() >= 24 * 3600000
     : state.observations >= 2;
   const hold = reasons.length > 0 && (structural || !confirmed);
+  /* A severe change confirms only once it has been seen for a day, so the next look is booked
+     for that moment. Before, the third sighting (about an hour in) stopped all checks and the
+     record waited for a person forever. An invalid record never confirms: no recheck. */
+  const dayAfterFirst = new Date(
+    state.firstSeen.getTime() + 24 * 3600000 + 60000,
+  );
+  const soon = new Date(now.getTime() + 30 * 60000);
+  const recheckAt =
+    !hold || structural
+      ? null
+      : severe && state.observations >= 3
+        ? new Date(Math.max(dayAfterFirst.getTime(), soon.getTime()))
+        : soon;
   return {
     ...state,
     hold,
+    structural,
+    recheckAt,
     warning: hold ? 'Source quality review: ' + reasons.join('; ') : null,
   };
 }

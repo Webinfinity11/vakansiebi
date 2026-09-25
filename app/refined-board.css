@@ -53,48 +53,6 @@
   font-size: var(--jobx-font-size-14px);
   font-weight: 600;
 }
-.refined-board .topbar .header-search {
-  margin-left: auto;
-  width: auto;
-  min-width: 44px;
-  padding: var(--jobx-space-10px) var(--jobx-space-12px);
-  flex: 0 0 auto;
-}
-.refined-board .topbar .saved-nav {
-  margin: 0;
-  padding: var(--jobx-space-10px) var(--jobx-space-12px);
-  min-height: 44px;
-  gap: var(--jobx-space-8px);
-  border: 0;
-  border-radius: var(--jobx-radius-8px);
-  background: var(--jobx-color-f2f4f8-surface);
-  font-size: var(--jobx-font-size-13px);
-}
-.refined-board .topbar .saved-nav > span {
-  display: inline;
-}
-.refined-board .topbar .saved-nav b {
-  background: transparent;
-  color: inherit;
-  min-width: 12px;
-  padding: 0;
-}
-.refined-board .topbar .personal-nav {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  min-height: 44px;
-  padding: var(--jobx-space-10px) var(--jobx-space-12px);
-  gap: var(--jobx-space-8px);
-  border: 0;
-  background: transparent;
-  font-size: var(--jobx-font-size-13px);
-}
-.refined-board .topbar .theme-toggle {
-  margin: 0;
-  flex: 0 0 44px;
-}
 .board-shell.editorial-board.crafted-board.refined-board .discovery-hero,
 .board-shell.editorial-board.crafted-board.refined-board .results-tools,
 .board-shell.editorial-board.crafted-board.refined-board .jobx-footer,
@@ -359,14 +317,6 @@
 }
 .filter-employment {
   width: 100%;
-  min-height: 44px;
-  border: 1px solid var(--jobx-color-e1e5ed-surface);
-  border-radius: var(--jobx-radius-8px);
-  padding: var(--jobx-space-8px) var(--jobx-space-10px);
-  font: inherit;
-  font-size: var(--jobx-font-size-13px);
-  color: var(--jobx-text);
-  background: var(--jobx-surface);
 }
 .refined-board .filters .source-note {
   display: none;
@@ -418,11 +368,6 @@
   .refined-board .topbar .jobx-brand {
     margin-right: auto;
   }
-  .refined-board .topbar .saved-nav {
-    padding: var(--jobx-space-8px) var(--jobx-space-10px);
-    font-size: var(--jobx-font-size-12px);
-  }
-
   .board-shell.editorial-board.crafted-board.refined-board
     .discovery-shortcuts {
     gap: var(--jobx-space-8px);
@@ -576,19 +521,6 @@
 @media (max-width: 760px) {
   .refined-board .topbar .header-inner {
     gap: var(--jobx-space-6px);
-  }
-  .refined-board .topbar .saved-nav {
-    width: 50px;
-    padding: var(--jobx-space-8px) var(--jobx-space-4px);
-    gap: var(--jobx-space-5px);
-  }
-  .refined-board .topbar .saved-nav > span,
-  .refined-board .topbar .personal-nav > span {
-    display: none;
-  }
-  .refined-board .topbar .personal-nav {
-    width: 44px;
-    padding: 0;
   }
 }
 
@@ -778,10 +710,6 @@
 .save-confirmation .undo-save {
   width: auto;
   min-width: 0;
-  padding: var(--jobx-space-8px);
-  text-decoration: underline;
-  white-space: nowrap;
-  font-weight: 600;
 }
 @media (max-width: 760px) {
   .board-shell.editorial-board.crafted-board.refined-board .results-toolbar {
@@ -833,7 +761,12 @@
   overflow: visible;
   margin-top: var(--jobx-space-24px);
   padding: var(--jobx-space-18px) var(--jobx-space-28px) var(--jobx-space-8px);
-  background: linear-gradient(115deg, #1032a5 0%, var(--jobx-accent-fixed) 64%, #0e8de9 100%);
+  background: linear-gradient(
+    115deg,
+    #1032a5 0%,
+    var(--jobx-accent-fixed) 64%,
+    #0e8de9 100%
+  );
   border: 1px solid #3269ee;
   border-radius: var(--jobx-radius-20px);
   box-shadow: 0 16px 40px #173b981c;
@@ -902,7 +835,8 @@
   margin: var(--jobx-space-3px) 0 var(--jobx-space-11px);
 }
 .board-shell.editorial-board.crafted-board.refined-board .job-skeleton > span {
-  background: url('/brand/jobx-mark.png') center / 34px no-repeat var(--jobx-accent-tint-soft);
+  background: url('/brand/jobx-mark.png') center / 34px no-repeat
+    var(--jobx-accent-tint-soft);
   border-radius: var(--jobx-radius-10px);
   animation: none;
   width: 38px;
@@ -997,7 +931,8 @@
   ) !important;
 }
 .similar-placeholder > span {
-  background: url('/brand/jobx-mark.png') center / 30px no-repeat var(--jobx-accent-tint-soft);
+  background: url('/brand/jobx-mark.png') center / 30px no-repeat
+    var(--jobx-accent-tint-soft);
 }
 .refined-board .load-more:disabled::before {
   content: '';
@@ -1019,22 +954,6 @@
   margin: var(--jobx-space-12px) 0 0;
   font-size: var(--jobx-font-size-13px);
   font-weight: 600;
-}
-.filter-subcategory select {
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  height: 44px;
-  padding: var(--jobx-space-8px);
-  border: 1px solid var(--jobx-color-dce2ec-surface);
-  border-radius: var(--jobx-radius-8px);
-  color: #34435b;
-  background: var(--jobx-surface);
-  font: inherit;
-}
-.filter-subcategory select:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
 }
 .filter-subcategory-help {
   margin: 0;
@@ -1086,9 +1005,6 @@
   min-height: 44px;
 }
 @media (max-width: 760px) {
-  .filter-subcategory select {
-    font-size: var(--jobx-font-size-16px);
-  }
   .board-shell.editorial-board.crafted-board.refined-board .save-button {
     width: 44px;
     height: 44px;
@@ -1152,7 +1068,7 @@
   border: 0;
   padding: 0 0 var(--jobx-space-18px);
   margin: 0 0 var(--jobx-space-18px);
-  border-bottom: 1px solid #e2e6ed;
+  border-bottom: 1px solid var(--ds-line);
   min-width: 0;
 }
 .salary-filter legend {
@@ -1166,14 +1082,6 @@
   color: var(--jobx-color-647089-text);
   margin-bottom: var(--jobx-space-6px);
 }
-.salary-filter > select {
-  width: 100%;
-  min-height: 40px;
-  padding: var(--jobx-space-8px) var(--jobx-space-10px);
-  border: 1px solid var(--jobx-color-dce1ea-surface);
-  border-radius: var(--jobx-radius-8px);
-  background: var(--jobx-surface);
-}
 .salary-presets {
   border: 0;
   padding: 0;
@@ -1182,24 +1090,15 @@
   gap: var(--jobx-space-6px);
   margin: var(--jobx-space-10px) 0;
 }
-.salary-presets button {
-  min-height: 40px;
-  border: 1px solid var(--jobx-color-dce1ea-surface);
-  border-radius: var(--jobx-radius-8px);
-  background: var(--jobx-surface);
-  font-size: var(--jobx-font-size-12px);
-  color: var(--jobx-color-46526b-text);
-  padding: var(--jobx-space-6px);
+/* The amounts are .ds-chip; the grid only lines them up. */
+.salary-presets .ds-chip {
+  justify-content: center;
+  min-width: 0;
+  padding-inline: var(--ds-space-2);
 }
-.salary-presets button[aria-pressed='true'] {
-  background: #eaf0ff;
-  border-color: var(--jobx-accent);
-  color: var(--jobx-accent);
-  font-weight: 700;
-}
-.salary-presets button:focus-visible {
-  outline: 2px solid var(--jobx-accent);
-  outline-offset: 2px;
+.salary-presets .ds-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
 }
 .salary-custom summary {
   cursor: pointer;
@@ -1219,34 +1118,18 @@
   color: var(--jobx-danger-text);
 }
 
-.salary-filter .salary-range input {
-  width: 100%;
-  min-width: 0;
-  min-height: 40px;
-  border: 1px solid var(--jobx-color-dce1ea-surface);
-  border-radius: var(--jobx-radius-8px);
-  padding: var(--jobx-space-8px) var(--jobx-space-10px);
-  background: var(--jobx-surface);
-  color: var(--jobx-text);
-}
 .salary-filter .salary-range input[aria-invalid='true'] {
   border-color: var(--jobx-danger-text);
-}
-.salary-filter :is(input, select):focus-visible {
-  outline: 2px solid var(--jobx-accent);
-  outline-offset: 2px;
 }
 .mobile-filters-sheet .filters-apply:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 @media (max-width: 760px) {
-  .salary-presets button,
-  .salary-filter > select,
+  .salary-presets .ds-chip,
   .salary-filter .salary-range input {
-    min-height: 44px;
+    min-height: var(--ds-control-touch);
   }
-  .salary-filter > select,
   .salary-filter .salary-range input {
     font-size: var(--jobx-font-size-16px);
   }
@@ -1462,19 +1345,22 @@
   filter: invert(1) hue-rotate(180deg);
 }
 :root[data-theme='dark']
-  .board-shell.editorial-board.crafted-board.refined-board .discovery-hero {
+  .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-hero {
   border-color: var(--jobx-border);
 }
 :root[data-theme='dark'] .refined-board .hero-brand-art {
   opacity: calc(var(--ribbon-opacity) * 0.5);
 }
 :root[data-theme='dark']
-  .board-shell.editorial-board.crafted-board.refined-board .discovery-shortcut {
+  .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-shortcut {
   background: var(--jobx-surface-raised);
   border: 1px solid var(--jobx-border);
 }
 :root[data-theme='dark']
-  .board-shell.editorial-board.crafted-board.refined-board .discovery-shortcut:is(:hover, [aria-pressed='true']) {
+  .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-shortcut:is(:hover, [aria-pressed='true']) {
   background: var(--jobx-accent-tint);
   border-color: var(--jobx-accent);
 }
@@ -1486,4 +1372,765 @@
 :root[data-theme='dark'] .vacancy-overview,
 :root[data-theme='dark'] .vacancy-description-panel {
   border-color: var(--jobx-border);
+}
+
+/* ── Board controls on the design system ─────────────────────────────────────────────────
+   These controls carry .ds-btn / .ds-chip. globals.css still styles some of them by element
+   (`.active-filters button`, `.filter-head > button`, `.save-button:hover … !important`), which
+   outranks a single .ds-* class, so the lines below hand the look back to the tokens. They add
+   no look of their own. */
+.active-filters .ds-chip {
+  gap: var(--ds-space-2);
+  min-height: var(--ds-control-sm);
+  max-width: 100%;
+  padding: 0 var(--ds-space-3);
+  border: 1px solid var(--ds-accent);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent-ink);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-align: left;
+}
+.active-filters .ds-chip:hover {
+  border-color: var(--ds-accent-hover);
+}
+.active-filters .ds-chip:focus-visible,
+.salary-presets .ds-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.board-shell .filter-head > .ds-btn {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-accent);
+}
+.board-shell .filter-head > .ds-btn:disabled {
+  color: var(--ds-ink-3);
+}
+/* The card's bookmark: an icon toggle at the control height, quiet until it is on. */
+.board-shell.editorial-board.crafted-board.refined-board
+  .job-card
+  .save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ds-control-md);
+  height: var(--ds-control-md);
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  color: var(--ds-ink-3);
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .job-card
+  .save-button
+  > svg {
+  width: var(--ds-icon-md);
+  height: var(--ds-icon-md);
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .job-card
+  .save-button:hover {
+  background: var(--ds-surface-muted) !important;
+  color: var(--ds-ink) !important;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .job-card
+  .save-button.is-saved {
+  background: var(--ds-accent-soft) !important;
+  color: var(--ds-accent) !important;
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .job-card
+  .save-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+/* The toast is the one dark surface: its quiet buttons take its light text. */
+.feedback-toast .ds-btn--ghost {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.feedback-toast .ds-btn--ghost:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.12);
+}
+/* A count on a button — the filter toggle here, "saved" in the masthead — is one badge. */
+.board-shell .mobile-filter-toggle b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--ds-space-1);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-accent);
+  color: var(--ds-on-accent);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ── Detail pass: the board and the vacancy page at the header's level of finish ──────────
+   Every value below is a design-system token, so the dark theme follows without a second list.
+   Several selectors carry one class more than they seem to need: they have to outrank older
+   element rules in globals.css and the generated dark sheet, which load around this file. */
+
+/* Disclosures: the browser's triangle is replaced by one chevron after the label, which turns
+   when the section opens. Used by "ბოლოს ნანახი", the extra filters, hidden and unavailable
+   vacancies, "მეტი მოქმედება" and the translation help. */
+.recent-summary,
+.filter-extra > summary,
+.hidden-vacancies > summary,
+.unavailable-saved > summary,
+.vacancy-more-actions > summary,
+.translation-help > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  list-style: none;
+  cursor: pointer;
+  border-radius: var(--ds-radius-sm);
+  transition: color var(--ds-duration-fast) var(--ds-ease);
+}
+.recent-summary::-webkit-details-marker,
+.filter-extra > summary::-webkit-details-marker,
+.hidden-vacancies > summary::-webkit-details-marker,
+.unavailable-saved > summary::-webkit-details-marker,
+.vacancy-more-actions > summary::-webkit-details-marker,
+.translation-help > summary::-webkit-details-marker {
+  display: none;
+}
+/* Only where a pointer hovers: after a tap, a phone keeps :hover and the label stayed blue. */
+@media (hover: hover) {
+  .recent-summary:hover,
+  .filter-extra > summary:hover,
+  .hidden-vacancies > summary:hover,
+  .unavailable-saved > summary:hover,
+  .vacancy-more-actions > summary:hover,
+  .translation-help > summary:hover {
+    color: var(--ds-accent);
+  }
+}
+.recent-summary:focus-visible,
+.filter-extra > summary:focus-visible,
+.hidden-vacancies > summary:focus-visible,
+.unavailable-saved > summary:focus-visible,
+.vacancy-more-actions > summary:focus-visible,
+.translation-help > summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+summary > svg.disclosure-chevron {
+  width: var(--ds-icon-md);
+  height: var(--ds-icon-md);
+  margin-left: auto;
+  color: var(--ds-ink-3);
+  transition: transform var(--ds-duration) var(--ds-ease);
+}
+/* A short line keeps its chevron beside the words rather than at the far edge. */
+.recent-summary > svg.disclosure-chevron,
+.vacancy-more-actions > summary > svg.disclosure-chevron {
+  margin-left: 0;
+}
+details[open] > summary > svg.disclosure-chevron {
+  transform: rotate(180deg);
+}
+.board-shell .recent-summary {
+  display: inline-flex;
+  padding-inline: var(--ds-space-1);
+  color: var(--ds-ink-2);
+}
+.board-shell .recent-summary svg {
+  margin: 0;
+  vertical-align: 0;
+}
+.board-shell .recent-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-line-soft);
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+/* The strip's clear button sits on the summary's line, not on a row of its own. */
+.board-shell .recent-strip {
+  position: relative;
+}
+.board-shell .recent-strip > .recent-head {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-height: 44px;
+  margin: 0;
+}
+.board-shell .recent-card {
+  border-color: var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  transition:
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    background-color var(--ds-duration-fast) var(--ds-ease);
+}
+.board-shell .recent-card:hover {
+  border-color: var(--ds-accent-border);
+  background: var(--ds-surface-muted);
+}
+.board-shell .recent-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.board-shell .recent-card span {
+  color: var(--ds-ink-3);
+}
+
+/* The hero's city field: one field, not a box inside a box. globals.css gives this trigger a
+   white fill with !important, so taking it back needs the same weight. */
+.board-shell .discovery-hero .searchbar .search-city > .choice.choice {
+  min-height: calc(var(--ds-control-lg) - 2px) !important;
+  padding-inline: var(--ds-space-2) 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-md) !important;
+}
+/* A narrow field ends a long city name with an ellipsis instead of cutting a letter. */
+.board-shell .discovery-hero .searchbar .search-city > .choice > span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-shell .discovery-hero .searchbar .search-city {
+  transition:
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration) var(--ds-ease);
+}
+.board-shell .discovery-hero .searchbar .search-city:hover {
+  border-color: var(--ds-line-strong);
+}
+.board-shell .discovery-hero .searchbar .search-city:focus-within {
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.board-shell .discovery-hero .searchbar .search-city > svg {
+  color: var(--ds-ink-3);
+}
+
+/* Toolbar: map, filters and sort are one row of secondary controls at one height. The sort is a
+   form dropdown now (a sort always has a value), so it takes the same trigger size. */
+.board-shell .results-sort .ds-select {
+  width: auto;
+  min-width: 132px;
+  min-height: var(--ds-control-md);
+  font-weight: 500;
+}
+/* The generated dark sheet paints the toolbar's buttons but not its link, so the three drifted
+   apart there; all three take the secondary look in both themes. */
+.board-shell.editorial-board.crafted-board.refined-board
+  .results-toolbar
+  .results-tools
+  :is(.secondary-button, .ds-select) {
+  background: var(--ds-surface);
+  border-color: var(--ds-line);
+  color: var(--ds-ink);
+}
+.board-shell.editorial-board.crafted-board.refined-board
+  .results-toolbar
+  .results-tools
+  :is(.secondary-button, .ds-select):hover {
+  background: var(--ds-surface-muted);
+  border-color: var(--ds-line-strong);
+}
+.board-shell .result-count {
+  font-variant-numeric: tabular-nums;
+}
+.board-shell .result-count-skeleton {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  vertical-align: middle;
+}
+/* While the list refreshes, the moving line says so; the word stays for screen readers. */
+.board-shell .results-updating > span:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Active filters: chips keep the selected look in both themes; "clear all" is a quiet button at
+   the chips' height and size. */
+.board-shell .active-filters .ds-chip.ds-chip {
+  border-color: var(--ds-accent);
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent-ink);
+}
+.board-shell .active-filters .ds-chip.ds-chip:hover {
+  border-color: var(--ds-accent-hover);
+}
+.board-shell .active-filters .ds-chip > svg {
+  width: var(--ds-icon-sm);
+  height: var(--ds-icon-sm);
+}
+.board-shell .active-filters .clear-all-filters.clear-all-filters {
+  min-height: var(--ds-control-sm);
+  padding: 0 var(--ds-space-3);
+  border: 0;
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  color: var(--ds-accent);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
+}
+.board-shell .active-filters .clear-all-filters.clear-all-filters:hover {
+  background: var(--ds-accent-soft);
+}
+
+/* Cards: figures line up down the list. */
+.board-shell .job-card .salary,
+.board-shell .job-when,
+.board-shell .facet-count,
+.similar-salary,
+.vacancy-page .salary-fact dd,
+.vacancy-page .detail-dates {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Empty results and an empty saved list: the mark in the accent, both actions at one height. */
+.board-shell .empty .empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent);
+}
+.board-shell .empty .empty-icon svg {
+  width: var(--ds-icon-lg);
+  height: var(--ds-icon-lg);
+}
+.board-shell .empty > .primary,
+.board-shell .empty > .secondary-button,
+.board-shell .empty .search-recovery .secondary-button {
+  min-height: var(--ds-control-md);
+  font-size: var(--ds-text-md);
+  white-space: normal;
+  text-align: center;
+}
+.board-shell .empty {
+  border-color: var(--ds-line-strong);
+  background: var(--ds-surface);
+}
+
+/* Load more and the report form show a working ring, not a changing word. */
+.board-shell .load-more .ds-spinner,
+.job-report-submit .ds-spinner {
+  width: var(--ds-icon-md);
+  height: var(--ds-icon-md);
+}
+
+/* The footer sits on the page itself; its own fill showed as a lighter slab in the dark theme. */
+.board-shell.board-shell .site-footer.jobx-footer {
+  background: transparent;
+}
+/* The directory under the list shares the page's edges. */
+.search-directory {
+  max-width: calc(1224px + 2 * var(--jobx-space-28px));
+}
+.search-directory-group a,
+.search-directory-links a {
+  transition:
+    color var(--ds-duration-fast) var(--ds-ease),
+    background-color var(--ds-duration-fast) var(--ds-ease),
+    border-color var(--ds-duration-fast) var(--ds-ease);
+}
+.search-directory-links a:focus-visible,
+.search-directory-group a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+  border-radius: var(--ds-radius-sm);
+}
+
+/* ── The vacancy page ─────────────────────────────────────────────────────────────────── */
+/* Category and placement are one badge shape. */
+.vacancy-page .vacancy-overview > .category-tag,
+.vacancy-page .vacancy-overview > .placement-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin: 0 var(--ds-space-1) var(--ds-space-2) 0;
+  padding: 0 var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-strong);
+  line-height: 1;
+  vertical-align: middle;
+}
+.vacancy-page .vacancy-overview > .category-tag {
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink-2);
+}
+.vacancy-page .vacancy-overview > .placement-badge-premium {
+  background: var(--ds-accent);
+  color: var(--ds-on-accent);
+}
+.vacancy-page .vacancy-overview > .placement-badge-vip {
+  background: var(--ds-warning-soft);
+  color: var(--ds-warning);
+}
+.board-shell .job-title-row .placement-badge {
+  border-radius: var(--ds-radius-pill);
+  padding: 2px var(--ds-space-2);
+  font-size: var(--ds-text-xs);
+  line-height: 1.4;
+}
+/* Dates read at the page's small size, each with its mark. */
+.vacancy-page .vacancy-title-tools .detail-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2) var(--ds-space-4);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+}
+.vacancy-page .detail-dates > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.vacancy-page .detail-dates > span > svg {
+  width: var(--ds-icon-sm);
+  height: var(--ds-icon-sm);
+}
+.vacancy-page .detail-dates > .deadline-urgent {
+  color: var(--ds-warning);
+  font-weight: var(--ds-weight-strong);
+}
+/* One section heading for the whole page. */
+.vacancy-page .vacancy-summary > h2,
+.vacancy-page .description-heading,
+.vacancy-page .extra-facts > h3,
+.vacancy-page .company-about > h2,
+.vacancy-page .vacancy-source-excerpt > h3,
+.vacancy-page .similar-vacancies > h2 {
+  margin: 0 0 var(--ds-space-4);
+  color: var(--ds-ink);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.vacancy-page .vacancy-summary > h2 {
+  margin-top: var(--ds-space-5);
+}
+.vacancy-page .extra-facts > h3,
+.vacancy-page .company-about > h2 {
+  margin-top: var(--ds-space-6);
+}
+.vacancy-page .vacancy-summary > p {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+.vacancy-page .extra-facts dt {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+.vacancy-page .extra-facts dd {
+  font-size: var(--ds-text-md);
+  color: var(--ds-ink);
+}
+/* The contact column: its title at the card size, every action full width at one size. */
+.vacancy-page .quick-apply > h3 {
+  margin: 0 0 var(--ds-space-4);
+  color: var(--ds-ink);
+  font-size: var(--ds-text-lg);
+  font-weight: 700;
+  line-height: 1.4;
+}
+.vacancy-page .quick-apply .external-application,
+.vacancy-page .quick-apply .email-actions .primary,
+.vacancy-page .vacancy-contact-guidance .primary {
+  width: 100%;
+  min-height: var(--ds-control-md);
+  font-size: var(--ds-text-md);
+}
+.vacancy-page .quick-apply .email-actions .secondary-button {
+  width: var(--ds-control-md);
+  min-height: var(--ds-control-md);
+}
+.vacancy-page .contact-phone {
+  border-radius: var(--ds-radius-md);
+  transition: background-color var(--ds-duration-fast) var(--ds-ease);
+}
+.vacancy-page .contact-phone:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.vacancy-page .contact-phone strong {
+  font-variant-numeric: tabular-nums;
+}
+.vacancy-page .contact-call,
+.vacancy-page .quick-apply-note,
+.vacancy-page .application-email > span {
+  font-size: var(--ds-text-xs);
+}
+.vacancy-page .contact-call {
+  font-weight: var(--ds-weight-strong);
+  color: var(--ds-accent);
+}
+/* "მეტი მოქმედება" reads as a quiet control at the page's small size. */
+.vacancy-page .vacancy-more-actions {
+  border-top-color: var(--ds-line);
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+}
+.vacancy-page .vacancy-more-actions > summary {
+  display: inline-flex;
+  min-height: 44px;
+  padding-inline: var(--ds-space-1);
+}
+.vacancy-page .vacancy-more-actions .vacancy-hide-action {
+  display: flex;
+}
+/* The source line under the card. */
+.vacancy-page .vacancy-layout > .vacancy-source.compact-source {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+}
+/* The report form: reasons a finger's height apart, not a screen apart. */
+.job-report-reasons {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.job-report-reasons > legend {
+  margin-bottom: var(--ds-space-2);
+  color: var(--ds-ink);
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-strong);
+}
+.job-report-reasons [role='radiogroup'] {
+  display: grid;
+  gap: 0;
+}
+.job-report-reason {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-height: 40px;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-md);
+  cursor: pointer;
+}
+.job-report-form > label {
+  color: var(--ds-ink);
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-strong);
+}
+.job-report-form > small {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.job-report-form .job-report-submit {
+  justify-self: start;
+}
+.job-report-form [role='alert'] {
+  margin: 0;
+  color: var(--ds-danger);
+  font-size: var(--ds-text-sm);
+}
+
+/* Similar vacancies: card titles at card weight, small text never under 12px, loading as
+   shapes with the moving sheen. */
+.similar-card {
+  border-color: var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  transition:
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration) var(--ds-ease);
+}
+.similar-card:hover {
+  border-color: var(--ds-accent-border);
+  box-shadow: var(--ds-shadow-sm);
+}
+.similar-card:focus-visible {
+  outline: none;
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.similar-card h3 {
+  color: var(--ds-ink);
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-strong);
+  line-height: 1.5;
+}
+.similar-card:hover h3 {
+  color: var(--ds-accent);
+}
+.similar-company {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+.similar-card p {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+.similar-salary {
+  font-size: var(--ds-text-sm);
+}
+.similar-open {
+  color: var(--ds-accent);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
+}
+.similar-placeholder.similar-placeholder {
+  display: grid;
+  align-content: start;
+  gap: var(--ds-space-3);
+  border-color: var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+}
+.similar-placeholder.similar-placeholder > .ds-skeleton {
+  margin: 0;
+}
+.similar-placeholder.similar-placeholder > .similar-skeleton-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ds-radius-pill);
+}
+.similar-placeholder > .similar-skeleton-line {
+  width: 85%;
+}
+.similar-placeholder > .similar-skeleton-short {
+  width: 45%;
+}
+/* Hidden and unavailable vacancies: their row buttons at the small control size, not 11px. */
+.board-shell .hidden-vacancies .secondary-button,
+.board-shell .unavailable-saved .secondary-button {
+  min-height: var(--ds-control-sm);
+  padding: 0 var(--ds-space-3);
+  font-size: var(--ds-text-sm);
+}
+.board-shell .hidden-vacancies > summary,
+.board-shell .unavailable-saved > summary {
+  min-height: 40px;
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
+}
+/* The report's radios take the checkbox's edge colour, so they read on white and on dark. */
+.job-report-reason [data-slot='radio-group-item'] {
+  border-color: var(--ds-line-strong);
+  background: var(--ds-surface);
+}
+.job-report-reason [data-slot='radio-group-item'][data-checked] {
+  border-color: var(--ds-accent);
+  background: var(--ds-accent);
+}
+.job-report-reason [data-slot='radio-group-item']:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+/* The sidebar's clear button: accent when it can act, muted when there is nothing to clear, in
+   both themes (the dark sheet painted it grey either way). */
+.board-shell.editorial-board.crafted-board .filters .filter-head > .ds-btn {
+  color: var(--ds-accent);
+}
+.board-shell.editorial-board.crafted-board
+  .filters
+  .filter-head
+  > .ds-btn:disabled {
+  color: var(--ds-ink-3);
+}
+
+/* Infinite scroll stays where the reader is. The loading row at the end must never be what the
+   browser anchors the view to: when thirty cards land above it, the anchor would drag the view
+   down with it and skip them. The cards the reader is looking at hold the view instead, and the
+   new ones settle in below. A list restored on "back" is shown as it was, without motion. */
+.board-shell .load-more-row,
+.board-shell .append-loading,
+.board-shell .results-progress,
+.board-shell .search-directory,
+.board-shell .jobx-footer,
+.board-shell > footer,
+.board-shell .public-header,
+.board-shell .results-toolbar,
+.board-shell .results-tools,
+.board-shell .results-foot {
+  /* Nothing below the list may hold the view. A reader who scrolled past the end is looking at
+     these; when the next thirty cards land above them, the view must stay where it is so those
+     cards fill it — not follow the footer down and trigger yet another load. The sticky header
+     and results toolbar are always on screen, so they must not be chosen as the anchor either:
+     anchored to them, a phone was carried to the bottom again after every page. */
+  overflow-anchor: none;
+}
+.board-shell .job-list:not([data-restored]) .job-card {
+  animation: ds-appear var(--ds-duration-slow) var(--ds-ease) backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-shell .job-list .job-card {
+    animation: none;
+  }
+}
+
+/* One place for filters on a computer: the side panel. It used to give way to a "ფილტრები"
+   button and a sheet below 1000px, so a slightly narrow laptop window got a phone's flow.
+   The sheet is now for phones only; from 761px the panel stays, a little narrower. */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .board-shell .workspace {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: var(--ds-space-5);
+  }
+  .board-shell .desktop-filters {
+    display: block;
+    position: sticky;
+    top: 18px;
+    max-height: calc(100vh - 36px);
+    overflow: auto;
+  }
+}
+/* Wherever the side panel is shown, it is the only way into the filters: no second
+   "ფილტრები" button opening the phone's sheet beside it. */
+@media (min-width: 761px) {
+  .board-shell .mobile-filter-toggle,
+  .board-shell .results-tools .mobile-filter-toggle.mobile-filter-toggle {
+    display: none;
+  }
+}
+
+/* The phone's filter sheet: one divider between sections, room above the pay heading, no stray
+   edge from the desktop panel, and the result button across the full width at the bottom. */
+.mobile-filters-sheet .filters {
+  border-right: 0;
+}
+.mobile-filters-sheet .salary-filter {
+  margin-top: var(--ds-space-5);
+  border-bottom: 0;
+}
+.mobile-filters-sheet .mobile-filters-footer {
+  position: sticky;
+  bottom: 0;
+  padding: var(--ds-space-3) var(--ds-space-4)
+    calc(var(--ds-space-3) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--ds-line);
+  background: var(--ds-surface);
+}
+.mobile-filters-sheet .mobile-filters-footer .filters-apply {
+  width: 100%;
+  min-height: var(--ds-control-lg);
 }

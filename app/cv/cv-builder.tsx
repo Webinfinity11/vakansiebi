@@ -35,6 +35,9 @@ import {
 import { track } from '../../lib/analytics-client';
 import { createResumeSync } from '../../lib/resume-client';
 import { PhotoEditor } from './photo-editor';
+import { SelectField } from '../select-field';
+import { SkeletonRows } from '../skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Phone,
   Mail,
@@ -46,6 +49,10 @@ import {
   Plus,
   Check,
   Download,
+  ImagePlus,
+  Pencil,
+  X,
+  RotateCcw,
 } from 'lucide-react';
 
 function Field({
@@ -105,9 +112,18 @@ const monthNames = [
 ];
 const thisYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 61 }, (_, i) => String(thisYear - i));
+/* An empty first entry clears the half, as the old select's first option did. */
+const monthOptions = [
+  { value: '', label: 'თვე' },
+  ...monthNames.map((name, i) => ({
+    value: String(i + 1).padStart(2, '0'),
+    label: name,
+  })),
+];
+const yearChoices = [{ value: '', label: 'წელი' }, ...yearOptions];
 
 /* The browser's month input shows an English calendar and a "--------- ----" mask. Two
-   Georgian selects say the same thing plainly. The stored value stays YYYY-MM, and a half
+   Georgian dropdowns say the same thing plainly. The stored value stays YYYY-MM, and a half
    choice is held here until both halves exist, so the saved record is never half a date. */
 function MonthField({
   label,
@@ -138,30 +154,22 @@ function MonthField({
     <fieldset className="cv-field cv-month" disabled={disabled}>
       <legend>{label}</legend>
       <div>
-        <select
-          aria-label={`${label}: თვე`}
+        <SelectField
+          label={`${label}: თვე`}
+          placeholder="თვე"
           value={month}
-          onChange={(event) => set({ year, month: event.target.value })}
-        >
-          <option value="">თვე</option>
-          {monthNames.map((name, i) => (
-            <option key={name} value={String(i + 1).padStart(2, '0')}>
-              {name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label={`${label}: წელი`}
+          disabled={disabled}
+          options={monthOptions}
+          onChange={(value) => set({ year, month: value })}
+        />
+        <SelectField
+          label={`${label}: წელი`}
+          placeholder="წელი"
           value={year}
-          onChange={(event) => set({ year: event.target.value, month })}
-        >
-          <option value="">წელი</option>
-          {yearOptions.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+          disabled={disabled}
+          options={yearChoices}
+          onChange={(value) => set({ year: value, month })}
+        />
       </div>
     </fieldset>
   );
@@ -225,8 +233,14 @@ function Section({
           onClick={onToggle}
         >
           <span>{title}</span>
-          {complete && <Check className="cv-complete" size={18} />}
-          <ChevronDown size={18} className={open ? 'cv-chevron-open' : ''} />
+          {complete && (
+            <Check className="cv-complete" size={20} aria-hidden="true" />
+          )}
+          <ChevronDown
+            size={20}
+            aria-hidden="true"
+            className={open ? 'cv-chevron-open' : ''}
+          />
         </button>
       </h2>
       <div id={`cv-section-${id}`} hidden={!open} className="cv-section-body">
@@ -687,26 +701,29 @@ export function CvBuilder() {
       <div className="cv-entry-actions">
         <button
           type="button"
-          aria-label={t.remove}
-          onClick={() => update({ [key]: items.filter((_, i) => i !== index) })}
-        >
-          <Trash2 size={16} />
-        </button>
-        <button
-          type="button"
+          className="ds-btn ds-btn--secondary ds-btn--icon"
           aria-label={t.moveUp}
           disabled={index === 0}
           onClick={() => move(-1)}
         >
-          <ChevronUp size={16} />
+          <ChevronUp aria-hidden="true" />
         </button>
         <button
           type="button"
+          className="ds-btn ds-btn--secondary ds-btn--icon"
           aria-label={t.moveDown}
           disabled={index === items.length - 1}
           onClick={() => move(1)}
         >
-          <ChevronDown size={16} />
+          <ChevronDown aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="ds-btn ds-btn--danger ds-btn--icon"
+          aria-label={t.remove}
+          onClick={() => update({ [key]: items.filter((_, i) => i !== index) })}
+        >
+          <Trash2 aria-hidden="true" />
         </button>
       </div>
     );
@@ -718,6 +735,10 @@ export function CvBuilder() {
         <div className="cv-intro">
           <h1>{cvText.ka.heading}</h1>
           <p className="cv-note">{cvText.ka.intro}</p>
+        </div>
+        <div className="cv-loading">
+          <SkeletonRows rows={3} block label="რედაქტორი იტვირთება" />
+          <span className="ds-skeleton ds-skeleton--block cv-loading-paper" />
         </div>
       </main>
     );
@@ -795,10 +816,15 @@ export function CvBuilder() {
             aria-describedby={!canPrint ? 'cv-print-hint' : undefined}
             onClick={printCv}
           >
-            <Download size={17} />
+            <Download aria-hidden="true" />
             {t.print}
           </button>
-          <button type="button" onClick={clear}>
+          <button
+            type="button"
+            className="ds-btn ds-btn--secondary"
+            onClick={clear}
+          >
+            <RotateCcw aria-hidden="true" />
             {t.clear}
           </button>
         </div>
@@ -862,7 +888,7 @@ export function CvBuilder() {
                     </span>
                     {cv.template === template && (
                       <span className="cv-template-check" aria-hidden="true">
-                        <Check size={14} />
+                        <Check size={14} aria-hidden="true" />
                       </span>
                     )}
                   </button>
@@ -939,6 +965,7 @@ export function CvBuilder() {
                   <button
                     key={font}
                     type="button"
+                    className="ds-chip"
                     data-font={font}
                     aria-pressed={cv.font === font}
                     onClick={() => update({ font })}
@@ -955,6 +982,7 @@ export function CvBuilder() {
                   <button
                     key={photoShape}
                     type="button"
+                    className="ds-chip"
                     aria-pressed={cv.photoShape === photoShape}
                     onClick={() => update({ photoShape })}
                   >
@@ -1016,7 +1044,8 @@ export function CvBuilder() {
                     unoptimized
                   />
                 )}
-                <label className="cv-file-button">
+                <label className="ds-btn ds-btn--secondary cv-file-button">
+                  <ImagePlus aria-hidden="true" />
                   {cv.photo ? t.changePhoto : t.choosePhoto}
                   <input
                     className="sr-only"
@@ -1033,24 +1062,29 @@ export function CvBuilder() {
                   <>
                     <button
                       type="button"
+                      className="ds-btn ds-btn--secondary"
                       onClick={() => setPhotoSource(cv.photo)}
                     >
+                      <Pencil aria-hidden="true" />
                       {t.editPhoto}
                     </button>
-                    <button type="button" onClick={() => update({ photo: '' })}>
+                    <button
+                      type="button"
+                      className="ds-btn ds-btn--ghost"
+                      onClick={() => update({ photo: '' })}
+                    >
+                      <X aria-hidden="true" />
                       {t.removePhoto}
                     </button>
                   </>
                 )}
               </div>
-              <label className="cv-check">
-                <input
-                  type="checkbox"
+              <label className="cv-check" htmlFor="cv-show-photo">
+                <Checkbox
+                  id="cv-show-photo"
                   checked={cv.showPhoto}
                   disabled={cv.template === 'compact'}
-                  onChange={(event) =>
-                    update({ showPhoto: event.target.checked })
-                  }
+                  onCheckedChange={(checked) => update({ showPhoto: checked })}
                 />
                 {t.showPhoto}
               </label>
@@ -1128,12 +1162,15 @@ export function CvBuilder() {
                         ),
                       )}
                     </div>
-                    <label className="cv-check">
-                      <input
-                        type="checkbox"
+                    <label
+                      className="cv-check"
+                      htmlFor={`cv-current-${item.id}`}
+                    >
+                      <Checkbox
+                        id={`cv-current-${item.id}`}
                         checked={item.current}
-                        onChange={(event) =>
-                          change({ current: event.target.checked })
+                        onCheckedChange={(checked) =>
+                          change({ current: checked })
                         }
                       />
                       {t.currentJob}
@@ -1144,6 +1181,7 @@ export function CvBuilder() {
               })}
               <button
                 type="button"
+                className="ds-btn ds-btn--secondary cv-add"
                 disabled={cv.experience.length >= 20}
                 onClick={() =>
                   update({
@@ -1162,7 +1200,7 @@ export function CvBuilder() {
                   })
                 }
               >
-                <Plus size={16} />
+                <Plus aria-hidden="true" />
                 {t.add}
               </button>
             </Section>
@@ -1226,6 +1264,7 @@ export function CvBuilder() {
               })}
               <button
                 type="button"
+                className="ds-btn ds-btn--secondary cv-add"
                 disabled={cv.education.length >= 20}
                 onClick={() =>
                   update({
@@ -1243,7 +1282,7 @@ export function CvBuilder() {
                   })
                 }
               >
-                <Plus size={16} />
+                <Plus aria-hidden="true" />
                 {t.add}
               </button>
             </Section>
@@ -1258,7 +1297,7 @@ export function CvBuilder() {
               <div className="cv-chips">
                 {cv.skills.map((item, index) => (
                   <button
-                    className="cv-chip"
+                    className="ds-chip cv-chip"
                     type="button"
                     key={`${item}-${index}`}
                     aria-label={`${t.remove}: ${item}`}
@@ -1268,7 +1307,8 @@ export function CvBuilder() {
                       })
                     }
                   >
-                    {item} ×
+                    {item}
+                    <X aria-hidden="true" />
                   </button>
                 ))}
               </div>
@@ -1297,10 +1337,11 @@ export function CvBuilder() {
               </label>
               <button
                 type="button"
+                className="ds-btn ds-btn--secondary cv-add"
                 disabled={!skill.trim() || cv.skills.length >= 40}
                 onClick={() => addSkills(skill)}
               >
-                <Plus size={16} />
+                <Plus aria-hidden="true" />
                 {t.add}
               </button>
             </Section>
@@ -1328,36 +1369,33 @@ export function CvBuilder() {
                         })
                       }
                     />
-                    <label className="cv-field">
-                      <span>{t.level}</span>
-                      <select
+                    <div className="cv-field">
+                      <span aria-hidden="true">{t.level}</span>
+                      <SelectField
+                        label={t.level}
                         value={item.level}
-                        onChange={(event) =>
+                        options={languageLevels.map((level) => ({
+                          value: level,
+                          label: t.languageLevels[level],
+                        }))}
+                        onChange={(value) =>
                           update({
                             languages: cv.languages.map((entry, i) =>
                               i === index
-                                ? {
-                                    ...entry,
-                                    level: event.target.value as LanguageLevel,
-                                  }
+                                ? { ...entry, level: value as LanguageLevel }
                                 : entry,
                             ),
                           })
                         }
-                      >
-                        {languageLevels.map((level) => (
-                          <option key={level} value={level}>
-                            {t.languageLevels[level]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                      />
+                    </div>
                   </div>
                   {entryActions('languages', index)}
                 </div>
               ))}
               <button
                 type="button"
+                className="ds-btn ds-btn--secondary cv-add"
                 disabled={cv.languages.length >= 10}
                 onClick={() =>
                   update({
@@ -1368,7 +1406,7 @@ export function CvBuilder() {
                   })
                 }
               >
-                <Plus size={16} />
+                <Plus aria-hidden="true" />
                 {t.add}
               </button>
             </Section>

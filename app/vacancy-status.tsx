@@ -3,7 +3,7 @@ export function VacancyStatus({ seen }: { seen: boolean }) {
   if (!seen) return null;
   return (
     <span className="vacancy-status status-seen">
-      <Eye size={12} aria-hidden="true" />
+      <Eye size={14} aria-hidden="true" />
       ნანახია
     </span>
   );

@@ -810,3 +810,141 @@ void test('Awork stores only a recognized city and keeps the address as a fact',
       );
   }
 });
+
+void test('Awork pay: one figure or a range, in lari or dollars; anything else stays text', () => {
+  const url = 'https://awork.ge/user/vacancy/6a8c01bee207671578b2cc64';
+  const page = (salary: string) => `
+    <link rel="canonical" href="${url}">
+    <vacancy-details>
+      <div class="vacancy-start-end-date">1 იანვარი - 31 დეკემბერი</div>
+      <div class="vacancy-info"><div class="vacancy-content"><h4>კონსულტანტი</h4></div></div>
+      <business-card><div class="company-info"><h4>კომპანია</h4></div></business-card>
+      <div class="overview-item">
+        <div class="overview-item-title">ხელფასი</div>
+        <div class="overview-item-info">${salary}</div>
+      </div>
+      <div class="job-detail-description">გაყიდვების კონსულტანტი მაღაზიაში, სრული განაკვეთით.</div>
+    </vacancy-details>`;
+  // Salaries as awork.ge printed them on 2026-09-25.
+  for (const [salary, min, currency] of [
+    ['1200 ₾', 1200, 'GEL'],
+    ['1100-1300 ₾', 1100, 'GEL'],
+    ['1500-5000 ₾ + ბონუსი', 1500, 'GEL'],
+    ['1 200 ₾', 1200, 'GEL'],
+    ['600-800 $ + ბონუსი', 600, 'USD'],
+    ['800 $ + ბონუსი', 800, 'USD'],
+    ['1300-1100 ₾', null, 'GEL'],
+    ['1200 + ბონუსი', null, ''],
+    ['Part-Time – 750 GEL/month | Full-Time – 1500 GEL/month', null, ''],
+    ['ფიქსირებული 700 + ბონუსი (მოსალოდნელი ანაზღაურება 4000+ ლარი)', null, ''],
+  ] as const) {
+    const job = parseDetail('awork', page(salary), url);
+    assert.equal(job.salary, salary);
+    assert.equal(job.salaryMin, min, salary);
+    assert.equal(job.currency, currency, salary);
+    assert.equal(job.salaryPeriod, '');
+  }
+});
+
+void test('jobs.ge districts, metro stations and streets are Tbilisi; the text stays as the address', () => {
+  const hinted = (city: string) =>
+    parseDetail('jobs', jobsDetail(), jobsUrl, { city });
+  const address = (v: ReturnType<typeof hinted>) =>
+    v.facts?.filter((f) => f.label === 'მისამართი').map((f) => f.value);
+  for (const [raw, kept] of [
+    ['ვაკე', 'ვაკე'],
+    ['საბურთალო;', 'საბურთალო'],
+    ['რუსთაველის გამზ. 12', 'რუსთაველის გამზ. 12'],
+    ['დიდუბე', 'დიდუბე'],
+    ['მეტრო ვარკეთილი', 'მეტრო ვარკეთილი'],
+    ['თბილისი, ვაკე.', 'თბილისი, ვაკე'],
+  ]) {
+    const v = hinted(raw);
+    assert.equal(v.city, 'თბილისი', raw);
+    assert.deepEqual(address(v), [kept], raw);
+    assert.ok(!v.warnings?.some((w) => w.includes('მდებარეობა')), raw);
+    // The late hint path gives the same vacancy.
+    const late = applyListingHints(
+      'jobs',
+      parseDetail('jobs', jobsDetail(), jobsUrl),
+      {
+        city: raw,
+      },
+    );
+    assert.equal(late.city, 'თბილისი', raw);
+    assert.deepEqual(address(late), [kept], raw);
+  }
+  // A town is the town; the bare name needs no address.
+  const batumi = hinted('ბათუმი');
+  assert.equal(batumi.city, 'ბათუმი');
+  assert.deepEqual(address(batumi), []);
+  assert.equal(hinted('ქუთაისი;').city, 'ქუთაისი');
+  // Remote work has no city and no "location unclear" warning.
+  for (const raw of ['დისტანციურად', 'დისტანციური']) {
+    const remote = hinted(raw);
+    assert.equal(remote.city, '', raw);
+    assert.equal(remote.mode, 'დისტანციური', raw);
+    assert.ok(!remote.warnings?.some((w) => w.includes('მდებარეობა')), raw);
+    const late = applyListingHints(
+      'jobs',
+      parseDetail('jobs', jobsDetail(), jobsUrl),
+      {
+        city: raw,
+      },
+    );
+    assert.equal(late.city, '', raw);
+    assert.equal(late.mode, 'დისტანციური', raw);
+  }
+  // An address the page already stated is not replaced; unknown text is kept as written.
+  const stated = applyListingHints(
+    'jobs',
+    {
+      ...parseDetail('jobs', jobsDetail(), jobsUrl),
+      facts: [{ label: 'მისამართი', value: 'ჭავჭავაძის 1' }],
+    },
+    { city: 'ვაკე' },
+  );
+  assert.deepEqual(address(stated), ['ჭავჭავაძის 1']);
+  assert.equal(hinted('სხვადასხვა ლოკაცია').city, 'სხვადასხვა ლოკაცია');
+});
+
+void test('cleanText decodes entities left over from double encoding, once', () => {
+  assert.equal(
+    cleanText(
+      '<p>Tom &amp;amp; Jerry &amp;quot;R&amp;D&amp;quot; &amp;#8217;s &amp;#x41; &amp;lt;b&amp;gt;</p>',
+    ),
+    'Tom & Jerry "R&D" ’s A <b>',
+  );
+  // Real ampersands and incomplete references stay as written; a second level is not undone.
+  assert.equal(
+    cleanText('<p>AT&amp;T, R&amp;D &amp;amp Co</p>'),
+    'AT&T, R&D &amp Co',
+  );
+  assert.equal(cleanText('<p>&amp;amp;lt;</p>'), '&lt;');
+  assert.equal(cleanText('<p>&amp;#0; &amp;#xD800;</p>'), '&#0; &#xD800;');
+});
+
+void test('v.dk.ge keeps the company logo from its own upload host', () => {
+  const detail = (logo: unknown) =>
+    JSON.stringify({
+      id: 321,
+      status: 'published',
+      deleted_at: null,
+      created_at: '2026-09-24 00:00:00.000000',
+      PositionDetail: { text: 'გაყიდვების მენეჯერი' },
+      CompanyDetail: { name: 'შპს კომპანია', logo },
+      VacancyLocation: { text: 'თბილისი' },
+      additional_info:
+        '<p>ვეძებთ გამოცდილ გაყიდვების მენეჯერს ჩვენს გუნდში სამუშაოდ.</p>',
+    });
+  const url = 'https://v.dk.ge/VacancyDetails/321';
+  const logo =
+    'https://recruting.dkcapital.ge/uploads/Logos/f29263873ad6bd7de.png';
+  assert.equal(parseDetail('dk', detail(logo), url).logoUrl, logo);
+  assert.equal(parseDetail('dk', detail(''), url).logoUrl, '');
+  assert.equal(parseDetail('dk', detail(null), url).logoUrl, '');
+  assert.equal(
+    parseDetail('dk', detail('https://evil.test/logo.png'), url).logoUrl,
+    '',
+  );
+});

@@ -10,7 +10,6 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   Activity,
-  ArrowUpRight,
   Building2,
   ChartColumn,
   Check,
@@ -32,8 +31,10 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
+import DateField from './date-field';
 import { attentionItems, OverviewPanel } from './overview';
 import { PostingInsights } from './posting-insights';
+import { SkeletonRows } from '../skeleton';
 import {
   Sheet,
   SheetContent,
@@ -70,6 +71,7 @@ import { runMessage } from '@/lib/run-messages';
 import { adminTime } from '@/lib/admin-format';
 import { ScraperMetricsPanel } from './scraper-metrics';
 import { ScraperLimits } from './scraper-limits';
+import { SelectField } from '../select-field';
 import type { ScraperMetrics } from '@/lib/server/scraper-metrics';
 type AdminSource = Source & { removed_count?: number };
 const names: Record<string, string> = {
@@ -104,6 +106,10 @@ const statusFilters: Record<string, string> = {
   archived: 'არქივი',
   rejected: 'უარყოფილი',
 };
+const intervalOptions = [180, 360, 720, 1440].map((m) => ({
+  value: String(m),
+  label: `${m / 60} საათი`,
+}));
 const time = (v: string | null) => (v ? adminTime(v) : 'ჯერ არ შემოწმებულა');
 async function request(url: string, body?: unknown) {
   const r = await fetch(
@@ -167,7 +173,10 @@ function EditorWrap({
   if (!submission) return <>{children}</>;
   return (
     <details className="raw-details submission-edit">
-      <summary>რედაქტირება დადასტურებამდე</summary>
+      <summary>
+        <ChevronDown className="admin-summary-mark" aria-hidden="true" />
+        რედაქტირება დადასტურებამდე
+      </summary>
       {children}
     </details>
   );
@@ -459,6 +468,7 @@ export default function AdminPanel() {
     }
   };
   const submission = !!selected?.submitted_at;
+  const [insightsRound, setInsightsRound] = useState(0);
   const markTest = async (test: boolean) => {
     if (!selected) return;
     setBusy(true);
@@ -466,6 +476,7 @@ export default function AdminPanel() {
     try {
       await request('/api/admin/submissions', { id: selected.id, test });
       setSelected({ ...selected, is_test: test });
+      setInsightsRound((n) => n + 1); // the form's statistics leave test posts out
       setMessage(test ? 'მონიშნულია ტესტად' : 'დაბრუნდა ნამდვილ განცხადებებში');
       await load();
     } catch (e) {
@@ -488,10 +499,10 @@ export default function AdminPanel() {
   const jobList = () => (
     <>
       {loading ? (
-        <p className="empty">იტვირთება…</p>
+        <SkeletonRows rows={4} block label="ვაკანსიები იტვირთება" />
       ) : !jobs.length ? (
         <div className="empty">
-          <Layers3 size={32} />
+          <Layers3 size={20} />
           {tab === 'submissions' ? (
             <>
               <h3>
@@ -511,7 +522,7 @@ export default function AdminPanel() {
           )}
         </div>
       ) : (
-        <div className="admin-job-list">
+        <div className="admin-job-list ds-appear-list">
           {jobs.map((j) => (
             <button className="admin-job" key={j.id} onClick={() => openJob(j)}>
               <CompanyLogo company={j.draft.company} url={j.draft.logoUrl} />
@@ -540,7 +551,7 @@ export default function AdminPanel() {
                     {vacancyStats?.data?.[j.id]?.total.view ?? '—'}
                   </small>
                 )}
-                {j.is_test && <span className="status">ტესტი</span>}
+                {j.is_test && <span className="ds-badge">ტესტი</span>}
                 {j.submitted_at && j.status === 'pending' ? (
                   <span className="status status-pending">
                     დადასტურებას ელოდება
@@ -552,44 +563,54 @@ export default function AdminPanel() {
                 )}
                 {j.requested_placement &&
                   j.requested_placement !== 'standard' && (
-                    <span className="review-label">
+                    <span className="ds-badge ds-badge--violet">
                       {placementLabels[j.requested_placement]}
                     </span>
                   )}
                 {!j.submitted_at &&
                   (j.automation_paused || !j.automation_managed) && (
-                    <span className="review-label">ხელით მართული</span>
+                    <span className="ds-badge">ხელით მართული</span>
                   )}
                 {!j.submitted_at &&
                   j.automation_reason &&
                   j.status !== 'published' && (
-                    <span className="review-label">
+                    <span className="ds-badge ds-badge--warning">
                       {automationReasons[j.automation_reason] ||
                         j.automation_reason}
                     </span>
                   )}
                 {j.needs_review &&
                   !['pending', 'rejected'].includes(j.status) && (
-                    <span className="review-label">
+                    <span className="ds-badge ds-badge--warning">
                       ცვლილება შესამოწმებელია
                     </span>
                   )}
                 {j.duplicates.length > 0 && (
-                  <span className="review-label">შესაძლო დუბლიკატი</span>
+                  <span className="ds-badge ds-badge--warning">
+                    შესაძლო დუბლიკატი
+                  </span>
                 )}
-                <ArrowUpRight size={17} />
               </div>
             </button>
           ))}
         </div>
       )}
       <div className="admin-pagination">
-        <span>{total} ჩანაწერი</span>
-        <button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+        <span className="admin-pagination-count">
+          {loading ? '' : `${total} ჩანაწერი`}
+        </span>
+        <button
+          type="button"
+          className="ds-btn ds-btn--secondary ds-btn--sm"
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+        >
           წინა
         </button>
         <span>{page}</span>
         <button
+          type="button"
+          className="ds-btn ds-btn--secondary ds-btn--sm"
           disabled={page * 30 >= total}
           onClick={() => setPage((p) => p + 1)}
         >
@@ -682,14 +703,14 @@ export default function AdminPanel() {
         <Brand />
         <button
           type="button"
-          className="admin-menu-button"
+          className="admin-menu-button ds-btn ds-btn--secondary"
           aria-expanded={menuOpen}
           aria-controls="admin-nav"
           onClick={() => setMenuOpen((open) => !open)}
         >
-          {current?.label ?? 'მენიუ'}
+          <span>{current?.label ?? 'მენიუ'}</span>
           {!!attention && <b>{attention}</b>}
-          <ChevronDown size={16} strokeWidth={1.75} aria-hidden="true" />
+          <ChevronDown size={16} aria-hidden="true" />
         </button>
       </div>
       {menuOpen && (
@@ -716,7 +737,7 @@ export default function AdminPanel() {
                   aria-current={tab === id ? 'page' : undefined}
                   onClick={() => go(id)}
                 >
-                  <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+                  <Icon size={16} aria-hidden="true" />
                   <span>{label}</span>
                   {!!count && (
                     <b className={alert ? 'admin-count-alert' : undefined}>
@@ -730,7 +751,7 @@ export default function AdminPanel() {
         </nav>
         <div className="admin-side-foot">
           <Link href="/?preview=1" target="_blank">
-            <ExternalLink size={15} strokeWidth={1.75} aria-hidden="true" />
+            <ExternalLink size={16} aria-hidden="true" />
             საიტის ნახვა
           </Link>
           <button
@@ -740,7 +761,7 @@ export default function AdminPanel() {
               window.location.assign('/admin');
             }}
           >
-            <LogOut size={15} strokeWidth={1.75} aria-hidden="true" />
+            <LogOut size={16} aria-hidden="true" />
             გასვლა
           </button>
         </div>
@@ -753,14 +774,14 @@ export default function AdminPanel() {
         )}
         {message && (
           <output className="admin-toast">
-            <Check size={16} strokeWidth={2} aria-hidden="true" />
+            <Check size={16} aria-hidden="true" />
             {message}
             <button
               type="button"
               onClick={() => setMessage('')}
               aria-label="შეტყობინების დახურვა"
             >
-              <X size={15} strokeWidth={1.75} />
+              <X size={16} />
             </button>
           </output>
         )}
@@ -796,13 +817,14 @@ export default function AdminPanel() {
               JOBX-ზე ფორმით გაგზავნილი; საიტზე მხოლოდ შენი დადასტურებით ჩნდება.
             </SectionHeading>
             <fieldset
-              className="submission-views"
+              className="admin-chips admin-chips--scroll"
               aria-label="ჩვენი ვაკანსიების სტატუსი"
             >
               {submissionViews.map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
+                  className="ds-chip"
                   aria-pressed={submissionView === key}
                   onClick={() => {
                     setPage(1);
@@ -816,7 +838,7 @@ export default function AdminPanel() {
             {jobList()}
             {/* Measured only once there is something to measure: after the queue, not before it. */}
             <SubmissionPerformance onOpen={(id) => void openJobById(id)} />
-            <PostingInsights />
+            <PostingInsights key={insightsRound} />
           </section>
         )}
         {tab === 'vacancies' && (
@@ -869,7 +891,7 @@ export default function AdminPanel() {
                   : `შემოტანილის დადასტურება (${counts.pending - counts.submissions})`}
               </button>
               <div className="admin-search">
-                <Search size={18} />
+                <Search size={16} />
                 <input
                   aria-label="ვაკანსიის ძებნა ადმინში"
                   placeholder="პოზიცია ან კომპანია"
@@ -913,11 +935,12 @@ export default function AdminPanel() {
                 options={Object.values(listingSourceNames)}
               />
               <button
-                className="icon-button"
+                type="button"
+                className="ds-btn ds-btn--secondary ds-btn--icon"
                 onClick={() => void load()}
                 aria-label="სიის განახლება"
               >
-                <RefreshCw size={18} />
+                <RefreshCw size={16} />
               </button>
             </div>
             {jobList()}
@@ -1020,13 +1043,13 @@ export default function AdminPanel() {
                 </span>
                 {github?.latest && (
                   <a href={github.latest.url} target="_blank" rel="noreferrer">
+                    <ExternalLink size={14} aria-hidden="true" />
                     ბოლო GitHub გაშვება: {time(github.latest.startedAt)} ·{' '}
                     {github.latest.status === 'completed'
                       ? github.latest.conclusion === 'success'
                         ? 'დასრულდა'
                         : 'შედეგი შესამოწმებელია'
-                      : 'რიგშია / მიმდინარეობს'}{' '}
-                    <ExternalLink size={13} />
+                      : 'რიგშია / მიმდინარეობს'}
                   </a>
                 )}
                 {github && !github.available && (
@@ -1088,31 +1111,21 @@ export default function AdminPanel() {
                 }
               />
               <div className="scraper-preferences">
-                <label>
+                <label htmlFor="all-sources-interval">
                   ყველა წყაროს ინტერვალი
-                  <select
-                    className="choice"
-                    aria-label="ყველა წყაროს ინტერვალი"
+                  <SelectField
+                    id="all-sources-interval"
                     disabled={busy || !sources.length}
-                    value={commonInterval ?? ''}
-                    onChange={(e) =>
+                    value={commonInterval == null ? '' : String(commonInterval)}
+                    placeholder="წყაროებს განსხვავებული ინტერვალი აქვს"
+                    options={intervalOptions}
+                    onChange={(v) =>
                       void sourceAction(
                         { id: 'all' },
-                        {
-                          action: 'configure',
-                          intervalMinutes: Number(e.target.value),
-                        },
+                        { action: 'configure', intervalMinutes: Number(v) },
                       )
                     }
-                  >
-                    <option value="" disabled>
-                      წყაროებს განსხვავებული ინტერვალი აქვს
-                    </option>
-                    <option value={180}>3 საათი</option>
-                    <option value={360}>6 საათი</option>
-                    <option value={720}>12 საათი</option>
-                    <option value={1440}>24 საათი</option>
-                  </select>
+                  />
                 </label>
                 <button
                   className="secondary-button"
@@ -1127,7 +1140,8 @@ export default function AdminPanel() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  ბაზის მოხმარება <ExternalLink size={14} />
+                  <ExternalLink size={14} aria-hidden="true" />
+                  ბაზის მოხმარება
                 </a>
               </div>
               <p className="admin-helper">
@@ -1150,7 +1164,7 @@ export default function AdminPanel() {
                     </span>
                   </div>
                   <p className="source-last">
-                    <Clock3 size={15} />
+                    <Clock3 size={14} />
                     ბოლო წარმატება: {time(s.last_success_at)}
                   </p>
                   <dl className="source-timing">
@@ -1204,10 +1218,20 @@ export default function AdminPanel() {
                     )}
                   </div>
                   <details className="source-settings">
-                    <summary>პარამეტრები და დეტალები</summary>
+                    <summary>
+                      <ChevronDown
+                        className="admin-summary-mark"
+                        aria-hidden="true"
+                      />
+                      პარამეტრები და დეტალები
+                    </summary>
                     {!!s.top_errors?.length && (
                       <details className="source-errors">
                         <summary>
+                          <ChevronDown
+                            className="admin-summary-mark"
+                            aria-hidden="true"
+                          />
                           ყველაზე ხშირი პასუხი წყაროდან ({s.errored})
                         </summary>
                         <ul>
@@ -1345,23 +1369,18 @@ export default function AdminPanel() {
                     </label>
                     <div className="interval-row">
                       <span>სიის შემოწმება</span>
-                      <select
-                        className="choice"
-                        aria-label={`${s.name}: შემოწმების ინტერვალი`}
-                        value={s.interval_minutes}
+                      <SelectField
+                        label={`${s.name}: შემოწმების ინტერვალი`}
+                        value={String(s.interval_minutes)}
                         disabled={busy}
-                        onChange={(e) =>
+                        options={intervalOptions}
+                        onChange={(v) =>
                           void sourceAction(s, {
                             action: 'configure',
-                            intervalMinutes: Number(e.target.value),
+                            intervalMinutes: Number(v),
                           })
                         }
-                      >
-                        <option value={180}>3 საათი</option>
-                        <option value={360}>6 საათი</option>
-                        <option value={720}>12 საათი</option>
-                        <option value={1440}>24 საათი</option>
-                      </select>
+                      />
                     </div>
                     <ScraperLimits
                       sources={[s]}
@@ -1381,7 +1400,13 @@ export default function AdminPanel() {
                           ავტომატურად გადაამოწმებს.
                         </p>
                         <details>
-                          <summary>შემოწმების დეტალები</summary>
+                          <summary>
+                            <ChevronDown
+                              className="admin-summary-mark"
+                              aria-hidden="true"
+                            />
+                            შემოწმების დეტალები
+                          </summary>
                           <p>{runMessage(s.last_error)}</p>
                         </details>
                       </div>
@@ -1456,7 +1481,7 @@ export default function AdminPanel() {
             <SectionHeading title="გაშვებები">
               ყოველი წყაროს ბოლო გაშვებები და მათი შედეგი.
             </SectionHeading>
-            <div className="run-list">
+            <div className="run-list ds-appear-list">
               {runs.map((r) => (
                 <div className="run-row" key={r.id}>
                   <strong>
@@ -1467,16 +1492,21 @@ export default function AdminPanel() {
                   <span className={`status status-${r.status}`}>
                     {names[r.status] || r.status}
                   </span>
-                  <span>{time(r.started_at)}</span>
-                  <span>
-                    ახალი: {r.imported} · შეცვლილი: {r.changed} · შეცდომა:{' '}
-                    {r.failed}
+                  <time dateTime={r.started_at}>{time(r.started_at)}</time>
+                  <span className="run-counts">
+                    ახალი: <b>{r.imported}</b> · შეცვლილი: <b>{r.changed}</b> ·
+                    შეცდომა:{' '}
+                    <b data-bad={r.failed > 0 || undefined}>{r.failed}</b>
                   </span>
                   {r.error && <p>{runMessage(r.error)}</p>}
                 </div>
               ))}
               {!runs.length && (
-                <p className="empty">შემოტანის ისტორია ჯერ ცარიელია.</p>
+                <div className="empty">
+                  <History size={20} aria-hidden="true" />
+                  <h3>გაშვება ჯერ არ ყოფილა</h3>
+                  <p>წყაროს პირველი შემოწმების შემდეგ შედეგი აქ გამოჩნდება.</p>
+                </div>
               )}
             </div>
           </section>
@@ -1491,12 +1521,16 @@ export default function AdminPanel() {
         <SheetContent className="edit-sheet">
           <SheetHeader>
             <SheetDescription>
-              {selected?.draft.company} ·{' '}
-              {submission && selected?.status === 'pending'
-                ? 'დადასტურებას ელოდება'
-                : selected
-                  ? names[selected.status]
-                  : ''}
+              {[
+                selected?.draft.company,
+                submission && selected?.status === 'pending'
+                  ? 'დადასტურებას ელოდება'
+                  : selected
+                    ? names[selected.status]
+                    : '',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </SheetDescription>
             <SheetTitle className="detail-title">
               {submission
@@ -1548,15 +1582,12 @@ export default function AdminPanel() {
                   <label htmlFor="admin-placement">
                     განთავსება დამტკიცებისას
                   </label>
-                  <select
+                  <SelectField
                     id="admin-placement"
                     value={placement}
                     disabled={busy}
-                    onChange={(e) =>
-                      setPlacement(e.target.value as PlacementTier)
-                    }
-                  >
-                    {placementTiers
+                    onChange={(v) => setPlacement(v as PlacementTier)}
+                    options={placementTiers
                       .filter(
                         (t) =>
                           t === 'standard' ||
@@ -1564,31 +1595,33 @@ export default function AdminPanel() {
                           (t === 'vip' && selected.vip_available) ||
                           (t === 'premium' && !!selected.invoice),
                       )
-                      .map((t) => (
-                        <option key={t} value={t}>
-                          {placementLabels[t]}
-                          {t === 'vip' && !selected.placement_expires_at
+                      .map((t) => ({
+                        value: t,
+                        label:
+                          placementLabels[t] +
+                          (t === 'vip' && !selected.placement_expires_at
                             ? ' · უფასოდ 14 დღე'
-                            : ''}
-                        </option>
-                      ))}
-                  </select>
+                            : ''),
+                      }))}
+                  />
                 </section>
               )}
               {selected.invoice && (
-                <section className="notice">
+                <section className="notice editor-notice">
                   <h3>ინვოისი · {invoiceStatuses[selected.invoice.status]}</h3>
                   <a
+                    className="editor-notice-link"
                     href={`/invoices/${selected.invoice.token}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
+                    <ExternalLink size={14} aria-hidden="true" />
                     {invoiceNumber(selected.invoice.number)} ·{' '}
                     {selected.invoice.amount_gel} ₾
                   </a>
                   {selected.invoice.status === 'pending' && (
                     <button
-                      className="secondary-button"
+                      className="ds-btn ds-btn--secondary ds-btn--sm"
                       disabled={busy}
                       onClick={() => setConfirm({ action: 'confirm-payment' })}
                     >
@@ -1597,7 +1630,7 @@ export default function AdminPanel() {
                   )}
                   {selected.invoice.status === 'refund_required' && (
                     <button
-                      className="secondary-button"
+                      className="ds-btn ds-btn--secondary ds-btn--sm"
                       disabled={busy}
                       onClick={() => setConfirm({ action: 'confirm-refund' })}
                     >
@@ -1633,8 +1666,8 @@ export default function AdminPanel() {
                   <div
                     className={
                       selected.automation_paused || !selected.automation_managed
-                        ? 'notice'
-                        : 'automation-state'
+                        ? 'notice editor-notice'
+                        : 'automation-state editor-notice'
                     }
                   >
                     <strong>
@@ -1663,7 +1696,7 @@ export default function AdminPanel() {
                       (selected.automation_paused ||
                         !selected.automation_managed) && (
                         <button
-                          className="secondary-button"
+                          className="ds-btn ds-btn--secondary ds-btn--sm"
                           disabled={busy}
                           onClick={() =>
                             setConfirm({ action: 'resume-automation' })
@@ -1812,12 +1845,12 @@ export default function AdminPanel() {
                       onChange={(v) => change('mode', v === 'ყველა' ? '' : v)}
                     />
                   </label>
-                  <label>
+                  <label htmlFor="edit-deadline">
                     ბოლო ვადა
-                    <input
-                      type="date"
+                    <DateField
+                      id="edit-deadline"
                       value={draft.deadline}
-                      onChange={(e) => change('deadline', e.target.value)}
+                      onChange={(v) => change('deadline', v)}
                     />
                   </label>
                   <label className="full-width">
@@ -1840,6 +1873,10 @@ export default function AdminPanel() {
                 {!!draft.facts?.length && (
                   <details className="raw-details">
                     <summary>
+                      <ChevronDown
+                        className="admin-summary-mark"
+                        aria-hidden="true"
+                      />
                       დამატებითი პირობების რედაქტირება ({draft.facts.length})
                     </summary>
                     <div className="metadata-editor">
@@ -1864,6 +1901,7 @@ export default function AdminPanel() {
                           </label>
                           <button
                             type="button"
+                            className="ds-btn ds-btn--danger ds-btn--sm"
                             onClick={() =>
                               change(
                                 'facts',
@@ -1881,6 +1919,10 @@ export default function AdminPanel() {
                 {!!draft.applicationLinks?.length && (
                   <details className="raw-details">
                     <summary>
+                      <ChevronDown
+                        className="admin-summary-mark"
+                        aria-hidden="true"
+                      />
                       განცხადების ბმულები ({draft.applicationLinks.length})
                     </summary>
                     <div className="metadata-editor">
@@ -1904,6 +1946,7 @@ export default function AdminPanel() {
                           </label>
                           <button
                             type="button"
+                            className="ds-btn ds-btn--danger ds-btn--sm"
                             onClick={() =>
                               change(
                                 'applicationLinks',
@@ -1922,7 +1965,13 @@ export default function AdminPanel() {
                 )}
                 {!submission && (
                   <details className="raw-details">
-                    <summary>წყაროს ბოლო ვერსიის შედარება</summary>
+                    <summary>
+                      <ChevronDown
+                        className="admin-summary-mark"
+                        aria-hidden="true"
+                      />
+                      წყაროს ბოლო ვერსიის შედარება
+                    </summary>
                     {selected.items.map((i) => (
                       <div key={i.id}>
                         <p>
@@ -2035,10 +2084,11 @@ export default function AdminPanel() {
                     disabled={busy}
                     onClick={() => setConfirm({ action: 'publish' })}
                   >
-                    დადასტურება და გამოქვეყნება <Check size={17} />
+                    <Check size={16} aria-hidden="true" />
+                    დადასტურება და გამოქვეყნება
                   </button>
                   <button
-                    className="secondary-button"
+                    className="ds-btn ds-btn--danger"
                     disabled={busy}
                     onClick={() => setConfirm({ action: 'reject' })}
                   >
@@ -2066,27 +2116,35 @@ export default function AdminPanel() {
                     disabled={busy}
                     onClick={() => setConfirm({ action: 'publish' })}
                   >
-                    გამოქვეყნება <Check size={17} />
+                    <Check size={16} aria-hidden="true" />
+                    გამოქვეყნება
                   </button>
                   <button
+                    className="ds-btn ds-btn--ghost"
                     disabled={busy}
                     onClick={() => setConfirm({ action: 'archive' })}
                   >
                     არქივში გადატანა
                   </button>
                   <button
+                    className="ds-btn ds-btn--ghost admin-ghost-danger"
                     disabled={busy}
                     onClick={() => setConfirm({ action: 'reject' })}
                   >
                     უარყოფა
                   </button>
                   {['archived', 'rejected'].includes(selected.status) && (
-                    <button disabled={busy} onClick={() => void act('restore')}>
+                    <button
+                      className="ds-btn ds-btn--ghost"
+                      disabled={busy}
+                      onClick={() => void act('restore')}
+                    >
                       შემოტანილებში დაბრუნება
                     </button>
                   )}
                   {selected.needs_review && selected.status === 'published' && (
                     <button
+                      className="ds-btn ds-btn--ghost"
                       disabled={busy}
                       onClick={() => void act('dismiss-update')}
                     >

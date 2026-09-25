@@ -6,8 +6,18 @@ import type {
   GeoJSONSource,
   MapMouseEvent,
 } from 'maplibre-gl';
-import { Banknote, ChevronUp, List, MapPin, Search, X } from 'lucide-react';
+import {
+  Banknote,
+  ChevronUp,
+  List,
+  MapPin,
+  MapPinOff,
+  Search,
+  X,
+} from 'lucide-react';
+import { trackAction } from '@/lib/analytics-client';
 import { Choice } from '../choice';
+import { SkeletonRows } from '../skeleton';
 import { CompanyLogo } from '../company-logo';
 import { compactSalary } from '@/lib/vacancy-presentation';
 import { vacancySegment } from '@/lib/vacancy-navigation';
@@ -62,7 +72,11 @@ export function JobMap() {
   const [hovered, setHovered] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
   const [ready, setReady] = useState(false);
+  // The city chip the map was last sent to; a pan or zoom by hand clears it.
+  const [city, setCity] = useState<string | null>(null);
 
+  // Once per visit: that the map page itself was opened.
+  useEffect(() => trackAction('map_page'), []);
   useEffect(() => {
     const controller = new AbortController();
     void fetch('/api/map', { signal: controller.signal })
@@ -98,6 +112,66 @@ export function JobMap() {
   );
   const byId = useMemo(() => new Map((all ?? []).map((v) => [v.id, v])), [all]);
   const selected = active ? byId.get(active) : undefined;
+  /* The phone's card rail: what the map shows, nearest to its centre first, with the opened
+     vacancy always on it. */
+  const nearby = useMemo(() => {
+    if (!bounds) return visible.slice(0, 25);
+    const cx = (bounds[0] + bounds[2]) / 2;
+    const cy = (bounds[1] + bounds[3]) / 2;
+    const dist = (v: MapVacancy) =>
+      Math.min(
+        ...v.places.map(([lat, lon]) => (lat - cy) ** 2 + (lon - cx) ** 2),
+      );
+    const list = [...visible].sort((a, b) => dist(a) - dist(b)).slice(0, 25);
+    if (selected && !list.some((v) => v.id === selected.id))
+      list.unshift(selected);
+    return list;
+  }, [visible, bounds, selected]);
+  const rail = useRef<HTMLDivElement>(null);
+  const railMoved = useRef(false);
+  const railTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // A pin tapped on the map brings its card to the middle of the rail.
+  useEffect(() => {
+    if (!active || railMoved.current) {
+      railMoved.current = false;
+      return;
+    }
+    rail.current
+      ?.querySelector<HTMLElement>(`[data-id="${active}"]`)
+      ?.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      });
+  }, [active]);
+  /* Swiping the rail picks the card that settles in the middle and pans the map to its pin,
+     keeping the pin clear of the rail. */
+  const onRailScroll = () => {
+    clearTimeout(railTimer.current);
+    railTimer.current = setTimeout(() => {
+      const box = rail.current;
+      if (!box) return;
+      const mid = box.getBoundingClientRect().left + box.clientWidth / 2;
+      let best: HTMLElement | null = null;
+      let gap = Infinity;
+      for (const el of box.querySelectorAll<HTMLElement>('[data-id]')) {
+        const r = el.getBoundingClientRect();
+        const d = Math.abs(r.left + r.width / 2 - mid);
+        if (d < gap) [gap, best] = [d, el];
+      }
+      const id = best?.dataset.id;
+      const v = id ? byId.get(id) : undefined;
+      if (!v || id === active) return;
+      railMoved.current = true;
+      setActive(id!);
+      trackAction('map_card');
+      const [lat, lon] = v.places[0];
+      map.current?.easeTo({
+        center: [lon, lat],
+        padding: { top: 0, bottom: 190, left: 0, right: 0 },
+      });
+    }, 140);
+  };
 
   // The map is created once; data and highlight changes are pushed into it below.
   useEffect(() => {
@@ -121,18 +195,24 @@ export function JobMap() {
           [47.2, 43.8],
         ],
         attributionControl: { compact: true },
+        locale: {
+          'NavigationControl.ZoomIn': 'გადიდება',
+          'NavigationControl.ZoomOut': 'დაპატარავება',
+          'GeolocateControl.FindMyLocation': 'ჩემი მდებარეობა',
+          'GeolocateControl.LocationNotAvailable': 'მდებარეობა მიუწვდომელია',
+          'AttributionControl.ToggleAttribution': 'რუკის წყაროები',
+        },
       });
       map.current = m;
       m.addControl(
         new maplibre.NavigationControl({ showCompass: false }),
         'bottom-right',
       );
-      m.addControl(
-        new maplibre.GeolocateControl({
-          positionOptions: { enableHighAccuracy: true },
-        }),
-        'bottom-right',
-      );
+      const locate = new maplibre.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+      });
+      locate.on('geolocate', () => trackAction('map_locate'));
+      m.addControl(locate, 'bottom-right');
       m.on('load', () => {
         // Street and place names in Georgian where OpenStreetMap has them.
         for (const layer of m.getStyle().layers)
@@ -186,6 +266,14 @@ export function JobMap() {
           },
           paint: { 'text-color': '#ffffff' },
         });
+        // A pin is 15px across; a finger needs about 40. This invisible ring takes the taps.
+        m.addLayer({
+          id: 'points-hit',
+          type: 'circle',
+          source: 'jobs',
+          filter: ['!', ['has', 'point_count']],
+          paint: { 'circle-radius': 20, 'circle-opacity': 0 },
+        });
         m.addLayer({
           id: 'points',
           type: 'circle',
@@ -220,6 +308,10 @@ export function JobMap() {
           setBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
         };
         m.on('moveend', report);
+        m.on('dragstart', () => setCity(null));
+        m.on('zoomstart', (e: { originalEvent?: Event }) => {
+          if (e.originalEvent) setCity(null);
+        });
         report();
         m.on('click', 'clusters', (e: MapMouseEvent) => {
           const f = m.queryRenderedFeatures(e.point, {
@@ -228,6 +320,7 @@ export function JobMap() {
           if (!f) return;
           void (m.getSource('jobs') as GeoJSONSource)
             .getClusterExpansionZoom(f.properties.cluster_id)
+            .finally(() => trackAction('map_cluster'))
             .then((zoom) =>
               m.easeTo({
                 center: (
@@ -237,19 +330,28 @@ export function JobMap() {
               }),
             );
         });
-        m.on('click', 'points', (e: MapMouseEvent) => {
-          const f = m.queryRenderedFeatures(e.point, { layers: ['points'] })[0];
-          if (f) setActive(String(f.properties.job));
+        m.on('click', 'points-hit', (e: MapMouseEvent) => {
+          const f = m.queryRenderedFeatures(e.point, {
+            layers: ['points', 'points-hit'],
+          })[0];
+          if (f) {
+            setActive(String(f.properties.job));
+            trackAction('map_pin');
+          }
         });
         m.on('click', (e: MapMouseEvent) => {
           if (
             !m.queryRenderedFeatures(e.point, {
-              layers: ['points', 'clusters'],
+              layers: ['points', 'points-hit', 'clusters'],
             }).length
           )
             setActive(null);
         });
-        for (const id of ['points', 'clusters']) {
+        // The compact attribution starts folded on every screen: a phone has no room for a full line.
+        m.getContainer()
+          .querySelector('.maplibregl-ctrl-attrib')
+          ?.classList.remove('maplibregl-compact-show');
+        for (const id of ['points-hit', 'clusters']) {
           m.on(
             'mouseenter',
             id,
@@ -287,6 +389,7 @@ export function JobMap() {
   }, [ready, hovered, active, filtered]);
 
   const focus = (v: MapVacancy) => {
+    trackAction('map_card');
     setActive(v.id);
     setSheet(false);
     const [lat, lon] = v.places[0];
@@ -302,43 +405,62 @@ export function JobMap() {
       <div className="job-map-bar">
         <div className="job-map-title">
           <h1>ვაკანსიები რუკაზე</h1>
-          <p>
-            {all
-              ? `${whole.format(total)} ვაკანსია ზუსტი მისამართით`
-              : 'იტვირთება…'}
-          </p>
+          {all ? (
+            <p>{whole.format(total)} ვაკანსია ზუსტი მისამართით</p>
+          ) : (
+            <p aria-label="ვაკანსიები იტვირთება">
+              <span className="ds-skeleton job-map-count-skeleton" />
+            </p>
+          )}
         </div>
         <label className="job-map-search">
-          <Search size={16} strokeWidth={1.75} aria-hidden="true" />
+          <Search size={16} aria-hidden="true" />
           <input
             type="search"
             value={query}
             placeholder="პოზიცია ან კომპანია"
             onChange={(e) => setQuery(e.target.value)}
+            // Counted once a search is left behind, not on every keystroke.
+            onBlur={(e) => {
+              if (e.target.value.trim()) trackAction('map_search');
+            }}
           />
         </label>
         <fieldset className="job-map-chips" aria-label="ფილტრები">
           <button
             type="button"
+            className="ds-chip"
             aria-pressed={paid}
-            onClick={() => setPaid((v) => !v)}
+            onClick={() => {
+              if (!paid) trackAction('map_paid');
+              setPaid((v) => !v);
+            }}
           >
-            <Banknote size={15} strokeWidth={1.75} aria-hidden="true" />
+            <Banknote aria-hidden="true" />
             ხელფასით
           </button>
           <Choice
             label="ყველა მიმართულება"
             value={category || 'ყველა'}
-            onChange={(v) => setCategory(v === 'ყველა' ? '' : v)}
+            onChange={(v) => {
+              if (v !== 'ყველა') trackAction('map_category');
+              setCategory(v === 'ყველა' ? '' : v);
+            }}
             options={categories.map(([name]) => name)}
           />
           {cities.map(([name, center, zoom]) => (
             <button
               key={name}
               type="button"
-              onClick={() => map.current?.easeTo({ center, zoom })}
+              className="ds-chip"
+              aria-pressed={city === name}
+              onClick={() => {
+                setCity(name);
+                trackAction('map_city');
+                map.current?.easeTo({ center, zoom });
+              }}
             >
-              <MapPin size={14} strokeWidth={1.75} aria-hidden="true" />
+              <MapPin aria-hidden="true" />
               {name}
             </button>
           ))}
@@ -351,28 +473,45 @@ export function JobMap() {
             type="button"
             className="job-map-handle"
             aria-expanded={sheet}
-            onClick={() => setSheet((v) => !v)}
+            onClick={() => {
+              if (!sheet) trackAction('map_sheet');
+              setSheet((v) => !v);
+            }}
           >
             <span aria-hidden="true" />
-            <b>{whole.format(visible.length)} ვაკანსია ამ ტერიტორიაზე</b>
+            <b>
+              {all ? (
+                `${whole.format(visible.length)} ვაკანსია ამ ტერიტორიაზე`
+              ) : (
+                <span className="ds-skeleton job-map-count-skeleton" />
+              )}
+            </b>
             {sheet ? (
-              <X size={16} strokeWidth={1.75} aria-hidden="true" />
+              <X size={16} aria-hidden="true" />
             ) : (
-              <ChevronUp size={16} strokeWidth={1.75} aria-hidden="true" />
+              <ChevronUp size={16} aria-hidden="true" />
             )}
           </button>
           <p className="job-map-hint">
-            <MapPin size={14} strokeWidth={1.75} aria-hidden="true" />
+            <MapPin size={14} aria-hidden="true" />
             რუკაზე მხოლოდ ის ვაკანსიებია, რომელთა მისამართიც ზუსტად, შენობამდე
             დადგინდა.
           </p>
-          {error && <p role="alert">{error}</p>}
-          {all && !visible.length && (
-            <p className="job-map-empty">
-              ამ ტერიტორიაზე ვაკანსია არ ჩანს. გაადიდე ან გადაიტანე რუკა.
+          {error && (
+            <p className="job-map-error" role="alert">
+              {error}
             </p>
           )}
-          <ul>
+          {!all && !error && (
+            <SkeletonRows rows={4} block label="ვაკანსიები იტვირთება" />
+          )}
+          {all && !visible.length && (
+            <div className="job-map-empty">
+              <MapPinOff aria-hidden="true" />
+              <p>ამ ტერიტორიაზე ვაკანსია არ ჩანს. გაადიდე ან გადაიტანე რუკა.</p>
+            </div>
+          )}
+          <ul className="ds-appear-list">
             {visible.slice(0, listLimit).map((v) => (
               <li key={v.id} data-active={active === v.id}>
                 <button
@@ -386,14 +525,16 @@ export function JobMap() {
                 >
                   <CompanyLogo company={v.company} url={v.logoUrl} />
                   <span className="job-map-card-text">
-                    {v.premium && <em>პრემიუმი</em>}
+                    {v.premium && (
+                      <em className="ds-badge ds-badge--warning">პრემიუმი</em>
+                    )}
                     <strong>{v.title}</strong>
                     <span>{v.company}</span>
                     {v.salary && (
                       <b>{compactSalary(v.salary, v.salaryPeriod)}</b>
                     )}
                     <small>
-                      <MapPin size={12} strokeWidth={1.75} aria-hidden="true" />
+                      <MapPin size={14} aria-hidden="true" />
                       {v.places.map((p) => p[2]).join(' · ')}
                     </small>
                   </span>
@@ -412,14 +553,14 @@ export function JobMap() {
         <div className="job-map-canvas">
           <div ref={box} className="job-map-gl" />
           {selected && (
-            <article className="job-map-pop">
+            <article className="job-map-pop ds-appear" key={selected.id}>
               <button
                 type="button"
-                className="job-map-pop-close"
+                className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm job-map-pop-close"
                 aria-label="დახურვა"
                 onClick={() => setActive(null)}
               >
-                <X size={16} strokeWidth={1.75} />
+                <X aria-hidden="true" />
               </button>
               <div className="job-map-pop-head">
                 <CompanyLogo
@@ -437,22 +578,75 @@ export function JobMap() {
                 </b>
               )}
               <p>
-                <MapPin size={13} strokeWidth={1.75} aria-hidden="true" />
+                <MapPin size={14} aria-hidden="true" />
                 {selected.places.map((p) => p[2]).join(' · ')}
               </p>
-              <a className="primary" href={href(selected)}>
+              <a
+                className="ds-btn ds-btn--primary"
+                href={href(selected)}
+                onClick={() => trackAction('map_open')}
+              >
                 ვაკანსიის ნახვა
               </a>
             </article>
           )}
           <button
             type="button"
-            className="job-map-listbtn"
-            onClick={() => setSheet(true)}
+            className="ds-btn ds-btn--secondary job-map-listbtn"
+            onClick={() => {
+              trackAction('map_sheet');
+              setSheet(true);
+            }}
           >
-            <List size={16} strokeWidth={1.75} aria-hidden="true" />
-            სია
+            <List size={16} aria-hidden="true" />
+            სია · {whole.format(visible.length)}
           </button>
+          {!!nearby.length && (
+            <div
+              className="job-map-rail"
+              ref={rail}
+              onScroll={onRailScroll}
+              aria-label="ვაკანსიები რუკის ამ ნაწილში"
+            >
+              {nearby.map((v) => (
+                <article
+                  key={v.id}
+                  className="job-map-slide"
+                  data-id={v.id}
+                  data-active={active === v.id}
+                >
+                  <div className="job-map-slide-head">
+                    <CompanyLogo company={v.company} url={v.logoUrl} />
+                    <div>
+                      {v.premium && (
+                        <span className="ds-badge ds-badge--warning">
+                          პრემიუმი
+                        </span>
+                      )}
+                      <strong>{v.title}</strong>
+                      <span>{v.company}</span>
+                    </div>
+                  </div>
+                  <p>
+                    {v.salary && (
+                      <b>{compactSalary(v.salary, v.salaryPeriod)}</b>
+                    )}
+                    <span>
+                      <MapPin size={14} aria-hidden="true" />
+                      {v.places[0][2]}
+                    </span>
+                  </p>
+                  <a
+                    className="ds-btn ds-btn--primary ds-btn--sm"
+                    href={href(v)}
+                    onClick={() => trackAction('map_open')}
+                  >
+                    ვაკანსიის ნახვა
+                  </a>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

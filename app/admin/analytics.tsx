@@ -1,4 +1,5 @@
 'use client';
+import { SkeletonRows } from '../skeleton';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import './analytics.css';
 import {
@@ -104,12 +105,13 @@ export function AnalyticsPanel() {
   return (
     <section className="admin-analytics">
       <div className="admin-analytics-bar">
-        <fieldset className="admin-analytics-windows">
+        <fieldset className="admin-chips">
           <legend className="sr-only">პერიოდი</legend>
           {windows.map((w) => (
             <button
               key={w.days}
               type="button"
+              className="ds-chip"
               aria-pressed={days === w.days}
               onClick={() => setDays(w.days)}
             >
@@ -120,7 +122,7 @@ export function AnalyticsPanel() {
         {data && <p className="admin-analytics-range">{rangeLabel(data)}</p>}
       </div>
       {!current ? (
-        <p className="admin-analytics-empty">იტვირთება…</p>
+        <SkeletonRows rows={3} block label="ანალიტიკა იტვირთება" />
       ) : current.error ? (
         <p role="alert" className="admin-error">
           {current.error}
@@ -213,7 +215,7 @@ export function AnalyticsPanel() {
               უშედეგო ძებნები პირველ რიგში. შედეგზე არჩეული ფილტრებიც მოქმედებს;
               ეს მომხმარებლების რაოდენობა არ არის.
             </p>
-            <div style={{ overflowX: 'auto' }}>
+            <div className="admin-table-scroll">
               <table className="admin-search-performance">
                 <thead>
                   <tr>
@@ -239,7 +241,9 @@ export function AnalyticsPanel() {
                 </tbody>
               </table>
               {!data!.searchPerformance.length && (
-                <p>ამ პერიოდში ძებნა არ დაფიქსირებულა.</p>
+                <p className="admin-analytics-empty admin-table-empty">
+                  ამ პერიოდში ძებნა არ დაფიქსირებულა.
+                </p>
               )}
             </div>
           </section>
@@ -416,7 +420,7 @@ function Activity({
                   x2={box.width - box.right}
                   y1={y(value)}
                   y2={y(value)}
-                  stroke="#eceef1"
+                  style={{ stroke: 'var(--ds-line)' }}
                 />
                 <text x={box.left - 8} y={y(value) + 4} textAnchor="end">
                   {whole.format(value)}
@@ -472,7 +476,7 @@ function Activity({
                   cy={y(hovered[measure.key])}
                   r="4"
                   fill={measure.colour}
-                  stroke="#fff"
+                  style={{ stroke: 'var(--ds-surface)' }}
                   strokeWidth="2"
                 />
               ))}

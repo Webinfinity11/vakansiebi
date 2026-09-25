@@ -1,4 +1,6 @@
 'use client';
+import { Eye, FileText, RefreshCw, Trash2, X } from 'lucide-react';
+import { SkeletonRows } from '../skeleton';
 import { adminTime } from '@/lib/admin-format';
 import { useEffect, useState } from 'react';
 import type { Cv } from '@/lib/cv';
@@ -31,7 +33,7 @@ export function ResumesPanel() {
       cache: 'no-store',
     })
       .then(async (response) => {
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok) throw Error(data.error || 'რეზიუმეები ვერ ჩაიტვირთა');
         setRows(data.resumes);
         setMore(data.more);
@@ -54,7 +56,7 @@ export function ResumesPanel() {
       const response = await fetch(`/api/admin/resumes?id=${id}`, {
         cache: 'no-store',
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) throw Error(data.error || 'რეზიუმე ვერ ჩაიტვირთა');
       setSelected({ id, cv: data.cv });
     } catch (e) {
@@ -74,7 +76,10 @@ export function ResumesPanel() {
         body: JSON.stringify({ id }),
       });
       if (!response.ok)
-        throw Error((await response.json()).error || 'წაშლა ვერ შესრულდა');
+        throw Error(
+          (await response.json().catch(() => ({}))).error ||
+            'წაშლა ვერ შესრულდა',
+        );
       if (selected?.id === id) setSelected(null);
       setVersion((n) => n + 1);
     } catch (e) {
@@ -86,52 +91,81 @@ export function ResumesPanel() {
   return (
     <section className="reports-section" aria-label="შენახული რეზიუმეები">
       <div className="reports-heading">
+        <h2>შენახული რეზიუმეები</h2>
         <button
           type="button"
-          className="secondary-button"
+          className="ds-btn ds-btn--secondary ds-btn--sm"
           disabled={busy || loading}
           onClick={() => {
             setLoading(true);
             setVersion((n) => n + 1);
           }}
         >
+          <RefreshCw size={16} aria-hidden="true" />
           განახლება
         </button>
       </div>
-      {error && <p role="alert">{error}</p>}
-      {loading && <p>რეზიუმეები იტვირთება…</p>}
-      {!loading && !rows.length && <p>შენახული რეზიუმეები არ არის.</p>}
-      <ul className="reports-list">
-        {rows.map((row) => (
-          <li key={row.id}>
-            <p>
-              {adminTime(row.createdAt)} ·{' '}
-              {row.language === 'ka' ? 'ქართული' : 'ინგლისური'} · {row.template}{' '}
-              · სისრულე: {row.completeness}%
-            </p>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={busy}
-              onClick={() => void open(row.id)}
-            >
-              ნახვა
-            </button>{' '}
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={busy}
-              onClick={() => void remove(row.id)}
-            >
-              წაშლა
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="reports-heading">
+      {error && (
+        <p role="alert" className="notice">
+          {error}
+        </p>
+      )}
+      {loading && <SkeletonRows rows={4} label="რეზიუმეები იტვირთება" />}
+      {!loading && !rows.length && !error && (
+        <div className="empty">
+          <FileText size={20} aria-hidden="true" />
+          <h3>შენახული რეზიუმე არ არის</h3>
+          <p>CV-ის ბილდერში PDF-ის ღილაკზე დაჭერისას რეზიუმე აქ შეინახება.</p>
+        </div>
+      )}
+      {!loading && !!rows.length && (
+        <ul className="reports-list resumes-list ds-appear-list">
+          {rows.map((row) => (
+            <li key={row.id} className="reports-item">
+              <div className="reports-details">
+                <div className="reports-meta">
+                  <time dateTime={row.createdAt}>
+                    {adminTime(row.createdAt)}
+                  </time>
+                  <span className="ds-badge">
+                    {row.language === 'ka' ? 'ქართული' : 'ინგლისური'}
+                  </span>
+                  <span>{row.template}</span>
+                  <span className="resumes-complete">
+                    სისრულე: {row.completeness}%
+                  </span>
+                </div>
+              </div>
+              <div className="reports-actions">
+                <button
+                  type="button"
+                  className="ds-btn ds-btn--ghost ds-btn--sm"
+                  disabled={busy}
+                  aria-pressed={selected?.id === row.id}
+                  onClick={() => void open(row.id)}
+                >
+                  <Eye size={16} aria-hidden="true" />
+                  ნახვა
+                </button>
+                <button
+                  type="button"
+                  className="ds-btn ds-btn--danger ds-btn--sm"
+                  disabled={busy}
+                  onClick={() => void remove(row.id)}
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                  წაშლა
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="admin-pagination" hidden={!page && !more && !loading}>
+        <span className="admin-pagination-count">გვერდი {page + 1}</span>
         <button
           type="button"
-          className="secondary-button"
+          className="ds-btn ds-btn--secondary ds-btn--sm"
           disabled={!page || loading || busy}
           onClick={() => {
             setLoading(true);
@@ -140,10 +174,9 @@ export function ResumesPanel() {
         >
           წინა
         </button>
-        <span>გვერდი {page + 1}</span>
         <button
           type="button"
-          className="secondary-button"
+          className="ds-btn ds-btn--secondary ds-btn--sm"
           disabled={!more || loading || busy}
           onClick={() => {
             setLoading(true);
@@ -154,15 +187,16 @@ export function ResumesPanel() {
         </button>
       </div>
       {selected && (
-        <div>
+        <div className="resumes-preview ds-appear">
           <button
             type="button"
-            className="secondary-button"
+            className="ds-btn ds-btn--secondary ds-btn--sm"
             onClick={() => setSelected(null)}
           >
+            <X size={16} aria-hidden="true" />
             დახურვა
           </button>
-          <div style={{ overflowX: 'auto' }}>
+          <div className="resumes-sheet">
             <CvSheet cv={selected.cv} />
           </div>
         </div>

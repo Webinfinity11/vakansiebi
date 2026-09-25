@@ -1,5 +1,6 @@
 'use client';
 import type { Source } from '@/lib/types';
+import { SelectField } from '../select-field';
 
 const fields = [
   {
@@ -58,21 +59,17 @@ export function ScraperLimits({
           return (
             <label key={f.key}>
               {f.label}
-              <select
-                className="choice"
-                aria-label={`${global ? 'ყველა წყარო' : sources[0]?.name}: ${f.label}`}
-                value={common}
-                onChange={(e) => onSave({ [f.key]: Number(e.target.value) })}
-              >
-                <option value="" disabled>
-                  განსხვავებული ლიმიტები
-                </option>
-                {options.map((value) => (
-                  <option key={value} value={value}>
-                    {value === 0 ? '0 — გამორთული' : value}
-                  </option>
-                ))}
-              </select>
+              <SelectField
+                label={`${global ? 'ყველა წყარო' : sources[0]?.name}: ${f.label}`}
+                value={common === '' ? '' : String(common)}
+                disabled={busy || !sources.length}
+                placeholder="განსხვავებული ლიმიტები"
+                options={options.map((value) => ({
+                  value: String(value),
+                  label: value === 0 ? '0 — გამორთული' : String(value),
+                }))}
+                onChange={(v) => onSave({ [f.key]: Number(v) })}
+              />
             </label>
           );
         })}

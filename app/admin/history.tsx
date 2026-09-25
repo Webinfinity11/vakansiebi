@@ -1,6 +1,8 @@
 'use client';
+import { SkeletonRows } from '../skeleton';
 import { adminClock, adminDay } from '@/lib/admin-format';
 import { useEffect, useState } from 'react';
+import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { placementLabels, type PlacementTier } from '@/lib/placement';
 import type { AuditEntry } from '@/lib/server/audit-history';
 
@@ -115,7 +117,7 @@ function Change({ e }: { e: AuditEntry }) {
         <>
           {e.beforeStatus && (
             <>
-              <s>{statuses[e.beforeStatus] ?? e.beforeStatus}</s>→
+              <s>{statuses[e.beforeStatus] ?? e.beforeStatus}</s>
             </>
           )}
           <ins>{statuses[e.afterStatus] ?? e.afterStatus}</ins>
@@ -293,11 +295,16 @@ function Folded({
         </p>
         <button
           type="button"
-          className="history-link"
+          className="history-toggle ds-btn ds-btn--ghost ds-btn--sm"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
         >
-          {open ? 'დაკეცვა ▴' : 'ჩამონათვალის გაშლა ▾'}
+          {open ? 'დაკეცვა' : 'ჩამონათვალის გაშლა'}
+          {open ? (
+            <ChevronUp size={16} aria-hidden="true" />
+          ) : (
+            <ChevronDown size={16} aria-hidden="true" />
+          )}
         </button>
         {open && (
           <ul className="history-inner">
@@ -334,7 +341,7 @@ function Entries({
         // A day can recur when entries were written out of order, so its first entry keys it.
         <section key={list[0].id}>
           <h3>{day}</h3>
-          <ul>
+          <ul className="ds-appear-list">
             {rows(list, fold).map((row) =>
               row.kind === 'one' ? (
                 <Entry
@@ -366,9 +373,18 @@ export function RecentChanges({
   onOpenJob: (id: string) => void;
 }) {
   const h = useHistory('people');
-  if (h.error) return <p role="alert">{h.error}</p>;
+  if (h.error)
+    return (
+      <p role="alert" className="overview-empty">
+        {h.error}
+      </p>
+    );
   if (h.loading && !h.entries.length)
-    return <p className="overview-empty">იტვირთება…</p>;
+    return (
+      <div className="overview-empty">
+        <SkeletonRows rows={4} />
+      </div>
+    );
   if (!h.entries.length)
     return <p className="overview-empty">ჯერ არაფერი შეცვლილა.</p>;
   return (
@@ -383,12 +399,19 @@ export function HistoryPanel({
 }) {
   const [scope, setScope] = useState<string>('people');
   return (
-    <section className="reports-section" aria-label="ცვლილებების ისტორია">
-      <fieldset className="submission-views" aria-label="ვინ შეცვალა">
+    <section
+      className="reports-section history-panel"
+      aria-label="ცვლილებების ისტორია"
+    >
+      <fieldset
+        className="admin-chips admin-chips--scroll"
+        aria-label="ვინ შეცვალა"
+      >
         {scopes.map(([key, label]) => (
           <button
             key={key}
             type="button"
+            className="ds-chip"
             aria-pressed={scope === key}
             onClick={() => setScope(key)}
           >
@@ -410,7 +433,10 @@ export function JobHistory({ jobId }: { jobId: string }) {
       className="raw-details job-history"
       onToggle={(e) => setOpen(e.currentTarget.open)}
     >
-      <summary>ცვლილებების ისტორია</summary>
+      <summary>
+        <ChevronDown className="admin-summary-mark" aria-hidden="true" />
+        ცვლილებების ისტორია
+      </summary>
       {open && <HistoryList key={jobId} scope="all" job={jobId} />}
     </details>
   );
@@ -431,21 +457,30 @@ function HistoryList({
       <div className="reports-heading">
         <button
           type="button"
-          className="secondary-button"
+          className="ds-btn ds-btn--secondary ds-btn--sm"
           disabled={h.loading}
           onClick={h.reload}
         >
+          <RefreshCw size={16} aria-hidden="true" />
           განახლება
         </button>
       </div>
-      {h.error && <p role="alert">{h.error}</p>}
+      {h.error && (
+        <p role="alert" className="notice">
+          {h.error}
+        </p>
+      )}
       {!h.loading && !h.entries.length && !h.error && (
-        <p>ჩანაწერები არ არის.</p>
+        <p className="history-empty">ამ სიაში ჩანაწერი ჯერ არ არის.</p>
       )}
       <Entries entries={h.entries} showJob={!job} onOpenJob={onOpenJob} />
-      {h.loading && <p>ისტორია იტვირთება…</p>}
+      {h.loading && <SkeletonRows rows={4} label="ისტორია იტვირთება" />}
       {h.more && !h.loading && (
-        <button type="button" className="secondary-button" onClick={h.next}>
+        <button
+          type="button"
+          className="ds-btn ds-btn--secondary history-more"
+          onClick={h.next}
+        >
           მეტის ჩვენება
         </button>
       )}

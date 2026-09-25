@@ -27,7 +27,7 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="theme-toggle"
+      className="ds-btn ds-btn--secondary ds-btn--icon site-theme"
       aria-label={
         next === 'dark' ? 'მუქ თემაზე გადართვა' : 'ღია თემაზე გადართვა'
       }
@@ -39,7 +39,11 @@ export function ThemeToggle() {
         trackAction(next === 'dark' ? 'theme_dark' : 'theme_light');
       }}
     >
-      {next === 'dark' ? <Moon size={17} /> : <Sun size={17} />}
+      {next === 'dark' ? (
+        <Moon aria-hidden="true" />
+      ) : (
+        <Sun aria-hidden="true" />
+      )}
     </button>
   );
 }

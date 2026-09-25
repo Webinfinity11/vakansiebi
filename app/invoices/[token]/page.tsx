@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 import { getInvoice } from '@/lib/server/billing';
 import { invoiceContact, invoiceNumber, invoiceStatuses } from '@/lib/billing';
 import { InvoiceActions } from './print-actions';
@@ -25,7 +26,10 @@ export default async function InvoicePage({
   return (
     <main className="invoice-page">
       <div className="invoice-toolbar">
-        <Link href="/">← JOBX-ზე დაბრუნება</Link>
+        <Link href="/">
+          <ChevronLeft aria-hidden="true" />
+          JOBX-ზე დაბრუნება
+        </Link>
         <InvoiceActions />
       </div>
       <article className="invoice-paper">
@@ -48,7 +52,9 @@ export default async function InvoicePage({
               timeZone: 'Asia/Tbilisi',
             })}
           </span>
-          <strong className={`invoice-status invoice-status-${invoice.status}`}>
+          <strong
+            className={`ds-badge invoice-status invoice-status-${invoice.status}`}
+          >
             {invoiceStatuses[invoice.status as keyof typeof invoiceStatuses]}
           </strong>
         </div>

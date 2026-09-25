@@ -81,7 +81,8 @@ export const mapCities = [
   'ჩოხატაური',
   'სურამი',
 ];
-const districts = [
+/** Tbilisi districts: a place named by one of them is in Tbilisi. */
+export const tbilisiDistricts: readonly string[] = [
   'ვაკე',
   'საბურთალო',
   'დიდუბე',
@@ -107,6 +108,7 @@ const districts = [
   'ლისი',
   'ორხევი',
 ];
+const districts = tbilisiDistricts;
 const streetTypes: [RegExp, string][] = [
   [/^(?:ქ\.?|ქუჩ(?:ა|აზე)?)$/, 'ქუჩა'],
   [/^(?:გამზ\.?|გამზირი|გამზირზე)$/, 'გამზირი'],
@@ -240,7 +242,9 @@ export function streetAddresses(
   const text = raw
     .normalize('NFKC')
     .replace(/\b0\d{3}\b/g, ' ')
-    .replace(/ქ\.(?=[ა-ჰ])/g, 'ქ. ');
+    .replace(/ქ\.(?=[ა-ჰ])/g, 'ქ. ')
+    // "მირიან მეფის ქ.21", "ჭავჭავაძის გამზ.76მ": the street type written onto the number.
+    .replace(/(^|[\s,])(ქ|გამზ|შეს|ხეივ|მოედ|გზატკ)\.(?=\d)/g, '$1$2. ');
   const named = cityIn(text);
   const fallback = cityIn(fallbackCity);
   const segments = text.split(/[;|]|\s\/\s|\n/).flatMap((part) => {
@@ -253,8 +257,13 @@ export function streetAddresses(
     const hit = streetIn(segment);
     if (!hit) continue;
     const own = cityIn(segment);
-    // A Tbilisi district names the city as surely as the word თბილისი does.
-    const inTbilisi = !!districtIn(segment);
+    // A Tbilisi district names the city as surely as the word თბილისი does, also when it sits
+    // beside the street rather than in it: "იუმაშევის #23 (ლილო)". Beside it, it is trusted only
+    // when the vacancy itself is not filed under another city.
+    const inTbilisi =
+      !!districtIn(segment) ||
+      (!!districtIn(text) &&
+        (!fallback.length || fallback.includes('თბილისი')));
     const city =
       own.length === 1
         ? own[0]

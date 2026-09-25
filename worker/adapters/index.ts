@@ -22,6 +22,7 @@ import { worknet } from './worknet';
 import { myjobs } from './myjobs';
 import { awork } from './awork';
 import { dk } from './dk';
+import { jobsLocation } from './jobs-location';
 import { jobtl } from './jobtl';
 export type { ListedLink, ListingHints } from './module';
 /** JSON-backed boards live in their own modules; the HTML boards below share this file. */
@@ -155,6 +156,35 @@ export function getSourceConfig(source: SourceId) {
     throw Error('Source is retired or unsupported');
   return configs[source];
 }
+const namedEntities: Record<string, string> = {
+  amp: '&',
+  quot: '"',
+  apos: "'",
+  lt: '<',
+  gt: '>',
+};
+/**
+ * Some sources encode their text twice, so "&amp;quot;" survives parsing as a literal
+ * "&quot;". One more pass decodes only complete references ending in ";": "AT&T" and
+ * "R&D" stay as written, and "&amp;lt;" becomes "&lt;", not "<".
+ */
+export function decodeLeftoverEntities(text: string) {
+  return text.replace(
+    /&(?:(amp|quot|apos|lt|gt)|#(\d{1,7})|#[xX]([0-9a-fA-F]{1,6}));/g,
+    (whole, name?: string, dec?: string, hex?: string) => {
+      if (name) return namedEntities[name];
+      const code = dec ? Number(dec) : parseInt(hex!, 16);
+      return code >= 0x20 &&
+        code <= 0x10ffff &&
+        !(code >= 0xd800 && code <= 0xdfff) &&
+        !(code >= 0x7f && code < 0xa0)
+        ? String.fromCodePoint(code)
+        : code === 9 || code === 10
+          ? String.fromCodePoint(code)
+          : whole;
+    },
+  );
+}
 export function cleanText(html: string) {
   const $ = load(html);
   $('script,style,noscript,iframe').remove();
@@ -184,7 +214,7 @@ export function cleanText(html: string) {
   $('p,div,li,h1,h2,h3,h4,h5,h6,tr,dt,dd,section').each((_, el) => {
     $(el).append('\n');
   });
-  return $.text()
+  return decodeLeftoverEntities($.text())
     .replace(/\u00a0/g, ' ')
     .replace(/[ \t]+/g, ' ')
     .replace(/ *\n */g, '\n')
@@ -649,7 +679,15 @@ export function parseDetail(
       logo?: string;
       startDate?: string;
       endDate?: string;
-      address?: { cityTitle?: Translated };
+      address?: {
+        cityTitle?: Translated;
+        districtTitle?: Translated;
+        subdistrictTitle?: Translated;
+        streetTitle?: Translated;
+        streetNumber?: string | null;
+      };
+      locationLatitude?: number | null;
+      locationLongitude?: number | null;
       salaryFrom?: number;
       salaryTo?: number;
       currencyId?: number;
@@ -699,6 +737,33 @@ export function parseDetail(
       j.title.trim().length >= 2 &&
       j.company.trim().length > 0;
     j.city = translated(data.address?.cityTitle);
+    // The board's address form: city, district, a street picked from its list, a house number
+    // and the employer's pin on the board map. Only a street makes it an address.
+    const street = translated(data.address?.streetTitle).trim();
+    if (street) {
+      const raw = String(data.address?.streetNumber ?? '').trim();
+      const number = /^\d{1,4}[ა-ჰa-zA-Z]?$/.test(raw) ? raw : '';
+      const address = [
+        j.city.trim(),
+        translated(data.address?.subdistrictTitle).trim() ||
+          translated(data.address?.districtTitle).trim(),
+        number ? `${street} ${number}` : street,
+      ]
+        .filter(Boolean)
+        .join(', ');
+      j.facts.push({ label: 'მისამართი', value: address.slice(0, 260) });
+      // A pin beside a street without a house number may be only the street's middle.
+      const lat = data.locationLatitude;
+      const lon = data.locationLongitude;
+      if (
+        number &&
+        typeof lat === 'number' &&
+        typeof lon === 'number' &&
+        Number.isFinite(lat) &&
+        Number.isFinite(lon)
+      )
+        j.coordinates = { lat, lon };
+    }
     j.description = [
       ['', translated(data.description)],
       ['მოვალეობები', translated(data.duties)],
@@ -1005,6 +1070,7 @@ export function applyListingHints(
   };
   if (!j.city && hints.city) {
     j.city = hints.city.replace(/\s+/g, ' ').trim();
+    if (source === 'jobs') Object.assign(j, jobsPlace(j));
     j.warnings = j.warnings.filter((w) => w !== unclearLocation);
   }
   if (hints.categoryLabel && !j.facts.some((f) => f.label === 'კატეგორია'))
@@ -1018,6 +1084,24 @@ export function applyListingHints(
       sourceCategory('jobs', hints.categoryLabel || ''),
     );
   return j;
+}
+/**
+ * A jobs.ge location naming a Tbilisi district, metro station or street becomes the city
+ * თბილისი, its text kept as the address; "დისტანციურად" is remote work with no city.
+ */
+function jobsPlace(
+  j: Pick<Vacancy, 'city' | 'mode' | 'facts'>,
+): Pick<Vacancy, 'city' | 'mode' | 'facts'> {
+  const place = jobsLocation(j.city);
+  const facts = j.facts || [];
+  return {
+    city: place.city,
+    mode: place.mode && !j.mode ? place.mode : j.mode,
+    facts:
+      place.address && !facts.some((f) => f.label === 'მისამართი')
+        ? [...facts, { label: 'მისამართი', value: place.address.slice(0, 260) }]
+        : facts,
+  };
 }
 /** Shared normalisation and validation for every source. */
 function finishVacancy(
@@ -1045,6 +1129,7 @@ function finishVacancy(
     j.datePosted = hints.firstListed;
   // A listing already named the work location when the detail page did not.
   if (!j.city && hints?.city) j.city = hints.city.replace(/\s+/g, ' ').trim();
+  if (source === 'jobs') Object.assign(j, jobsPlace(j));
   j.category = classify(j.title, fromSource);
   if (!j.company) j.warnings.push('კომპანიის სახელი წყაროზე ვერ მოიძებნა.');
   // Nothing parsed: the page's shape is not what this adapter expects.

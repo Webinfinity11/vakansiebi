@@ -14,6 +14,7 @@ import { worknet } from '../worker/adapters/worknet';
 import { readDiscoveryInfo, discoveryListingUrl } from '../worker/discovery';
 import { vacancySchema } from '../lib/vacancy-schema';
 import { categories } from '../lib/types';
+import { streetAddresses } from '../lib/street-address';
 
 const fixture = (name: string) =>
   readFileSync(new URL(`./fixtures/worknet/${name}`, import.meta.url), 'utf8');
@@ -165,6 +166,60 @@ void test('worknet city comes from the street, else the sampled region, else not
       { regionId: 11, street: 'რუსთავი' },
     ]),
     'ქვემო ქართლი',
+  );
+});
+void test('worknet keeps the filed town when a street is only named after another municipality', () => {
+  const withLocation = (locations: unknown) =>
+    parseDetail('worknet', JSON.stringify({ ...detail(), locations }), publicUrl).city;
+  // "ქუთაისის ქუჩა" filed under a Tbilisi district is a Tbilisi street.
+  assert.equal(
+    withLocation([{ regionId: 28, municipalityId: [43], street: 'ქუთაისის ქუჩა 5' }]),
+    'თბილისი',
+  );
+  // With nothing filed, or the same town filed, the street still decides.
+  assert.equal(withLocation([{ regionId: 72, street: 'ქ. ქუთაისი, ნიკეას 5' }]), 'ქუთაისი');
+  assert.equal(
+    withLocation([{ regionId: 72, municipalityId: [81], street: 'ქ. ქუთაისი, ნიკეას 5' }]),
+    'ქუთაისი',
+  );
+});
+void test('worknet takes the one municipality as the town when the street names none', () => {
+  const withLocation = (locations: unknown) =>
+    parseDetail('worknet', JSON.stringify({ ...detail(), locations }), publicUrl);
+  // Kutaisi's municipality puts a bare street on the map instead of leaving "იმერეთი".
+  const kutaisi = withLocation([
+    { regionId: 72, municipalityId: [81], street: 'რუსთაველის ქუჩა 8' },
+  ]);
+  assert.equal(kutaisi.city, 'ქუთაისი');
+  assert.deepEqual(
+    streetAddresses('რუსთაველის ქუჩა 8', kutaisi.city).map((a) => a.query),
+    ['რუსთაველის ქუჩა 8, ქუთაისი'],
+  );
+  // Tbilisi's districts are Tbilisi; a scalar id reads the same as a list of one.
+  assert.equal(
+    withLocation([{ regionId: 28, municipalityId: 43, street: 'ვაჟა-ფშაველას 10' }]).city,
+    'თბილისი',
+  );
+  // A municipality that is not a town, two towns, or an unknown id leave the region.
+  assert.equal(
+    withLocation([{ regionId: 62, municipalityId: [63], street: 'ცენტრალური 1' }]).city,
+    'მცხეთა-მთიანეთი',
+  );
+  assert.equal(
+    withLocation([
+      { regionId: 72, municipalityId: [81], street: 'ნიკეას 5' },
+      { regionId: 72, municipalityId: [84], street: 'ჭავჭავაძის 2' },
+    ]).city,
+    'იმერეთი',
+  );
+  assert.equal(
+    withLocation([{ regionId: 72, municipalityId: [9999], street: 'ნიკეას 5' }]).city,
+    'იმერეთი',
+  );
+  // The street still wins when it names the town itself.
+  assert.equal(
+    withLocation([{ regionId: 72, municipalityId: [84], street: 'ქ.ქუთაისი, ნიკეას 5' }]).city,
+    'ქუთაისი',
   );
 });
 void test('worknet rejects inactive, canceled and mismatched vacancies', () => {

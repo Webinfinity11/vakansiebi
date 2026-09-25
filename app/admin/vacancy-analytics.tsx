@@ -1,4 +1,5 @@
 'use client';
+import { SkeletonRows } from '../skeleton';
 import { useEffect, useState } from 'react';
 import { placementLabels, type PlacementTier } from '@/lib/placement';
 import {
@@ -148,7 +149,7 @@ function DailyBars({ days, metric }: { days: VacancyDay[]; metric: Metric }) {
           x2={width}
           y1={height - bottom}
           y2={height - bottom}
-          stroke="#e1e5ed"
+          style={{ stroke: 'var(--ds-line)' }}
         />
         {values.map((value, i) => {
           const h = (value / top) * (height - bottom - 4);
@@ -160,7 +161,9 @@ function DailyBars({ days, metric }: { days: VacancyDay[]; metric: Metric }) {
               width={step - gap}
               height={Math.max(0, h)}
               rx={Math.min(4, (step - gap) / 2)}
-              fill={at === i ? '#1f3f96' : '#2457e6'}
+              style={{
+                fill: at === i ? 'var(--ds-accent-ink)' : 'var(--ds-accent)',
+              }}
               opacity={at === null || at === i ? 1 : 0.55}
             />
           );
@@ -199,7 +202,7 @@ export function VacancyAnalyticsBlock({
       {error ? (
         <p role="alert">{error}</p>
       ) : !data ? (
-        <output>სტატისტიკა იტვირთება…</output>
+        <SkeletonRows rows={3} block label="სტატისტიკა იტვირთება" />
       ) : (
         <>
           <div className="vacancy-kpis">
@@ -304,7 +307,7 @@ function Sparkline({ days }: { days: VacancyDay[] }) {
       <polyline
         points={points}
         fill="none"
-        stroke="#2457e6"
+        style={{ stroke: 'var(--ds-accent)' }}
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
@@ -368,7 +371,9 @@ export function SubmissionPerformance({
         </button>
       </div>
       {error && <p role="alert">{error}</p>}
-      {!rows && !error && <p>სტატისტიკა იტვირთება…</p>}
+      {!rows && !error && (
+        <SkeletonRows rows={2} block label="სტატისტიკა იტვირთება" />
+      )}
       {rows && !rows.length && <p>ფორმით გაგზავნილი ვაკანსია ჯერ არ არის.</p>}
       {!!sorted.length && (
         <>
@@ -403,7 +408,9 @@ export function SubmissionPerformance({
                   <th scope="col" className="num">
                     ნახვები
                   </th>
-                  <th scope="col">30 დღე</th>
+                  <th scope="col" className="spark-col">
+                    30 დღე
+                  </th>
                   <th scope="col" className="num">
                     კონტაქტი
                   </th>
@@ -436,7 +443,7 @@ export function SubmissionPerformance({
                           {statusNames[r.status] ?? r.status}
                         </span>
                         {r.status === 'published' && r.tier !== 'standard' && (
-                          <span className="vacancy-tier">
+                          <span className="ds-badge ds-badge--violet">
                             {placementLabels[r.tier]}
                           </span>
                         )}
@@ -444,7 +451,7 @@ export function SubmissionPerformance({
                       <td data-label="ნახვები" className="num">
                         {whole.format(r.total.view)}
                       </td>
-                      <td data-label="30 დღე">
+                      <td data-label="30 დღე" className="spark-col">
                         <Sparkline days={r.series} />
                       </td>
                       <td

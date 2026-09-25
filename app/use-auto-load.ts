@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 
 /* The next page arrives before the reader reaches the end of this one.
    It used to wait for a fresh downward gesture and then for sixteen more pixels
@@ -12,15 +12,18 @@ import { useEffect, useRef, type RefObject } from 'react';
    Two things keep that from running away. Nothing loads until the reader has
    scrolled at all, so a tall screen does not fetch a second page it never
    showed; and after `maxPages` in a row the button comes back, because a list
-   that never ends is a footer nobody can reach. */
+   that never ends is a footer nobody can reach. Pressing it resumes the run. */
 export function useAutoLoad(
   target: RefObject<HTMLElement | null>,
   enabled: boolean,
   onLoad: () => void,
-  maxPages = 5,
+  maxPages = 10,
 ) {
   const loaded = useRef(0);
   const scrolled = useRef(false);
+  /* A press of the button is the reader asking for more: the automatic run starts again rather
+     than making them press after every page. */
+  const [round, setRound] = useState(0);
   useEffect(() => {
     const node = target.current;
     if (!node || !enabled || loaded.current >= maxPages) return;
@@ -37,8 +40,9 @@ export function useAutoLoad(
         loaded.current += 1;
         onLoad();
       },
-      // A screen's reach: the page is on its way before the end is in sight.
-      { rootMargin: '700px 0px 700px 0px' },
+      /* Two screens' reach: the page is fetched well before the end is in sight, so a reader
+         scrolling at an ordinary pace never meets the loader and waits at it. */
+      { rootMargin: '1400px 0px 1400px 0px' },
     );
     observer.observe(node);
     window.addEventListener('scroll', moved, { passive: true });
@@ -46,5 +50,9 @@ export function useAutoLoad(
       observer.disconnect();
       window.removeEventListener('scroll', moved);
     };
-  }, [enabled, onLoad, target, maxPages]);
+  }, [enabled, onLoad, target, maxPages, round]);
+  return () => {
+    loaded.current = 0;
+    setRound((n) => n + 1);
+  };
 }

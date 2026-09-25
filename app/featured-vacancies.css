@@ -146,40 +146,19 @@
   gap: var(--jobx-space-8px);
   width: 100%;
 }
+/* The premium card's call to action is the primary button (.ds-btn--primary); the bookmark
+   beside it takes the secondary outline at the same height. */
 .board-shell .job-card[data-featured='premium'] .featured-cta {
-  display: inline-flex;
   flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: var(--jobx-space-6px);
-  min-height: 44px;
-  padding: 0 var(--jobx-space-14px);
-  border-radius: var(--jobx-radius-10px);
-  background: var(--jobx-accent-fixed);
-  color: var(--jobx-white-fixed);
-  font-size: var(--jobx-font-size-13px);
-  font-weight: 600;
-  text-decoration: none;
-  white-space: nowrap;
-}
-.board-shell .job-card[data-featured='premium'] .featured-cta:hover {
-  background: var(--jobx-color-1b45bd-fixed);
-  color: var(--jobx-white-fixed);
-}
-.board-shell .job-card[data-featured='premium'] .featured-cta:focus-visible {
-  outline: 2px solid var(--jobx-accent-fixed);
-  outline-offset: 2px;
 }
 .board-shell.editorial-board.crafted-board.refined-board
   .job-card[data-featured='premium']
   .save-button {
   flex: none;
   inset: auto;
-  width: 44px;
-  height: 44px;
   margin: 0;
-  border: 1px solid #d5ddeb;
-  border-radius: var(--jobx-radius-10px);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
 }
 
 /* ---------- VIP ---------- */
@@ -392,26 +371,6 @@
   .company-none
   .company-fallback-initial {
   color: var(--jobx-color-0e1523-fixed);
-}
-:root[data-theme='dark']
-  .board-shell
-  .job-card[data-featured='premium']
-  .featured-cta {
-  background: var(--jobx-color-6f93ff-fixed);
-  color: var(--jobx-color-0e1523-fixed);
-}
-:root[data-theme='dark']
-  .board-shell
-  .job-card[data-featured='premium']
-  .featured-cta:hover {
-  background: var(--jobx-color-8eabff-fixed);
-  color: var(--jobx-color-0e1523-fixed);
-}
-:root[data-theme='dark']
-  .board-shell.editorial-board.crafted-board.refined-board
-  .job-card[data-featured='premium']
-  .save-button {
-  border-color: #34405a;
 }
 :root[data-theme='dark']
   .board-shell.editorial-board.crafted-board.refined-board

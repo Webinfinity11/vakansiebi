@@ -88,6 +88,7 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
             <h2>ბოლოს მოძებნილი</h2>
             <button
               type="button"
+              className="ds-btn ds-btn--ghost ds-btn--sm"
               onClick={() => {
                 clearRecentSearches();
                 setRecent([]);
@@ -104,7 +105,7 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
                   className="search-start-term"
                   onClick={() => onPick(value)}
                 >
-                  <History size={15} aria-hidden="true" />
+                  <History size={16} aria-hidden="true" />
                   <span>{value}</span>
                 </button>
                 <button
@@ -116,7 +117,7 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
                     setRecent(readRecentSearches());
                   }}
                 >
-                  <X size={15} aria-hidden="true" />
+                  <X size={16} aria-hidden="true" />
                 </button>
               </li>
             ))}
@@ -128,7 +129,12 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
           <h2>პოპულარული ძიებები</h2>
           <div className="search-start-chips">
             {popular.slice(0, phone ? 6 : 18).map((value) => (
-              <button key={value} type="button" onClick={() => onPick(value)}>
+              <button
+                key={value}
+                type="button"
+                className="ds-chip"
+                onClick={() => onPick(value)}
+              >
                 {value}
               </button>
             ))}

@@ -47,17 +47,54 @@
   .board-shell .header-inner {
     gap: var(--jobx-space-10px);
   }
-  .board-shell .saved-nav {
-    min-height: 44px;
-    font-size: var(--jobx-font-size-12px);
-    padding: var(--jobx-space-8px) var(--jobx-space-10px);
-    gap: var(--jobx-space-6px);
+  /* The masthead: public-header.css loads after this file, so these rules carry one more
+     class. Every control is a 44px square or pill; the logo and "ყველა" keep the left. */
+  .board-shell .topbar.public-header.public-header,
+  .board-shell .topbar.public-header .header-inner.header-inner {
+    height: 60px;
+    min-height: 60px;
   }
-  .board-shell .saved-nav > span {
+  .board-shell .topbar.public-header .header-inner.header-inner {
+    padding-block: 0;
+    padding-left: max(var(--ds-space-3), env(safe-area-inset-left));
+    padding-right: max(var(--ds-space-3), env(safe-area-inset-right));
+    gap: var(--ds-space-2);
+  }
+  .board-shell .topbar.public-header .header-inner .jobx-brand,
+  .board-shell .topbar.public-header .header-inner .jobx-brand img {
+    width: 90px;
+    height: 30px;
+  }
+  .board-shell .topbar.public-header .header-inner .jobx-brand {
+    min-height: var(--ds-control-touch);
+  }
+  .board-shell .topbar.public-header .header-inner .header-label-full,
+  .board-shell .topbar.public-header .header-inner .site-search {
     display: none;
   }
-  .board-shell .saved-nav b {
-    font-size: var(--jobx-font-size-12px);
+  .board-shell .topbar.public-header .header-inner .header-label-short {
+    display: inline;
+  }
+  .board-shell .topbar.public-header .header-inner .site-nav-link {
+    height: var(--ds-control-touch);
+    min-height: var(--ds-control-touch);
+    padding-inline: var(--ds-space-2);
+  }
+  .board-shell .topbar.public-header .header-inner .header-actions {
+    gap: var(--ds-space-1);
+  }
+  /* The card bookmark keeps a finger-sized target. */
+  .board-shell.editorial-board.crafted-board.refined-board
+    .job-card
+    .save-button.save-button {
+    width: var(--ds-control-touch);
+    height: var(--ds-control-touch);
+  }
+  .board-shell .topbar.public-header .header-inner .header-actions .ds-btn {
+    width: var(--ds-control-touch);
+    height: var(--ds-control-touch);
+    min-height: var(--ds-control-touch);
+    padding: 0;
   }
 
   /* ---------- Hero ---------- */
@@ -65,7 +102,8 @@
     display: none;
   }
   .board-shell .discovery-hero .hero-inner {
-    padding: var(--jobx-space-18px) var(--jobx-space-18px) var(--jobx-space-12px);
+    padding: var(--jobx-space-18px) var(--jobx-space-18px)
+      var(--jobx-space-12px);
   }
   .board-shell .discovery-hero h1,
   .board-shell .hero h1 {
@@ -100,7 +138,7 @@
     height: 44px;
   }
   .board-shell .discovery-hero .searchbar .primary {
-    font-size: var(--jobx-font-size-13px);
+    font-size: var(--ds-text-md);
   }
   /* "No registration" and "direct from the employer" are true of every vacancy below; on a phone
      they were 56px between the search field and the list, and the site shows both by doing them. */
@@ -202,7 +240,7 @@
     gap: var(--jobx-space-7px);
     padding: var(--jobx-space-8px) var(--jobx-space-12px);
     border: 1px solid var(--jobx-color-e2e8f2-surface);
-    border-radius: var(--jobx-radius-999px);
+    border-radius: var(--ds-radius-md);
     background: var(--jobx-surface);
   }
   .category-gallery button svg {
@@ -236,9 +274,6 @@
   }
   .board-shell .recent-track .recent-card span {
     max-width: 120px;
-  }
-  .board-shell .recent-strip .recent-head button {
-    min-height: 44px;
   }
 
   /* ---------- Results head ---------- */
@@ -275,31 +310,12 @@
   .board-shell .results-tools .mobile-filter-toggle {
     order: 3;
     width: auto;
-    min-height: 44px;
     margin: 0;
-    font-size: var(--jobx-font-size-14px);
-    font-weight: 600;
     justify-content: center;
-    gap: var(--jobx-space-8px);
-  }
-  .board-shell .results-tools .mobile-filter-toggle b {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 var(--jobx-space-7px);
-    border-radius: var(--jobx-radius-999px);
-    background: var(--jobx-accent);
-    color: var(--jobx-surface);
-    font-size: var(--jobx-font-size-12px);
   }
 
   .board-shell .active-filters {
     gap: var(--jobx-space-6px);
-  }
-  .board-shell .active-filters button {
-    font-size: var(--jobx-font-size-12px);
   }
 
   /* ---------- Vacancy cards ---------- */
@@ -515,9 +531,6 @@
     position: absolute;
     top: 10px;
     right: 60px;
-    min-height: 44px;
-    padding: var(--jobx-space-6px) var(--jobx-space-12px);
-    font-size: var(--jobx-font-size-13px);
   }
   .mobile-filters-sheet .filters {
     flex: 1 1 auto;
@@ -527,9 +540,6 @@
     padding: var(--jobx-space-16px) var(--jobx-space-18px);
     scroll-padding-block: 16px;
   }
-  .mobile-filters-clear:disabled {
-    opacity: 0.45;
-  }
   .mobile-filters-sheet .choice {
     min-height: 48px !important;
     font-size: var(--jobx-font-size-16px) !important;
@@ -537,12 +547,11 @@
     color: inherit;
   }
   .mobile-filters-sheet .filters h3,
-  .mobile-filters-sheet legend,
-  .mobile-filters-sheet .filters select {
+  .mobile-filters-sheet legend {
     color: inherit;
   }
   .mobile-filters-sheet .choice,
-  .mobile-filters-sheet .filters select {
+  .mobile-filters-sheet .ds-select {
     min-height: 48px;
     height: auto;
     font-size: var(--jobx-font-size-16px);
@@ -559,8 +568,8 @@
   .mobile-filters-sheet .salary-presets {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .mobile-filters-sheet .salary-presets button {
-    min-height: 44px;
+  .mobile-filters-sheet .salary-presets .ds-chip {
+    min-height: var(--ds-control-touch);
     padding-inline: var(--jobx-space-3px);
   }
   .mobile-filters-sheet .filter-extra summary {
@@ -568,7 +577,8 @@
   }
   .mobile-filters-footer {
     flex: 0 0 auto;
-    padding: var(--jobx-space-12px) var(--jobx-space-18px) calc(var(--jobx-space-12px) + env(safe-area-inset-bottom));
+    padding: var(--jobx-space-12px) var(--jobx-space-18px)
+      calc(var(--jobx-space-12px) + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border);
   }
   .mobile-filters-sheet .filters h3 {
@@ -582,23 +592,13 @@
     min-width: 0;
     grid-template-columns: minmax(0, 1fr);
   }
-  .mobile-filters-sheet .filter-subcategory select {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    min-height: 44px;
-    height: 48px;
-    padding: var(--jobx-space-10px) var(--jobx-space-36px) var(--jobx-space-10px) var(--jobx-space-12px);
-    font-size: var(--jobx-font-size-16px);
-  }
   .mobile-filters-sheet .check-row {
     min-height: 48px;
     font-size: var(--jobx-font-size-14px);
     padding: var(--jobx-space-6px) var(--jobx-space-8px);
   }
   .mobile-filters-sheet .check-row input[type='radio'],
-  .mobile-filters-sheet input[type='radio'],
-  .mobile-filters-sheet .advanced-filters input[type='checkbox'] {
+  .mobile-filters-sheet input[type='radio'] {
     width: 20px;
     height: 20px;
   }
@@ -643,9 +643,6 @@
   .vacancy-page .detail-dates {
     font-size: var(--jobx-font-size-13px);
   }
-  .vacancy-tools .secondary-button {
-    font-size: var(--jobx-font-size-13px);
-  }
   .vacancy-page .detail-facts dt {
     font-size: var(--jobx-font-size-12px);
   }
@@ -653,10 +650,6 @@
     font-size: var(--jobx-font-size-12px);
   }
 
-  .vacancy-page .vacancy-hide-action {
-    font-size: var(--jobx-font-size-13px);
-    min-height: 44px;
-  }
   .vacancy-source .job-evidence,
   .vacancy-page .job-evidence {
     font-size: var(--jobx-font-size-12px);
@@ -669,12 +662,6 @@
   }
   .application-email > span {
     font-size: var(--jobx-font-size-12px);
-  }
-  .vacancy-mobile-action .primary {
-    font-size: var(--jobx-font-size-14px);
-  }
-  .vacancy-mobile-action .secondary-button {
-    font-size: var(--jobx-font-size-13px);
   }
 
   .vacancy-page .feedback-toast {
@@ -834,10 +821,15 @@
 
 @media (max-width: 760px) {
   .board-shell.editorial-board .hero-inner {
-    padding: var(--jobx-space-26px) var(--jobx-space-16px) var(--jobx-space-24px);
+    padding: var(--jobx-space-26px) var(--jobx-space-16px)
+      var(--jobx-space-24px);
   }
   .board-shell.editorial-board .discovery-hero h1 {
-    font-size: clamp(var(--jobx-font-size-30px), 8.2vw, var(--jobx-font-size-44px));
+    font-size: clamp(
+      var(--jobx-font-size-30px),
+      8.2vw,
+      var(--jobx-font-size-44px)
+    );
     letter-spacing: -0.8px;
     line-height: 1.18;
     max-width: 540px;
@@ -922,23 +914,13 @@
     gap: var(--jobx-space-8px);
     padding: 0 var(--jobx-space-12px);
   }
-  .board-shell .header-search {
-    width: 44px;
-    padding: 0;
-    flex: 0 0 44px;
-  }
-  .board-shell .header-search span {
-    display: none;
-  }
-  .board-shell .theme-toggle + .saved-nav {
-    margin-left: 0;
-  }
 }
 
 /* ---------- Post-job form ---------- */
 @media (max-width: 760px) {
   .post-job-shell .post-job-main {
-    padding: var(--jobx-space-16px) var(--jobx-space-14px) var(--jobx-space-32px);
+    padding: var(--jobx-space-16px) var(--jobx-space-14px)
+      var(--jobx-space-32px);
   }
   .post-job-shell .post-intro {
     margin: var(--jobx-space-16px) 0 var(--jobx-space-24px);
@@ -1060,13 +1042,12 @@
     gap: var(--jobx-space-4px) var(--jobx-space-8px);
     margin-bottom: var(--jobx-space-2px);
   }
-  .board-shell .search-start-recent header button,
   .board-shell .search-start-term {
-    min-height: 44px;
+    min-height: var(--ds-control-touch);
   }
   .board-shell .search-start-forget {
-    width: 44px;
-    height: 44px;
+    width: var(--ds-control-touch);
+    height: var(--ds-control-touch);
     margin-right: 0;
   }
   .board-shell .search-start-chips {
@@ -1075,10 +1056,12 @@
     gap: var(--jobx-space-8px);
     align-items: flex-start;
   }
-  .board-shell .search-start-chips button {
-    min-height: 44px;
+  /* Chips (.ds-chip) grow to a finger's height on phones, like every other control. */
+  .board-shell .search-start-chips .ds-chip,
+  .board-shell .active-filters .ds-chip {
+    min-height: var(--ds-control-touch);
     max-width: 100%;
-    padding: var(--jobx-space-8px) var(--jobx-space-10px);
+    white-space: normal;
     overflow-wrap: anywhere;
   }
 }
@@ -1091,34 +1074,37 @@
   .board-shell .results-tools .results-sort {
     min-width: 0;
   }
+  /* Filters, sort and map share the secondary look at the phone control height. */
   .board-shell .results-tools .mobile-filter-toggle,
+  .board-shell .results-tools .results-map-link,
   .board-shell .results-tools .results-sort .choice {
     width: 100%;
     max-width: none;
-    height: 48px;
-    min-height: 48px !important;
-    border: 1px solid var(--jobx-color-dce1ea-surface) !important;
-    border-radius: var(--jobx-radius-10px) !important;
-    background: var(--jobx-surface) !important;
-    color: var(--jobx-color-46526b-text);
+    height: var(--ds-control-touch);
+    min-height: var(--ds-control-touch) !important;
+    border: 1px solid var(--ds-line) !important;
+    border-radius: var(--ds-radius-md) !important;
+    background: var(--ds-surface) !important;
+    color: var(--ds-ink);
     font-family: inherit;
-    font-size: var(--jobx-font-size-14px) !important;
-    font-weight: 600;
-    line-height: 1.4;
-    padding: var(--jobx-space-10px) var(--jobx-space-12px) !important;
+    font-size: var(--ds-text-md) !important;
+    font-weight: var(--ds-weight-strong);
+    line-height: 1.2;
+    padding: 0 var(--ds-space-3) !important;
     box-shadow: none;
   }
   .board-shell .results-tools .mobile-filter-toggle:focus-visible,
+  .board-shell .results-tools .results-map-link:focus-visible,
   .board-shell .results-tools .results-sort .choice:focus-visible {
-    outline: 2px solid var(--jobx-accent);
-    outline-offset: 2px;
-    box-shadow: none;
+    outline: none;
+    border-color: var(--ds-accent) !important;
+    box-shadow: 0 0 0 3px var(--ds-focus);
   }
   .board-shell .discovery-hero .search-city .choice {
     background: transparent !important;
     border: 0 !important;
     border-radius: 0 !important;
-    min-height: 48px !important;
+    min-height: calc(var(--ds-control-lg) - 2px) !important;
   }
   .job-choice-options {
     min-width: min(260px, calc(100vw - 32px));
@@ -1130,7 +1116,8 @@
   }
   .job-choice-options [data-slot='select-item'] {
     min-height: 48px;
-    padding: var(--jobx-space-12px) var(--jobx-space-30px) var(--jobx-space-12px) var(--jobx-space-12px);
+    padding: var(--jobx-space-12px) var(--jobx-space-30px)
+      var(--jobx-space-12px) var(--jobx-space-12px);
     font-size: var(--jobx-font-size-14px);
     line-height: 1.5;
   }
@@ -1142,7 +1129,8 @@
 /* ── CV builder ── */
 @media screen and (max-width: 760px) {
   .cv-shell .cv-main {
-    padding: var(--jobx-space-22px) var(--jobx-space-14px) var(--jobx-space-40px);
+    padding: var(--jobx-space-22px) var(--jobx-space-14px)
+      var(--jobx-space-40px);
   }
   .cv-shell .cv-intro h1 {
     font-size: var(--jobx-font-size-24px);
@@ -1256,9 +1244,26 @@
     margin-bottom: calc(100px + env(safe-area-inset-bottom));
   }
 }
+@media (max-width: 380px) {
+  /* Narrow phones: the masthead tightens its gaps so four 44px actions still fit. */
+  .board-shell .topbar.public-header .header-inner.header-inner {
+    gap: var(--ds-space-1);
+  }
+  .board-shell .topbar.public-header .header-inner .jobx-brand,
+  .board-shell .topbar.public-header .header-inner .jobx-brand img {
+    width: 80px;
+    height: 27px;
+  }
+  .board-shell .topbar.public-header .header-inner .site-nav-link {
+    padding-inline: var(--ds-space-1);
+  }
+  .board-shell .topbar.public-header .header-inner .header-actions {
+    gap: 2px;
+  }
+}
 @media (max-width: 760px) {
   /* The phone header has no room for a second link; the map is reached from the board. */
-  .board-shell .topbar.public-header .all-vacancies-link.header-map-link {
+  .board-shell .topbar.public-header .site-nav-link.header-map-link {
     display: none;
   }
 }
@@ -1268,6 +1273,106 @@
     grid-column: 1 / -1;
     grid-row: 2;
     justify-content: center;
-    min-height: 44px;
+  }
+}
+
+/* ── Detail pass (phone) ────────────────────────────────────────────────────────────────
+   These follow refined-board.css's detail block, which loads after this file, so each rule
+   carries one class more than the shared rule it narrows. */
+@media (max-width: 760px) {
+  /* A bare `footer > span:nth-child(2)` in globals.css hid the source link on phones. */
+  .vacancy-page .vacancy-layout > .compact-source > span:nth-child(2) {
+    display: inline;
+  }
+  /* Inline links in the source line keep the text's rhythm but take a finger-sized hit area. */
+  .vacancy-page .vacancy-layout > .compact-source a {
+    display: inline-block;
+    padding-block: 15px;
+    margin-block: -15px;
+  }
+  .vacancy-page .quick-apply .email-actions .secondary-button.secondary-button {
+    width: var(--ds-control-touch);
+    min-height: var(--ds-control-touch);
+  }
+  .vacancy-page .email-actions.email-actions {
+    grid-template-columns: minmax(0, 1fr) var(--ds-control-touch);
+  }
+  .search-directory.search-directory {
+    padding-inline: var(--jobx-space-16px);
+  }
+  /* Filters and sort share the row; the map is a square button at its end, labelled for
+     screen readers, instead of a full-width row of its own. */
+  .board-shell.editorial-board.crafted-board .results-tools {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--ds-control-touch);
+  }
+  .board-shell.editorial-board.crafted-board .results-tools .results-map-link {
+    grid-column: 3;
+    grid-row: 1;
+    width: var(--ds-control-touch);
+    padding: 0 !important;
+  }
+  .board-shell .results-tools .results-map-link .results-map-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .board-shell .results-tools .results-sort .ds-select {
+    width: 100%;
+    min-width: 0;
+    height: var(--ds-control-touch);
+    min-height: var(--ds-control-touch);
+    border-color: var(--ds-line);
+    border-radius: var(--ds-radius-md);
+    font-size: var(--ds-text-md);
+    font-weight: var(--ds-weight-strong);
+  }
+  .board-shell .discovery-hero .clear-search {
+    flex-basis: var(--ds-control-touch);
+    width: var(--ds-control-touch);
+    height: var(--ds-control-touch);
+  }
+  /* The sheet: a bold title like every other heading, one divider between sections, and rows
+     that start at the fields' edge. */
+  .mobile-filters-sheet [data-slot='sheet-title'].cn-font-heading {
+    font-weight: 700;
+  }
+  .mobile-filters-sheet .filters .salary-filter {
+    margin-bottom: 0;
+    border-bottom: 0;
+  }
+  .mobile-filters-sheet .filters .filter-extra {
+    margin-top: var(--ds-space-3);
+    padding-top: var(--ds-space-1);
+  }
+  .mobile-filters-sheet .filters .filter-extra[open] > summary {
+    margin-bottom: var(--ds-space-1);
+  }
+  .mobile-filters-sheet .filters .advanced-filters {
+    margin-top: 0;
+  }
+  .mobile-filters-sheet .filters .check-row {
+    padding-inline: 0;
+    font-weight: 400;
+  }
+  .vacancy-page .quick-apply.quick-apply .external-application,
+  .vacancy-page .quick-apply.quick-apply .email-actions .primary,
+  .vacancy-page .vacancy-contact-guidance.vacancy-contact-guidance .primary,
+  .board-shell .empty.empty > .primary,
+  .board-shell .empty.empty > .secondary-button,
+  .board-shell .empty.empty .search-recovery .secondary-button {
+    min-height: var(--ds-control-touch);
+  }
+  .board-shell .hidden-vacancies.hidden-vacancies .secondary-button,
+  .board-shell .unavailable-saved.unavailable-saved .secondary-button,
+  .board-shell .hidden-vacancies.hidden-vacancies > summary,
+  .board-shell .unavailable-saved.unavailable-saved > summary {
+    min-height: var(--ds-control-touch);
+  }
+  /* The report form's reasons at the finger's height. */
+  .vacancy-page .job-report-reason {
+    min-height: var(--ds-control-touch);
   }
 }

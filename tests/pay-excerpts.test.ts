@@ -92,3 +92,14 @@ void test('a pay line from a numbered list loses its number, and an amount keeps
     JSON.stringify(kept),
   );
 });
+void test('a pay line joined to the label above it is not read a second time', () => {
+  // jobs.ge 755468, 2026-09: the same 900 lari was shown twice and lost its filter value.
+  const text =
+    'ანაზღაურება:\n• ხელფასი ფიქსირებული 900 ლარი.\n• ბონუსი 300-700 ლარი.';
+  assert.deepEqual(payExcerpts(text), [
+    'ანაზღაურება: ხელფასი ფიქსირებული 900 ლარი.',
+  ]);
+  const pay = visibleFields(text);
+  assert.equal(pay.salaryMin, 900);
+  assert.equal(pay.currency, 'GEL');
+});

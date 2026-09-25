@@ -1,4 +1,5 @@
 import { sourceNames, type Vacancy } from '../../lib/types';
+import { safeLogoUrl } from '../../lib/vacancy-media';
 import { cleanText, UnavailableVacancy } from './index';
 import type { ListedLink, ListingInfo, SourceModule } from './module';
 
@@ -24,7 +25,11 @@ type Detail = {
   what_to_do?: unknown;
   requirement?: unknown;
   perspective?: unknown;
-  CompanyDetail?: { name?: unknown; brandname?: unknown } | null;
+  CompanyDetail?: {
+    name?: unknown;
+    brandname?: unknown;
+    logo?: unknown;
+  } | null;
   CurrencyDetail?: Named;
   PositionDetail?: Named;
   VacancyLocation?: Named;
@@ -185,7 +190,7 @@ export const dk: SourceModule = {
         .filter(Boolean)
         .join('\n\n'),
       facts,
-      logoUrl: '',
+      logoUrl: safeLogoUrl(d.CompanyDetail?.logo),
       applicationLinks: [],
       url,
       source: sourceNames.dk,

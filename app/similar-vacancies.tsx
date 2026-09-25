@@ -3,7 +3,6 @@ import { VacancyStatus } from './vacancy-status';
 import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { ArrowUpRight } from 'lucide-react';
 import { CompanyLogo } from './company-logo';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { markListHop, vacancyPath } from '@/lib/vacancy-navigation';
@@ -58,13 +57,15 @@ export function SimilarVacancies({
       <h2 id="similar-title">მსგავსი ვაკანსიები</h2>
       {!current ? (
         <>
-          <p className="filter-help">მსგავსი ვაკანსიები იტვირთება…</p>
+          <p className="sr-only">მსგავსი ვაკანსიები იტვირთება</p>
           <div className="similar-grid" aria-hidden="true">
             {[0, 1, 2].map((index) => (
               <div className="similar-placeholder" key={index}>
-                <span />
-                <i />
-                <i />
+                {/* Divs, not spans: an older rule paints the placeholder's spans. */}
+                <div className="ds-skeleton similar-skeleton-logo" />
+                <div className="ds-skeleton ds-skeleton--title" />
+                <div className="ds-skeleton similar-skeleton-line" />
+                <div className="ds-skeleton similar-skeleton-short" />
               </div>
             ))}
           </div>
@@ -110,9 +111,7 @@ export function SimilarVacancies({
                 </span>
               )}
               <p>{reasons.join(' · ')}</p>
-              <span className="similar-open">
-                ვაკანსიის ნახვა <ArrowUpRight size={15} />
-              </span>
+              <span className="similar-open">ვაკანსიის ნახვა</span>
             </Link>
           ))}
         </div>

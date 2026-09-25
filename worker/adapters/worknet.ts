@@ -1,5 +1,5 @@
 import { sourceNames, type Vacancy } from '../../lib/types';
-import { explicitWorkCity } from '../../lib/work-location';
+import { explicitWorkCity, workTowns } from '../../lib/work-location';
 import { UnavailableVacancy } from './index';
 import type { ListedLink, ListingInfo, SourceModule } from './module';
 import classifications from './worknet-classifications.json' with { type: 'json' };
@@ -35,6 +35,45 @@ const regions: Record<number, string> = {
   55: 'სამცხე-ჯავახეთი',
   68: 'გურია',
 };
+/**
+ * Municipality names come from the public Area classification
+ * (worknet-api.moh.gov.ge/api/Classification/Area, read 2026-09-25). Ids 29–45 are Tbilisi and
+ * its districts. A municipality is taken as the town only when a town of that name is one a
+ * workplace label may name: "ქუთაისი" is the city, "ყაზბეგი" is not a town.
+ */
+const tbilisiParts = new Set(Array.from({ length: 17 }, (_, i) => 29 + i));
+function municipalityTown(ids: number[]) {
+  const towns = new Set(
+    ids.map((id) =>
+      tbilisiParts.has(id) ? 'თბილისი' : names('Municipality', [id])[0] || '',
+    ),
+  );
+  const [town] = towns;
+  return towns.size === 1 && workTowns.includes(town) ? town : '';
+}
+const municipalityNames = new Set<string>(
+  Object.values(classifications.Municipality),
+);
+/**
+ * The street's town wins, except when the agency filed the workplace under another town and
+ * the street only borrows a municipality's name: "ქუთაისის ქუჩა 5" filed under თბილისი is a
+ * Tbilisi street. A street that names the town itself ("ქ. ქუთაისი, ნიკეას 5") still wins.
+ */
+export function workCity(
+  streetCity: string,
+  filedTown: string,
+  streets: string,
+) {
+  if (
+    streetCity &&
+    filedTown &&
+    streetCity !== filedTown &&
+    municipalityNames.has(streetCity) &&
+    !new RegExp(`(?<![ა-ჰ])${streetCity}(?![ა-ჰ])`).test(streets)
+  )
+    return filedTown;
+  return streetCity || filedTown;
+}
 const contractTypes: Record<string, string> = {
   სრული: 'სრული განაკვეთი',
   არასრული: 'ნახევარი განაკვეთი',
@@ -164,6 +203,13 @@ export const worknet: SourceModule = {
     const streets = [
       ...new Set(locations.map((l) => str(l.street).replace(/\s+/g, ' ').trim())),
     ].filter(Boolean);
+    const municipalityIds = [
+      ...new Set(
+        locations
+          .flatMap((l) => [l.municipalityId].flat())
+          .filter(Number.isSafeInteger),
+      ),
+    ] as number[];
     const regionIds = [
       ...new Set(locations.map((l) => l.regionId).filter(Number.isSafeInteger)),
     ] as number[];
@@ -230,12 +276,19 @@ export const worknet: SourceModule = {
       .replace(/[ \t]+\n/g, '\n')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
-    // A street names the city when it can; otherwise the region stands in, never a guess.
+    // A street names the city when it can, then the one municipality the agency filed the
+    // workplace under; otherwise the region stands in, never a guess.
     const region = regionIds.length === 1 ? regions[regionIds[0]] || '' : '';
+    const town = municipalityTown(municipalityIds);
     return {
       title: str(data.vacancyName),
       company: str(data.organizationName),
-      city: explicitWorkCity({ description: '', facts }) || region,
+      city:
+        workCity(
+          explicitWorkCity({ description: '', facts }),
+          town,
+          streets.join('; '),
+        ) || region,
       category: 'სხვა',
       salary,
       salaryMin,

@@ -277,10 +277,19 @@ export function PhotoEditor({
           </p>
         )}
         <div className="cv-photo-editor__actions">
-          <button type="button" onClick={onCancel}>
+          <button
+            type="button"
+            className="ds-btn ds-btn--secondary"
+            onClick={onCancel}
+          >
             {text.cancel}
           </button>
-          <button type="button" onClick={apply} disabled={!image}>
+          <button
+            type="button"
+            className="ds-btn ds-btn--primary"
+            onClick={apply}
+            disabled={!image}
+          >
             {text.apply}
           </button>
         </div>

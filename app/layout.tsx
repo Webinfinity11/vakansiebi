@@ -14,6 +14,8 @@ import './public-header.css';
 import './post-job.css';
 import './theme-dark.css';
 import './featured-vacancies.css';
+// Last: the design system settles colours, controls and buttons for every page.
+import './design-system.css';
 import { themeScript } from '@/lib/theme';
 export const viewport: Viewport = {
   width: 'device-width',
@@ -67,7 +69,7 @@ export default function RootLayout({
         {/* Before the first paint: a themed page never flashes the other theme. */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         {children}
         <Suspense fallback={null}>
           <GoogleAnalytics measurementId="G-9S8J0W7QXM" />

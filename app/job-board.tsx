@@ -59,8 +59,7 @@ import {
 import { track, trackAction } from '@/lib/analytics-client';
 import type { ActionCode } from '@/lib/analytics-actions';
 import {
-  ArrowUpRight,
-  ArrowRight,
+  ChevronDown,
   Crown,
   Search,
   SlidersHorizontal,
@@ -124,6 +123,9 @@ const categoryIcons = {
 };
 
 import { Choice } from './choice';
+import { SelectField } from './select-field';
+/* A sentinel for the subcategory menu's "all" row: a menu item cannot carry an empty value. */
+const allSubcategories = '__all__';
 export { Choice };
 // Shared with the search plan, so "სხვა" means a city outside this very list.
 const cities: string[] = [...cityOptions];
@@ -195,11 +197,11 @@ const JobCard = memo(function JobCard({
       data-dir={swipe.dx > 0 ? 'right' : swipe.dx < 0 ? 'left' : undefined}
     >
       <div className="swipe-reveal swipe-reveal-right" aria-hidden="true">
-        <Bookmark size={18} /> {saved ? 'მოხსნა' : 'შენახვა'}
+        <Bookmark size={16} /> {saved ? 'მოხსნა' : 'შენახვა'}
       </div>
       {!demo && (
         <div className="swipe-reveal swipe-reveal-left" aria-hidden="true">
-          <EyeOff size={18} /> დამალვა
+          <EyeOff size={16} /> დამალვა
         </div>
       )}
       <article
@@ -244,7 +246,7 @@ const JobCard = memo(function JobCard({
             )}
             {featured === 'vip' && (
               <span className="featured-label featured-label-vip">
-                <Crown size={12} aria-hidden="true" />
+                <Crown size={14} aria-hidden="true" />
                 VIP
               </span>
             )}
@@ -272,7 +274,7 @@ const JobCard = memo(function JobCard({
             )}
             {j.city && (
               <span>
-                <MapPin size={13} />
+                <MapPin size={14} />
                 <span className="location-text" title={j.city}>
                   {vacancyCardLocation(j.city)}
                 </span>
@@ -280,13 +282,13 @@ const JobCard = memo(function JobCard({
             )}
             {j.employmentType && (
               <span>
-                <BriefcaseBusiness size={13} />
+                <BriefcaseBusiness size={14} />
                 {j.employmentType}
               </span>
             )}
             {j.mode && (
               <span>
-                <Laptop size={13} />
+                <Laptop size={14} />
                 {j.mode}
               </span>
             )}
@@ -316,7 +318,7 @@ const JobCard = memo(function JobCard({
           <div className="job-actions">
             {featured === 'premium' && (
               <Link
-                className="featured-cta"
+                className="ds-btn ds-btn--primary featured-cta"
                 href={openHref}
                 prefetch={false}
                 aria-label={`${j.title} — ვაკანსიის ნახვა`}
@@ -328,7 +330,7 @@ const JobCard = memo(function JobCard({
                   else onOpen(j);
                 }}
               >
-                ვაკანსიის ნახვა <ArrowRight size={15} aria-hidden="true" />
+                ვაკანსიის ნახვა
               </Link>
             )}
             <button
@@ -341,7 +343,7 @@ const JobCard = memo(function JobCard({
               aria-pressed={saved}
               onClick={() => onToggleSave(j.id)}
             >
-              <Bookmark size={19} />
+              <Bookmark size={16} />
             </button>
           </div>
         </div>
@@ -467,6 +469,33 @@ export default function JobBoard({
   >([]);
   const [mobileDraft, setMobileDraft] = useState<SearchFilters | null>(null);
   const mobileKey = mobileDraft ? searchParams(mobileDraft).toString() : '';
+  /* How many vacancies the filters being set would show, so the button can say it before it is
+     pressed. Asked once the choices settle, from the light summary listing. */
+  const [draftTotal, setDraftTotal] = useState<{
+    key: string;
+    total: number;
+  } | null>(null);
+  useEffect(() => {
+    if (!filtersOpen || !mobileKey) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void fetch(`/api/jobs?${mobileKey}&summary=1&page=1`, {
+        signal: controller.signal,
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((body) => {
+          if (body && typeof body.total === 'number')
+            setDraftTotal({ key: mobileKey, total: body.total });
+        })
+        .catch(() => {});
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [filtersOpen, mobileKey]);
+  const previewTotal =
+    draftTotal && draftTotal.key === mobileKey ? draftTotal.total : null;
   const [pageState, setPageState] = useState(() => ({
       key: boardSearchKey(initialSearch, { savedOnly, preview: demo }),
       page: readSearchPage(params),
@@ -812,7 +841,7 @@ export default function JobBoard({
     setAppendPage({ key: filterKey, page: loadedThrough + 1 });
   }, [appending, resultsPending, loadedThrough, pages, filterKey, page]);
   const nextPageTarget = useRef<HTMLDivElement>(null);
-  useAutoLoad(
+  const resumeAutoLoad = useAutoLoad(
     nextPageTarget,
     restoreReady &&
       !appending &&
@@ -1202,9 +1231,14 @@ export default function JobBoard({
         {prefix !== 'mobile' && (
           <div className="filter-head">
             <h2>
-              <SlidersHorizontal size={17} /> ფილტრები
+              <SlidersHorizontal size={16} /> ფილტრები
             </h2>
-            <button onClick={resetFilters} disabled={!activeCount}>
+            <button
+              type="button"
+              className="ds-btn ds-btn--ghost ds-btn--sm"
+              onClick={resetFilters}
+              disabled={!activeCount}
+            >
               გასუფთავება
             </button>
           </div>
@@ -1259,7 +1293,7 @@ export default function JobBoard({
                         />
                         <CategoryIcon
                           className="category-icon"
-                          size={17}
+                          size={16}
                           aria-hidden="true"
                         />
                         <span>{c === 'ყველა' ? 'ყველა მიმართულება' : c}</span>
@@ -1321,7 +1355,7 @@ export default function JobBoard({
                 })}
             </div>
             <button
-              className="category-expand"
+              className="ds-btn ds-btn--ghost category-expand"
               type="button"
               aria-expanded={allCategoriesVisible}
               onClick={() => setAllCategoriesVisible((value) => !value)}
@@ -1335,28 +1369,26 @@ export default function JobBoard({
           subcategories.some((item) => item.category === draft.category) && (
             <div className="filter-subcategory">
               <label htmlFor={`${prefix}-subcategory`}>ქვემიმართულება</label>
-              <select
+              <SelectField
                 id={`${prefix}-subcategory`}
-                aria-describedby={`${prefix}-subcategory-help`}
-                value={draft.subcategory || ''}
-                onChange={(event) => {
+                value={draft.subcategory || allSubcategories}
+                onChange={(next) => {
+                  const subcategory =
+                    next === allSubcategories ? undefined : next;
                   if (prefix === 'mobile')
-                    setMobileDraft({
-                      ...draft,
-                      subcategory: event.target.value || undefined,
-                    });
-                  else setSubcategory(event.target.value);
+                    setMobileDraft({ ...draft, subcategory });
+                  else setSubcategory(subcategory ?? '');
                 }}
-              >
-                <option value="">ყველა — {draft.category}</option>
-                {subcategories
-                  .filter((item) => item.category === draft.category)
-                  .map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.label}
-                    </option>
-                  ))}
-              </select>
+                options={[
+                  {
+                    value: allSubcategories,
+                    label: `ყველა — ${draft.category}`,
+                  },
+                  ...subcategories
+                    .filter((item) => item.category === draft.category)
+                    .map((item) => ({ value: item.id, label: item.label })),
+                ]}
+              />
               <p
                 className="filter-subcategory-help"
                 id={`${prefix}-subcategory-help`}
@@ -1389,23 +1421,21 @@ export default function JobBoard({
         >
           განაკვეთი
         </label>
-        <select
-          className="filter-employment"
-          id={`${prefix}-employment`}
-          value={draft.employment}
-          onChange={(event) => {
-            const employment = event.target
-              .value as AdvancedFilters['employment'];
-            if (prefix === 'mobile') setMobileDraft({ ...draft, employment });
-            else setAdvanced({ ...advanced, employment });
-          }}
-        >
-          {Object.entries(employmentLabels).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <div className="filter-employment">
+          <SelectField
+            id={`${prefix}-employment`}
+            value={draft.employment}
+            onChange={(next) => {
+              const employment = next as AdvancedFilters['employment'];
+              if (prefix === 'mobile') setMobileDraft({ ...draft, employment });
+              else setAdvanced({ ...advanced, employment });
+            }}
+            options={Object.entries(employmentLabels).map(([key, label]) => ({
+              value: key,
+              label,
+            }))}
+          />
+        </div>
         {prefix === 'mobile' && (
           <SalaryFilter
             prefix={prefix}
@@ -1419,6 +1449,7 @@ export default function JobBoard({
             {draft.entryLevel || draft.postedWithin || draft.source !== 'ყველა'
               ? ' · არჩეულია'
               : ''}
+            <ChevronDown className="disclosure-chevron" aria-hidden="true" />
           </summary>
           <AdvancedFilterControls
             prefix={prefix}
@@ -1441,7 +1472,7 @@ export default function JobBoard({
           />
         </details>
         <div className="source-note">
-          <ShieldCheck size={21} />
+          <ShieldCheck size={20} />
           <p>იპოვე აქ. დეტალები გადაამოწმე პირველწყაროზე.</p>
         </div>
       </>
@@ -1479,9 +1510,7 @@ export default function JobBoard({
           <span>
             ადმინის წინასწარი ნახვა — გამოუქვეყნებელი ვაკანსიებიც ჩანს
           </span>
-          <Link href="/admin">
-            ადმინში დაბრუნება <ArrowUpRight size={14} />
-          </Link>
+          <Link href="/admin">ადმინში დაბრუნება</Link>
         </div>
       )}
       <main>
@@ -1552,7 +1581,7 @@ export default function JobBoard({
                           searchInputRef.current?.focus();
                         }}
                       >
-                        <X size={18} aria-hidden="true" />
+                        <X size={16} aria-hidden="true" />
                       </button>
                     )}
                     <SearchSuggest
@@ -1574,7 +1603,7 @@ export default function JobBoard({
                     />
                   </div>
                   <div className="search-city">
-                    <MapPin size={18} />
+                    <MapPin size={16} />
                     <Choice
                       label="ყველა ქალაქი"
                       value={city}
@@ -1593,7 +1622,6 @@ export default function JobBoard({
                     <span className="search-label-short" aria-hidden="true">
                       ძებნა
                     </span>
-                    <ArrowRight size={18} />
                   </button>
                 </form>
               </search>
@@ -1671,7 +1699,14 @@ export default function JobBoard({
                       <h2>
                         {savedOnly ? 'შენახული ვაკანსიები' : 'ვაკანსიები'}
                         <span className="result-count">
-                          {resultsPending ? '…' : total}
+                          {resultsPending ? (
+                            <span
+                              className="ds-skeleton result-count-skeleton"
+                              aria-label="იტვირთება"
+                            />
+                          ) : (
+                            total
+                          )}
                         </span>
                       </h2>
                       <output
@@ -1712,6 +1747,7 @@ export default function JobBoard({
                           'სათაურებში ვერ მოიძებნა — ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.'
                         ) : advanced.deep ? (
                           <button
+                            className="ds-btn ds-btn--ghost ds-btn--sm"
                             onClick={() =>
                               setAdvanced({ ...advanced, deep: false })
                             }
@@ -1720,6 +1756,7 @@ export default function JobBoard({
                           </button>
                         ) : searchMeta?.wider && searchMeta.wider > total ? (
                           <button
+                            className="ds-btn ds-btn--ghost ds-btn--sm"
                             onClick={() =>
                               setAdvanced({ ...advanced, deep: true })
                             }
@@ -1737,9 +1774,10 @@ export default function JobBoard({
                     href="/map"
                     prefetch={false}
                     className="secondary-button results-map-link"
+                    aria-label="ვაკანსიები რუკაზე"
                   >
-                    <MapPin size={16} />
-                    რუკაზე
+                    <MapPin size={16} aria-hidden="true" />
+                    <span className="results-map-label">რუკაზე</span>
                   </Link>
                   <button
                     className="mobile-filter-toggle secondary-button"
@@ -1752,10 +1790,11 @@ export default function JobBoard({
                     ფილტრები {activeCount > 0 && <b>{activeCount}</b>}
                   </button>
                   <div className="results-sort">
-                    <Choice
+                    {/* A sort always has a value, so the list has no "ყველა" row. */}
+                    <SelectField
                       label="დალაგება"
                       value={sort}
-                      onChange={(v) => setSort(v === 'ყველა' ? 'უახლესი' : v)}
+                      onChange={(v) => setSort(v || 'უახლესი')}
                       options={[
                         'შესაბამისობა',
                         'უახლესი',
@@ -1769,83 +1808,127 @@ export default function JobBoard({
               {!!activeCount && (
                 <div className="active-filters">
                   {query && (
-                    <button onClick={() => setQuery('')}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => setQuery('')}
+                    >
                       {query}
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {city !== 'ყველა' && (
-                    <button onClick={() => setCity('ყველა')}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => setCity('ყველა')}
+                    >
                       {city}
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {category !== 'ყველა' && (
-                    <button onClick={() => setCategory('ყველა')}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => setCategory('ყველა')}
+                    >
                       {category}
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {subcategory && (
-                    <button onClick={() => setSubcategory('')}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => setSubcategory('')}
+                    >
                       {subcategoryFor(category, subcategory)?.label}
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {source !== 'ყველა' && (
-                    <button onClick={() => setSource('ყველა')}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => setSource('ყველა')}
+                    >
                       {source}
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {paid && (
-                    <button onClick={() => setPaid(false)}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => setPaid(false)}
+                    >
                       ხელფასი მითითებულია
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {remote && (
-                    <button onClick={() => setRemote(false)}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => setRemote(false)}
+                    >
                       დისტანციური
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {(advanced.salaryPeriod === 'day' ||
                     advanced.salaryFrom !== null ||
                     advanced.salaryTo !== null) && (
-                    <button onClick={() => relaxFilter('salary')}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => relaxFilter('salary')}
+                    >
                       {/* With no amount on either side there is no range to
                           show, and "0–∞ ₾ / დღე" named a filter nobody set. */}
                       {advanced.salaryFrom === null &&
                       advanced.salaryTo === null
                         ? 'დღიური ანაზღაურება'
                         : `${advanced.salaryFrom !== null && advanced.salaryTo !== null ? `${advanced.salaryFrom}–${advanced.salaryTo} ₾` : advanced.salaryFrom !== null ? `${advanced.salaryFrom} ₾-დან` : `${advanced.salaryTo} ₾-მდე`} / ${advanced.salaryPeriod === 'day' ? 'დღე' : 'თვე'}`}
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {advanced.employment !== 'all' && (
-                    <button onClick={() => relaxFilter('employment')}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => relaxFilter('employment')}
+                    >
                       {employmentLabels[advanced.employment]}
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {advanced.entryLevel && (
-                    <button onClick={() => relaxFilter('entryLevel')}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => relaxFilter('entryLevel')}
+                    >
                       გამოცდილების გარეშე
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {!!advanced.postedWithin && (
-                    <button onClick={() => relaxFilter('postedWithin')}>
+                    <button
+                      className="ds-chip"
+                      data-active="true"
+                      onClick={() => relaxFilter('postedWithin')}
+                    >
                       {advanced.postedWithin === 1
                         ? 'დღეს'
                         : `ბოლო ${advanced.postedWithin} დღეში`}
-                      <X size={12} />
+                      <X aria-hidden="true" />
                     </button>
                   )}
                   {activeCount >= 2 && (
                     <button
-                      className="clear-all-filters"
+                      className="ds-btn ds-btn--ghost ds-btn--sm clear-all-filters"
                       onClick={resetFilters}
                     >
                       გასუფთავება
@@ -1860,6 +1943,10 @@ export default function JobBoard({
                   <details className="unavailable-saved" open>
                     <summary>
                       დასრულებული ან მიუწვდომელი ({unavailable.length})
+                      <ChevronDown
+                        className="disclosure-chevron"
+                        aria-hidden="true"
+                      />
                     </summary>
                     <p>
                       ეს განცხადებები აქტიურ შედეგებში აღარ ჩანს. შენახულიდან
@@ -1894,6 +1981,10 @@ export default function JobBoard({
                 <details className="hidden-vacancies">
                   <summary>
                     დამალული ვაკანსიები ({activity.hidden.length})
+                    <ChevronDown
+                      className="disclosure-chevron"
+                      aria-hidden="true"
+                    />
                   </summary>
                   <p>
                     შენახულია ამ ბრაუზერში. სურვილისამებრ დააბრუნე ძებნის
@@ -1931,7 +2022,7 @@ export default function JobBoard({
               )}
               {error ? (
                 <div className="empty" role="alert">
-                  <Globe2 size={30} />
+                  <Globe2 size={20} />
                   <h3>ვაკანსიები ვერ ჩაიტვირთა</h3>
                   <p>{error}</p>
                   <button
@@ -1975,7 +2066,7 @@ export default function JobBoard({
               {!resultsPending && !error && !visibleJobs.length && (
                 <div className="empty">
                   <div className="empty-icon">
-                    {savedOnly ? <Bookmark size={28} /> : <Search size={28} />}
+                    {savedOnly ? <Bookmark size={20} /> : <Search size={20} />}
                   </div>
                   <h3>
                     {savedOnly &&
@@ -2035,7 +2126,7 @@ export default function JobBoard({
                       if (savedOnly) setSavedOnly(false);
                     }}
                   >
-                    ყველა ვაკანსია <ArrowRight size={16} />
+                    ყველა ვაკანსია
                   </button>
                 </div>
               )}
@@ -2073,16 +2164,22 @@ export default function JobBoard({
                       event.preventDefault();
                       if (appending) return;
                       act('more_click');
+                      resumeAutoLoad();
                       loadMore();
                     }}
                   >
-                    {appending
-                      ? 'იტვირთება…'
-                      : appendError
-                        ? 'ხელახლა ცდა'
-                        : loadedThrough - page >= 49
-                          ? 'შემდეგი ვაკანსიების ნახვა'
-                          : `მეტის ჩვენება · კიდევ ${Math.min(listPageSize, Math.max(0, total - (page - 1) * listPageSize - jobs.length))}`}
+                    {appending ? (
+                      <>
+                        <span className="ds-spinner" aria-hidden="true" />
+                        იტვირთება
+                      </>
+                    ) : appendError ? (
+                      'ხელახლა ცდა'
+                    ) : loadedThrough - page >= 49 ? (
+                      'შემდეგი ვაკანსიების ნახვა'
+                    ) : (
+                      `მეტის ჩვენება · კიდევ ${Math.min(listPageSize, Math.max(0, total - (page - 1) * listPageSize - jobs.length))}`
+                    )}
                   </a>
                   {appendError && (
                     <p className="load-more-error" role="alert">
@@ -2152,12 +2249,15 @@ export default function JobBoard({
       {saveNotice && !feedback && !filtersOpen && (
         <div className="feedback-toast save-confirmation">
           <output>
-            <Check size={17} />
+            <Check size={16} />
             {saveNotice.wasSaved
               ? 'შენახულებიდან ამოღებულია'
               : 'ვაკანსია შენახულია'}
           </output>
-          <button className="undo-save" onClick={undoSave}>
+          <button
+            className="ds-btn ds-btn--ghost ds-btn--sm undo-save"
+            onClick={undoSave}
+          >
             გაუქმება
           </button>
           <button
@@ -2170,7 +2270,7 @@ export default function JobBoard({
       )}
       {feedback && !filtersOpen && (
         <output className="feedback-toast">
-          <Check size={17} />
+          <Check size={16} />
           {feedback}
           <button
             aria-label="შეტყობინების დახურვა"
@@ -2191,7 +2291,7 @@ export default function JobBoard({
           <SheetHeader>
             <SheetTitle>ფილტრები</SheetTitle>
             <button
-              className="mobile-filters-clear"
+              className="ds-btn ds-btn--ghost ds-btn--sm mobile-filters-clear"
               disabled={!mobileKey}
               onClick={() => setMobileDraft(readSearch(new URLSearchParams()))}
             >
@@ -2217,7 +2317,11 @@ export default function JobBoard({
                 setMobileDraft(null);
               }}
             >
-              შედეგების ჩვენება <ArrowRight size={16} />
+              {previewTotal === null
+                ? 'შედეგების ჩვენება'
+                : previewTotal === 0
+                  ? 'ვაკანსია ვერ მოიძებნა'
+                  : `ნახე ${new Intl.NumberFormat('ka-GE').format(previewTotal)} ვაკანსია`}
             </button>
           </div>
         </SheetContent>

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { ChevronDown, CheckCircle2, Search } from 'lucide-react';
+import { SkeletonRows } from '../skeleton';
 import type { EmployerCandidate, EmployerName } from '@/lib/server/employers';
 
 type EmployerPageSummary = { slug: string; name: string; count: number };
@@ -59,8 +60,8 @@ export function EmployersPanel() {
   return (
     <section className="admin-analytics">
       <p className="admin-analytics-note">
-        მსგავსი სახელები, რომლებიც შეილება ერთი დამსაქმებელი იყოს. ავტომატურად
-        არაფერი ერთიანდება — ერთი პასუხი ყველ მართლწერას ეხება.
+        მსგავსი სახელები, რომლებიც შეიძლება ერთი დამსაქმებელი იყოს. ავტომატურად
+        არაფერი ერთიანდება — ერთი პასუხი ყველა მართლწერას ეხება.
       </p>
       {state?.error && (
         <p role="alert" className="admin-error">
@@ -70,6 +71,7 @@ export function EmployersPanel() {
       {!!pages.length && (
         <details className="raw-details">
           <summary>
+            <ChevronDown className="admin-summary-mark" aria-hidden="true" />
             საკუთარი გვერდის მქონე დამსაქმებლები ({pages.length})
           </summary>
           <ol className="admin-employer-pages">
@@ -89,15 +91,17 @@ export function EmployersPanel() {
         </details>
       )}
       {!state ? (
-        <p>იტვირთება…</p>
+        <SkeletonRows rows={4} block label="კომპანიები იტვირთება" />
       ) : !state.rows ? null : !state.rows.length ? (
-        <p className="admin-analytics-empty">
-          ახლა შესამოწმებელი არაფერი არის.
-        </p>
+        <div className="empty">
+          <CheckCircle2 size={20} aria-hidden="true" />
+          <h3>შესამოწმებელი სახელი არ არის</h3>
+          <p>მსგავსი მართლწერის ახალი წყვილი გამოჩენისთანავე აქ დაემატება.</p>
+        </div>
       ) : (
         <>
           <div className="admin-search">
-            <Search size={18} />
+            <Search size={16} />
             <input
               aria-label="დამსაქმებლის სახელით გაფილტვრა"
               placeholder="სახელით გაფილტვრა"
@@ -153,6 +157,7 @@ function FilteredEmployerList({
             <span className="admin-employer-actions">
               <button
                 type="button"
+                className="ds-btn ds-btn--secondary ds-btn--sm"
                 disabled={Boolean(busy)}
                 onClick={() => void decide(row, 'merge')}
               >
@@ -160,6 +165,7 @@ function FilteredEmployerList({
               </button>
               <button
                 type="button"
+                className="ds-btn ds-btn--secondary ds-btn--sm"
                 disabled={Boolean(busy)}
                 onClick={() => void decide(row, 'separate')}
               >

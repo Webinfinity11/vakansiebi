@@ -42,6 +42,33 @@ void test('floors and offices are dropped, not mistaken for the house', () => {
   );
 });
 
+void test('a street type written onto the number still reads as street and house', () => {
+  // Real hr.ge and myjobs.ge texts.
+  assert.deepEqual(queries('ქ. თბილისი, დიდი დიღომი, მირიან მეფის ქ.21'), [
+    'მირიან მეფის ქუჩა 21, თბილისი',
+  ]);
+  assert.deepEqual(queries('თბილისი; ჭავჭავაძის გამზ.76მ'), [
+    'ჭავჭავაძის გამზირი 76მ, თბილისი',
+  ]);
+  // A number with no street before it is still nothing.
+  assert.deepEqual(queries('თბილისი, ქ.21'), []);
+  assert.deepEqual(queries('ოფისი N5, გამზ.12', 'თბილისი'), []);
+});
+
+void test('a Tbilisi district beside the street names the city', () => {
+  // jobs.ge: "იუმაშევის #23 (ლილო)" with no city anywhere.
+  assert.deepEqual(queries('იუმაშევის #23 (ლილო)'), ['იუმაშევის 23, თბილისი']);
+  assert.deepEqual(queries('იუმაშევის #23 (ლილო)', 'თბილისი'), [
+    'იუმაშევის 23, თბილისი',
+  ]);
+  // Filed under another city, the district is not trusted over it.
+  assert.deepEqual(queries('იუმაშევის #23 (ლილო)', 'ბათუმი'), [
+    'იუმაშევის 23, ბათუმი',
+  ]);
+  // No district, no city: still refused.
+  assert.deepEqual(queries('იუმაშევის #23'), []);
+});
+
 const place = (
   lat: number,
   lon: number,

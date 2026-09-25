@@ -9,7 +9,19 @@ import { placeVacancies } from '../worker/places';
 let round = 0;
 for (;;) {
   round++;
-  const result = await placeVacancies({ vacancies: 400, lookups: 300 });
+  const result = await placeVacancies({ vacancies: 400, lookups: 300 }).catch(
+    (error) => {
+      // The geocoder is unreachable for now: wait a minute and carry on where this left off.
+      console.warn(
+        `round ${round}: geocoder unreachable (${error instanceof Error ? error.message : error}), retrying in 60s`,
+      );
+      return 'retry' as const;
+    },
+  );
+  if (result === 'retry') {
+    await new Promise((resolve) => setTimeout(resolve, 60_000));
+    continue;
+  }
   const left = (
     await db().query(
       `SELECT count(*)::int n FROM jobs j LEFT JOIN job_place_checks c ON c.job_id = j.id

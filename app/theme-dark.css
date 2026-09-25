@@ -947,9 +947,6 @@
   background: var(--jobx-surface);
   border-bottom: 1px solid #2d323e;
 }
-:root[data-theme='dark'] .board-shell .saved-nav {
-  color: #cdd0d4;
-}
 :root[data-theme='dark'] .board-shell .hero {
   background: var(--jobx-accent-tint);
   border-bottom: 1px solid var(--jobx-color-dce4f6-surface);
@@ -1013,12 +1010,6 @@
   border: 1px solid #2e3440;
   background: var(--jobx-surface);
 }
-:root[data-theme='dark'] .board-shell .filter-head > button {
-  color: var(--jobx-color-5d6067-text);
-}
-:root[data-theme='dark'] .board-shell .filter-head > button:disabled {
-  color: #969ca6;
-}
 :root[data-theme='dark'] .board-shell .filters h3 {
   color: #b7c0d0;
 }
@@ -1064,11 +1055,6 @@
 :root[data-theme='dark'] .board-shell .results-head .choice {
   color: #b3b7bf;
   background: var(--jobx-surface);
-}
-:root[data-theme='dark'] .board-shell .active-filters button {
-  color: #c0c4ca;
-  border: 1px solid #474d5a;
-  background: #262b34;
 }
 :root[data-theme='dark'] .board-shell .job-card {
   border: 1px solid var(--jobx-color-e2e2e3-surface);
@@ -1172,20 +1158,6 @@
 :root[data-theme='dark'] .board-shell .filters h3 small {
   color: #9fa4ad;
 }
-:root[data-theme='dark'] .advanced-filters > label,
-:root[data-theme='dark'] .advanced-filters legend,
-:root[data-theme='dark'] .advanced-filters fieldset > label {
-  color: #ccced3;
-}
-:root[data-theme='dark'] .advanced-filters select,
-:root[data-theme='dark'] .salary-range input {
-  border: 1px solid #3c4454;
-  background: var(--jobx-surface);
-  color: #d0d2d7;
-}
-:root[data-theme='dark'] .advanced-filters input[type='checkbox'] {
-  accent-color: #586274;
-}
 :root[data-theme='dark'] .advanced-filters fieldset {
   border: 0;
   border-top: 1px solid var(--jobx-border-neutral);
@@ -1200,9 +1172,8 @@
 :root[data-theme='dark'] .filter-error {
   color: #d98c8c;
 }
-:root[data-theme='dark'] .advanced-filters :is(input,
-:root[data-theme='dark'] select):focus-visible {
-  outline: 3px solid var(--jobx-color-a3a7af-border);
+:root[data-theme='dark'] .salary-range input:focus-visible {
+  outline: none;
 }
 :root[data-theme='dark'] .salary-range input[aria-invalid='true'] {
   border-color: var(--jobx-color-ad4440-text);
@@ -1227,10 +1198,6 @@
 :root[data-theme='dark'] .board-shell nav .nav-active:after {
   background: var(--jobx-accent);
 }
-:root[data-theme='dark'] .board-shell .save-button.is-saved {
-  color: var(--jobx-accent);
-  background: var(--jobx-accent-tint);
-}
 :root[data-theme='dark'] .board-shell .quick button:hover {
   border-color: var(--jobx-accent);
 }
@@ -1245,14 +1212,6 @@
 }
 :root[data-theme='dark'] .board-shell .hero-copy .eyebrow > span {
   background: var(--jobx-accent);
-}
-:root[data-theme='dark'] .board-shell .active-filters button {
-  color: var(--jobx-accent-hover);
-  background: var(--jobx-accent-tint);
-  border-color: #b4c5ee;
-}
-:root[data-theme='dark'] .board-shell .filter-head > button:not(:disabled) {
-  color: var(--jobx-accent);
 }
 :root[data-theme='dark'] .board-shell .job-card:focus-within {
   border-color: var(--jobx-accent);
@@ -1331,11 +1290,6 @@
 :root[data-theme='dark'] .vacancy-page .detail-dates {
   color: #929baa;
 }
-:root[data-theme='dark'] .vacancy-tools .is-saved {
-  color: var(--jobx-accent);
-  background: var(--jobx-accent-tint);
-  border-color: #afc4f4;
-}
 :root[data-theme='dark'] .vacancy-page .detail-facts {
   background: #272d3a;
   border: 1px solid var(--jobx-color-e2e7f0-surface);
@@ -1378,16 +1332,6 @@
 }
 :root[data-theme='dark'] .vacancy-related-links .application-links {
   border: 0;
-}
-:root[data-theme='dark'] .vacancy-related-links .application-links .vacancy-apply-link {
-  background: var(--jobx-accent);
-  color: var(--jobx-surface);
-  border: 1px solid var(--jobx-accent);
-}
-:root[data-theme='dark'] .vacancy-related-links .application-links .vacancy-employer-link {
-  color: var(--jobx-color-315590-text);
-  background: var(--jobx-accent-tint-soft);
-  border: 1px solid #1f2942;
 }
 :root[data-theme='dark'] .vacancy-source {
   border-top: 1px solid var(--jobx-color-e2e7ef-surface);
@@ -1454,9 +1398,6 @@
 :root[data-theme='dark'] .vacancy-summary .summary-conflict dt {
   color: #e6c99e;
 }
-:root[data-theme='dark'] .vacancy-hide-action {
-  color: var(--jobx-color-5a6a80-text);
-}
 :root[data-theme='dark'] .vacancy-page .salary-fact {
   background: #273930;
   border: 1px solid #2f5744;
@@ -1485,9 +1426,6 @@
 }
 :root[data-theme='dark'] .vacancy-contact-guidance h3 {
   color: var(--jobx-color-253650-text);
-}
-:root[data-theme='dark'] .vacancy-contact-guidance a.primary {
-  color: var(--jobx-surface);
 }
 :root[data-theme='dark'] .vacancy-contact .vacancy-cv-hint {
   border-top: 1px solid #262f3e;
@@ -1642,9 +1580,6 @@
 :root[data-theme='dark'] .board-shell .discovery-hero .searchbar input::placeholder {
   color: #8f9cad;
 }
-:root[data-theme='dark'] .board-shell .discovery-hero .searchbar .primary {
-  background: var(--jobx-accent);
-}
 :root[data-theme='dark'] .discovery-shortcut {
   background: var(--jobx-color-edf2f9-surface);
 }
@@ -1768,15 +1703,6 @@
 :root[data-theme='dark'] .board-shell .jobx-footer .footer-meta {
   border-top: 1px solid #272f3d;
 }
-:root[data-theme='dark'] .board-shell .header-search {
-  border: 0;
-  background: transparent;
-  color: var(--jobx-color-34415a-text);
-}
-:root[data-theme='dark'] .board-shell .header-search:hover {
-  background: var(--jobx-accent-tint);
-  color: var(--jobx-accent);
-}
 :root[data-theme='dark'] .category-options .category-icon {
   color: var(--jobx-color-70809b-text);
 }
@@ -1794,14 +1720,6 @@
 }
 :root[data-theme='dark'] .category-options .facet-count {
   color: var(--jobx-color-70809b-text);
-}
-:root[data-theme='dark'] .category-expand {
-  border: 0;
-  background: transparent;
-  color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .category-expand:hover {
-  background: var(--jobx-accent-tint);
 }
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board {
   background: var(--jobx-page-warm);
@@ -1879,8 +1797,18 @@
 }
 :root[data-theme='dark']
   .board-shell.editorial-board.crafted-board
-  .header-search {
-  color: #b9c9e6;
+  .hide-button,
+:root[data-theme='dark']
+  .board-shell.editorial-board.crafted-board
+  .choice
+  button,
+:root[data-theme='dark']
+  .board-shell.editorial-board.crafted-board
+  .results-tools
+  button {
+  background: #1d293d;
+  color: #d7e2f7;
+  border-color: #35445e;
 }
 :root[data-theme='dark'] .board-shell .company-page-link {
   color: var(--jobx-accent);
@@ -1891,9 +1819,6 @@
 }
 :root[data-theme='dark'] .board-shell .company-identity {
   color: var(--jobx-color-526179-text);
-}
-:root[data-theme='dark'] .company-navigation-hint {
-  color: #8e9bae;
 }
 :root[data-theme='dark'] .board-shell a.company-identity:hover,
 :root[data-theme='dark'] .board-shell a.company-identity:focus-visible {
@@ -2055,12 +1980,6 @@
   }
 }
 @media (max-width: 760px) {
-  :root[data-theme='dark'] .board-shell .results-tools .mobile-filter-toggle b {
-    background: var(--jobx-accent);
-    color: var(--jobx-surface);
-  }
-}
-@media (max-width: 760px) {
   :root[data-theme='dark'] .board-shell .job-when {
     color: var(--jobx-color-64676c-text);
   }
@@ -2103,8 +2022,7 @@
 }
 @media (max-width: 760px) {
   :root[data-theme='dark'] .mobile-filters-sheet .filters h3,
-:root[data-theme='dark'] .mobile-filters-sheet legend,
-:root[data-theme='dark'] .mobile-filters-sheet .filters select {
+:root[data-theme='dark'] .mobile-filters-sheet legend {
     color: inherit;
   }
 }
@@ -2120,24 +2038,27 @@
 }
 @media (max-width: 760px) {
   :root[data-theme='dark'] .board-shell .results-tools .mobile-filter-toggle,
+:root[data-theme='dark'] .board-shell .results-tools .results-map-link,
 :root[data-theme='dark'] .board-shell .results-tools .results-sort .choice {
-    border: 1px solid var(--jobx-color-dce1ea-surface) !important;
-    background: var(--jobx-surface) !important;
-    color: var(--jobx-color-46526b-text);
     box-shadow: none;
   }
 }
 @media (max-width: 760px) {
   :root[data-theme='dark'] .board-shell .results-tools .mobile-filter-toggle:focus-visible,
+:root[data-theme='dark'] .board-shell .results-tools .results-map-link:focus-visible,
 :root[data-theme='dark'] .board-shell .results-tools .results-sort .choice:focus-visible {
-    outline: 2px solid var(--jobx-accent);
-    box-shadow: none;
+    outline: none;
   }
 }
 @media (max-width: 760px) {
   :root[data-theme='dark'] .board-shell .discovery-hero .search-city .choice {
     background: transparent !important;
     border: 0 !important;
+  }
+}
+@media (max-width: 760px) {
+  :root[data-theme='dark'] .mobile-filters-sheet .filters .salary-filter {
+    border-bottom: 0;
   }
 }
 
@@ -2147,9 +2068,6 @@
 }
 :root[data-theme='dark'] .board-shell .recent-head h2 {
   color: var(--jobx-color-57708e-text);
-}
-:root[data-theme='dark'] .board-shell .recent-head button {
-  color: var(--jobx-color-5d6067-text);
 }
 :root[data-theme='dark'] .board-shell .recent-card {
   border: 1px solid var(--jobx-color-e2e2e3-surface);
@@ -2173,15 +2091,6 @@
 :root[data-theme='dark'] .board-shell .search-city .near-me:focus-visible {
   outline: 3px solid var(--jobx-color-a3a7af-border);
 }
-:root[data-theme='dark'] .theme-toggle {
-  border: 1px solid var(--jobx-border-neutral);
-  background: var(--jobx-surface);
-  color: var(--jobx-color-5c5e62-text);
-}
-:root[data-theme='dark'] .theme-toggle:hover {
-  color: var(--jobx-accent);
-  border-color: var(--jobx-color-a4b9eb-text);
-}
 :root[data-theme='dark'] .board-shell .hide-button {
   color: var(--jobx-text-secondary);
 }
@@ -2195,12 +2104,6 @@
 :root[data-theme='dark'] .board-shell .recent-summary {
   color: var(--jobx-color-405272-text);
 }
-:root[data-theme='dark'] .board-shell .active-filters .clear-all-filters {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  color: var(--jobx-color-405272-text);
-}
 :root[data-theme='dark'] .board-shell .results-progress {
   color: var(--jobx-text-secondary);
 }
@@ -2208,6 +2111,9 @@
   :root[data-theme='dark'] .board-shell.editorial-board.crafted-board .results-tools {
     box-shadow: none;
   }
+}
+:root[data-theme='dark'] .job-report-reasons {
+  border: 0;
 }
 
 /* ── from app/search-features.css ── */
@@ -2229,7 +2135,6 @@
   color: var(--jobx-accent);
 }
 :root[data-theme='dark'] .board-shell .search-query-field {
-  border: 1px solid var(--jobx-color-d7e0ee-surface);
   background: var(--jobx-page-blue);
 }
 :root[data-theme='dark'] .board-shell .search-query-field > svg {
@@ -2243,11 +2148,13 @@
   background: transparent;
 }
 :root[data-theme='dark'] .board-shell .clear-search {
+  border: 0;
   background: transparent;
-  color: var(--jobx-color-60748f-text);
+}
+:root[data-theme='dark'] .board-shell .clear-search:focus-visible {
+  outline: none;
 }
 :root[data-theme='dark'] .board-shell .discovery-hero .searchbar .search-city {
-  border: 1px solid var(--jobx-color-d7e0ee-surface);
   background: var(--jobx-page-blue);
 }
 :root[data-theme='dark'] .board-shell .discovery-hero .searchbar .search-city .choice {
@@ -2266,43 +2173,17 @@
 :root[data-theme='dark'] .search-start h2 {
   color: var(--jobx-color-6a7588-text);
 }
-:root[data-theme='dark'] .search-start-recent header button {
-  border: 0;
-  background: transparent;
-  color: var(--jobx-color-6a7588-text);
-}
-:root[data-theme='dark'] .search-start-recent header button:hover {
-  color: var(--jobx-text);
-  background: var(--jobx-color-f1f4fa-surface);
-}
-:root[data-theme='dark'] .search-start-recent li:hover {
-  background: var(--jobx-color-f4f7fd-surface);
-}
 :root[data-theme='dark'] .search-start-term {
   border: 0;
   background: transparent;
-  color: var(--jobx-text);
-}
-:root[data-theme='dark'] .search-start-term svg {
-  color: var(--jobx-color-8a94a8-text);
 }
 :root[data-theme='dark'] .search-start-forget {
   border: 0;
   background: transparent;
-  color: var(--jobx-color-8a94a8-text);
 }
-:root[data-theme='dark'] .search-start-forget:hover {
-  color: var(--jobx-text);
-  background: #272d3a;
-}
-:root[data-theme='dark'] .search-start-chips button {
-  border: 0;
-  background: var(--jobx-color-f1f4fa-surface);
-  color: var(--jobx-color-26334d-text);
-}
-:root[data-theme='dark'] .search-start-chips button:hover {
-  background: #242c3d;
-  color: var(--jobx-text);
+:root[data-theme='dark'] :is(.search-start-term,
+:root[data-theme='dark'] .search-start-forget):focus-visible {
+  outline: none;
 }
 
 /* ── from app/refined-board.css ── */
@@ -2312,18 +2193,6 @@
 :root[data-theme='dark'] .refined-board .topbar {
   box-shadow: none;
   background: var(--jobx-surface);
-}
-:root[data-theme='dark'] .refined-board .topbar .saved-nav {
-  border: 0;
-  background: var(--jobx-color-f2f4f8-surface);
-}
-:root[data-theme='dark'] .refined-board .topbar .saved-nav b {
-  background: transparent;
-  color: inherit;
-}
-:root[data-theme='dark'] .refined-board .topbar .personal-nav {
-  border: 0;
-  background: transparent;
 }
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .discovery-hero,
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .results-tools,
@@ -2386,11 +2255,6 @@
 }
 :root[data-theme='dark'] .filter-employment-label {
   color: var(--jobx-text-secondary);
-}
-:root[data-theme='dark'] .filter-employment {
-  border: 1px solid var(--jobx-color-e1e5ed-surface);
-  color: var(--jobx-text);
-  background: var(--jobx-surface);
 }
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
   .discovery-shortcut[aria-pressed='true']
@@ -2459,7 +2323,8 @@
   background: var(--jobx-surface);
 }
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board .job-skeleton > span {
-  background: url('/brand/jobx-mark.png') center / 34px no-repeat var(--jobx-accent-tint-soft);
+  background: url('/brand/jobx-mark.png') center / 34px no-repeat
+    var(--jobx-accent-tint-soft);
 }
 :root[data-theme='dark']
   .board-shell.editorial-board.crafted-board.refined-board
@@ -2472,12 +2337,8 @@
   ) !important;
 }
 :root[data-theme='dark'] .similar-placeholder > span {
-  background: url('/brand/jobx-mark.png') center / 30px no-repeat var(--jobx-accent-tint-soft);
-}
-:root[data-theme='dark'] .filter-subcategory select {
-  border: 1px solid var(--jobx-color-dce2ec-surface);
-  color: #b7c1d1;
-  background: var(--jobx-surface);
+  background: url('/brand/jobx-mark.png') center / 30px no-repeat
+    var(--jobx-accent-tint-soft);
 }
 :root[data-theme='dark'] .unavailable-saved {
   border: 1px solid var(--jobx-color-dce2ec-surface);
@@ -2491,30 +2352,15 @@
 }
 :root[data-theme='dark'] .salary-filter {
   border: 0;
-  border-bottom: 1px solid #2a313d;
 }
 :root[data-theme='dark'] .salary-filter > label {
   color: var(--jobx-color-647089-text);
 }
-:root[data-theme='dark'] .salary-filter > select {
-  border: 1px solid var(--jobx-color-dce1ea-surface);
-  background: var(--jobx-surface);
-}
 :root[data-theme='dark'] .salary-presets {
   border: 0;
 }
-:root[data-theme='dark'] .salary-presets button {
-  border: 1px solid var(--jobx-color-dce1ea-surface);
-  background: var(--jobx-surface);
-  color: var(--jobx-color-46526b-text);
-}
-:root[data-theme='dark'] .salary-presets button[aria-pressed='true'] {
-  background: #1c2845;
-  border-color: var(--jobx-accent);
-  color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .salary-presets button:focus-visible {
-  outline: 2px solid var(--jobx-accent);
+:root[data-theme='dark'] .salary-presets .ds-chip:focus-visible {
+  outline: none;
 }
 :root[data-theme='dark'] .salary-filter .filter-help {
   color: var(--jobx-color-647089-text);
@@ -2522,17 +2368,8 @@
 :root[data-theme='dark'] .salary-filter .filter-error {
   color: var(--jobx-danger-text);
 }
-:root[data-theme='dark'] .salary-filter .salary-range input {
-  border: 1px solid var(--jobx-color-dce1ea-surface);
-  background: var(--jobx-surface);
-  color: var(--jobx-text);
-}
 :root[data-theme='dark'] .salary-filter .salary-range input[aria-invalid='true'] {
   border-color: var(--jobx-danger-text);
-}
-:root[data-theme='dark'] .salary-filter :is(input,
-:root[data-theme='dark'] select):focus-visible {
-  outline: 2px solid var(--jobx-accent);
 }
 :root[data-theme='dark'] .vacancy-page
   .vacancy-layout:has(> .vacancy-description-panel)
@@ -2564,16 +2401,19 @@
   color: var(--jobx-color-6a7588-text);
 }
 :root[data-theme='dark']
-  .board-shell.editorial-board.crafted-board.refined-board .discovery-hero {
+  .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-hero {
   border-color: var(--jobx-border);
 }
 :root[data-theme='dark']
-  .board-shell.editorial-board.crafted-board.refined-board .discovery-shortcut {
+  .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-shortcut {
   background: var(--jobx-surface-raised);
   border: 1px solid var(--jobx-border);
 }
 :root[data-theme='dark']
-  .board-shell.editorial-board.crafted-board.refined-board .discovery-shortcut:is(:hover, [aria-pressed='true']) {
+  .board-shell.editorial-board.crafted-board.refined-board
+  .discovery-shortcut:is(:hover, [aria-pressed='true']) {
   background: var(--jobx-accent-tint);
   border-color: var(--jobx-accent);
 }
@@ -2585,50 +2425,72 @@
 :root[data-theme='dark'] .vacancy-description-panel {
   border-color: var(--jobx-border);
 }
+:root[data-theme='dark'] .active-filters .ds-chip:focus-visible,
+:root[data-theme='dark'] .salary-presets .ds-chip:focus-visible {
+  outline: none;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
+  .job-card
+  .save-button {
+  background: transparent;
+}
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
+  .job-card
+  .save-button:focus-visible {
+  outline: none;
+}
+:root[data-theme='dark'] .feedback-toast .ds-btn--ghost {
+  color: inherit;
+}
+:root[data-theme='dark'] .recent-summary:focus-visible,
+:root[data-theme='dark'] .filter-extra > summary:focus-visible,
+:root[data-theme='dark'] .hidden-vacancies > summary:focus-visible,
+:root[data-theme='dark'] .unavailable-saved > summary:focus-visible,
+:root[data-theme='dark'] .vacancy-more-actions > summary:focus-visible,
+:root[data-theme='dark'] .translation-help > summary:focus-visible {
+  outline: none;
+}
+:root[data-theme='dark'] .board-shell .recent-card:focus-visible {
+  outline: none;
+}
+:root[data-theme='dark'] .board-shell .discovery-hero .searchbar .search-city > .choice.choice {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+:root[data-theme='dark'] .board-shell .active-filters .clear-all-filters.clear-all-filters {
+  border: 0;
+  background: transparent;
+}
+:root[data-theme='dark'] .board-shell.board-shell .site-footer.jobx-footer {
+  background: transparent;
+}
+:root[data-theme='dark'] .search-directory-links a:focus-visible,
+:root[data-theme='dark'] .search-directory-group a:focus-visible {
+  outline: none;
+}
+:root[data-theme='dark'] .vacancy-page .contact-phone:focus-visible {
+  outline: none;
+}
+:root[data-theme='dark'] .job-report-reasons {
+  border: 0;
+}
+:root[data-theme='dark'] .similar-card:focus-visible {
+  outline: none;
+}
+:root[data-theme='dark'] .job-report-reason [data-slot='radio-group-item']:focus-visible {
+  outline: none;
+}
+:root[data-theme='dark'] .mobile-filters-sheet .filters {
+  border-right: 0;
+}
+:root[data-theme='dark'] .mobile-filters-sheet .salary-filter {
+  border-bottom: 0;
+}
 
 /* ── from app/public-header.css ── */
 :root[data-theme='dark'] .board-shell .topbar.public-header {
-  background: var(--jobx-surface);
-  border-bottom: 1px solid var(--jobx-color-e1e5ed-surface);
   box-shadow: none;
-}
-:root[data-theme='dark'] .board-shell .topbar.public-header :is(a,
-:root[data-theme='dark'] button):focus-visible {
-  outline: 2px solid var(--jobx-accent);
-}
-:root[data-theme='dark'] .board-shell .topbar.public-header .all-vacancies-link {
-  color: var(--jobx-accent);
-  border: 0;
-  background: transparent;
-}
-:root[data-theme='dark'] .board-shell .topbar.public-header .header-search,
-:root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav,
-:root[data-theme='dark'] .board-shell .topbar.public-header .personal-nav {
-  color: var(--jobx-color-536078-text);
-  border: 0;
-  background: transparent;
-}
-:root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav {
-  background: var(--jobx-color-f2f4f8-surface);
-}
-:root[data-theme='dark'] .board-shell .topbar.public-header .header-cv {
-  color: var(--jobx-accent-fixed);
-  background: var(--jobx-accent-tint);
-}
-:root[data-theme='dark'] .board-shell .topbar.public-header .header-cv:hover {
-  background: var(--jobx-accent-tint-soft);
-}
-:root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav.is-active {
-  color: var(--jobx-accent);
-  background: var(--jobx-accent-tint);
-}
-:root[data-theme='dark'] .board-shell .topbar.public-header .saved-nav b {
-  color: inherit;
-  background: transparent;
-}
-:root[data-theme='dark'] .board-shell .topbar.public-header .header-post-job {
-  color: var(--jobx-surface);
-  background: var(--jobx-accent);
 }
 
 /* ── from app/post-job.css ── */
@@ -2636,87 +2498,20 @@
   background: var(--jobx-page-cool);
   color: var(--jobx-text-strong);
 }
-:root[data-theme='dark'] .post-back {
-  color: var(--jobx-color-536078-text);
-}
 :root[data-theme='dark'] .post-eyebrow {
   color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .post-intro > p:last-child {
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .post-section {
-  background: var(--jobx-surface);
-  border: 1px solid var(--jobx-color-e1e5ed-surface);
 }
 :root[data-theme='dark'] .post-section h2 > span {
   color: var(--jobx-accent);
   background: var(--jobx-accent-tint);
 }
-:root[data-theme='dark'] .post-section-note {
-  color: var(--jobx-color-536078-text);
+:root[data-theme='dark'] .post-field :is(input,
+:root[data-theme='dark'] textarea):focus-visible {
+  outline: none;
 }
-:root[data-theme='dark'] .post-field input,
-:root[data-theme='dark'] .post-field select,
-:root[data-theme='dark'] .post-field textarea {
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
-  background: var(--jobx-surface);
-  color: var(--jobx-text-strong);
-}
-:root[data-theme='dark'] .post-field input::placeholder,
-:root[data-theme='dark'] .post-field textarea::placeholder {
-  color: #969ca6;
-}
-:root[data-theme='dark'] .post-job-main :is(input,
-:root[data-theme='dark'] select,
-:root[data-theme='dark'] textarea,
-:root[data-theme='dark'] button,
-:root[data-theme='dark'] a,
+:root[data-theme='dark'] .post-job-main :is(a,
 :root[data-theme='dark'] summary):focus-visible {
-  outline: 2px solid var(--jobx-accent);
-}
-:root[data-theme='dark'] .post-field [aria-invalid='true'] {
-  border-color: var(--jobx-danger-text-alt);
-}
-:root[data-theme='dark'] .post-field small {
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .post-job-main .post-field-error {
-  color: var(--jobx-danger-text-alt);
-}
-:root[data-theme='dark'] .post-consent input {
-  accent-color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .post-primary {
-  color: var(--jobx-surface);
-  background: var(--jobx-accent);
-  border: 1px solid var(--jobx-accent);
-}
-:root[data-theme='dark'] .post-secondary {
-  color: var(--jobx-color-536078-text);
-  background: var(--jobx-surface);
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
-}
-:root[data-theme='dark'] .post-draft-note {
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .post-message {
-  color: var(--jobx-danger-text-alt);
-  background: var(--jobx-surface);
-  border: 1px solid var(--jobx-danger-text-alt);
-}
-:root[data-theme='dark'] .post-success {
-  background: var(--jobx-surface);
-  border: 1px solid var(--jobx-color-e1e5ed-surface);
-}
-:root[data-theme='dark'] .post-success > svg {
-  color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .post-success > small {
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .post-plan-note {
-  color: var(--jobx-color-536078-text);
+  outline: none;
 }
 :root[data-theme='dark'] .board-shell .job-card.placement-vip {
   border-color: var(--jobx-warning-border);
@@ -2746,14 +2541,6 @@
 :root[data-theme='dark'] .post-intro::after {
   background: linear-gradient(90deg, var(--jobx-accent), #5fc6de);
 }
-:root[data-theme='dark'] .post-plans {
-  border-color: var(--jobx-color-d9e2f5-surface);
-  background: linear-gradient(135deg, var(--jobx-surface) 70%, #1c2a45);
-}
-:root[data-theme='dark'] .post-invoice-callout {
-  background: var(--jobx-accent-tint);
-  border: 1px solid #acc1f6;
-}
 :root[data-theme='dark'] .featured-vacancies {
   border: 1px solid #adc2f5;
   background: var(--jobx-accent-tint);
@@ -2775,73 +2562,24 @@
 :root[data-theme='dark'] .featured-premium h3 {
   color: var(--jobx-accent);
 }
-:root[data-theme='dark'] .post-plan-pills > label {
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
-  background: var(--jobx-surface);
+:root[data-theme='dark'] .post-plan-pills input:focus-visible {
+  outline: none;
 }
-:root[data-theme='dark'] .post-plan-pills > label.is-selected {
-  border-color: var(--jobx-accent);
-  background: var(--jobx-accent-tint);
-  box-shadow: inset 0 0 0 1px var(--jobx-shadow-accent-color);
-}
-:root[data-theme='dark'] .post-plan-pills input {
-  accent-color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .post-vip-note {
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .post-logo-preview {
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
+:root[data-theme='dark'] .not-found-shell {
   background: var(--jobx-page-cool);
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .post-logo-choose:focus-within {
-  outline: 2px solid var(--jobx-accent);
 }
 
 /* ── from app/invoices.css ── */
 :root[data-theme='dark'] .invoice-page {
   color: var(--jobx-text-strong);
 }
-:root[data-theme='dark'] .invoice-toolbar a {
-  color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .invoice-actions button {
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
-  background: var(--jobx-surface);
-}
-:root[data-theme='dark'] .invoice-paper {
-  background: var(--jobx-surface);
-  border: 1px solid var(--jobx-color-e1e5ed-surface);
-  border-top: 4px solid var(--jobx-accent);
-}
-:root[data-theme='dark'] .invoice-heading p {
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .invoice-meta {
-  border-bottom: 1px solid var(--jobx-color-e1e5ed-surface);
-}
-:root[data-theme='dark'] .invoice-status {
-  color: var(--jobx-warning-text);
-}
-:root[data-theme='dark'] .invoice-status-paid {
-  color: #a4e0c0;
-}
-:root[data-theme='dark'] .invoice-paper h2 {
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .invoice-paper th {
-  background: var(--jobx-accent-tint);
-}
-:root[data-theme='dark'] .invoice-paper th,
-:root[data-theme='dark'] .invoice-paper td {
-  border-bottom: 1px solid var(--jobx-color-e1e5ed-surface);
-}
-:root[data-theme='dark'] .invoice-payment {
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
+:root[data-theme='dark'] .invoice-toolbar a:focus-visible,
+:root[data-theme='dark'] .invoice-paper a:focus-visible {
+  outline: none;
 }
 :root[data-theme='dark'] .invoice-paper footer {
-  color: var(--jobx-color-536078-text);
+  border: 0;
+  background: none;
 }
 @media print {
   :root[data-theme='dark'] .invoice-paper {
@@ -2855,58 +2593,28 @@
     color: var(--jobx-text-strong) !important;
   }
 }
-:root[data-theme='dark'] .invoice-test-notice {
-  color: var(--jobx-warning-text);
-  background: #342b18;
-}
 
 /* ── from app/cv.css ── */
 :root[data-theme='dark'] .cv-shell {
   background: var(--jobx-page-cool);
   color: var(--jobx-text-strong);
 }
-:root[data-theme='dark'] .cv-note {
-  color: var(--jobx-color-536078-text);
+:root[data-theme='dark'] .cv-segment button,
+:root[data-theme='dark'] .cv-section h2 > button,
+:root[data-theme='dark'] .cv-main .cv-template,
+:root[data-theme='dark'] .cv-swatches button {
+  background: none;
+  color: inherit;
 }
-:root[data-theme='dark'] .cv-main button,
-:root[data-theme='dark'] .cv-file-button {
-  border: 1px solid var(--jobx-color-dce2ec-surface);
-  background: var(--jobx-surface);
-  color: var(--jobx-text-strong);
-}
-:root[data-theme='dark'] .cv-main button:hover:not(:disabled),
-:root[data-theme='dark'] .cv-file-button:hover {
-  border-color: #546178;
-}
-:root[data-theme='dark'] .cv-main button:focus-visible,
+:root[data-theme='dark'] :is(
+  .cv-segment button,
+:root[data-theme='dark'] .cv-section h2 > button,
+:root[data-theme='dark'] .cv-swatches button
+):focus-visible,
 :root[data-theme='dark'] .cv-file-button:focus-within,
-:root[data-theme='dark'] .cv-main input:focus-visible,
-:root[data-theme='dark'] .cv-main textarea:focus-visible,
-:root[data-theme='dark'] .cv-main select:focus-visible {
-  outline: 2px solid var(--jobx-accent);
-}
-:root[data-theme='dark'] .cv-main button.cv-primary {
-  background: var(--jobx-accent);
-  border-color: var(--jobx-accent);
-  color: var(--jobx-surface);
-}
-:root[data-theme='dark'] .cv-segment {
-  background: #20293b;
-}
-:root[data-theme='dark'] .cv-segment button {
-  background: transparent;
-  border-color: transparent;
-}
-:root[data-theme='dark'] .cv-segment button[aria-pressed='true'] {
-  background: var(--jobx-surface);
-  color: var(--jobx-accent);
-  box-shadow: 0 1px 3px #05070a1d;
-}
-:root[data-theme='dark'] .cv-message {
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .cv-main .cv-template {
-  border: 2px solid var(--jobx-color-dce2ec-surface);
+:root[data-theme='dark'] .cv-field :is(input,
+:root[data-theme='dark'] textarea):focus-visible {
+  outline: none;
 }
 :root[data-theme='dark'] .cv-template-thumbnail {
   background: var(--jobx-surface);
@@ -2915,16 +2623,8 @@
 :root[data-theme='dark'] .cv-template-check {
   color: var(--jobx-surface);
 }
-:root[data-theme='dark'] .cv-style {
-  border-bottom: 1px solid var(--jobx-color-dce2ec-surface);
-}
-:root[data-theme='dark'] .cv-text-contrast-warning {
-  color: #e87d7d;
-}
 :root[data-theme='dark'] .cv-main .cv-swatches button {
-  border: 3px solid var(--jobx-surface);
   color: var(--jobx-surface);
-  box-shadow: 0 0 0 1px #121721;
 }
 :root[data-theme='dark'] .cv-custom-color {
   background: conic-gradient(
@@ -2947,77 +2647,19 @@
   color: var(--jobx-surface);
 }
 :root[data-theme='dark'] .cv-custom-color:focus-within {
-  outline: 2px solid var(--jobx-accent);
+  outline: none;
 }
 :root[data-theme='dark'] .cv-custom-color input {
   border: 0;
 }
-:root[data-theme='dark'] .cv-style-options button[aria-pressed='true'] {
-  color: var(--jobx-accent);
-  background: var(--jobx-accent-tint);
-  border-color: var(--jobx-accent);
-}
 :root[data-theme='dark'] .cv-progress progress {
   border: 0;
-  background: var(--jobx-color-e1e5ed-surface);
-  accent-color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .cv-progress progress::-webkit-progress-bar {
-  background: var(--jobx-color-e1e5ed-surface);
-}
-:root[data-theme='dark'] .cv-progress progress::-webkit-progress-value {
-  background: var(--jobx-accent);
-}
-:root[data-theme='dark'] .cv-section {
-  background: var(--jobx-surface);
-  border: 1px solid var(--jobx-color-e1e5ed-surface);
 }
 :root[data-theme='dark'] .cv-section h2 > button {
   border: 0;
 }
-:root[data-theme='dark'] .cv-complete {
-  color: #9ee5e0;
-}
-:root[data-theme='dark'] .cv-field input,
-:root[data-theme='dark'] .cv-field textarea,
-:root[data-theme='dark'] .cv-field select {
-  border: 1px solid var(--jobx-color-dce2ec-surface);
-  background: var(--jobx-surface);
-  color: var(--jobx-text-strong);
-}
-:root[data-theme='dark'] .cv-field small {
-  color: #939aaa;
-}
-:root[data-theme='dark'] .cv-field input:disabled {
-  background: var(--jobx-page-cool);
-}
 :root[data-theme='dark'] .cv-month {
   border: 0;
-}
-:root[data-theme='dark'] .cv-main .cv-month select {
-  border: 1px solid var(--jobx-color-dce2ec-surface);
-  background-color: var(--jobx-surface);
-  color: var(--jobx-text-strong);
-}
-:root[data-theme='dark'] .cv-main .cv-month select:focus-visible {
-  outline: 2px solid var(--jobx-accent);
-}
-:root[data-theme='dark'] .cv-main .cv-month:disabled select {
-  background: var(--jobx-page-cool);
-  color: var(--jobx-text-muted);
-}
-:root[data-theme='dark'] .cv-check input {
-  accent-color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .cv-entry {
-  border-top: 1px solid var(--jobx-color-e1e5ed-surface);
-}
-:root[data-theme='dark'] .cv-main .cv-chip {
-  background: var(--jobx-accent-tint);
-  color: var(--jobx-accent);
-}
-:root[data-theme='dark'] .cv-preview-heading {
-  color: var(--jobx-color-536078-text);
 }
 :root[data-theme='dark'] .cv-preview-viewport {
   background: var(--jobx-surface);
@@ -3032,24 +2674,16 @@
     box-shadow: none !important;
   }
 }
-:root[data-theme='dark'] .cv-main .cv-template:hover:not(:disabled) {
-  border-color: var(--jobx-color-dce2ec-surface);
-  box-shadow: 0 2px 7px #05070a20;
+:root[data-theme='dark'] .cv-main .cv-template:focus-visible {
+  outline: none;
 }
 :root[data-theme='dark'] .cv-photo-editor__dialog {
   border: 0;
-  background: var(--jobx-surface);
-  color: var(--jobx-text-heading);
 }
-:root[data-theme='dark'] .cv-photo-editor__viewport {
-  background: #232d3d;
+:root[data-theme='dark'] .cv-photo-editor__zoom input {
+  background: none;
 }
-:root[data-theme='dark'] .cv-photo-editor__actions button {
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
-  background: var(--jobx-surface);
-  color: var(--jobx-color-536078-text);
-}
-:root[data-theme='dark'] .cv-photo-editor__dialog .cv-photo-editor__error {
-  color: var(--jobx-danger-text-alt);
+:root[data-theme='dark'] .cv-photo-editor__zoom input:focus-visible {
+  outline: none;
 }
 

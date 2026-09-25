@@ -1,11 +1,15 @@
 'use client';
 import { adminDate } from '@/lib/admin-format';
 import { useEffect, useState, type SubmitEvent } from 'react';
+import { ExternalLink } from 'lucide-react';
+import { SkeletonRows } from '../skeleton';
 import { InvoiceEmailTest } from './invoice-email-test';
 import {
   billingSettingsSchema,
   invoiceNumber,
   invoiceStatuses,
+  premiumDays,
+  premiumPriceGEL,
   type JobInvoice,
 } from '@/lib/billing';
 import { placementLabels, type PlacementTier } from '@/lib/placement';
@@ -26,6 +30,14 @@ type Totals = {
   refunds_due_count: number;
 };
 const day = 86400000;
+/* Each invoice state in the colour of its meaning, the same badges as every other status. */
+const invoiceTone: Record<keyof typeof invoiceStatuses, string> = {
+  pending: 'ds-badge ds-badge--warning',
+  paid: 'ds-badge ds-badge--success',
+  cancelled: 'ds-badge',
+  refund_required: 'ds-badge ds-badge--danger',
+  refunded: 'ds-badge',
+};
 /* Whole days left, rounded up, so a promotion ending tonight reads "1 დღე" rather than "0". */
 function daysLeft(expires: string, now: number) {
   return Math.max(1, Math.ceil((Date.parse(expires) - now) / day));
@@ -96,6 +108,9 @@ export function BillingSettings({
   }
   return (
     <>
+      {!ready && !message && (
+        <SkeletonRows rows={2} block label="ინვოისები იტვირთება" />
+      )}
       {totals && (
         <dl className="billing-totals">
           <div>
@@ -120,7 +135,7 @@ export function BillingSettings({
           </div>
         </dl>
       )}
-      <section className="billing-invoices billing-placements">
+      <section className="billing-invoices billing-placements ds-card">
         <h2>აქტიური განთავსებები</h2>
         {placements.map((p) => {
           const left = daysLeft(p.expires_at, loadedAt);
@@ -128,22 +143,33 @@ export function BillingSettings({
             <article key={p.id}>
               <div>
                 <strong>
-                  {placementLabels[p.tier]} · {p.title || 'ვაკანსია'}
+                  <span
+                    className={
+                      p.tier === 'premium'
+                        ? 'ds-badge ds-badge--violet'
+                        : 'ds-badge ds-badge--accent'
+                    }
+                  >
+                    {placementLabels[p.tier]}
+                  </span>
+                  {p.title || 'ვაკანსია'}
                 </strong>
-                <p>
-                  {p.company}
-                  {p.invoice_status &&
-                    ` · ${invoiceStatuses[p.invoice_status]}`}
-                </p>
-                <span data-soon={left <= 3 || undefined}>
-                  დარჩა {left} დღე · {adminDate(p.expires_at)}
-                  -მდე
+                <p>{p.company}</p>
+                <span className="billing-meta">
+                  {p.invoice_status && (
+                    <span className={invoiceTone[p.invoice_status]}>
+                      {invoiceStatuses[p.invoice_status]}
+                    </span>
+                  )}
+                  <span data-soon={left <= 3 || undefined}>
+                    დარჩა {left} დღე · {adminDate(p.expires_at)}-მდე
+                  </span>
                 </span>
               </div>
               <div>
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="ds-btn ds-btn--secondary ds-btn--sm"
                   onClick={() => onReview(p.id)}
                 >
                   განცხადების მართვა
@@ -153,34 +179,40 @@ export function BillingSettings({
           );
         })}
         {ready && !placements.length && (
-          <p>აქტიური VIP ან პრემიუმ განთავსება არ არის.</p>
+          <p className="billing-empty">
+            აქტიური VIP ან პრემიუმ განთავსება არ არის.
+          </p>
         )}
       </section>
       <InvoiceEmailTest invoices={invoices} />
-      <section className="billing-invoices">
+      <section className="billing-invoices ds-card">
         <h2>ინვოისები</h2>
         {invoices.map((inv) => (
           <article key={inv.token}>
             <div>
-              <strong>
+              <strong className="billing-number">
                 {invoiceNumber(inv.number)} · {inv.amount_gel} ₾
               </strong>
               <p>
                 {inv.payer_name} · {inv.vacancy_title}
               </p>
-              <span>{invoiceStatuses[inv.status]}</span>
+              <span className={invoiceTone[inv.status]}>
+                {invoiceStatuses[inv.status]}
+              </span>
             </div>
             <div>
               <a
+                className="ds-btn ds-btn--ghost ds-btn--sm"
                 href={`/invoices/${inv.token}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
+                <ExternalLink size={16} aria-hidden="true" />
                 ინვოისის ნახვა
               </a>
               <button
                 type="button"
-                className="secondary-button"
+                className="ds-btn ds-btn--secondary ds-btn--sm"
                 onClick={() => onReview(inv.job_id)}
               >
                 განცხადების მართვა
@@ -188,25 +220,35 @@ export function BillingSettings({
             </div>
           </article>
         ))}
-        {ready && !invoices.length && <p>ინვოისები ჯერ არ არის.</p>}
+        {ready && !invoices.length && (
+          <p className="billing-empty">ინვოისები ჯერ არ არის.</p>
+        )}
         <div className="invoice-list-pages">
           {page > 1 && (
-            <button type="button" onClick={() => setPage((p) => p - 1)}>
+            <button
+              type="button"
+              className="ds-btn ds-btn--secondary ds-btn--sm"
+              onClick={() => setPage((p) => p - 1)}
+            >
               წინა
             </button>
           )}
           {page * 30 < total && (
-            <button type="button" onClick={() => setPage((p) => p + 1)}>
+            <button
+              type="button"
+              className="ds-btn ds-btn--secondary ds-btn--sm"
+              onClick={() => setPage((p) => p + 1)}
+            >
               შემდეგი
             </button>
           )}
         </div>
       </section>
-      <form className="billing-settings notice" onSubmit={save}>
+      <form className="billing-settings ds-card" onSubmit={save}>
         <h2>ინვოისის რეკვიზიტები</h2>
         <p>
-          პრემიუმი — 20 ₾ / 14 დღე. თანხა ირიცხება აქ მითითებულ ანგარიშზე;
-          ჩარიცხვას ადმინისტრატორი ადასტურებს.
+          პრემიუმი — {premiumPriceGEL} ₾ / {premiumDays} დღე. თანხა ირიცხება აქ
+          მითითებულ ანგარიშზე; ჩარიცხვას ადმინისტრატორი ადასტურებს.
         </p>
         {(
           [
@@ -218,6 +260,7 @@ export function BillingSettings({
           <label key={key}>
             {label}
             <input
+              className="ds-input"
               value={values[key]}
               onInput={(e) => {
                 const value = e.currentTarget.value;
@@ -230,10 +273,15 @@ export function BillingSettings({
             />
           </label>
         ))}
-        <button className="primary" disabled={!ready || busy}>
+        <button className="ds-btn ds-btn--primary" disabled={!ready || busy}>
+          {busy && <span className="ds-spinner" aria-hidden="true" />}
           {busy ? 'ინახება…' : 'რეკვიზიტების შენახვა'}
         </button>
-        {message && <p role="alert">{message}</p>}
+        {message && (
+          <p role="alert" className="billing-message">
+            {message}
+          </p>
+        )}
       </form>
     </>
   );

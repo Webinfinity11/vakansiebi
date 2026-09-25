@@ -1,6 +1,8 @@
 'use client';
 import { useState, type SubmitEvent } from 'react';
 import { invoiceNumber, type JobInvoice } from '@/lib/billing';
+import { Send } from 'lucide-react';
+import { SelectField } from '../select-field';
 
 export function InvoiceEmailTest({ invoices }: { invoices: JobInvoice[] }) {
   const [email, setEmail] = useState('');
@@ -35,31 +37,30 @@ export function InvoiceEmailTest({ invoices }: { invoices: JobInvoice[] }) {
     }
   }
   return (
-    <form className="billing-settings notice" onSubmit={send}>
+    <form className="billing-settings ds-card" onSubmit={send}>
       <h2>ელფოსტის გაგზავნის შემოწმება</h2>
       <p>
         აირჩიე ინვოისი — წერილში მისი დეტალები და პირდაპირი ბმული გაიგზავნება.
       </p>
-      <label>
+      <label htmlFor="invoice-test-token">
         სატესტო ინვოისი
-        <select
+        <SelectField
+          id="invoice-test-token"
           value={invoiceToken}
-          onChange={(event) => setInvoiceToken(event.target.value)}
-          required
+          onChange={setInvoiceToken}
+          placeholder="აირჩიე ინვოისი"
           disabled={busy || !invoices.length}
-        >
-          <option value="">აირჩიე ინვოისი</option>
-          {invoices.map((invoice) => (
-            <option key={invoice.token} value={invoice.token}>
-              {invoiceNumber(invoice.number)} · {invoice.payer_name} ·{' '}
-              {invoice.vacancy_title}
-            </option>
-          ))}
-        </select>
+          options={invoices.map((invoice) => ({
+            value: invoice.token,
+            label: `${invoiceNumber(invoice.number)} · ${invoice.payer_name} · ${invoice.vacancy_title}`,
+          }))}
+        />
       </label>
       <label>
         მიმღების ელფოსტა
         <input
+          className="ds-input"
+          placeholder="name@example.ge"
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -69,14 +70,19 @@ export function InvoiceEmailTest({ invoices }: { invoices: JobInvoice[] }) {
         />
       </label>
       <button
-        className="primary"
+        className="ds-btn ds-btn--primary"
         disabled={
           busy || !invoices.some((invoice) => invoice.token === invoiceToken)
         }
       >
+        {busy ? (
+          <span className="ds-spinner" aria-hidden="true" />
+        ) : (
+          <Send size={16} aria-hidden="true" />
+        )}
         {busy ? 'იგზავნება…' : 'სატესტო წერილის გაგზავნა'}
       </button>
-      {message && <output>{message}</output>}
+      {message && <output className="billing-message">{message}</output>}
     </form>
   );
 }

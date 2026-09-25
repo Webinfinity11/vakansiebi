@@ -27,3 +27,11 @@ void test(
     }
   },
 );
+
+void test('an IPv6 network counts as one login client', async () => {
+  const { clientNetwork } = await import('../lib/server/login-attempts');
+  assert.equal(clientNetwork('2001:db8:1:2:3:4:5:6'), '2001:db8:1:2::/64');
+  assert.equal(clientNetwork('2001:0db8:1:2::9'), '2001:db8:1:2::/64');
+  assert.equal(clientNetwork('203.0.113.9'), '203.0.113.9');
+  assert.equal(clientNetwork('::ffff:203.0.113.9'), '::ffff:203.0.113.9');
+});

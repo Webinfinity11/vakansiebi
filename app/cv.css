@@ -5,7 +5,8 @@
   color: var(--jobx-text-strong);
 }
 .cv-main {
-  max-width: 1420px;
+  /* The header's width, so the page's left edge lines up with the logo. */
+  max-width: 1280px;
   margin: auto;
   padding: var(--jobx-space-32px) var(--jobx-space-28px) var(--jobx-space-64px);
 }
@@ -19,10 +20,10 @@
   letter-spacing: -0.6px;
 }
 .cv-note {
-  color: var(--jobx-color-536078-text);
-  font-size: var(--jobx-font-size-12px);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
   line-height: 1.8;
-  margin: 0 0 var(--jobx-space-16px);
+  margin: 0 0 var(--ds-space-4);
 }
 .cv-intro .cv-note {
   font-size: var(--jobx-font-size-14px);
@@ -32,78 +33,111 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--jobx-space-8px);
+  gap: var(--ds-space-2);
 }
 .cv-toolbar {
   justify-content: space-between;
-  gap: var(--jobx-space-16px);
+  gap: var(--ds-space-4);
 }
-.cv-main button,
-.cv-file-button {
+/* Buttons take the system's classes (.ds-btn, .ds-chip, .cv-primary). The few left bare —
+   the segmented switch, section headers, template cards and colour swatches — share this
+   reset and then draw themselves below. */
+.cv-segment button,
+.cv-section h2 > button,
+.cv-main .cv-template,
+.cv-swatches button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--jobx-space-7px);
-  min-height: 40px;
-  padding: var(--jobx-space-9px) var(--jobx-space-13px);
-  border: 1px solid var(--jobx-color-dce2ec-surface);
-  border-radius: var(--jobx-radius-8px);
-  background: var(--jobx-surface);
-  color: var(--jobx-text-strong);
+  gap: var(--ds-space-2);
+  border: 1px solid transparent;
+  background: none;
+  color: inherit;
   font: inherit;
-  font-size: var(--jobx-font-size-12px);
-  font-weight: 600;
   cursor: pointer;
 }
-.cv-main button:disabled {
-  cursor: default;
-  opacity: 0.4;
-}
-.cv-main button:hover:not(:disabled),
-.cv-file-button:hover {
-  border-color: #8998b3;
-}
-.cv-main button:focus-visible,
+:is(
+  .cv-segment button,
+  .cv-section h2 > button,
+  .cv-swatches button
+):focus-visible,
 .cv-file-button:focus-within,
-.cv-main input:focus-visible,
-.cv-main textarea:focus-visible,
-.cv-main select:focus-visible {
-  outline: 2px solid var(--jobx-accent);
-  outline-offset: 3px;
+.cv-field :is(input, textarea):focus-visible {
+  outline: none;
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 3px var(--ds-focus);
 }
-.cv-main button.cv-primary {
-  background: var(--jobx-accent);
-  border-color: var(--jobx-accent);
-  color: var(--jobx-surface);
+/* The file input is hidden; its label is the secondary button and shows its focus. */
+.cv-file-button {
+  position: relative;
 }
+/* A segmented switch: one pressed option on a muted track, as tall as the buttons beside it. */
 .cv-segment {
   display: flex;
-  padding: var(--jobx-space-4px);
-  background: #e9edf5;
-  border-radius: var(--jobx-radius-10px);
-  gap: var(--jobx-space-4px);
+  align-items: center;
+  padding: 3px;
+  border: 1px solid var(--ds-line);
+  background: var(--ds-surface-muted);
+  border-radius: var(--ds-radius-md);
+  gap: 2px;
 }
 .cv-segment button {
-  background: transparent;
-  border-color: transparent;
+  min-height: calc(var(--ds-control-md) - 8px);
+  padding: 0 var(--ds-space-3);
+  border-radius: var(--ds-radius-sm);
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+  font-weight: 500;
+}
+.cv-segment button:hover:not([aria-pressed='true']) {
+  color: var(--ds-ink);
 }
 .cv-segment button[aria-pressed='true'] {
-  background: var(--jobx-surface);
-  color: var(--jobx-accent);
-  box-shadow: 0 1px 3px #19253c12;
+  background: var(--ds-surface);
+  border-color: var(--ds-line);
+  color: var(--ds-accent-ink);
+  font-weight: var(--ds-weight-strong);
+  box-shadow: var(--ds-shadow-sm);
+}
+/* Said next to the button it explains, not under the language switch. */
+.cv-toolbar + #cv-print-hint {
+  margin: var(--ds-space-2) 0 0;
+  text-align: end;
+}
+.cv-loading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 500px);
+  gap: var(--jobx-space-36px);
+  align-items: start;
+  margin-top: var(--ds-space-5);
+}
+.cv-loading .cv-loading-paper {
+  height: 520px;
+  border-radius: 0;
+}
+@media (max-width: 1100px) {
+  .cv-loading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cv-loading .cv-loading-paper {
+    display: none;
+  }
 }
 .cv-message {
+  /* <output> is inline by default; as a block it keeps its line reserved, so a status appearing
+     never pushes the templates down. */
+  display: block;
   min-height: 30px;
-  padding: var(--jobx-space-6px) 0;
-  color: var(--jobx-color-536078-text);
-  font-size: var(--jobx-font-size-12px);
+  padding: var(--ds-space-1) 0;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
 }
 .cv-mobile-tabs {
   display: none;
 }
 .cv-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 500px);
   gap: var(--jobx-space-36px);
   align-items: start;
 }
@@ -112,9 +146,9 @@
 }
 .cv-gallery h2,
 .cv-style h2 {
-  font-size: var(--jobx-font-size-13px);
-  font-weight: 700;
-  margin: 0 0 var(--jobx-space-12px);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
+  margin: 0 0 var(--ds-space-3);
 }
 .cv-gallery-track {
   display: flex;
@@ -137,9 +171,10 @@
   width: 100%;
   height: 100%;
   justify-content: flex-start;
-  border: 2px solid var(--jobx-color-dce2ec-surface);
+  border: 2px solid var(--ds-line);
+  background: var(--ds-surface);
   text-align: left;
-  border-radius: var(--jobx-radius-8px);
+  border-radius: var(--ds-radius-lg);
   overflow: hidden;
   gap: 0;
 }
@@ -177,16 +212,16 @@
 .cv-style {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--jobx-space-20px);
-  padding: var(--jobx-space-22px) 0;
-  margin-bottom: var(--jobx-space-16px);
-  border-bottom: 1px solid var(--jobx-color-dce2ec-surface);
+  gap: var(--ds-space-5);
+  padding: var(--ds-space-5) 0;
+  margin-bottom: var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-line);
 }
 .cv-text-contrast-warning {
   display: block;
-  margin: var(--jobx-space-10px) 0 0;
-  color: #b91c1c;
-  font-size: var(--jobx-font-size-12px);
+  margin: var(--ds-space-2) 0 0;
+  color: var(--ds-warning);
+  font-size: var(--ds-text-xs);
 }
 .cv-style-colors {
   flex-basis: 100%;
@@ -201,11 +236,11 @@
   min-height: 32px;
   width: 32px;
   padding: 0;
-  border: 3px solid var(--jobx-surface);
-  border-radius: var(--jobx-radius-circle);
+  border: 3px solid var(--ds-surface);
+  border-radius: var(--ds-radius-pill);
   color: var(--jobx-surface);
   background: var(--swatch);
-  box-shadow: 0 0 0 1px #dce2ec;
+  box-shadow: 0 0 0 1px var(--ds-line-strong);
 }
 .cv-main .cv-swatches button[aria-pressed='true'] {
   outline: 2px solid var(--swatch);
@@ -249,8 +284,8 @@
   outline-offset: 2px;
 }
 .cv-custom-color:focus-within {
-  outline: 2px solid var(--jobx-accent);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
 }
 .cv-custom-color input {
   position: absolute;
@@ -264,13 +299,8 @@
 }
 .cv-style-options {
   display: flex;
-  gap: var(--jobx-space-6px);
+  gap: var(--ds-space-2);
   flex-wrap: wrap;
-}
-.cv-style-options button[aria-pressed='true'] {
-  color: var(--jobx-accent);
-  background: var(--jobx-accent-tint);
-  border-color: var(--jobx-accent);
 }
 .cv-style-options [data-font='system'] {
   font-family:
@@ -290,33 +320,38 @@
 .cv-progress > div {
   display: flex;
   justify-content: space-between;
-  font-size: var(--jobx-font-size-12px);
-  margin-bottom: var(--jobx-space-8px);
+  font-size: var(--ds-text-xs);
+  margin-bottom: var(--ds-space-2);
 }
 .cv-progress progress {
   display: block;
   width: 100%;
   height: 6px;
   border: 0;
-  border-radius: var(--jobx-radius-10px);
+  border-radius: var(--ds-radius-pill);
   overflow: hidden;
-  background: var(--jobx-color-e1e5ed-surface);
-  accent-color: var(--jobx-accent);
+  appearance: none;
+  background: var(--ds-line);
+  accent-color: var(--ds-accent);
 }
 .cv-progress progress::-webkit-progress-bar {
-  background: var(--jobx-color-e1e5ed-surface);
+  background: var(--ds-line);
 }
 .cv-progress progress::-webkit-progress-value {
-  background: var(--jobx-accent);
+  background: var(--ds-accent);
+  border-radius: var(--ds-radius-pill);
+}
+.cv-progress progress::-moz-progress-bar {
+  background: var(--ds-accent);
 }
 .cv-storage-note {
   margin: var(--jobx-space-12px) 0 var(--jobx-space-20px);
 }
 .cv-section {
-  background: var(--jobx-surface);
-  border: 1px solid var(--jobx-color-e1e5ed-surface);
-  border-radius: var(--jobx-radius-12px);
-  margin-bottom: var(--jobx-space-12px);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  margin-bottom: var(--ds-space-3);
   overflow: hidden;
 }
 .cv-section h2 {
@@ -326,23 +361,43 @@
   display: flex;
   width: 100%;
   justify-content: flex-start;
+  gap: var(--ds-space-2);
   border: 0;
-  padding: var(--jobx-space-20px);
-  font-size: var(--jobx-font-size-15px);
+  padding: var(--ds-space-4) var(--ds-space-5);
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-strong);
   border-radius: 0;
+}
+.cv-section h2 > button {
+  transition: background-color var(--ds-duration-fast) var(--ds-ease);
+}
+.cv-section h2 > button:hover {
+  background: var(--ds-surface-muted);
+}
+.cv-section h2 > button > svg:last-child {
+  transition: transform var(--ds-duration) var(--ds-ease);
+}
+.cv-section-body:not([hidden]) {
+  animation: ds-appear var(--ds-duration-slow) var(--ds-ease) both;
+}
+.cv-section h2 > button:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--ds-focus);
+}
+.cv-section h2 > button > svg:last-child {
+  color: var(--ds-ink-3);
 }
 .cv-section h2 > button > span {
   flex: 1;
   text-align: left;
 }
 .cv-complete {
-  color: #0f766e;
+  color: var(--ds-success);
 }
 .cv-chevron-open {
   transform: rotate(180deg);
 }
 .cv-section-body {
-  padding: 0 var(--jobx-space-20px) var(--jobx-space-24px);
+  padding: 0 var(--ds-space-5) var(--ds-space-5);
 }
 .cv-section-body[hidden] {
   display: none;
@@ -350,44 +405,72 @@
 .cv-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--jobx-space-20px) var(--jobx-space-16px);
+  gap: var(--ds-space-5) var(--ds-space-4);
 }
 .cv-field {
   display: flex;
   flex-direction: column;
-  gap: var(--jobx-space-8px);
+  gap: var(--ds-space-2);
   min-width: 0;
-  margin-bottom: var(--jobx-space-16px);
-  font-size: var(--jobx-font-size-12px);
-  font-weight: 600;
+  margin-bottom: var(--ds-space-4);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
 }
+/* Text fields take the dropdowns' box: one height, border, radius and focus ring. */
 .cv-field input,
-.cv-field textarea,
-.cv-field select {
+.cv-field textarea {
   width: 100%;
-  min-height: 44px;
-  padding: var(--jobx-space-11px) var(--jobx-space-12px);
-  border: 1px solid var(--jobx-color-dce2ec-surface);
-  border-radius: var(--jobx-radius-8px);
-  background: var(--jobx-surface);
-  color: var(--jobx-text-strong);
+  min-height: var(--ds-control-md);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
   font: inherit;
-  font-size: var(--jobx-font-size-14px);
+  font-size: var(--ds-text-md);
   font-weight: 400;
+}
+.cv-field :is(input, textarea)::placeholder {
+  color: var(--ds-ink-3);
 }
 .cv-field textarea {
   min-height: 132px;
   resize: vertical;
   line-height: 1.7;
 }
+.cv-field .ds-select {
+  font-weight: 400;
+}
+/* Inside a grid of fields the grid's gap spaces them; the field's own margin would double it. */
+.cv-fields > .cv-field {
+  margin-bottom: 0;
+}
+.cv-fields + :is(.cv-check, .cv-entry-actions, .cv-field) {
+  margin-top: var(--ds-space-3);
+}
+.cv-field :is(input, textarea),
+.cv-field .ds-select {
+  transition:
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration) var(--ds-ease);
+}
+.cv-field :is(input, textarea):hover:not(:disabled, :focus),
+.cv-field .ds-select:hover:not(:disabled, :focus-visible, [data-popup-open]) {
+  border-color: var(--ds-line-strong);
+}
+.cv-field .ds-select[data-popup-open] {
+  border-color: var(--ds-accent);
+}
 .cv-field small {
-  color: #647087;
-  font-size: var(--jobx-font-size-11px);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
   font-weight: 400;
   line-height: 1.6;
 }
-.cv-field input:disabled {
-  background: var(--jobx-page-cool);
+.cv-field :is(input, .ds-select):disabled {
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink-3);
+  cursor: not-allowed;
 }
 .cv-month {
   min-width: 0;
@@ -397,44 +480,12 @@
 }
 .cv-month legend {
   padding: 0;
-  margin-bottom: var(--jobx-space-8px);
+  margin-bottom: var(--ds-space-2);
 }
 .cv-month > div {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: var(--jobx-space-8px);
-}
-.cv-main .cv-month select {
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  /* The same box as the text inputs beside it: padding, border and type size. */
-  padding: var(--jobx-space-11px) var(--jobx-space-34px) var(--jobx-space-11px) var(--jobx-space-12px);
-  border: 1px solid var(--jobx-color-dce2ec-surface);
-  border-radius: var(--jobx-radius-8px);
-  background-color: var(--jobx-surface);
-  color: var(--jobx-text-strong);
-  font: inherit;
-  font-size: var(--jobx-font-size-14px);
-  font-weight: 400;
-  appearance: none;
-  cursor: pointer;
-}
-/* The chevron has its own, stronger rule: the dark theme repaints `.cv-field select` with a
-   `background` shorthand, which would otherwise wipe the image along with the colour. */
-html:root .cv-main .cv-month select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238a94a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-}
-.cv-main .cv-month select:focus-visible {
-  outline: 2px solid var(--jobx-accent);
-  outline-offset: 1px;
-}
-.cv-main .cv-month:disabled select {
-  background: var(--jobx-page-cool);
-  color: var(--jobx-text-muted);
-  cursor: default;
+  gap: var(--ds-space-2);
 }
 .cv-wide {
   grid-column: 1 / -1;
@@ -442,21 +493,36 @@ html:root .cv-main .cv-month select {
 .cv-check {
   display: flex;
   align-items: center;
-  gap: var(--jobx-space-9px);
-  font-size: var(--jobx-font-size-12px);
-  min-height: 44px;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-text-sm);
+  min-height: var(--ds-control-touch);
+  cursor: pointer;
 }
-.cv-check input {
-  width: 17px;
-  height: 17px;
-  accent-color: var(--jobx-accent);
+.cv-check:has([data-disabled]) {
+  color: var(--ds-ink-3);
+  cursor: not-allowed;
+}
+.cv-check [data-slot='checkbox'] {
+  width: 18px;
+  height: 18px;
+  border-color: var(--ds-line-strong);
+  border-radius: 5px;
+  background: var(--ds-surface);
+}
+.cv-check [data-slot='checkbox'][data-checked] {
+  border-color: var(--ds-accent);
+  background: var(--ds-accent);
+  color: var(--ds-on-accent);
+}
+.cv-check [data-slot='checkbox']:focus-visible {
+  box-shadow: 0 0 0 3px var(--ds-focus);
 }
 .cv-photo-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--jobx-space-8px);
-  padding-top: var(--jobx-space-8px);
+  gap: var(--ds-space-2);
+  padding-top: var(--ds-space-2);
 }
 .cv-photo-controls img {
   object-fit: cover;
@@ -468,24 +534,34 @@ html:root .cv-main .cv-month select {
   border-radius: var(--jobx-radius-14px);
 }
 .cv-entry {
-  padding: var(--jobx-space-20px) 0;
-  border-top: 1px solid var(--jobx-color-e1e5ed-surface);
+  padding: var(--ds-space-5) 0;
+  border-top: 1px solid var(--ds-line);
 }
 .cv-entry-actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--jobx-space-6px);
+  gap: var(--ds-space-2);
+}
+.cv-add {
+  margin-top: var(--ds-space-2);
 }
 .cv-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--jobx-space-8px);
-  margin-bottom: var(--jobx-space-16px);
+  gap: var(--ds-space-2);
+  margin-bottom: var(--ds-space-4);
 }
-.cv-main .cv-chip {
-  border-radius: var(--jobx-radius-20px);
-  background: var(--jobx-accent-tint);
-  color: var(--jobx-accent);
+/* A skill is a chip with its remove mark; long skills wrap instead of widening the form. */
+.cv-chips .cv-chip {
+  max-width: 100%;
+  white-space: normal;
+  text-align: start;
+}
+.cv-chips .cv-chip > svg.lucide {
+  color: var(--ds-ink-3);
+}
+.cv-chips .cv-chip:hover > svg.lucide {
+  color: var(--ds-danger);
 }
 .cv-preview {
   position: sticky;
@@ -495,9 +571,9 @@ html:root .cv-main .cv-month select {
 .cv-preview-heading {
   display: flex;
   justify-content: space-between;
-  font-size: var(--jobx-font-size-12px);
-  color: var(--jobx-color-536078-text);
-  margin: 0 0 var(--jobx-space-14px);
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+  margin: 0 0 var(--ds-space-3);
 }
 .cv-preview-viewport {
   position: relative;
@@ -599,7 +675,11 @@ html:root .cv-main .cv-month select {
 }
 .cv-page .cv-document-title {
   margin-top: var(--jobx-space-10px);
-  color: color-mix(in srgb, var(--cv-text, var(--jobx-color-111111-fixed)) 70%, var(--jobx-white-fixed-keyword));
+  color: color-mix(
+    in srgb,
+    var(--cv-text, var(--jobx-color-111111-fixed)) 70%,
+    var(--jobx-white-fixed-keyword)
+  );
   font-size: var(--jobx-font-size-17px);
   font-weight: 500;
 }
@@ -662,12 +742,20 @@ html:root .cv-main .cv-month select {
   min-width: 0;
 }
 .cv-page .cv-period {
-  color: color-mix(in srgb, var(--cv-text, var(--jobx-color-111111-fixed)) 70%, var(--jobx-white-fixed-keyword));
+  color: color-mix(
+    in srgb,
+    var(--cv-text, var(--jobx-color-111111-fixed)) 70%,
+    var(--jobx-white-fixed-keyword)
+  );
   font-size: var(--jobx-font-size-10px);
   flex-shrink: 0;
 }
 .cv-page .cv-organization {
-  color: color-mix(in srgb, var(--cv-text, var(--jobx-color-111111-fixed)) 70%, var(--jobx-white-fixed-keyword));
+  color: color-mix(
+    in srgb,
+    var(--cv-text, var(--jobx-color-111111-fixed)) 70%,
+    var(--jobx-white-fixed-keyword)
+  );
   margin-top: var(--jobx-space-3px);
 }
 .cv-page .cv-document-bullets {
@@ -692,8 +780,13 @@ html:root .cv-main .cv-month select {
 }
 .cv-page .cv-document-skills li {
   padding: var(--jobx-space-4px) var(--jobx-space-11px);
-  border: 1px solid color-mix(in srgb, var(--cv-accent) 22%, var(--jobx-white-fixed-keyword));
-  background: color-mix(in srgb, var(--cv-accent) 6%, var(--jobx-white-fixed-keyword));
+  border: 1px solid
+    color-mix(in srgb, var(--cv-accent) 22%, var(--jobx-white-fixed-keyword));
+  background: color-mix(
+    in srgb,
+    var(--cv-accent) 6%,
+    var(--jobx-white-fixed-keyword)
+  );
   border-radius: var(--jobx-radius-4px);
 }
 .cv-page .cv-document-languages ul {
@@ -710,7 +803,11 @@ html:root .cv-main .cv-month select {
   align-items: baseline;
 }
 .cv-page .cv-document-languages li span {
-  color: color-mix(in srgb, var(--cv-text, var(--jobx-color-111111-fixed)) 70%, var(--jobx-white-fixed-keyword));
+  color: color-mix(
+    in srgb,
+    var(--cv-text, var(--jobx-color-111111-fixed)) 70%,
+    var(--jobx-white-fixed-keyword)
+  );
   font-size: var(--jobx-font-size-10px);
 }
 .cv-page .cv-language-dots {
@@ -958,23 +1055,25 @@ html:root .cv-main .cv-month select {
 }
 .cv-segment > span {
   align-self: center;
-  padding: 0 var(--jobx-space-8px);
-  font-size: var(--jobx-font-size-12px);
+  padding: 0 var(--ds-space-2);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
 }
 :root .cv-main .cv-template:hover:not(:disabled) {
-  border-color: var(--jobx-color-dce2ec-surface);
-  box-shadow: 0 2px 7px #19253c14;
+  border-color: var(--ds-line-strong);
+  box-shadow: var(--ds-shadow-sm);
 }
 :root .cv-main button.cv-template[aria-pressed='true']:hover:not(:disabled) {
   border-color: var(--cv-selected-accent);
 }
 :root .cv-main .cv-template:focus-visible {
-  outline: 1px solid var(--cv-selected-accent);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
 }
 
 /* photo editor */
 .cv-photo-editor {
+  animation: ds-fade var(--ds-duration) var(--ds-ease) both;
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -994,12 +1093,14 @@ html:root .cv-main .cv-month select {
   max-width: 100%;
   max-height: calc(100dvh - 48px);
   overflow-y: auto;
-  padding: var(--jobx-space-24px);
-  border-radius: var(--jobx-radius-18px);
-  background: var(--jobx-surface);
-  color: var(--jobx-text-heading);
-  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.25);
+  padding: var(--ds-space-5);
+  border-radius: var(--ds-radius-xl);
+  border: 1px solid var(--ds-line);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  box-shadow: var(--ds-shadow-lg);
   font-family: 'FiraGO', 'FiraGO Fallback', Arial, sans-serif;
+  animation: ds-appear var(--ds-duration-slow) var(--ds-ease) both;
 }
 .cv-photo-editor__dialog h2 {
   margin: 0 0 var(--jobx-space-8px);
@@ -1007,7 +1108,9 @@ html:root .cv-main .cv-month select {
 }
 .cv-photo-editor__dialog p {
   margin: 0 0 var(--jobx-space-18px);
-  font-size: var(--jobx-font-size-13px);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+  font-weight: 400;
   line-height: 1.7;
 }
 .cv-photo-editor__viewport {
@@ -1016,7 +1119,8 @@ html:root .cv-main .cv-month select {
   height: 280px;
   margin: 0 auto;
   overflow: hidden;
-  background: #e5eaf2;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
   touch-action: none;
   user-select: none;
   cursor: grab;
@@ -1055,46 +1159,69 @@ html:root .cv-main .cv-month select {
   display: grid;
   gap: var(--jobx-space-4px);
   margin: var(--jobx-space-20px) 0 var(--jobx-space-12px);
-  font-size: var(--jobx-font-size-13px);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
 }
+@media (prefers-reduced-motion: reduce) {
+  .cv-photo-editor,
+  .cv-photo-editor__dialog,
+  .cv-section-body:not([hidden]) {
+    animation: none;
+  }
+}
+/* The zoom slider drawn in the system's colours instead of the platform's. */
 .cv-photo-editor__zoom input {
   width: 100%;
-  min-height: 44px;
+  min-height: var(--ds-control-touch);
   margin: 0;
-  accent-color: var(--primary);
-}
-.cv-photo-editor__actions {
-  display: flex;
-  gap: var(--jobx-space-12px);
-  justify-content: flex-end;
-}
-.cv-photo-editor__actions button {
-  min-height: 48px;
-  padding: var(--jobx-space-12px) var(--jobx-space-18px);
-  border: 1px solid var(--jobx-color-ccd4e2-surface);
-  border-radius: var(--jobx-radius-9px);
-  background: var(--jobx-surface);
-  color: var(--jobx-color-536078-text);
-  font: inherit;
-  font-size: var(--jobx-font-size-13px);
-  font-weight: 600;
+  appearance: none;
+  background: none;
   cursor: pointer;
 }
-.cv-photo-editor__actions button:last-child {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: var(--primary-foreground);
+.cv-photo-editor__zoom input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-line-strong);
 }
-.cv-photo-editor__actions button:disabled {
+.cv-photo-editor__zoom input::-moz-range-track {
+  height: 4px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-line-strong);
+}
+.cv-photo-editor__zoom input::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  border: 2px solid var(--ds-surface);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-accent);
+  box-shadow: var(--ds-shadow-sm);
+}
+.cv-photo-editor__zoom input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--ds-surface);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-accent);
+}
+.cv-photo-editor__zoom input:focus-visible {
+  outline: none;
+}
+.cv-photo-editor__zoom input:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.cv-photo-editor__zoom input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-.cv-photo-editor :is(button, input):focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
+.cv-photo-editor__actions {
+  display: flex;
+  gap: var(--ds-space-3);
+  justify-content: flex-end;
 }
 .cv-photo-editor__dialog .cv-photo-editor__error {
-  color: var(--jobx-danger-text-alt);
+  color: var(--ds-danger);
   overflow-wrap: anywhere;
 }
 @media print {
@@ -1107,5 +1234,10 @@ html:root .cv-main .cv-month select {
   .cv-shell > .site-footer,
   .cv-shell > .search-directory {
     display: none !important;
+  }
+}
+@media (max-width: 760px) {
+  .cv-toolbar + #cv-print-hint {
+    text-align: start;
   }
 }

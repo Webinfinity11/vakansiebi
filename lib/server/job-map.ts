@@ -33,6 +33,12 @@ export async function mapVacancies(): Promise<MapVacancy[]> {
        json_agg(json_build_array(p.lat, p.lon, p.label) ORDER BY p.query) AS places
      FROM job_places p JOIN jobs j ON j.id = p.job_id
      WHERE j.status = 'published'
+       -- The board's own visibility: an active source, a live deadline, no tenders.
+       AND EXISTS (SELECT 1 FROM source_items si JOIN sources s ON s.id = si.source_id
+                    WHERE si.job_id = j.id AND NOT s.retired)
+       AND (coalesce(j.published->>'deadline', '') = ''
+            OR j.published->>'deadline' >= to_char(now() AT TIME ZONE 'Asia/Tbilisi', 'YYYY-MM-DD'))
+       AND NOT (lower(j.published->>'title') ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]])')
      GROUP BY j.id
      ORDER BY premium DESC, j.published_at DESC NULLS LAST
      LIMIT 5000`,

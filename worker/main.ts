@@ -159,13 +159,16 @@ try {
         error instanceof Error ? error.message : error,
       ),
     );
-    // Map pins for new vacancies, a bounded handful of geocoder requests per cycle.
-    await placeVacancies().catch((error) =>
-      console.warn(
-        'Vacancy map placement skipped:',
-        error instanceof Error ? error.message : error,
-      ),
-    );
+    // Map pins for new vacancies, a bounded handful of geocoder requests per cycle. The
+    // scheduled scrape runs one process per source at once; only one of them places, so the
+    // geocoder is never asked the same address twice or faster than once a second.
+    if (!arg || arg === 'hr')
+      await placeVacancies().catch((error) =>
+        console.warn(
+          'Vacancy map placement skipped:',
+          error instanceof Error ? error.message : error,
+        ),
+      );
     if (purged?.applied && purged.expired + purged.removed > 0)
       console.log(
         `Purged ended vacancies: ${purged.expired} expired, ${purged.removed} removed`,

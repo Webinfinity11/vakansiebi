@@ -1,9 +1,11 @@
 'use client';
+import { ChevronDown } from 'lucide-react';
 import type {
   ScraperMetrics,
   ScraperMetricRow,
 } from '@/lib/server/scraper-metrics';
 import { listingSourceNames } from '@/lib/types';
+import { SkeletonRows } from '../skeleton';
 
 export function ScraperMetricsPanel({
   metrics,
@@ -70,9 +72,16 @@ export function ScraperMetricsPanel({
         ნიშნავს ჩვენს ბაზაში ახლად შექმნილ ვაკანსიას — წყაროზე შესაძლოა ადრე
         გამოქვეყნდა. უკვე არსებულთან მიბმული დუბლიკატი ახალში არ ითვლება.
       </p>
-      {metrics ? table(metrics.daily, true) : <p>მეტრიკები იტვირთება…</p>}
+      {metrics ? (
+        table(metrics.daily, true)
+      ) : (
+        <SkeletonRows rows={5} label="მეტრიკები იტვირთება" />
+      )}
       <details>
-        <summary>წყაროების დატვირთვა — ბოლო 24 საათი</summary>
+        <summary>
+          <ChevronDown className="admin-summary-mark" aria-hidden="true" />
+          წყაროების დატვირთვა — ბოლო 24 საათი
+        </summary>
         {metrics && table(metrics.sources, false)}
       </details>
       <p className="admin-helper">

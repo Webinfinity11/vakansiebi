@@ -39,11 +39,21 @@ export async function stageVacancy(itemId: string, v: Vacancy, _hours = 6) {
       lastSeen: item.quality_last_seen,
       observations: item.quality_observations || 0,
     });
+    if (quality.hold && quality.structural && quality.observations >= 3) {
+      /* Seen invalid three times: the source keeps publishing it broken. It is recorded as a
+         source error and left off the site, instead of sitting in the review queue. */
+      await c.query(
+        `UPDATE source_items SET last_checked_at=now(),error=$2,failures=failures+1,
+        ${clearedQualitySql},next_check_at='infinity'::timestamptz WHERE id=$1`,
+        [itemId, 'invalid source data: ' + (quality.warning ?? '')],
+      );
+      return 'quality_held';
+    }
     if (quality.hold) {
       await c.query(
         `UPDATE source_items SET quality_candidate=$2,quality_signature=$3,quality_warning=$4,
         quality_first_seen=$5,quality_last_seen=$6,quality_observations=$7,last_checked_at=now(),error=NULL,failures=0,
-        next_check_at=CASE WHEN $7>=3 THEN 'infinity'::timestamptz ELSE now()+interval '30 minutes' END WHERE id=$1`,
+        next_check_at=COALESCE($8::timestamptz,'infinity'::timestamptz) WHERE id=$1`,
         [
           itemId,
           v,
@@ -52,6 +62,7 @@ export async function stageVacancy(itemId: string, v: Vacancy, _hours = 6) {
           quality.firstSeen,
           quality.lastSeen,
           quality.observations,
+          quality.recheckAt,
         ],
       );
       return 'quality_held';

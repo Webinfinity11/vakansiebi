@@ -1,4 +1,5 @@
 'use client';
+import { SkeletonRows } from '../skeleton';
 import { useEffect, useState } from 'react';
 import { placementLabels } from '@/lib/placement';
 import { postExtraLabels, postFieldLabels } from '@/lib/analytics-funnel';
@@ -75,11 +76,12 @@ export function PostingInsights() {
             ნამდვილი განცხადებებია, ტესტების გარეშე.
           </p>
         </div>
-        <fieldset className="overview-periods" aria-label="პერიოდი">
+        <fieldset className="admin-chips" aria-label="პერიოდი">
           {windows.map(([value, label]) => (
             <button
               key={value}
               type="button"
+              className="ds-chip"
               aria-pressed={days === value}
               onClick={() => setDays(value)}
             >
@@ -89,7 +91,9 @@ export function PostingInsights() {
         </fieldset>
       </header>
       {error && <p role="alert">{error}</p>}
-      {!shown && !error && <p className="posting-muted">იტვირთება…</p>}
+      {!shown && !error && (
+        <SkeletonRows rows={2} block label="ანალიტიკა იტვირთება" />
+      )}
       {shown && received && (
         <>
           <dl className="vacancy-performance-kpis posting-kpis">
