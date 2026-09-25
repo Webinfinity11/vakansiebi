@@ -1,0 +1,264 @@
+/* The companies directory: the company page's calm surfaces, every colour a design-system token
+   so the dark theme follows without a second list. `:root .board-shell` lifts these rules over
+   the older board rules and their generated dark-theme overrides. */
+:root .board-shell.companies-page {
+  background: var(--ds-page);
+}
+:root .board-shell.companies-page .vacancy-page-main {
+  max-width: 1080px;
+}
+
+:root .board-shell.companies-page .companies-head {
+  display: grid;
+  gap: var(--ds-space-1);
+  margin: var(--ds-space-2) 0 var(--ds-space-5);
+}
+:root .board-shell.companies-page .companies-head h1 {
+  margin: 0;
+  color: var(--ds-ink);
+  font-size: clamp(24px, 3vw, 32px);
+  line-height: 1.3;
+}
+:root .board-shell.companies-page .companies-head p {
+  margin: 0;
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Search: a design-system field with the icon inside and our own clear control. */
+:root .board-shell.companies-page .companies-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2) var(--ds-space-4);
+  margin: 0 0 var(--ds-space-4);
+}
+:root .board-shell.companies-page .companies-search {
+  position: relative;
+  display: block;
+  flex: 0 1 360px;
+  min-width: 0;
+}
+:root .board-shell.companies-page .companies-search > svg.lucide {
+  position: absolute;
+  top: 50%;
+  left: var(--ds-space-3);
+  width: var(--ds-icon-md);
+  height: var(--ds-icon-md);
+  color: var(--ds-ink-3);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+:root .board-shell.companies-page .companies-search .ds-input {
+  padding-inline: calc(var(--ds-space-3) * 2 + var(--ds-icon-md))
+    calc(var(--ds-control-sm) + var(--ds-space-1));
+}
+/* The design-system ring, not the board's heavier outline for its own fields. */
+:root .board-shell.companies-page .companies-search .ds-input:focus {
+  outline: none;
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+:root .board-shell.companies-page .companies-search .ds-input::placeholder {
+  color: var(--ds-ink-3);
+}
+:root
+  .board-shell.companies-page
+  .companies-search
+  .ds-input::-webkit-search-cancel-button {
+  appearance: none;
+}
+:root .board-shell.companies-page .companies-search-clear {
+  position: absolute;
+  top: 50%;
+  right: var(--ds-space-1);
+  width: var(--ds-control-sm);
+  min-height: var(--ds-control-sm);
+  padding: 0;
+  color: var(--ds-ink-3);
+  transform: translateY(-50%);
+}
+:root .board-shell.companies-page .companies-search-clear:hover {
+  color: var(--ds-ink);
+}
+:root .board-shell.companies-page .companies-found {
+  margin: 0;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+:root .board-shell.companies-page .companies-found:empty {
+  display: none;
+}
+
+/* Cards: logo, name, count, towns. Three across, one row height per row; no arrow — the whole
+   card is the link. */
+:root .board-shell.companies-page .companies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--ds-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+:root .board-shell.companies-page .companies-grid[hidden] {
+  display: none;
+}
+:root .board-shell.companies-page .companies-grid > li {
+  display: flex;
+  min-width: 0;
+}
+:root .board-shell.companies-page .companies-card {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--ds-space-4);
+  min-width: 0;
+  padding: var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  text-decoration: none;
+  transition:
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration) var(--ds-ease);
+}
+:root .board-shell.companies-page .companies-card:hover {
+  border-color: var(--ds-line-strong);
+  box-shadow: var(--ds-shadow-md);
+}
+:root .board-shell.companies-page .companies-card:hover .companies-card-name {
+  color: var(--ds-accent);
+}
+:root .board-shell.companies-page .companies-card:focus-visible {
+  outline: none;
+  border-color: var(--ds-accent);
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+:root .board-shell.companies-page .companies-card .company-avatar {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  border-color: var(--ds-line);
+  background: var(--ds-surface);
+}
+:root .board-shell.companies-page .companies-card-body {
+  display: grid;
+  gap: var(--ds-space-1);
+  min-width: 0;
+}
+:root .board-shell.companies-page .companies-card-name {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-strong);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  transition: color var(--ds-duration-fast) var(--ds-ease);
+}
+:root .board-shell.companies-page .companies-card-jobs {
+  color: var(--ds-accent-ink);
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+:root .board-shell.companies-page .companies-card-cities {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  min-width: 0;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+}
+:root .board-shell.companies-page .companies-card-cities > svg.lucide {
+  flex: none;
+  width: var(--ds-icon-sm);
+  height: var(--ds-icon-sm);
+}
+:root .board-shell.companies-page .companies-card-cities > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Nothing to list, the list failed, or the filter matched nothing. */
+:root .board-shell.companies-page .companies-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-6) var(--ds-space-5);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  text-align: center;
+}
+:root .board-shell.companies-page .companies-empty h2 {
+  margin: 0;
+  font-size: var(--ds-text-lg);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+:root .board-shell.companies-page .companies-empty p {
+  margin: 0 0 var(--ds-space-2);
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-md);
+}
+:root .board-shell.companies-page .companies-empty-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent);
+}
+
+@media (max-width: 760px) {
+  :root .board-shell.companies-page .companies-head {
+    margin: var(--ds-space-1) 0 var(--ds-space-4);
+  }
+  :root .board-shell.companies-page .companies-search {
+    flex-basis: 100%;
+  }
+  :root .board-shell.companies-page .companies-search .ds-input {
+    min-height: var(--ds-control-touch);
+    padding-right: var(--ds-control-touch);
+    /* 16px keeps iOS from zooming into the field. */
+    font-size: var(--ds-text-lg);
+  }
+  :root .board-shell.companies-page .companies-search-clear {
+    width: var(--ds-control-touch);
+    min-height: var(--ds-control-touch);
+    right: 0;
+  }
+  :root .board-shell.companies-page .companies-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ds-space-2);
+  }
+  :root .board-shell.companies-page .companies-card {
+    gap: var(--ds-space-3);
+    padding: var(--ds-space-3);
+  }
+  :root .board-shell.companies-page .companies-card .company-avatar {
+    width: 56px;
+    height: 56px;
+    flex-basis: 56px;
+  }
+  :root .board-shell.companies-page .companies-card-name {
+    font-size: var(--ds-text-md);
+  }
+  :root .board-shell.companies-page .companies-card-jobs {
+    font-size: var(--ds-text-sm);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .board-shell.companies-page .companies-card {
+    transition: none;
+  }
+}

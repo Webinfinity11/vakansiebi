@@ -45,8 +45,9 @@ export const actionGroups = [
     },
   },
   {
-    title: 'კომპანიის გვერდი',
+    title: 'კომპანიები',
     codes: {
+      companies_page: 'კომპანიების სია გაიხსნა',
       company_page: 'კომპანიის გვერდი გაიხსნა',
       open_company: 'ვაკანსია კომპანიის გვერდიდან',
     },

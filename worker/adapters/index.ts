@@ -6,6 +6,7 @@ import {
 import { mailtoAddress } from '../../lib/application-contact';
 import { hasShortClassifiedDescription } from '../../lib/short-classified-description';
 import { companyKey } from '../../lib/company-key';
+import { withoutLegalForm } from '../../lib/employer-identity';
 import { visibleFields } from '../visible-fields';
 import { enrichVacancy } from '../enrich';
 import { load } from 'cheerio';
@@ -225,7 +226,8 @@ export function fingerprint(
   j: Pick<Vacancy, 'title' | 'company' | 'city'> &
     Partial<Pick<Vacancy, 'source' | 'url'>>,
 ) {
-  const base = [j.title, j.company, j.city]
+  // The legal form is not part of the name: "შპს X" on one board is "X" on another.
+  const base = [j.title, withoutLegalForm(j.company), j.city]
     .map((s) =>
       s
         .normalize('NFKC')
@@ -1089,7 +1091,7 @@ export function applyListingHints(
  * A jobs.ge location naming a Tbilisi district, metro station or street becomes the city
  * თბილისი, its text kept as the address; "დისტანციურად" is remote work with no city.
  */
-function jobsPlace(
+export function jobsPlace(
   j: Pick<Vacancy, 'city' | 'mode' | 'facts'>,
 ): Pick<Vacancy, 'city' | 'mode' | 'facts'> {
   const place = jobsLocation(j.city);

@@ -99,7 +99,8 @@ void test(
       },
       {
         title: 'Warehouse Lead',
-        company: 'Listing fixture',
+        // The same employer with its legal form written out on the other board.
+        company: 'შპს Listing fixture',
         salary: '2500',
         salaryMin: 2500,
         salaryPeriod: '',

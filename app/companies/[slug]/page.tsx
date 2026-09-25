@@ -4,8 +4,6 @@ import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { cache } from 'react';
 import {
-  CalendarClock,
-  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +24,7 @@ import { logoCompanyKey } from '@/lib/company-logo-identity';
 import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import { safeExternalUrl } from '@/lib/vacancy-media';
+import { listPageSize } from '@/lib/search-state';
 import './company.css';
 
 type Props = {
@@ -64,18 +63,30 @@ const load = cache(async (rawSlug: string, rawPage: string) => {
         jobIds: employer.jobIds,
       },
     ),
+    /* Each field from the newest profile that has it: an employer spelt two ways can have its
+       logo saved under one spelling and its website under the other, and the companies list
+       already shows that logo. Taking one whole row lost the logo here. */
     db()
       .query(
         `SELECT logo_url, website, description FROM company_profiles
-          WHERE company_key=ANY($1) AND (website<>'' OR description<>'' OR logo_url<>'') ORDER BY updated_at DESC LIMIT 1`,
+          WHERE company_key=ANY($1) AND (website<>'' OR description<>'' OR logo_url<>'') ORDER BY updated_at DESC`,
         [employer.names.map(companyKey)],
       )
-      .then(
-        (r) =>
-          r.rows[0] as
-            | { logo_url: string; website: string; description: string }
-            | undefined,
-      ),
+      .then((r) => {
+        const rows = r.rows as {
+          logo_url: string;
+          website: string;
+          description: string;
+        }[];
+        if (!rows.length) return undefined;
+        const pick = (field: keyof (typeof rows)[number]) =>
+          rows.find((row) => row[field]?.trim())?.[field].trim() || '';
+        return {
+          logo_url: pick('logo_url'),
+          website: pick('website'),
+          description: pick('description'),
+        };
+      }),
   ]);
   // Vacancies can end between directory rebuilds; an employer with nothing left has no page.
   if (!result.total || page > result.pages) notFound();
@@ -93,7 +104,11 @@ const load = cache(async (rawSlug: string, rawPage: string) => {
       }
     }
   }
-  return { employer, result, page, profile, logoUrl: logoUrl || '' };
+  // Tbilisi's date, for the "new" and "ends soon" marks on the list.
+  const today = new Date().toLocaleDateString('sv-SE', {
+    timeZone: 'Asia/Tbilisi',
+  });
+  return { employer, result, page, profile, logoUrl: logoUrl || '', today };
 });
 
 async function read(props: Props) {
@@ -134,8 +149,17 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   };
 }
 
+/** Whole days from one YYYY-MM-DD date to a later one; null when either is missing. */
+function daysFrom(later: string, earlier: string) {
+  const a = Date.parse(later);
+  const b = Date.parse(earlier);
+  return Number.isNaN(a) || Number.isNaN(b)
+    ? null
+    : Math.round((a - b) / 86_400_000);
+}
+
 export default async function CompanyPage(props: Props) {
-  const { employer, result, page, profile, logoUrl } = await read(props);
+  const { employer, result, page, profile, logoUrl, today } = await read(props);
   const path = `/companies/${encodeURIComponent(employer.slug)}`;
   const here = page > 1 ? `${path}?page=${page}` : path;
   const website = profile?.website ? safeExternalUrl(profile.website) : '';
@@ -154,9 +178,11 @@ export default async function CompanyPage(props: Props) {
               cities: employer.cities.map((c) => c.name),
               jobs: result.jobs,
               total: result.total,
+              offset: (page - 1) * listPageSize,
             }),
             breadcrumbs([
               { name: 'ვაკანსიები', path: '/' },
+              { name: 'კომპანიები', path: '/companies' },
               { name: employer.name, path: here },
             ]),
           ]),
@@ -171,7 +197,9 @@ export default async function CompanyPage(props: Props) {
             ყველა ვაკანსია
           </Link>
           <span aria-hidden="true">/</span>
-          <span>დამსაქმებელი</span>
+          <Link href="/companies" prefetch={false}>
+            კომპანიები
+          </Link>
         </nav>
         <section className="company-page-head" aria-labelledby="company-title">
           <div className="detail-company">
@@ -219,54 +247,61 @@ export default async function CompanyPage(props: Props) {
               {result.total}
             </span>
           </h2>
-          <div className="similar-grid">
-            {result.jobs.map((job) => (
-              <ListHopLink
-                key={job.id}
-                href={vacancyPath(job, { from: here })}
-                from={here}
-                event="open_company"
-                className="similar-card"
-              >
-                <h3 title={job.title}>
-                  {vacancyCardTitle(job.title, job.source)}
-                </h3>
-                {vacancyCardSalary(
-                  job.salary,
-                  job.salaryPeriod,
-                  job.source,
-                ) && (
-                  <span className="similar-salary">
-                    {vacancyCardSalary(
-                      job.salary,
-                      job.salaryPeriod,
-                      job.source,
-                    )}
-                  </span>
-                )}
-                <div className="company-job-meta">
-                  {job.city && (
-                    <span>
-                      <MapPin size={14} aria-hidden="true" />
-                      {job.city}
+          <ul className="company-jobs">
+            {result.jobs.map((job) => {
+              const salary = vacancyCardSalary(
+                job.salary,
+                job.salaryPeriod,
+                job.source,
+              );
+              const fresh = daysFrom(today, job.datePosted ?? '');
+              const left = daysFrom(job.deadline ?? '', today);
+              return (
+                <li key={job.id}>
+                  <ListHopLink
+                    href={vacancyPath(job, { from: here })}
+                    from={here}
+                    event="open_company"
+                    className="company-job"
+                  >
+                    <span className="company-job-main">
+                      <h3 title={job.title}>
+                        {vacancyCardTitle(job.title, job.source)}
+                      </h3>
+                      <span className="company-job-meta">
+                        {job.city && (
+                          <span>
+                            <MapPin size={14} aria-hidden="true" />
+                            {job.city}
+                          </span>
+                        )}
+                        {job.deadline && (
+                          <time dateTime={job.deadline}>
+                            ბოლო ვადა {formatDate(job.deadline)}
+                          </time>
+                        )}
+                      </span>
                     </span>
-                  )}
-                  {job.datePosted && (
-                    <time dateTime={job.datePosted}>
-                      <CalendarDays size={14} aria-hidden="true" />
-                      გამოქვეყნდა: {formatDate(job.datePosted)}
-                    </time>
-                  )}
-                  {job.deadline && (
-                    <time dateTime={job.deadline}>
-                      <CalendarClock size={14} aria-hidden="true" />
-                      ბოლო ვადა: {formatDate(job.deadline)}
-                    </time>
-                  )}
-                </div>
-              </ListHopLink>
-            ))}
-          </div>
+                    <span className="company-job-side">
+                      {salary && <b>{salary}</b>}
+                      {left !== null && left >= 0 && left <= 3 ? (
+                        <span className="ds-badge ds-badge--warning">
+                          {left === 0 ? 'ბოლო დღე' : `${left} დღე დარჩა`}
+                        </span>
+                      ) : (
+                        fresh !== null &&
+                        fresh <= 2 && (
+                          <span className="ds-badge ds-badge--accent">
+                            ახალი
+                          </span>
+                        )
+                      )}
+                    </span>
+                  </ListHopLink>
+                </li>
+              );
+            })}
+          </ul>
           {result.pages > 1 && (
             <nav className="company-page-pages" aria-label="გვერდები">
               {page > 1 ? (

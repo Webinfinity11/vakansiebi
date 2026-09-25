@@ -9,6 +9,10 @@ import {
   legacyEmployerSlug,
   mergedIdentities,
 } from '../employer-identity';
+import { companyKey } from '../company-key';
+import { logoCompanyKey } from '../company-logo-identity';
+import { safeLogoUrl } from '../vacancy-media';
+import { resolveCompanyLogos } from './company-logos';
 
 export type EmployerName = { name: string; count: number };
 export type EmployerCandidate = {
@@ -258,4 +262,70 @@ export async function employerPagesIfReady() {
     new Promise<undefined>((r) => setTimeout(r, 0)),
   ]);
   return settled || null;
+}
+
+export type DirectoryEmployer = {
+  slug: string;
+  name: string;
+  logoUrl: string;
+  jobs: number;
+  cities: string[];
+};
+
+/* The companies page: every employer page whose company has a logo. A letter in a circle is
+   fine beside one vacancy; a wall of them is not a directory anyone wants to browse. The logo
+   is found the way the company page finds it — an admin's own, then one a source embedded on a
+   current vacancy, then one shared from another spelling of the same employer. */
+async function buildEmployerDirectory(
+  pages: Awaited<ReturnType<typeof buildEmployerPages>>,
+): Promise<DirectoryEmployer[]> {
+  const list = [...pages.bySlug.values()];
+  const profiles = new Map<string, string>(
+    (
+      await publicRead(
+        `SELECT company_key, logo_url FROM company_profiles
+          WHERE logo_url<>'' AND company_key=ANY($1::text[])`,
+        [list.flatMap((p) => p.names.map(companyKey))],
+      )
+    ).rows.map((r) => [r.company_key, r.logo_url]),
+  );
+  const own = (p: EmployerPage) =>
+    p.names.map((n) => profiles.get(companyKey(n))).find(Boolean) ||
+    safeLogoUrl(p.logoUrl) ||
+    '';
+  const shared = await resolveCompanyLogos(
+    list.filter((p) => !own(p)).flatMap((p) => p.names),
+  );
+  return list
+    .map((p) => ({
+      slug: p.slug,
+      name: p.name,
+      logoUrl:
+        own(p) ||
+        p.names
+          .map((n) => shared.get(logoCompanyKey(n))?.logoUrl)
+          .find(Boolean) ||
+        '',
+      jobs: p.jobIds.length,
+      cities: p.cities.slice(0, 2).map((c) => c.name),
+    }))
+    .filter((e) => e.logoUrl)
+    .sort((a, b) => b.jobs - a.jobs || a.name.localeCompare(b.name, 'ka'));
+}
+
+let directory: {
+  from: ReturnType<typeof buildEmployerPages>;
+  value: Promise<DirectoryEmployer[]>;
+} | null = null;
+/** Rebuilt with the employer pages it is made from, never more often. */
+export function companiesDirectory() {
+  const from = employerPages();
+  if (directory?.from !== from) {
+    const value = from.then(buildEmployerDirectory).catch((error) => {
+      directory = null;
+      throw error;
+    });
+    directory = { from, value };
+  }
+  return directory.value;
 }

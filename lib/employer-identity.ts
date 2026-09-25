@@ -7,8 +7,16 @@ import { genericCompanyKeys } from './company-logo-identity';
    whole word only, so "იმედი" keeps its "იმ". */
 const legalForm =
   /(^|[^\p{L}\p{N}])(შ\.?\s?პ\.?\s?ს|ს\.?\s?ს\.?\s?ი\.?\s?პ|ა\.?\s?ა\.?\s?ი\.?\s?პ|ს\.?\s?ს|ი\s?[/.]\s?მ|llc|ltd|jsc|inc)\.?(?=[^\p{L}\p{N}]|$)/giu;
+/** The name with its legal form taken out, spelling otherwise untouched. */
+export function withoutLegalForm(name: string) {
+  return name.normalize('NFKC').replace(legalForm, '$1 ');
+}
+/* The same legal forms for PostgreSQL, on lower-case text: Georgian letters are spelled out,
+   because a C-locale [:alnum:] does not include them. */
+export const legalFormSql =
+  '(^|[^a-z0-9ა-ჰ])(შ\\.?\\s?პ\\.?\\s?ს|ს\\.?\\s?ს\\.?\\s?ი\\.?\\s?პ|ა\\.?\\s?ა\\.?\\s?ი\\.?\\s?პ|ს\\.?\\s?ს|ი\\s?[/.]\\s?მ|llc|ltd|jsc|inc)\\.?(?=[^a-z0-9ა-ჰ]|$)';
 export function employerKey(name: string) {
-  return companyKey(name.normalize('NFKC').replace(legalForm, '$1 '));
+  return companyKey(withoutLegalForm(name));
 }
 
 /* A Latin spelling written in Georgian letters, so "Midea" and "მიდეა" meet. Exact letters only:

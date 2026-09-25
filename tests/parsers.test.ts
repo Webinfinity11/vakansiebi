@@ -948,3 +948,15 @@ void test('v.dk.ge keeps the company logo from its own upload host', () => {
     '',
   );
 });
+
+void test('the legal form does not split one employer into two postings', () => {
+  const v = { title: 'მოლარე', city: 'თბილისი' };
+  const plain = fingerprint({ ...v, company: 'ნიკორა' });
+  for (const company of ['შპს ნიკორა', 'შ.პ.ს. "ნიკორა"', 'ნიკორა LLC'])
+    assert.equal(fingerprint({ ...v, company }), plain, company);
+  // Only a whole word is a legal form: "იმედი" keeps its "იმ".
+  assert.notEqual(
+    fingerprint({ ...v, company: 'იმედი' }),
+    fingerprint({ ...v, company: 'ედი' }),
+  );
+});

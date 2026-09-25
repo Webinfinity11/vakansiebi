@@ -13,6 +13,7 @@
 }
 :root .board-shell.company-page .company-page-cities {
   align-items: center;
+  margin-top: 0;
   gap: var(--ds-space-2);
   color: var(--ds-ink-2);
 }
@@ -22,7 +23,11 @@
 
 /* About and website: a quiet row under a hairline, not a grey box inside the blue one. */
 :root .board-shell.company-page .company-about {
-  align-items: center;
+  /* The website button sits level with the "about" line, not halfway down an open text. */
+  align-items: flex-start;
+  /* Across the whole panel: the older 760px cap ended the hairline mid-panel and left the
+     website button floating in the middle of it. */
+  max-width: none;
   margin: var(--ds-space-5) 0 0;
   padding: var(--ds-space-3) 0 0;
   border: 0;
@@ -68,12 +73,15 @@
 }
 :root .board-shell.company-page .company-description p {
   margin: var(--ds-space-1) 0 var(--ds-space-3);
+  /* Written in the admin's text box: its paragraphs are line breaks. */
+  white-space: pre-line;
+  overflow-wrap: anywhere;
   color: var(--ds-ink-2);
   font-size: var(--ds-text-md);
   animation: ds-appear var(--ds-duration-slow) var(--ds-ease) both;
 }
 :root .board-shell.company-page .company-about a.company-website {
-  margin: 0 0 0 auto;
+  margin: calc((var(--ds-control-touch) - var(--ds-control-sm)) / 2) 0 0 auto;
   color: var(--ds-ink);
   font-size: var(--ds-text-sm);
 }
@@ -89,55 +97,103 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Vacancy rows: system line, hover lift, focus ring; meta grouped on the left. */
-:root .board-shell.company-page .similar-card {
-  padding: var(--ds-space-5);
-  min-height: 0;
-  border-color: var(--ds-line);
+/* Vacancy rows: one panel with a line between rows, so a long list reads as a list rather than
+   a stack of separate boxes. Titles are in running text case; capitals are for section heads. */
+:root .board-shell.company-page .company-jobs {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  list-style: none;
+}
+:root .board-shell.company-page .company-jobs li + li {
+  border-top: 1px solid var(--ds-line);
+}
+:root .board-shell.company-page .company-job {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--ds-space-4);
+  align-items: center;
+  padding: var(--ds-space-4) var(--ds-space-5);
   color: var(--ds-ink);
   text-decoration: none;
-  transition:
-    border-color var(--ds-duration-fast) var(--ds-ease),
-    box-shadow var(--ds-duration) var(--ds-ease);
+  transition: background var(--ds-duration-fast) var(--ds-ease);
 }
-:root .board-shell.company-page .similar-card:hover {
-  border-color: var(--ds-line-strong);
-  box-shadow: var(--ds-shadow-md);
+:root .board-shell.company-page .company-job:hover {
+  background: var(--ds-surface-muted);
 }
-:root .board-shell.company-page .similar-card:hover h3 {
-  color: var(--ds-accent);
-}
-:root .board-shell.company-page .similar-card:focus-visible {
+:root .board-shell.company-page .company-job:focus-visible {
   outline: none;
-  border-color: var(--ds-accent);
-  box-shadow: 0 0 0 3px var(--ds-focus);
+  box-shadow: inset 0 0 0 2px var(--ds-focus);
 }
-:root .board-shell.company-page .similar-card h3 {
+:root .board-shell.company-page .company-job-main {
+  display: grid;
+  gap: var(--ds-space-1);
+  min-width: 0;
+}
+:root .board-shell.company-page .company-job h3 {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-lg);
+  font-weight: var(--ds-weight-strong);
+  font-feature-settings: normal;
+  line-height: 1.4;
   overflow-wrap: anywhere;
   transition: color var(--ds-duration-fast) var(--ds-ease);
 }
-:root .board-shell.company-page .similar-salary {
-  color: var(--ds-ink);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+:root .board-shell.company-page .company-job:hover h3 {
+  color: var(--ds-accent);
 }
 :root .board-shell.company-page .company-job-meta {
-  gap: var(--ds-space-2) var(--ds-space-5);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--ds-space-1) var(--ds-space-2);
   color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
   font-variant-numeric: tabular-nums;
 }
-:root .board-shell.company-page .company-job-meta > :is(span, time) {
+:root .board-shell.company-page .company-job-meta > * {
+  margin-left: 0;
   display: inline-flex;
   align-items: center;
   gap: var(--ds-space-1);
 }
-:root .board-shell.company-page .company-job-meta time {
-  margin-left: 0;
+:root .board-shell.company-page .company-job-meta > * + *::before {
+  content: '·';
+  margin-right: var(--ds-space-1);
+  color: var(--ds-line-strong);
+}
+:root .board-shell.company-page .company-job-side {
+  display: grid;
+  justify-items: end;
+  gap: var(--ds-space-1);
+}
+:root .board-shell.company-page .company-job-side b {
+  color: var(--ds-success);
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+:root .board-shell.company-page .company-page-pages {
+  margin-top: var(--ds-space-4);
 }
 
 :root .board-shell.company-page .company-page-pages {
   align-items: center;
+}
+/* "Previous" filled its whole column and read as a banner; both steps keep their own width. */
+:root .board-shell.company-page .company-page-pages > :first-child {
+  justify-self: start;
 }
 :root .board-shell.company-page .company-page-count {
   color: var(--ds-ink-2);
@@ -146,13 +202,32 @@
 }
 
 @media (max-width: 760px) {
-  :root .board-shell.company-page .similar-card {
-    grid-template-columns: minmax(0, 1fr);
-    padding: var(--ds-space-4);
-    gap: var(--ds-space-2);
+  /* Both breadcrumb steps are links here, so the separator between them stays. */
+  :root
+    .board-shell.company-page
+    .vacancy-breadcrumb
+    > span[aria-hidden='true'] {
+    display: inline;
+    color: var(--ds-ink-3);
   }
-  :root .board-shell.company-page .company-job-meta {
-    gap: var(--ds-space-1) var(--ds-space-4);
+  /* A long legal name at the desktop size ran to five lines above the fold. */
+  :root .board-shell.company-page .company-page-head h1 {
+    font-size: 22px;
+  }
+  :root .board-shell.company-page .company-job {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-4);
+  }
+  :root .board-shell.company-page .company-job h3 {
+    font-size: var(--ds-text-md);
+  }
+  :root .board-shell.company-page .company-job-side {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-items: start;
+    gap: var(--ds-space-2);
   }
   :root .board-shell.company-page .company-about a.company-website {
     margin-left: 0;
@@ -162,4 +237,12 @@
   :root .board-shell.company-page .company-description p {
     animation: none;
   }
+}
+
+/* The missing-employer page offers the whole catalogue first and the companies list beside it. */
+.not-found-card .not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ds-space-2);
 }

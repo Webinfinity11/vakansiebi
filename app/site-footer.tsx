@@ -1,6 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { Bookmark, CircleHelp, FileText, Search } from 'lucide-react';
+import {
+  Bookmark,
+  Building2,
+  CircleHelp,
+  FileText,
+  Search,
+} from 'lucide-react';
 import { landingCopy, type Landing } from '@/lib/seo-landing';
 import { Brand } from './brand';
 import { TopGeCounter } from './top-ge-counter';
@@ -44,6 +50,9 @@ export function SiteFooter({
             )}
             <Link href="/cv" prefetch={false}>
               <FileText size={16} aria-hidden="true" /> რეზიუმეს შექმნა
+            </Link>
+            <Link href="/companies" prefetch={false}>
+              <Building2 size={16} aria-hidden="true" /> კომპანიები
             </Link>
           </nav>
         </div>

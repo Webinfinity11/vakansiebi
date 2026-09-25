@@ -105,11 +105,18 @@ export function jobPosting(
   const located = namedCity(job);
   // Explicit work-address facts can name several valid locations. Do not infer
   // multiple workplaces from incidental city mentions elsewhere in the text.
-  const address = vacancySummary(job).find((item) => item.label === 'მისამართი')?.value || '';
+  const address =
+    vacancySummary(job).find((item) => item.label === 'მისამართი')?.value || '';
   const addressCities = cities.filter((city) =>
-    new RegExp(`(^|[^ა-ჰa-z])${cityStem(city)}`).test(address.normalize('NFKC').toLowerCase()),
+    new RegExp(`(^|[^ა-ჰa-z])${cityStem(city)}`).test(
+      address.normalize('NFKC').toLowerCase(),
+    ),
   );
-  const working = located.length ? located : addressCities.length ? addressCities : citiesInText(job);
+  const working = located.length
+    ? located
+    : addressCities.length
+      ? addressCities
+      : citiesInText(job);
   /* A remote vacancy on a Georgian board is open to people in Georgia; that is
      the one requirement the source does support, and without it Google refuses
      a telecommute posting outright. An office city, where the posting names one,
@@ -220,6 +227,8 @@ export function employerPage(employer: {
   cities?: readonly string[];
   jobs: readonly { id: string; title: string; canonicalId?: string }[];
   total: number;
+  /** Vacancies on the pages before this one, so page two's list does not start again at 1. */
+  offset?: number;
 }) {
   const website = safeExternalUrl(employer.website || '');
   const logo = safeExternalUrl(employer.logoUrl || '');
@@ -250,10 +259,34 @@ export function employerPage(employer: {
       numberOfItems: employer.total,
       itemListElement: employer.jobs.slice(0, 30).map((job, index) => ({
         '@type': 'ListItem',
-        position: index + 1,
+        position: (employer.offset || 0) + index + 1,
         name: job.title,
         url: vacancyUrl(job),
       })),
     },
   ];
+}
+
+/* The companies page: a collection of employer pages, each named with the page it links to. */
+export function companiesCollection(
+  employers: readonly { slug: string; name: string }[],
+) {
+  const url = `${siteUrl}/companies`;
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'კომპანიები',
+    url,
+    inLanguage: 'ka-GE',
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: employers.length,
+      itemListElement: employers.slice(0, 100).map((employer, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: employer.name,
+        url: `${url}/${encodeURIComponent(employer.slug)}`,
+      })),
+    },
+  };
 }

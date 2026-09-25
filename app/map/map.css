@@ -655,3 +655,141 @@
     width: 100%;
   }
 }
+
+/* ── A small cluster, listed where it was tapped. ── */
+.job-map-group {
+  position: absolute;
+  z-index: 5;
+  top: var(--ds-space-4);
+  left: var(--ds-space-4);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(360px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-xl);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  box-shadow: var(--ds-shadow-lg);
+  overflow: hidden;
+}
+.job-map-group header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) var(--ds-space-2) var(--ds-space-3)
+    var(--ds-space-4);
+  border-bottom: 1px solid var(--ds-line);
+  font-size: var(--ds-text-md);
+}
+.job-map-group header .ds-btn {
+  color: var(--ds-ink-3);
+}
+.job-map-group ul {
+  display: grid;
+  margin: 0;
+  padding: var(--ds-space-1);
+  overflow-y: auto;
+  list-style: none;
+}
+.job-map-group a {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: var(--ds-space-3);
+  align-items: center;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--ds-duration-fast) var(--ds-ease);
+}
+.job-map-group a:hover,
+.job-map-group a:focus-visible {
+  background: var(--ds-surface-muted);
+  outline: none;
+}
+.job-map-group a:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--ds-focus);
+}
+.job-map-group .company-avatar {
+  width: 36px;
+  height: 36px;
+}
+.job-map-group a > span {
+  display: grid;
+  min-width: 0;
+}
+.job-map-group a strong {
+  overflow: hidden;
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.job-map-group a small {
+  overflow: hidden;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.job-map-group a b {
+  color: var(--ds-success);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The tap answered: a ring spreads from where the finger landed. */
+.job-map-ripple {
+  position: absolute;
+  z-index: 4;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border: 2px solid var(--ds-accent);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: job-map-ripple 520ms var(--ds-ease) forwards;
+}
+@keyframes job-map-ripple {
+  from {
+    opacity: 0.7;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+/* A cluster's cards arrive one after another, rising into the rail. */
+@keyframes job-map-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+.job-map-rail[data-group='true'] .job-map-slide {
+  animation: job-map-slide-in var(--ds-duration-slow) var(--ds-ease) backwards;
+}
+.job-map-rail[data-group='true'] .job-map-slide:nth-child(2) {
+  animation-delay: 50ms;
+}
+.job-map-rail[data-group='true'] .job-map-slide:nth-child(3) {
+  animation-delay: 100ms;
+}
+@media (max-width: 900px) {
+  .job-map-group {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .job-map-ripple,
+  .job-map-rail[data-group='true'] .job-map-slide {
+    animation: none;
+  }
+  .job-map-ripple {
+    display: none;
+  }
+}

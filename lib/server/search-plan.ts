@@ -11,6 +11,7 @@ import {
 } from '../job-intelligence';
 import { requiredExperiencePattern } from '../experience';
 import { cities, cityStem, otherCity } from '../cities';
+import { legalFormSql } from '../employer-identity';
 import { db } from './db';
 import { ApiError } from './auth';
 
@@ -354,13 +355,15 @@ export function searchPlan(
      the employer "კომპანია" — a Vake restaurant on jobs.ge and a four-star hotel in Avlabari on
      ss.ge — were folded into one, and the hotel's vacancy vanished from the list. A single letter
      is not a name either, but two letters can be a brand ("S.G"), so those keep grouping. */
-  const employerKey = `regexp_replace(${normalized(p('company'))},'[^a-z0-9ა-ჰ]','','g')`;
+  // "შპს X" and "X" are one employer: the legal form is not part of the name.
+  const employer = `regexp_replace(${normalized(p('company'))},'${legalFormSql}','\\1 ','g')`;
+  const employerKey = `regexp_replace(${employer},'[^a-z0-9ა-ჰ]','','g')`;
   const genericEmployers = [...genericCompanyKeys]
     .map((key) => `'${key.replace(/'/g, "''")}'`)
     .join(',');
   // C locales classify Georgian letters as non-alphanumeric. Keep them explicitly
   // or unrelated Georgian titles/employers/cities all collapse into the key "||".
-  const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' OR length(${employerKey}) < 2 OR ${employerKey} IN (${genericEmployers}) THEN j.id::text ELSE regexp_replace(${normalized(`concat_ws('|',${p('title')},${p('company')},${p('city')})`)},'[^[:alnum:]ა-ჰ|]','','g') END`;
+  const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' OR length(${employerKey}) < 2 OR ${employerKey} IN (${genericEmployers}) THEN j.id::text ELSE regexp_replace(concat_ws('|',${normalized(p('title'))},${employer},${normalized(p('city'))}),'[^[:alnum:]ა-ჰ|]','','g') END`;
   const numericSalary = `jsonb_typeof(${p('salaryMin')})='number'`;
   const monthlyFloor = 100;
   const monthlyCeiling = 50000;

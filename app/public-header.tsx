@@ -77,11 +77,13 @@ export function PublicHeader({
       ? 'all'
       : pathname === '/map'
         ? 'map'
-        : pathname === '/cv'
-          ? 'cv'
-          : pathname === '/post-job'
-            ? 'post'
-            : null;
+        : pathname === '/companies'
+          ? 'companies'
+          : pathname === '/cv'
+            ? 'cv'
+            : pathname === '/post-job'
+              ? 'post'
+              : null;
   const here = (place: string) =>
     current === place ? ('page' as const) : undefined;
   return (
@@ -107,6 +109,14 @@ export function PublicHeader({
             aria-current={here('map')}
           >
             რუკა
+          </Link>
+          <Link
+            href="/companies"
+            prefetch={false}
+            className="ds-btn ds-btn--ghost site-nav-link header-companies-link"
+            aria-current={here('companies')}
+          >
+            კომპანიები
           </Link>
         </nav>
         <div className="header-actions">

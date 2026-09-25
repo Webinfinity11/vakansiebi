@@ -1262,8 +1262,10 @@
   }
 }
 @media (max-width: 760px) {
-  /* The phone header has no room for a second link; the map is reached from the board. */
-  .board-shell .topbar.public-header .site-nav-link.header-map-link {
+  /* The phone header has no room for more links; the map is reached from the board, the
+     companies from the footer and every company page's breadcrumb. */
+  .board-shell .topbar.public-header .site-nav-link.header-map-link,
+  .board-shell .topbar.public-header .site-nav-link.header-companies-link {
     display: none;
   }
 }

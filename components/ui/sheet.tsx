@@ -36,6 +36,24 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   );
 }
 
+/* Tab wraps inside an open sheet. The dialog's own guards let focus reach the page behind the
+   filter sheet, so a keyboard user ended up in the list the sheet covers. */
+function keepFocusInside(event: React.KeyboardEvent<HTMLElement>) {
+  const inside = [
+    ...event.currentTarget.querySelectorAll<HTMLElement>(
+      'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+    ),
+  ].filter((el) => el.getClientRects().length > 0);
+  if (!inside.length) return;
+  const first = inside[0];
+  const last = inside[inside.length - 1];
+  const active = document.activeElement;
+  if (event.shiftKey ? active === first : active === last) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+  }
+}
+
 function SheetContent({
   className,
   children,
@@ -57,6 +75,10 @@ function SheetContent({
           className,
         )}
         {...props}
+        onKeyDown={(event) => {
+          props.onKeyDown?.(event);
+          if (event.key === 'Tab') keepFocusInside(event);
+        }}
       >
         {children}
         {showCloseButton && (

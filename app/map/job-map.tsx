@@ -31,6 +31,9 @@ const cities: [string, [number, number], number][] = [
   ['ქუთაისი', [42.699, 42.263], 12.4],
 ];
 const listLimit = 80;
+/* A cluster this small opens as a list: zooming in again and again to count a handful of pins
+   is work the map can do for the reader. A larger one zooms in, as before. */
+const groupLimit = 12;
 const whole = new Intl.NumberFormat('ka-GE');
 
 type Bounds = [number, number, number, number] | null;
@@ -74,6 +77,10 @@ export function JobMap() {
   const [ready, setReady] = useState(false);
   // The city chip the map was last sent to; a pan or zoom by hand clears it.
   const [city, setCity] = useState<string | null>(null);
+  // The vacancies of a small cluster the reader tapped, listed instead of zoomed into.
+  const [group, setGroup] = useState<string[] | null>(null);
+  // Where the last tap on the map landed, for the ripple that answers it.
+  const [ripple, setRipple] = useState<{ x: number; y: number; n: number }>();
 
   // Once per visit: that the map page itself was opened.
   useEffect(() => trackAction('map_page'), []);
@@ -114,7 +121,17 @@ export function JobMap() {
   const selected = active ? byId.get(active) : undefined;
   /* The phone's card rail: what the map shows, nearest to its centre first, with the opened
      vacancy always on it. */
+  const grouped = useMemo(
+    () =>
+      group
+        ? group
+            .map((id) => byId.get(id))
+            .filter((v): v is MapVacancy => !!v && filtered.includes(v))
+        : null,
+    [group, byId, filtered],
+  );
   const nearby = useMemo(() => {
+    if (grouped?.length) return grouped;
     if (!bounds) return visible.slice(0, 25);
     const cx = (bounds[0] + bounds[2]) / 2;
     const cy = (bounds[1] + bounds[3]) / 2;
@@ -126,7 +143,7 @@ export function JobMap() {
     if (selected && !list.some((v) => v.id === selected.id))
       list.unshift(selected);
     return list;
-  }, [visible, bounds, selected]);
+  }, [grouped, visible, bounds, selected]);
   const rail = useRef<HTMLDivElement>(null);
   const railMoved = useRef(false);
   const railTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -310,6 +327,9 @@ export function JobMap() {
         m.on('moveend', report);
         m.on('dragstart', () => setCity(null));
         m.on('zoomstart', (e: { originalEvent?: Event }) => {
+          if (e.originalEvent) setGroup(null);
+        });
+        m.on('zoomstart', (e: { originalEvent?: Event }) => {
           if (e.originalEvent) setCity(null);
         });
         report();
@@ -318,23 +338,52 @@ export function JobMap() {
             layers: ['clusters'],
           })[0];
           if (!f) return;
-          void (m.getSource('jobs') as GeoJSONSource)
-            .getClusterExpansionZoom(f.properties.cluster_id)
-            .finally(() => trackAction('map_cluster'))
-            .then((zoom) =>
-              m.easeTo({
-                center: (
-                  f.geometry as unknown as { coordinates: [number, number] }
-                ).coordinates,
-                zoom,
-              }),
-            );
+          setRipple((r) => ({
+            x: e.point.x,
+            y: e.point.y,
+            n: (r?.n ?? 0) + 1,
+          }));
+          trackAction('map_cluster');
+          const source = m.getSource('jobs') as GeoJSONSource;
+          const id = f.properties.cluster_id;
+          const center = (
+            f.geometry as unknown as { coordinates: [number, number] }
+          ).coordinates;
+          void source.getClusterExpansionZoom(id).then(async (zoom) => {
+            // Past the last clustering zoom the pins share one building: zooming cannot part them.
+            if (f.properties.point_count > groupLimit && zoom <= 15) {
+              setGroup(null);
+              m.easeTo({ center, zoom, duration: 650 });
+              return;
+            }
+            const leaves = await source.getClusterLeaves(id, 200, 0);
+            const ids = [
+              ...new Set(leaves.map((l) => String(l.properties?.job))),
+            ];
+            setActive(null);
+            setGroup(ids);
+            railMoved.current = false;
+            rail.current?.scrollTo({ left: 0 });
+            m.easeTo({
+              center,
+              duration: 650,
+              padding: matchMedia('(max-width: 900px)').matches
+                ? { top: 0, bottom: 190, left: 0, right: 0 }
+                : { top: 0, bottom: 0, left: 0, right: 0 },
+            });
+          });
         });
         m.on('click', 'points-hit', (e: MapMouseEvent) => {
           const f = m.queryRenderedFeatures(e.point, {
             layers: ['points', 'points-hit'],
           })[0];
           if (f) {
+            setGroup(null);
+            setRipple((r) => ({
+              x: e.point.x,
+              y: e.point.y,
+              n: (r?.n ?? 0) + 1,
+            }));
             setActive(String(f.properties.job));
             trackAction('map_pin');
           }
@@ -344,8 +393,10 @@ export function JobMap() {
             !m.queryRenderedFeatures(e.point, {
               layers: ['points', 'points-hit', 'clusters'],
             }).length
-          )
+          ) {
             setActive(null);
+            setGroup(null);
+          }
         });
         // The compact attribution starts folded on every screen: a phone has no room for a full line.
         m.getContainer()
@@ -380,16 +431,19 @@ export function JobMap() {
   useEffect(() => {
     const m = map.current;
     if (!ready || !m) return;
-    const lit = hovered ?? active;
+    const lit = new Set(
+      hovered ? [hovered] : active ? [active] : (group ?? []),
+    );
     m.removeFeatureState({ source: 'jobs' });
-    if (!lit) return;
+    if (!lit.size) return;
     for (const f of features(filtered).features)
-      if (f.properties.job === lit)
+      if (lit.has(f.properties.job))
         m.setFeatureState({ source: 'jobs', id: f.id }, { on: true });
-  }, [ready, hovered, active, filtered]);
+  }, [ready, hovered, active, group, filtered]);
 
   const focus = (v: MapVacancy) => {
     trackAction('map_card');
+    setGroup(null);
     setActive(v.id);
     setSheet(false);
     const [lat, lon] = v.places[0];
@@ -552,6 +606,59 @@ export function JobMap() {
 
         <div className="job-map-canvas">
           <div ref={box} className="job-map-gl" />
+          {ripple && (
+            <span
+              key={ripple.n}
+              className="job-map-ripple"
+              style={{ left: ripple.x, top: ripple.y }}
+              aria-hidden="true"
+              onAnimationEnd={() => setRipple(undefined)}
+            />
+          )}
+          {grouped && grouped.length > 0 && !selected && (
+            <section
+              className="job-map-group ds-appear"
+              key={group!.join()}
+              aria-label="ვაკანსიები ამ წერტილში"
+            >
+              <header>
+                <strong>
+                  {whole.format(grouped.length)} ვაკანსია ამ წერტილში
+                </strong>
+                <button
+                  type="button"
+                  className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm"
+                  aria-label="დახურვა"
+                  onClick={() => setGroup(null)}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              </header>
+              <ul className="ds-appear-list">
+                {grouped.map((v) => (
+                  <li key={v.id}>
+                    <a
+                      href={href(v)}
+                      onClick={() => trackAction('map_open')}
+                      onMouseEnter={() => setHovered(v.id)}
+                      onMouseLeave={() => setHovered(null)}
+                      onFocus={() => setHovered(v.id)}
+                      onBlur={() => setHovered(null)}
+                    >
+                      <CompanyLogo company={v.company} url={v.logoUrl} />
+                      <span>
+                        <strong>{v.title}</strong>
+                        <small>{v.company}</small>
+                      </span>
+                      {v.salary && (
+                        <b>{compactSalary(v.salary, v.salaryPeriod)}</b>
+                      )}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {selected && (
             <article className="job-map-pop ds-appear" key={selected.id}>
               <button
@@ -590,20 +697,33 @@ export function JobMap() {
               </a>
             </article>
           )}
-          <button
-            type="button"
-            className="ds-btn ds-btn--secondary job-map-listbtn"
-            onClick={() => {
-              trackAction('map_sheet');
-              setSheet(true);
-            }}
-          >
-            <List size={16} aria-hidden="true" />
-            სია · {whole.format(visible.length)}
-          </button>
+          {grouped?.length ? (
+            <button
+              type="button"
+              className="ds-btn ds-btn--secondary job-map-listbtn"
+              onClick={() => setGroup(null)}
+            >
+              {whole.format(grouped.length)} ვაკანსია ამ წერტილში
+              <X size={16} aria-hidden="true" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="ds-btn ds-btn--secondary job-map-listbtn"
+              onClick={() => {
+                trackAction('map_sheet');
+                setSheet(true);
+              }}
+            >
+              <List size={16} aria-hidden="true" />
+              სია · {whole.format(visible.length)}
+            </button>
+          )}
           {!!nearby.length && (
             <div
               className="job-map-rail"
+              data-group={!!grouped?.length}
+              key={grouped?.length ? group!.join() : 'area'}
               ref={rail}
               onScroll={onRailScroll}
               aria-label="ვაკანსიები რუკის ამ ნაწილში"
