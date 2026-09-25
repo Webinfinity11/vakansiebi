@@ -793,3 +793,12 @@
     display: none;
   }
 }
+
+/* Panels over the map get their own compositing layer. Without one, Chrome repainted the
+   group list's shadow over the WebGL canvas without clearing it, and a dark smear built up
+   around the panel as its rows animated in and the pins below were relit on hover. */
+.job-map-group,
+.job-map-pop {
+  isolation: isolate;
+  will-change: transform;
+}

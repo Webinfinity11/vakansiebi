@@ -807,7 +807,6 @@ export default function AdminPanel() {
               onAct={(source, body) =>
                 void sourceAction({ id: source as Source['id'] | 'all' }, body)
               }
-              onOpenJob={(id) => void openJobById(id)}
             />
           </section>
         )}

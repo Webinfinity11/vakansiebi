@@ -23,7 +23,6 @@ import {
 import { sourceHealth } from '@/lib/scraper-status';
 import { listingSourceNames, type Source } from '@/lib/types';
 import type { OverviewPeriod } from '@/lib/server/admin-overview';
-import { RecentChanges } from './history';
 
 type Overview = {
   days: OverviewPeriod;
@@ -235,7 +234,6 @@ export function OverviewPanel({
   go,
   onAct,
   onReview,
-  onOpenJob,
 }: {
   sources: Source[];
   now: number;
@@ -244,7 +242,6 @@ export function OverviewPanel({
   go: (tab: string) => void;
   onAct: (source: string, body: Record<string, unknown>) => void;
   onReview: (source: string) => void;
-  onOpenJob: (id: string) => void;
 }) {
   const [days, setDays] = useState<OverviewPeriod>(1);
   const [data, setData] = useState<Overview | null>(null);
@@ -380,78 +377,65 @@ export function OverviewPanel({
         </button>
       </div>
 
-      <div className="overview-cols">
-        <section className="overview-card" id="overview-attention">
-          <header>
-            <h2>ყურადღება სჭირდება</h2>
-            <span>{items.length ? `${items.length} საკითხი` : ''}</span>
-          </header>
-          {!now ? (
-            <div className="overview-empty">
-              <SkeletonRows rows={3} />
-            </div>
-          ) : !items.length ? (
-            <p className="overview-empty overview-clear">
-              <CircleCheck size={20} aria-hidden="true" />
-              ყველაფერი რიგზეა: წყაროები მუშაობს და არაფერი ელოდება.
-            </p>
-          ) : (
-            <ul className="overview-attention ds-appear-list">
-              {items.map((item) => (
-                <li key={item.id} data-tone={item.tone}>
-                  <item.icon size={16} aria-hidden="true" />
-                  <div>
-                    <b>{item.title}</b>
-                    <p>{item.detail}</p>
-                    {!!item.chips?.length && (
-                      <span className="overview-chips">
-                        {item.chips.map((chip) => (
-                          <code key={chip}>{chip}</code>
-                        ))}
-                      </span>
-                    )}
-                  </div>
-                  {item.action && (
-                    <button
-                      type="button"
-                      className={
-                        item.action.primary
-                          ? 'ds-btn ds-btn--primary ds-btn--sm'
-                          : 'ds-btn ds-btn--secondary ds-btn--sm'
-                      }
-                      disabled={busy}
-                      onClick={item.action.run}
-                    >
-                      {item.action.icon && (
-                        <item.action.icon size={16} aria-hidden="true" />
-                      )}
-                      {item.action.label}
-                    </button>
+      {/* What needs a decision, not a log of decisions already made: the admin knows what they
+          did, and the full history stays one tab away. */}
+      <section className="overview-card" id="overview-attention">
+        <header>
+          <h2>ყურადღება სჭირდება</h2>
+          <span>{items.length ? `${items.length} საკითხი` : ''}</span>
+        </header>
+        {!now ? (
+          <div className="overview-empty">
+            <SkeletonRows rows={3} />
+          </div>
+        ) : !items.length ? (
+          <p className="overview-empty overview-clear">
+            <CircleCheck size={20} aria-hidden="true" />
+            ყველაფერი რიგზეა: წყაროები მუშაობს და არაფერი ელოდება.
+          </p>
+        ) : (
+          <ul className="overview-attention ds-appear-list">
+            {items.map((item) => (
+              <li key={item.id} data-tone={item.tone}>
+                <item.icon size={16} aria-hidden="true" />
+                <div>
+                  <b>{item.title}</b>
+                  <p>{item.detail}</p>
+                  {!!item.chips?.length && (
+                    <span className="overview-chips">
+                      {item.chips.map((chip) => (
+                        <code key={chip}>{chip}</code>
+                      ))}
+                    </span>
                   )}
-                </li>
-              ))}
-            </ul>
-          )}
-          {!!off.length && (
-            <p className="overview-foot">
-              განზრახ გამორთულია: {off.map((s) => s.name).join(', ')}
-            </p>
-          )}
-        </section>
-        <section className="overview-card">
-          <header>
-            <h2>ბოლო ცვლილებები</h2>
-            <button
-              type="button"
-              className="ds-btn ds-btn--ghost ds-btn--sm"
-              onClick={() => go('history')}
-            >
-              სრული ისტორია
-            </button>
-          </header>
-          <RecentChanges onOpenJob={onOpenJob} />
-        </section>
-      </div>
+                </div>
+                {item.action && (
+                  <button
+                    type="button"
+                    className={
+                      item.action.primary
+                        ? 'ds-btn ds-btn--primary ds-btn--sm'
+                        : 'ds-btn ds-btn--secondary ds-btn--sm'
+                    }
+                    disabled={busy}
+                    onClick={item.action.run}
+                  >
+                    {item.action.icon && (
+                      <item.action.icon size={16} aria-hidden="true" />
+                    )}
+                    {item.action.label}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {!!off.length && (
+          <p className="overview-foot">
+            განზრახ გამორთულია: {off.map((s) => s.name).join(', ')}
+          </p>
+        )}
+      </section>
 
       <section className="overview-card">
         <header>
