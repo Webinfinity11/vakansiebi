@@ -30,3 +30,20 @@ void test('local workers wait a full interval while longer cron intervals keep t
     '2026-09-14T16:25:00.000Z',
   );
 });
+
+void test('a quiet source waits longer, up to twelve hours, and stays on the slot', async () => {
+  const { quietIntervalMinutes, nextRunAt } = await import('../worker/next-run');
+  // One empty check is a quiet hour, not a quiet board.
+  assert.equal(quietIntervalMinutes(180, 0), 180);
+  assert.equal(quietIntervalMinutes(180, 1), 180);
+  assert.equal(quietIntervalMinutes(180, 2), 360);
+  assert.equal(quietIntervalMinutes(180, 3), 720);
+  assert.equal(quietIntervalMinutes(180, 9), 720);
+  // A source an admin already set to a day is never checked more often.
+  assert.equal(quietIntervalMinutes(1440, 3), 1440);
+  const now = Date.UTC(2026, 8, 25, 9, 25);
+  assert.equal(
+    nextRunAt(quietIntervalMinutes(180, 2), now, 180).toISOString(),
+    '2026-09-25T15:17:00.000Z',
+  );
+});

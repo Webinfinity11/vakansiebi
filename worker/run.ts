@@ -1,4 +1,4 @@
-import { nextRunAt } from './next-run';
+import { nextRunAt, quietIntervalMinutes } from './next-run';
 import { completeDescription } from './linked-description';
 import { detailQueueProjection } from './detail-queue';
 import { importDateReason, pendingNewItemsSql } from './new-only';
@@ -422,13 +422,28 @@ export async function runSource(
       source,
       qualityWarning,
     ]);
+    // A board with nothing new is checked less often until it has something again.
+    const recent = (
+      await db().query<{ fresh: number }>(
+        `SELECT imported + changed AS fresh FROM source_runs
+          WHERE source_id=$1 AND run_kind='discovery' AND status IN ('success','partial')
+          ORDER BY started_at DESC LIMIT 3`,
+        [source],
+      )
+    ).rows;
+    const emptyStreak = recent.findIndex((r) => r.fresh > 0);
     await db().query(
       'UPDATE sources SET last_success_at=CASE WHEN $3::text IS NULL THEN now() ELSE last_success_at END,last_error=$2,consecutive_failures=0,next_run_at=$4 WHERE id=$1',
       [
         source,
         operationalWarning,
         structural,
-        nextRunAt(config.interval_minutes),
+        nextRunAt(
+          quietIntervalMinutes(
+            config.interval_minutes,
+            emptyStreak === -1 ? recent.length : emptyStreak,
+          ),
+        ),
       ],
     );
     return {

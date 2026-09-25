@@ -1,7 +1,9 @@
 name: Vacancy scraper
 on:
   schedule:
-    - cron: '17 */3 * * *'
+    # Every three hours from 07:17 to 22:17 Tbilisi time (UTC+4). Georgian boards post in the
+    # daytime; the two night runs found almost nothing and only kept the database awake.
+    - cron: '17 3-18/3 * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -9,8 +11,31 @@ concurrency:
   group: vacancy-scraper-production
   cancel-in-progress: false
 jobs:
-  scrape:
+  # One query decides which sources are due. A source that is not due — a quiet board whose
+  # next check was pushed out, or one an admin set to a longer interval — no longer starts a
+  # runner, installs dependencies and connects only to find it has nothing to do; when nothing
+  # is due, the run ends here and the database is not woken again.
+  plan:
     if: github.repository == 'Webinfinity11/vakansiebi' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      sources: ${{ steps.due.outputs.sources }}
+    steps:
+      - id: due
+        env:
+          DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
+        run: |
+          command -v psql >/dev/null || sudo apt-get install -y -q postgresql-client >/dev/null
+          sources=$(psql "$DATABASE_URL" -Atc "SELECT coalesce(json_agg(id ORDER BY id), '[]')
+            FROM sources WHERE id = ANY(ARRAY['hr','jobs','ss','gancxadebebi','myjobs','awork','dk'])
+            AND enabled AND NOT retired
+            AND (requested_at IS NOT NULL OR (auto_enabled AND next_run_at <= now() + interval '10 minutes'))")
+          echo "Due: $sources"
+          echo "sources=$sources" >> "$GITHUB_OUTPUT"
+  scrape:
+    needs: plan
+    if: needs.plan.outputs.sources != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
@@ -22,7 +47,7 @@ jobs:
       # They are collected from a reachable network instead; see README. Keeping them here
       # would also push their next run a day out on every deferral, delaying that collection.
       matrix:
-        source: [hr, jobs, ss, gancxadebebi, myjobs, awork, dk]
+        source: ${{ fromJSON(needs.plan.outputs.sources) }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -45,3 +70,4 @@ jobs:
           SCRAPE_BUDGET_MINUTES: '8'
           DETAIL_CONCURRENCY: '3'
           DISCOVERY_PAGE_BUDGET: '3'
+

@@ -1,5 +1,5 @@
 import { siteUrl } from '@/lib/seo';
-import { sitemapIndexResponse, sitemapLeaves } from '@/lib/sitemap';
+import { datedSitemapLeaves, sitemapIndexResponse } from '@/lib/sitemap';
 
 /* The same sitemap index as /sitemap.xml under a second address. Search Console keeps its
    state per submitted URL, so an address it has never seen gets a fresh fetch rather than
@@ -9,5 +9,5 @@ export const dynamic = 'force-static';
 export const revalidate = 3600;
 
 export async function GET() {
-  return sitemapIndexResponse(sitemapLeaves(siteUrl));
+  return sitemapIndexResponse(await datedSitemapLeaves(siteUrl));
 }

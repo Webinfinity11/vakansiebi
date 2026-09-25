@@ -54,7 +54,10 @@ void test('sitemap-pages.xml has no database dependency', async () => {
     const body = await response.text();
     assert.match(body, /<urlset /);
     assert.ok(body.includes('<loc>https://jobx.ge/</loc>'));
-    assert.ok(!body.includes('<loc>https://jobx.ge/post-job</loc>'), 'noindex form is excluded');
+    assert.ok(
+      !body.includes('<loc>https://jobx.ge/post-job</loc>'),
+      'noindex form is excluded',
+    );
     assert.ok(body.includes('<loc>https://jobx.ge/cv</loc>'));
   });
 });
@@ -376,4 +379,28 @@ void test('persistent snapshots preserve dates and fit a large catalogue in one 
   assert.ok(Buffer.byteLength(snapshot) < 1_900_000);
   assert.deepEqual(decodeSitemapSnapshot(snapshot), entries);
   assert.throws(() => encodeSitemapSnapshot([]), /no URLs/);
+});
+
+void test('the index dates each leaf by its newest address and survives a leaf that fails', async () => {
+  const { datedSitemapLeaves, sitemapIndexResponse } =
+    await import('../lib/sitemap');
+  const bodies: Record<string, string> = {
+    'https://x.ge/sitemap-jobs.xml':
+      '<url><lastmod>2026-09-24T08:00:00.000Z</lastmod></url><url><lastmod>2026-09-25T10:53:21.536Z</lastmod></url>',
+    'https://x.ge/sitemap-categories.xml':
+      '<url><lastmod>not a date</lastmod></url>',
+    'https://x.ge/sitemap-pages.xml': '<url><loc>https://x.ge/</loc></url>',
+  };
+  const leaves = await datedSitemapLeaves('https://x.ge', async (url) => {
+    if (url.endsWith('companies.xml')) throw Error('offline');
+    return bodies[url];
+  });
+  const xml = await sitemapIndexResponse(leaves).text();
+  assert.match(
+    xml,
+    /sitemap-jobs\.xml<\/loc><lastmod>2026-09-25T10:53:21\.536Z<\/lastmod>/,
+  );
+  // No date is better than a wrong one: pages list none, a failed or dateless leaf gets none.
+  for (const name of ['pages', 'categories', 'companies'])
+    assert.match(xml, new RegExp(`sitemap-${name}\\.xml</loc></sitemap>`));
 });

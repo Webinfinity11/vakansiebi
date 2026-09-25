@@ -15,3 +15,20 @@ export function nextRunAt(
   }
   return new Date(now + period);
 }
+
+/** The longest a quiet source waits between checks. */
+export const quietCeilingMinutes = 720;
+
+/**
+ * How long a source waits after a check, given how many checks in a row (this one included)
+ * found nothing new. One empty check is ordinary — a board has quiet hours — so the second
+ * doubles the wait and the third doubles it again, up to twelve hours. Anything new resets it.
+ * Doubling keeps the wait a multiple of the three-hour slot, so it stays aligned with the cron.
+ */
+export function quietIntervalMinutes(intervalMinutes: number, emptyStreak: number) {
+  if (emptyStreak < 2) return intervalMinutes;
+  return Math.max(
+    intervalMinutes,
+    Math.min(quietCeilingMinutes, intervalMinutes * 2 ** (emptyStreak - 1)),
+  );
+}
