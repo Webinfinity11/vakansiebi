@@ -8,6 +8,15 @@ import type { ListedLink, SourceModule } from './module';
 const sitemap = 'https://awork.ge/sitemap-vacancy.xml';
 const text = (value: string) => value.replace(/\s+/g, ' ').trim();
 
+/* Since 2026-09-26 awork.ge answers in English whatever the request asks for; its labels are
+   read back into the Georgian ones the rest of the adapter uses. */
+const englishLabels: Record<string, string> = {
+  Address: 'მისამართი',
+  Salary: 'ხელფასი',
+  'Employment type': 'დასაქმების ტიპი',
+  'Working type': 'სამუშაოს ტიპი',
+};
+
 export const awork: SourceModule = {
   config: {
     origin: 'https://awork.ge',
@@ -52,9 +61,14 @@ export const awork: SourceModule = {
     const root = $('vacancy-details');
     const fields = new Map<string, string>();
     root.find('.overview-item').each((_, el) => {
-      const label = text($(el).find('.overview-item-title').text());
+      const raw = text($(el).find('.overview-item-title').text());
+      const label = englishLabels[raw] || raw;
       const value = text($(el).find('.overview-item-info').text());
-      if (label && value && value !== 'არ არის მითითებული')
+      if (
+        label &&
+        value &&
+        !['არ არის მითითებული', 'Not specified'].includes(value)
+      )
         fields.set(label, value);
     });
     const dates = text(

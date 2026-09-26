@@ -98,6 +98,10 @@ void test('missing description fails instead of importing a navigation page', ()
 void test('Georgian date parser validates dates and explicit year', () => {
   assert.equal(georgianDate('04 ოქტომბერი', 2026), '2026-10-04');
   assert.equal(georgianDate('31 თებერვალი', 2026), '');
+  // awork.ge began serving English pages on 2026-09-26.
+  assert.equal(georgianDate('31 August', 2026), '2026-08-31');
+  assert.equal(georgianDate('30 september', 2026), '2026-09-30');
+  assert.equal(georgianDate('31 Smarch', 2026), '');
   assert.equal(georgianDate('01 იანვარი 2027', 2026), '2027-01-01');
 });
 void test('duplicate fingerprint folds punctuation but keeps city differences', () => {

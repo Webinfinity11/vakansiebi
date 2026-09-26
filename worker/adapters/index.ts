@@ -1177,9 +1177,25 @@ export function georgianDate(value: string, year: number) {
     'ნოემბერი',
     'დეკემბერი',
   ];
+  // A board may serve the same page in English ("31 August"); the month reads either way.
+  const english = [
+    'january',
+    'february',
+    'march',
+    'april',
+    'may',
+    'june',
+    'july',
+    'august',
+    'september',
+    'october',
+    'november',
+    'december',
+  ];
   const match = value.trim().match(/^(\d{1,2})\s+(\S+)(?:\s+(\d{4}))?$/);
   if (!match) return '';
-  const month = months.indexOf(match[2]) + 1;
+  const month =
+    months.indexOf(match[2]) + 1 || english.indexOf(match[2].toLowerCase()) + 1;
   if (!month) return '';
   const y = Number(match[3]) || year;
   const result = `${y}-${String(month).padStart(2, '0')}-${match[1].padStart(2, '0')}`;
