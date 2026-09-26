@@ -7,6 +7,7 @@ import {
   searchParams,
 } from '../lib/search-state';
 import { categories } from '../lib/types';
+import { searchValueFromUrl } from '../lib/search-url';
 import { cityOptions, cityStem, otherCity } from '../lib/cities';
 void test('a shared search restores all supported filters without private or preview data', () => {
   const filters = {
@@ -119,4 +120,9 @@ void test('SSR and client identify the same normalized URL without sharing priva
     ['10001', 10000],
   ] as const)
     assert.equal(readSearchPage(new URLSearchParams({ page: raw })), page);
+});
+
+void test('a city in the address bar is read whatever its letter case', () => {
+  assert.equal(searchValueFromUrl('city', 'Tbilisi'), 'თბილისი');
+  assert.equal(searchValueFromUrl('city', 'tbilisi'), 'თბილისი');
 });

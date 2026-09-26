@@ -3,6 +3,18 @@ import type { Vacancy } from './types';
 const georgianWord = /^[ა-ჰ]+$/u;
 const cyrillic = /[Ѐ-ӿ]/u;
 const shortTechnicalToken = /^[a-z0-9#+.]{2}$/;
+// English glue words: "bank of georgia" is about the bank, not about "of".
+const latinStopwords = new Set([
+  'of',
+  'the',
+  'and',
+  'in',
+  'at',
+  'for',
+  'to',
+  'an',
+  'on',
+]);
 /**
  * Query tokens. One- and two-letter Georgian or Cyrillic fragments (ის, და, по)
  * occur inside nearly every text and are dropped unless they are all the user
@@ -11,14 +23,30 @@ const shortTechnicalToken = /^[a-z0-9#+.]{2}$/;
 export function searchTerms(query: string): string[] {
   const tokens = [
     ...new Set(
-      query
-        .normalize('NFKC')
-        .toLowerCase()
-        .match(/[\p{L}\p{N}+#.]+/gu) || [],
+      (
+        query
+          .normalize('NFKC')
+          .toLowerCase()
+          // One name written apart: "ქოლ-ცენტრის", "call center" are one word to search.
+          .replace(/ქოლ[\s-]+ცენტრ/gu, 'ქოლცენტრ')
+          .replace(/\bcall[\s-]+cent(?:er|re)s?\b/gu, 'ქოლცენტრ')
+          .match(/[\p{L}\p{N}+#.]+/gu) || []
+      )
+        /* A dot keeps .net and node.js whole, but between Georgian letters it is a missing
+           space ("მცხობელი.მზარეული"), and at either end of a Georgian word it is punctuation. */
+        .flatMap((token) => token.split(/(?<=[ა-ჰ])\.+(?=[ა-ჰ])/u))
+        .map((token) =>
+          /[ა-ჰ]/u.test(token) ? token.replace(/^\.+|\.+$/g, '') : token,
+        )
+        // A lone "." or "..." is punctuation, not a word to look for.
+        .filter((token) => /[\p{L}\p{N}]/u.test(token)),
     ),
   ];
   const meaningful = tokens.filter(
-    (token) => token.length >= 3 || shortTechnicalToken.test(token),
+    (token) =>
+      !latinStopwords.has(token) &&
+      /[\p{L}\p{N}]/u.test(token) &&
+      (token.length >= 3 || shortTechnicalToken.test(token)),
   );
   return (meaningful.length ? meaningful : tokens).slice(0, 12);
 }
@@ -35,8 +63,14 @@ export function escapeRegex(value: string) {
  *   longer Latin and every Cyrillic token is a word prefix (бухгалтер → бухгалтера).
  */
 export function termPattern(term: string): string | null {
-  const georgian = /^[ა-ჰ][ა-ჰ\s]*$/u.test(term);
-  if (georgian && term.length >= 3) return null;
+  // Hyphens appear only in reviewed spellings such as "ქოლ-ცენტრ".
+  const georgian = /^[ა-ჰ][ა-ჰ\s-]*$/u.test(term);
+  if (georgian && term.length >= 6) return null;
+  /* A short stem is the start of a word, never the inside of one: "ოფის" must not find
+     "განყოფილების", "დაცვ" not "ჯანდაცვის". Two letters reach here only as the whole
+     query, a reader still typing "მძ". Georgian letters are spelled out because a C
+     collation does not count them as word characters. */
+  if (georgian) return '(^|[^[:alnum:]ა-ჰ])' + escapeRegex(term);
   const whole = georgian || (term.length < 5 && !cyrillic.test(term));
   const lead = /^[\p{L}\p{N}]/u.test(term) ? '\\m' : '';
   let trail = '';

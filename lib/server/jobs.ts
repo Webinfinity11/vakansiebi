@@ -31,7 +31,8 @@ import {
   type FilterKey,
   type SearchMeta,
 } from './search-plan';
-import { suggestSearch } from '../search-language';
+import { latinGeorgianSearch, suggestSearch } from '../search-language';
+import { titleLexicon } from './title-lexicon';
 import { logoCompanyKey } from '../company-logo-identity';
 import { resolveCompanyLogos } from './company-logos';
 import { employerPages, employerPagesIfReady } from './employers';
@@ -85,6 +86,8 @@ export async function publicJobs(
      gets those rather than an empty page — a word like "wordpress" never appears
      in a title. The page says so, and the search stays narrow next time. */
   if (!answer.search.wider) return answer;
+  // Not for a bare number: "1500" is in every salary line.
+  if (/^[\d\s.,₾$€%-]+$/.test(readSearch(params).query.trim())) return answer;
   const wider = new URLSearchParams(params);
   wider.set('deep', 'true');
   const widened = await again(wider);
@@ -158,7 +161,51 @@ async function loadPublicJobs(
      reader instead: a word like "wordpress" lives only in descriptions. */
   const deepTotal = Number(measured.deep_total ?? 0);
   if (deepTotal > count) search.wider = deepTotal;
-  const correction = count === 0 ? suggestSearch(filters.query) : null;
+  /* A correction is for a word that is not in the catalogue at all. When the typed words
+     exist somewhere — in a description, or only outside the chosen filters — rewriting them
+     would answer a question nobody asked ("კარიერა" in Kutaisi is not "კურიერი"). */
+  const typedCount = async () => {
+    const plain = searchPlan(
+      new URLSearchParams({ q: filters.query, deep: 'true' }),
+      preview,
+      { grouped: true },
+    );
+    return Number(
+      (
+        await publicRead(
+          `${plain.cte} SELECT count(*)::int n FROM (SELECT 1 FROM searchable j WHERE ${plain.where} LIMIT 1000) found`,
+          plain.args,
+        )
+      ).rows[0].n,
+    );
+  };
+  const titleCount = async (query: string) => {
+    const changed = new URLSearchParams(params);
+    changed.set('q', query);
+    const plan = searchPlan(changed, preview, { grouped: true });
+    return Number(
+      (
+        await publicRead(
+          `${plan.cte} SELECT count(*)::int count FROM searchable j WHERE ${plan.where}`,
+          plan.args,
+        )
+      ).rows[0].count,
+    );
+  };
+  let correction: string | null = null;
+  if (count === 0 && filters.query.trim()) {
+    const lexicon = await titleLexicon();
+    const typed = await typedCount();
+    // A spelling correction only for words the catalogue does not hold at all.
+    if (typed === 0) correction = suggestSearch(filters.query, lexicon);
+    /* Georgian typed in Latin letters ("dacva", "gorgia") may still sit in a stray
+       description; the Georgian reading wins when its titles clearly outnumber that. */
+    const latin = correction
+      ? null
+      : latinGeorgianSearch(filters.query, lexicon);
+    if (latin && (await titleCount(latin)) >= Math.max(1, typed * 3))
+      correction = latin;
+  }
   if (correction) {
     const corrected = new URLSearchParams(params);
     corrected.set('q', correction);
@@ -180,13 +227,23 @@ async function loadPublicJobs(
   if (shorter) {
     const counts = (await publicRead(shorter.statement, shorter.args)).rows[0]
       .dropped as Record<string, number>;
+    /* The fullest result wins, except that an offer keeping the occupation the reader
+       named beats one that drops it. */
     const [best] = Object.entries(counts)
-      .map(([index, n]) => ({ index: Number(index), count: Number(n) || 0 }))
-      .filter((item) => item.count > 0)
-      .sort((a, b) => b.count - a.count || a.index - b.index);
-    const words = best
-      ? shorter.queryTerms.filter((_, index) => index !== best.index)
-      : [];
+      .map(([index, n]) => ({
+        option: shorter.options[Number(index)],
+        index: Number(index),
+        count: Number(n) || 0,
+      }))
+      .filter((item) => item.count > 0 && item.option?.words.length)
+      .sort(
+        (a, b) =>
+          Number(shorter.namesRole && b.option.keepsRole) -
+            Number(shorter.namesRole && a.option.keepsRole) ||
+          b.count - a.count ||
+          a.index - b.index,
+      );
+    const words = best ? best.option.words : [];
     if (best && words.length)
       search.suggestion = {
         query: words.join(' '),

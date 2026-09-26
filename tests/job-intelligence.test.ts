@@ -55,7 +55,11 @@ void test('particles that occur in every text are dropped unless they are the wh
 void test('match patterns bound Latin words, keep Georgian stems as substrings and never leak metacharacters', () => {
   assert.equal(termPattern('დეველოპერ'), null);
   assert.equal(termPattern('დაცვის თანამშრომ'), null);
-  assert.equal(termPattern('ის'), '\\mის\\M');
+  // A short Georgian stem is the start of a word; two letters reach here only as the whole query.
+  assert.equal(termPattern('ის'), '(^|[^[:alnum:]ა-ჰ])ის');
+  assert.equal(termPattern('მძ'), '(^|[^[:alnum:]ა-ჰ])მძ');
+  assert.equal(termPattern('ოფის'), '(^|[^[:alnum:]ა-ჰ])ოფის');
+  assert.equal(termPattern('მზარეულ'), null);
   assert.equal(termPattern('java'), '\\mjava(e?s)?\\M');
   assert.equal(termPattern('react'), '\\mreact');
   assert.equal(termPattern('бухгалтер'), '\\mбухгалтер');

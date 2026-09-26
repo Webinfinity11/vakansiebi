@@ -14,7 +14,9 @@ export function searchUrlValue(key: string, value: string) {
 }
 
 export function searchValueFromUrl(key: string, value: string) {
-  return values[key]?.find((label) => latinUrl(label) === value) ?? value;
+  // "Tbilisi" and "tbilisi" are one address.
+  const lower = value.toLowerCase();
+  return values[key]?.find((label) => latinUrl(label) === lower) ?? value;
 }
 
 export function canonicalSearchParams(params: URLSearchParams) {

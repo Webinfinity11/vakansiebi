@@ -83,3 +83,32 @@ export function createResumeSync(
     },
   };
 }
+
+/** The CV this browser saved on JOBX, if any; read without touching the server. */
+export function savedResumeIdentity(storage: CvStorage): Identity | null {
+  try {
+    const identity = JSON.parse(storage.getItem(identityKey) || 'null');
+    return identity && typeof identity.id === 'string' ? identity : null;
+  } catch {
+    return null;
+  }
+}
+
+/* Tells JOBX that the holder of a saved CV pressed send-CV, call or apply on one of our own
+   vacancies. Like the usage counts, only production builds send — a local server may point
+   at the real database — and a failure never reaches the reader. */
+export function sendResumeContact(
+  storage: CvStorage,
+  job: string,
+  kind: 'cv' | 'call' | 'apply',
+) {
+  if (process.env.NODE_ENV !== 'production') return;
+  const identity = savedResumeIdentity(storage);
+  if (!identity) return;
+  void fetch('/api/resumes/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...identity, job, kind }),
+    keepalive: true,
+  }).catch(() => {});
+}

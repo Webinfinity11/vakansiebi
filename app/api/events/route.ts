@@ -15,8 +15,15 @@ function sameSite(request: Request) {
   return origin === own || origin === configured;
 }
 
+/* Crawlers that run scripts (Google's renderer, preview fetchers, headless browsers) would
+   otherwise count as readers. The agent is only tested here, never stored. */
+const automated =
+  /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|facebookexternalhit|python-|curl\/|wget\/|node-fetch|axios\/|go-http/i;
+
 export async function POST(request: Request) {
   try {
+    if (automated.test(request.headers.get('user-agent') || ''))
+      return new Response(null, { status: 204 });
     if (!sameSite(request))
       throw new ApiError('მოთხოვნის წყარო დაუშვებელია', 403);
     // A reader produces a handful of events a minute; this only stops a script.

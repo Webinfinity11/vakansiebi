@@ -86,3 +86,16 @@ export function vacancySeries(
   }
   return result;
 }
+
+/** A JOBX-built CV whose holder pressed a contact button on one of our vacancies. */
+export type ResumeContact = {
+  resumeId: string;
+  fullName: string;
+  title: string;
+  phone: string;
+  email: string;
+  city: string;
+  kinds: { kind: 'cv' | 'call' | 'apply'; presses: number }[];
+  firstAt: string;
+  lastAt: string;
+};

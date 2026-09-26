@@ -1,6 +1,7 @@
 import { db } from './db';
 import {
   aggregateVacancyAnalytics,
+  type ResumeContact,
   seriesDays,
   vacancyEventKinds,
   vacancySeries,
@@ -53,6 +54,22 @@ export async function vacancyDailySeries(ids: string[]) {
   return vacancySeries(ids, rows, first, last);
 }
 
+/* The JOBX-built CVs whose holders pressed send-CV, call or apply on one of our vacancies,
+   most recent first. Only CVs still kept are listed; a deleted CV leaves no trace. */
+export async function resumeContacts(jobId: string): Promise<ResumeContact[]> {
+  const { rows } = await db().query<ResumeContact>(
+    `SELECT r.id::text "resumeId", COALESCE(r.cv->>'fullName','') "fullName",
+       COALESCE(r.cv->>'title','') title, COALESCE(r.cv->>'phone','') phone,
+       COALESCE(r.cv->>'email','') email, COALESCE(r.cv->>'city','') city,
+       jsonb_agg(jsonb_build_object('kind',c.kind,'presses',c.presses) ORDER BY c.kind) kinds,
+       min(c.first_at) "firstAt", max(c.last_at) "lastAt"
+     FROM resume_contacts c JOIN resumes r ON r.id=c.resume_id AND r.expires_at>now()
+     WHERE c.job_id=$1 GROUP BY r.id ORDER BY max(c.last_at) DESC LIMIT 200`,
+    [jobId],
+  );
+  return rows;
+}
+
 /* Every real vacancy sent through JOBX's own posting form that has been on the site, newest
    first, with its counts. Tests and never-published submissions have nothing to measure. */
 export async function submissionPerformance() {
@@ -75,13 +92,21 @@ export async function submissionPerformance() {
      ORDER BY s.created_at DESC LIMIT 200`,
   );
   const ids = jobs.map((j) => j.id);
-  const [counts, series] = await Promise.all([
+  const [counts, series, people] = await Promise.all([
     vacancyAnalytics(ids),
     vacancyDailySeries(ids),
+    db().query<{ id: string; count: number }>(
+      `SELECT c.job_id::text id, count(DISTINCT c.resume_id)::int count
+       FROM resume_contacts c JOIN resumes r ON r.id=c.resume_id AND r.expires_at>now()
+       WHERE c.job_id=ANY($1::uuid[]) GROUP BY c.job_id`,
+      [ids],
+    ),
   ]);
+  const cvs = new Map(people.rows.map((row) => [row.id, row.count]));
   return jobs.map((j) => ({
     ...j,
     ...counts[j.id],
     series: series[j.id],
+    people: cvs.get(j.id) ?? 0,
   }));
 }

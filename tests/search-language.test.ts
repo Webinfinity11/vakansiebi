@@ -1,11 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  georgianFromLatin,
+  latinGeorgianSearch,
   searchGroups,
   stemGeorgian,
   suggestSearch,
   syncopeVariant,
 } from '../lib/search-language';
+import { searchTerms } from '../lib/job-intelligence';
 import { readSearch, searchParams } from '../lib/search-state';
 import { filtersSchema } from '../lib/personal-space';
 void test('reviewed role equivalents preserve all query terms and technical punctuation', () => {
@@ -108,4 +111,76 @@ void test('daily work and daily pay are separate shareable filters; old saved se
   assert.equal(bad.salaryTo, null);
   assert.equal(bad.postedWithin, 0);
   assert.equal(bad.employment, 'all');
+});
+
+// From the 2026-09-26 usage report: searches that found nothing although vacancies existed.
+void test('title words correct typos the reviewed roles do not cover', () => {
+  const lexicon = new Map([
+    ['დიასახლისი', 240],
+    ['აღმზრდელი', 12],
+    ['მონიტორინგის', 20],
+    ['სასტუმროს', 60],
+    ['ადმინისტრატორი', 400],
+    ['უსაფრთხოების', 60],
+    ['ბუღალტერია', 3],
+  ]);
+  assert.equal(suggestSearch('დისსახლისი', lexicon), 'დიასახლისი');
+  assert.equal(suggestSearch('აღნზრდელი', lexicon), 'აღმზრდელი');
+  assert.equal(suggestSearch('მორიტორინგის', lexicon), 'მონიტორინგის');
+  assert.equal(
+    suggestSearch('საატუმრო ღამის ადმინისტრარორი', lexicon),
+    'სასტუმროს ღამის ადმინისტრატორი',
+    'a declined title word is still the same word',
+  );
+  assert.equal(
+    suggestSearch('ბუღალტეირ', lexicon),
+    'ბუღალტერი',
+    'two forms of one word are not a tie',
+  );
+  assert.equal(suggestSearch('დიასახლისი', lexicon), null);
+  assert.equal(suggestSearch('someuniquecompanyname', lexicon), null);
+});
+void test('Georgian typed on a Latin keyboard is read as Georgian, English is left alone', () => {
+  const lexicon = new Map([
+    ['მზარეული', 134],
+    ['უსაფრთხოების', 60],
+  ]);
+  assert.equal(georgianFromLatin('damxmare'), 'დამხმარე');
+  assert.equal(georgianFromLatin('shemfutveli'), 'შემფუთველი');
+  assert.equal(
+    latinGeorgianSearch('mzareuli, mcxobeli', lexicon),
+    'მზარეული მცხობელი',
+  );
+  assert.equal(latinGeorgianSearch('usaptxoeba', lexicon), 'უსაფრთხოების');
+  assert.equal(latinGeorgianSearch('მზარეული'), null);
+  assert.equal(latinGeorgianSearch('c++'), null);
+});
+void test('dots between Georgian words separate them; the stemmer reads plural locatives', () => {
+  assert.deepEqual(searchTerms('მცხობელი.მზარეული'), ['მცხობელი', 'მზარეული']);
+  assert.deepEqual(searchTerms('node.js .net მძღოლი.'), [
+    'node.js',
+    '.net',
+    'მძღოლი',
+  ]);
+  assert.equal(stemGeorgian('ოფისებში'), 'ოფის');
+  assert.equal(stemGeorgian('მედიცინა'), 'მედიცინ');
+  assert.equal(stemGeorgian('სტომატოლოგია'), 'სტომატოლოგ');
+});
+void test('short stems stay whole words and stay out of other words', () => {
+  assert.equal(stemGeorgian('მედია'), 'მედია', 'not the start of მედიცინა');
+  assert.equal(stemGeorgian('ოფის'), 'ოფის');
+  assert.equal(stemGeorgian('მოლარე'), 'მოლარ');
+  assert.equal(
+    suggestSearch('audit', new Map([['ლუდის', 40]])),
+    null,
+    'a three-letter stem one letter away is not the same word',
+  );
+});
+void test('aliases, guard words and glue words', () => {
+  assert.ok(searchGroups('ქოლცენტრი')[0].includes('ქოლ-ცენტრ'));
+  assert.ok(searchGroups('tbc')[0].includes('თიბისი'));
+  assert.ok(searchGroups('დარაჯი')[0].includes('მცველ'));
+  assert.ok(searchGroups('buxgalteri')[0].includes('ბუღალტერ'));
+  assert.deepEqual(searchTerms('Bank of Georgia'), ['bank', 'georgia']);
+  assert.deepEqual(searchTerms('.*'), []);
 });

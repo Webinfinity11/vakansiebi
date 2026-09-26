@@ -1,4 +1,5 @@
 import type { ActionCode } from './analytics-actions';
+import { sendResumeContact } from './resume-client';
 
 /* Sends an event without adding a tracking id or setting a cookie; the body is only the kind
    and the value. sendBeacon survives the page being left, which is exactly
@@ -25,8 +26,29 @@ export type TrackedKind =
   | 'resume'
   | 'action';
 
+/* A vacancy read, and each way of reaching its employer, counts once per visit (one tab
+   session): a reload, a return from the mail app or a second tap is the same person doing
+   the same thing. Where session storage is unavailable every press still counts. */
+const oncePerVisit = new Set<TrackedKind>([
+  'view',
+  'outbound',
+  'call',
+  'cv',
+  'apply',
+]);
+function seenThisVisit(kind: TrackedKind, value: string) {
+  if (!oncePerVisit.has(kind)) return false;
+  try {
+    const key = `jobx-counted:${kind}:${value}`;
+    if (sessionStorage.getItem(key)) return true;
+    sessionStorage.setItem(key, '1');
+  } catch {}
+  return false;
+}
+
 export function track(kind: TrackedKind, value: string) {
   if (process.env.NODE_ENV !== 'production') return;
+  if (seenThisVisit(kind, value)) return;
   try {
     const body = JSON.stringify({ kind, value });
     const sent =
@@ -49,3 +71,16 @@ export function track(kind: TrackedKind, value: string) {
 
 /* A control or an error on a public page, by its code name alone. */
 export const trackAction = (code: ActionCode) => track('action', code);
+
+/* A press that reaches the employer. It is counted like any other; on a vacancy posted
+   through JOBX it also names the CV this browser saved on JOBX, if there is one. */
+export function trackContact(
+  kind: 'call' | 'cv' | 'apply',
+  job: { id: string; source: string },
+) {
+  track(kind, job.id);
+  if (job.source === 'JOBX' && typeof window !== 'undefined')
+    try {
+      sendResumeContact(window.localStorage, job.id, kind);
+    } catch {}
+}

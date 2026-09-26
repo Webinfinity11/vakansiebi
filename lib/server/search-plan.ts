@@ -2,14 +2,14 @@ import { subcategories, subcategoryFor } from '../subcategories';
 import { z } from 'zod';
 import { genericCompanyKeys } from '../company-logo-identity';
 import { readSearch } from '../search-state';
-import { searchMatchGroups } from '../search-language';
+import { roleFor, searchMatchGroups } from '../search-language';
 import {
   escapeRegex,
   searchTerms,
   termPattern,
   termScope,
 } from '../job-intelligence';
-import { requiredExperiencePattern } from '../experience';
+import { negatedRequirement, requiredExperiencePattern } from '../experience';
 import { cities, cityStem, otherCity } from '../cities';
 import { legalFormSql } from '../employer-identity';
 import { db } from './db';
@@ -117,19 +117,42 @@ const cityPattern = (name: string) => {
     (stem !== normalizedName
       ? '(ი|ისა?|ში|სა?|იდან|ით|ამდე)'
       : '(|ში|სა?|დან|მდე)') +
-    '($|[^[:alnum:]ა-ჰ])'
+    '($|[^[:alnum:]ა-ჰ])' +
+    // "რუსთავის გზატკეცილი" and "ბათუმის ქუჩა" are Tbilisi addresses, not other cities.
+    '(?!(გზატკეცილ|ქუჩ|გამზირ|ხეივან|შესახვევ|ჩიხ|მოედან|ტრასა|დასახლებ|მთიანეთ))'
   );
 };
 type MatchGroup = {
-  /** Where the group may match: a very short word names a role, so it stays out of descriptions. */
-  s: 'head' | 'document';
+  /** Where the group may match: a very short word names a role, so it stays out of descriptions,
+      and a reviewed occupation is read from the title alone. */
+  s: 'title' | 'head' | 'document';
   /** Its alternatives: the text a document must contain, the regex that confirms
       a non-Georgian one, and whether the reader typed this form themselves. */
   a: { t: string; p: string | null; o?: 1 }[];
 };
+/* An occupation names the job, not the employer: "ფარმაცევტი" found twelve medical
+   representatives of a "ფარმაცევტული კომპანია", "კონდიტერი" a driver at a საკონდიტრო,
+   "hr" the recruitment agencies and the hr@ mailboxes some sources give as the employer.
+   Any other word — a bank, a hotel, a shop — still finds the employer that carries it. */
+const roleAbbreviations = new Set([
+  'hr',
+  'it',
+  'qa',
+  'pr',
+  'smm',
+  'seo',
+  'ux',
+  'ui',
+  'cfo',
+]);
+function headScope(group: { own: string[] }): MatchGroup['s'] {
+  return group.own.some((term) => roleFor(term) || roleAbbreviations.has(term))
+    ? 'title'
+    : 'head';
+}
 function matchGroups(query: string, deep = false): MatchGroup[] {
   return searchMatchGroups(query).map((group) => ({
-    s: deep ? termScope(group.all[0]) : 'head',
+    s: deep ? termScope(group.all[0]) : headScope(group),
     a: group.all.map((term) => ({
       t: term,
       p: termPattern(term),
@@ -152,6 +175,10 @@ const documentText = (alias: string, preview: boolean, guarded = true) =>
       : `${alias}.search_document`;
 /* Maintained by migration 029 and read bare, for the same reason as the document:
    COALESCE would hide it from its index. A draft preview builds it live. */
+/* The title as the headline normalizes it. It is read only beside a headline LIKE, which
+   keeps the trigram index in charge of finding the candidates. */
+const titleText = (alias: string, preview: boolean) =>
+  normalized(preview ? `${alias}.draft->>'title'` : `${alias}.search_title`);
 const headlineText = (alias: string, preview: boolean, guarded = true) =>
   preview
     ? normalized(
@@ -178,14 +205,16 @@ const candidatePredicate = (
   groups
     .map((group) => {
       const text =
-        group.s === 'head'
-          ? headlineText(alias, preview, false)
-          : documentText(alias, preview, false);
+        group.s === 'document'
+          ? documentText(alias, preview, false)
+          : headlineText(alias, preview, false);
+      const title = group.s === 'title' ? titleText(alias, preview) : null;
       return `(${group.a
-        .map(
-          ({ t, p }) =>
-            `(${text} LIKE ${bind(likeText(t))}${p ? ` AND ${text} ~ ${bind(p)}` : ''})`,
-        )
+        .map(({ t, p }) => {
+          const like = bind(likeText(t));
+          const pattern = p ? bind(p) : null;
+          return `(${text} LIKE ${like}${pattern ? ` AND ${text} ~ ${pattern}` : ''}${title ? ` AND ${title} LIKE ${like}${pattern ? ` AND ${title} ~ ${pattern}` : ''}` : ''})`;
+        })
         .join(' OR ')})`;
     })
     .join(' AND ');
@@ -224,7 +253,7 @@ export function searchPlan(
   const groups = matchGroups(filters.query, filters.deep);
   // The same words against the descriptions, to count what that click would add.
   const deeper =
-    !filters.deep && groups.some((group) => group.s === 'head')
+    !filters.deep && groups.some((group) => group.s !== 'document')
       ? matchGroups(filters.query, true)
       : null;
   const queryTerms = groups.map((group) => group.a[0].t);
@@ -307,16 +336,19 @@ export function searchPlan(
           filters.employment === 'daily'
             ? // Do not join "ხელფასი: დღიური" to the next line's "სამუშაო",
               // or mistake "დღიური სამუშაოს ხანგრძლივობა" for one-day work.
-              '(^|[^ა-ჰa-z])(დღიური|ერთდღიანი|ერთჯერადი)[[:blank:]-]+(სამუშაო|სამსახური|დასაქმება)([^ა-ჰa-z]|$)|one[ -]day[[:blank:]]+(job|work)\\M|day[ -]labou?r\\M'
+              '(^|[^ა-ჰa-z])(დღიური|ერთდღიანი|ერთჯერადი)[[:blank:]-]+(სამუშაო|სამსახური|დასაქმება|მუშა|მშრომელ)([^ა-ჰa-z]|$)|one[ -]day[[:blank:]]+(job|work)\\M|day[ -]labou?r\\M'
             : filters.employment === 'part-time'
-              ? '(ნახევარი?|არასრული?|ნაწილობრივი?)[[:space:]]+განაკვეთ|part[ -]?time'
+              ? '(ნახევარი?|არასრული?|ნაწილობრივი?|½|1/2)[[:space:]]*განაკვეთ|part[ -]?time'
               : 'სტაჟიორ|სტაჟირებ|\\mintern(ship)?\\M',
         );
   const entryLevelPattern = filters.entryLevel
     ? bind(
-        'გამოცდილების[[:space:]]+გარეშე|გამოცდილება[[:space:]:–-]+(არ[[:space:]]+(არის[[:space:]]+)?(სავალდებულო|აუცილებელი|საჭირო)|არ[[:space:]]+მოითხოვება)|no[[:space:]]+(previous[[:space:]]+|prior[[:space:]]+)?experience[[:space:]]+(is[[:space:]]+)?(required|needed|necessary)|experience[[:space:]]+(is[[:space:]]+)?not[[:space:]]+(required|needed|necessary)',
+        'გამოცდილების[[:space:]]+გარეშე|გამოცდილებას[[:space:]]+(არ[[:space:]]+აქვს[[:space:]]+მნიშვნელობა|მნიშვნელობა[[:space:]]+არ[[:space:]]+აქვს)|გამოცდილება[[:space:]:–-]+(არ[[:space:]]+(არის[[:space:]]+)?(სავალდებულო|აუცილებელი|საჭირო)|არ[[:space:]]+მოითხოვება)|no[[:space:]]+(previous[[:space:]]+|prior[[:space:]]+)?experience[[:space:]]+(is[[:space:]]+)?(required|needed|necessary)|experience[[:space:]]+(is[[:space:]]+)?not[[:space:]]+(required|needed|necessary)',
       )
     : null;
+  /* "Beginner" and "graduate" say entry level only in the experience field itself; in a
+     description they as often address graduates of a programme that still wants years. */
+  const entryLevelFacts = '(^|[^ა-ჰ])(დამწყებ|კურსდამთავრებულ)';
   const requiredExperience = filters.entryLevel
     ? bind(requiredExperiencePattern)
     : null;
@@ -334,7 +366,7 @@ export function searchPlan(
         ? `(CASE WHEN ${normalized(scalar(alias, 'city'))}='' THEN ${document(alias)} ~ ${cityStemPattern} ELSE false END) AS city_text`
         : '',
       entryLevelPattern
-        ? `(${experienceText(alias)} ~ ${entryLevelPattern} AND NOT (${experienceText(alias)} ~ ${requiredExperience})) AS entry_level`
+        ? `((${experienceText(alias)} ~ ${entryLevelPattern} OR ${factsText(alias)} ~ ${bind(entryLevelFacts)}) AND NOT (regexp_replace(${experienceText(alias)}, ${bind(negatedRequirement)}, '', 'g') ~ ${requiredExperience})) AS entry_level`
         : '',
       employmentPattern
         ? `(${filters.employment === 'daily' ? `(${employmentText(alias)} || ' ' || ${document(alias)})` : employmentText(alias)} ~ ${employmentPattern}) AS employment_match`
@@ -569,21 +601,42 @@ export function shorterSearches(params: URLSearchParams, preview = false) {
     args.push(value);
     return `$${args.length}`;
   };
-  const kept = groups.map((_, index) =>
-    groups.filter((_group, position) => position !== index),
-  );
+  /* Each word dropped in turn, and — when the query names an occupation — that occupation
+     alone: "მტვირთავი ღამის ცვლა" should fall back to the loaders, not to "ღამის ცვლა". */
+  const role = groups.map((group) => group.s === 'title');
+  const options = groups.map((_, index) => ({
+    positions: groups.map((_g, i) => i).filter((i) => i !== index),
+  }));
+  const roleOnly = groups.map((_g, i) => i).filter((i) => role[i]);
+  if (roleOnly.length && roleOnly.length < groups.length - 1)
+    options.push({ positions: roleOnly });
   const statement =
     'WITH ' +
-    kept
-      .map((rest, index) => hitsCte(`kept${index}`, rest, preview, bind))
+    options
+      .map((option, index) =>
+        hitsCte(
+          `kept${index}`,
+          option.positions.map((i) => groups[i]),
+          preview,
+          bind,
+        ),
+      )
       .join(',') +
     ',' +
     plan.cte.slice('WITH '.length) +
-    ` SELECT jsonb_build_object(${kept
+    ` SELECT jsonb_build_object(${options
       .map(
-        (_rest, index) =>
+        (_option, index) =>
           `'${index}',(SELECT count(*)::int FROM searchable j WHERE ${plan.where} AND j.id IN (SELECT id FROM kept${index}))`,
       )
       .join(',')}) dropped`;
-  return { statement, args, queryTerms: typed };
+  return {
+    statement,
+    args,
+    options: options.map((option) => ({
+      words: option.positions.map((i) => typed[i]).filter(Boolean),
+      keepsRole: option.positions.some((i) => role[i]),
+    })),
+    namesRole: role.some(Boolean),
+  };
 }

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
 import { z } from 'zod';
-import { cvSchema, type Cv } from '../cv';
+import { cvSchema, emptyCv, type Cv } from '../cv';
 import { maxPhotoBytes } from '../cv-photo';
 import { db } from './db';
 import { ApiError } from './auth';
@@ -86,6 +86,27 @@ export async function deleteResume(input: unknown) {
   ]);
 }
 
+export const resumeContactInput = resumeIdentity.extend({
+  job: z.uuid(),
+  kind: z.enum(['cv', 'call', 'apply']),
+});
+/* Ties a JOBX-built CV to one of our own vacancies when its holder presses send-CV, call or
+   apply there. The delete token proves the CV is the reader's; any other vacancy, a test
+   submission or an unknown CV records nothing and says nothing, so the answer never tells a
+   caller which vacancies or CVs exist. */
+export async function recordResumeContact(input: unknown) {
+  const { id, token, job, kind } = resumeContactInput.parse(input);
+  await db().query(
+    `INSERT INTO resume_contacts(job_id,resume_id,kind)
+     SELECT s.job_id,r.id,$4 FROM resumes r
+     JOIN job_submissions s ON s.job_id=$3 AND NOT s.is_test
+     WHERE r.id=$1 AND r.delete_token_hash=$2 AND r.expires_at>now()
+     ON CONFLICT (job_id,resume_id,kind)
+       DO UPDATE SET presses=resume_contacts.presses+1,last_at=now()`,
+    [id, tokenHash(token), job, kind],
+  );
+}
+
 export async function purgeResumes() {
   return (
     (await db().query('DELETE FROM resumes WHERE expires_at <= now()'))
@@ -99,8 +120,10 @@ export async function resumeDetail(id: string): Promise<Cv | null> {
     [z.uuid().parse(id)],
   );
   const row = result.rows[0];
+  // Older or partial records still open: every field the preview reads gets its default.
   return row
     ? {
+        ...emptyCv(row.cv?.language === 'en' ? 'en' : 'ka'),
         ...row.cv,
         photo: row.photo
           ? `data:image/webp;base64,${row.photo.toString('base64')}`

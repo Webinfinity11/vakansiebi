@@ -1,5 +1,5 @@
 'use client';
-import { useState, type ReactNode } from 'react';
+import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import {
   ChevronDown,
   Copy,
@@ -16,7 +16,17 @@ import {
   vacancyContacts,
 } from '@/lib/vacancy-details';
 import type { PublicJob } from '@/lib/types';
-import { track, trackAction } from '@/lib/analytics-client';
+import { trackAction, trackContact } from '@/lib/analytics-client';
+import { savedResumeIdentity } from '@/lib/resume-client';
+
+const noChanges = () => () => {};
+function holdsJobxCv() {
+  try {
+    return !!savedResumeIdentity(window.localStorage);
+  } catch {
+    return false;
+  }
+}
 
 export function QuickApply({
   job,
@@ -31,9 +41,16 @@ export function QuickApply({
   /* Pressing call, opening a letter with a CV or leaving for the employer's own
      form is where reading turns into applying, and until now none of the three
      was counted. Only the vacancy is recorded, once per press. */
-  const reached = (kind: 'call' | 'cv' | 'apply') => () => track(kind, job.id);
+  const reached = (kind: 'call' | 'cv' | 'apply') => () =>
+    trackContact(kind, job);
   const application = applicationDestination(job);
   const [message, setMessage] = useState('');
+  // Read after hydration: the server cannot know what this browser saved.
+  const linksCv = useSyncExternalStore(
+    noChanges,
+    () => job.source === 'JOBX' && holdsJobxCv(),
+    () => false,
+  );
   return (
     <section className="quick-apply" id="vacancy-contacts" tabIndex={-1}>
       <h3>დაუკავშირდი დამსაქმებელს</h3>
@@ -120,6 +137,11 @@ export function QuickApply({
           {emails.some((contact) => contact.application)
             ? 'გაიხსნება შენი ფოსტა. მიამაგრე CV და გაგზავნამდე გადაამოწმე წერილის ტექსტი და თემა.'
             : 'გაიხსნება შენი ფოსტა. წერილის ტექსტი და თემა შეცვალე დაკავშირების მიზნის მიხედვით.'}
+        </p>
+      )}
+      {linksCv && (phones.length > 0 || emails.length > 0 || !!application) && (
+        <p className="quick-apply-note">
+          JOBX-ზე შექმნილი შენი CV დაკავშირებისას ამ ვაკანსიასთან აღირიცხება.
         </p>
       )}
       {!phones.length && !emails.length && !application && (

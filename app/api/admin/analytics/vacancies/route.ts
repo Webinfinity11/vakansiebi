@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { apiError, requireAdmin } from '@/lib/server/auth';
 import {
+  resumeContacts,
   vacancyAnalytics,
   vacancyDailySeries,
 } from '@/lib/server/vacancy-analytics';
@@ -17,17 +18,21 @@ export async function GET(request: Request) {
       .parse((params.get('ids') || '').split(','));
     const unique = [...new Set(ids.map((id) => id.toLowerCase()))];
     // The daily series is read only for the one open vacancy, never for a whole list.
-    const [counts, series] = await Promise.all([
+    const single = params.get('series') === '1' && unique.length === 1;
+    const [counts, series, people] = await Promise.all([
       vacancyAnalytics(unique),
-      params.get('series') === '1' && unique.length === 1
-        ? vacancyDailySeries(unique)
-        : {},
+      single ? vacancyDailySeries(unique) : {},
+      single ? resumeContacts(unique[0]) : null,
     ]);
     return Response.json(
       Object.fromEntries(
         Object.entries(counts).map(([id, value]) => [
           id,
-          { ...value, series: (series as Record<string, unknown>)[id] },
+          {
+            ...value,
+            series: (series as Record<string, unknown>)[id],
+            ...(people ? { people } : {}),
+          },
         ]),
       ),
       {

@@ -471,7 +471,9 @@ const roleRules = [
     id: 'security-monitoring',
     category: 'დაცვა',
     label: 'ვიდეომონიტორინგი',
-    pattern: 'მონიტორინგ|კამერებ|მეთვალყურ|cctv|surveillance',
+    // A bare "monitoring" is as often a bank portfolio or a ministry department.
+    pattern:
+      'ვიდეო[- ]?მონიტორინგ|(ობიექტ|უსაფრთხოებ)[^ ]*.*მონიტორინგ|მონიტორინგის (თანამშრომ|ოპერატორ|ოფიცერ)|კამერებ|მეთვალყურ|cctv|surveillance',
   },
   {
     id: 'security-cash',
@@ -483,8 +485,9 @@ const roleRules = [
     id: 'security-guard',
     category: 'დაცვა',
     label: 'დაცვა / დარაჯი',
+    // Environmental, health and data protection are not guarding.
     pattern:
-      '(^|[^ა-ჰa-z])დაცვა([^ა-ჰa-z]|$)|დაცვის|მცველ|დარაჯ|ფიზიკურ.*უსაფრთხოებ|უსაფრთხოების.*(თანამშრომ|ოფიცერ|ადმინისტრატორ|ინსპექტორ)|security guard|guard',
+      '^(?![\\s\\S]*(გარემოს?[- ]?დაცვ|ჯანდაცვ|მონაცემთა დაცვ|უფლებების დაცვ))[\\s\\S]*((^|[^ა-ჰa-z])დაცვა([^ა-ჰa-z]|$)|დაცვის|მცველ|დარაჯ|ფიზიკურ.*უსაფრთხოებ|უსაფრთხოების.*(თანამშრომ|ოფიცერ|ადმინისტრატორ|ინსპექტორ)|security guard|guard)',
   },
   {
     id: 'production-engineering',

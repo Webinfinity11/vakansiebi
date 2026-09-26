@@ -809,3 +809,20 @@ void test('manual audit corrections keep concrete duties and reject a vague digi
     undefined,
   );
 });
+
+void test('guarding and video monitoring leave out environmental and portfolio work', () => {
+  for (const title of [
+    'გარემოს დაცვის საქალაქო სამსახურის მონიტორინგის განყოფილების სპეციალისტი',
+    'ჯანდაცვის პროგრამების სპეციალისტი',
+    'ანაზღაურებადი სტაჟირება პორტფელის მონიტორინგის მიმართულებით',
+  ])
+    assert.equal(subcategoryForTitle('დაცვა', title), undefined, title);
+  assert.equal(
+    subcategoryForTitle('დაცვა', 'ობიექტის დაცვის თანამშრომელი')?.id,
+    'security-guard',
+  );
+  assert.equal(
+    subcategoryForTitle('დაცვა', 'ვიდეომონიტორინგის ოპერატორი')?.id,
+    'security-monitoring',
+  );
+});

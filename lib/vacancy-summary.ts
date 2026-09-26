@@ -66,6 +66,8 @@ export function vacancySummary(job: Pick<Vacancy, 'description' | 'facts'>) {
       }
     }
   }
+  // A list item's own ending (";", ",", ":") is punctuation of the source, not of the value.
+  for (const item of result) item.value = item.value.replace(/[\s;,:]+$/u, '');
   const conflict = experienceConflict(job);
   if (conflict)
     return result.map((item) =>

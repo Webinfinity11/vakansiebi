@@ -323,3 +323,56 @@ void test('new Latin role names use Unicode letter boundaries and normalize case
   assert.equal(explicitRoleCategory('ᲔᲥᲗᲐᲜᲘ'), 'სამედიცინო');
   assert.equal(explicitRoleCategory('Chef-de-partie'), 'მომსახურება');
 });
+
+// Titles a 2026-09-26 comparison of the catalogue with the role filters found filed by the
+// employer's industry. Each must now land in the category a job seeker filters by.
+void test('roles sources file by industry are classified by the role itself', () => {
+  const cases: [string, string, string][] = [
+    ['ფლებოტომისტი', 'სხვა', 'სამედიცინო'],
+    ['ენდოკრინოლოგი', 'სხვა', 'სამედიცინო'],
+    ['ამბულატორიის სანიტარი', 'მომსახურება', 'სამედიცინო'],
+    ['ბელბოი', 'სხვა', 'მომსახურება'],
+    ['ქოლ-ცენტრის ოპერატორი', 'ადმინისტრაცია', 'მომსახურება'],
+    ['მოძრავი მერჩენდაიზერი', 'ლოჯისტიკა', 'გაყიდვები'],
+    ['პრისეილერი', 'სხვა', 'გაყიდვები'],
+    ['განვადების მენეჯერი', 'ადმინისტრაცია', 'ფინანსები'],
+    ['ოქროს ლომბარდის ექსპერტ-შემფასებელი', 'სხვა', 'ფინანსები'],
+    ['ინსტალატორი', 'სხვა', 'მშენებლობა'],
+    ['აირშემდუღებელი', 'წარმოება', 'მშენებლობა'],
+    ['პროდუქციის ამგროვებელი', 'სხვა', 'ლოჯისტიკა'],
+    ['მტვირთავი', 'წარმოება', 'ლოჯისტიკა'],
+    ['მძღოლ-ინკასატორი', 'ლოჯისტიკა', 'დაცვა'],
+    ['ვიდეო მონიტორინგის სპეციალისტი', 'მარკეტინგი', 'დაცვა'],
+  ];
+  for (const [title, source, expected] of cases)
+    assert.equal(classify(title, source as never), expected, title);
+  // Mixed roles keep the source's answer rather than guess.
+  assert.equal(
+    classify('გაყიდვების ქოლცენტრის ოპერატორი', 'გაყიდვები'),
+    'გაყიდვები',
+  );
+  assert.equal(
+    classify('სამედიცინო შემთხვევების კოორდინატორი', 'ადმინისტრაცია'),
+    'ადმინისტრაცია',
+  );
+});
+
+void test('environmental, health and data protection are not security work', () => {
+  assert.notEqual(titleCategory('უმცროსი გარემოსდაცვითი სპეციალისტი'), 'დაცვა');
+  assert.notEqual(
+    titleCategory(
+      'გარემოს დაცვის საქალაქო სამსახურის მონიტორინგის განყოფილების სპეციალისტი',
+    ),
+    'დაცვა',
+  );
+  assert.notEqual(
+    titleCategory('პერსონალურ მონაცემთა დაცვის ოფიცერი'),
+    'დაცვა',
+  );
+  assert.equal(
+    titleCategory('გარემოს დაცვისა და შრომის უსაფრთხოების სპეციალისტი'),
+    'დაცვა',
+    'occupational safety stays with security',
+  );
+  assert.equal(titleCategory('დაცვის თანამშრომელი'), 'დაცვა');
+});

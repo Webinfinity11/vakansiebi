@@ -36,7 +36,7 @@ import {
   vacancyPath,
 } from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
-import { track, trackAction } from '@/lib/analytics-client';
+import { track, trackAction, trackContact } from '@/lib/analytics-client';
 import type { PublicJob } from '@/lib/types';
 import { vacancySummary } from '@/lib/vacancy-summary';
 import {
@@ -69,14 +69,14 @@ function ApplyAction({ job }: { job: PublicJob }) {
         <a
           className="secondary-button"
           href={`tel:${contacts.phones[0].number}`}
-          onClick={() => track('call', job.id)}
+          onClick={() => trackContact('call', job)}
         >
           <Phone aria-hidden="true" />
           დარეკვა
         </a>
         <a
           className="primary"
-          onClick={() => track('cv', job.id)}
+          onClick={() => trackContact('cv', job)}
           href={emailDraft(
             contacts.emails[0].email,
             job.title,
@@ -95,7 +95,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
       <a
         className="primary"
         href={emailDraft(emails[0].email, job.title, defaultApplicationBody)}
-        onClick={() => track('cv', job.id)}
+        onClick={() => trackContact('cv', job)}
       >
         <Mail aria-hidden="true" />
         CV-ის გაგზავნა მეილით
@@ -108,7 +108,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
         href={external.url}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => track('apply', job.id)}
+        onClick={() => trackContact('apply', job)}
       >
         <Send aria-hidden="true" />
         განაცხადი კომპანიის საიტზე
@@ -119,7 +119,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
       <a
         className="primary"
         href={`tel:${contacts.phones[0].number}`}
-        onClick={() => track('call', job.id)}
+        onClick={() => trackContact('call', job)}
       >
         <Phone aria-hidden="true" />
         დარეკვა

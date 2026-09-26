@@ -12,6 +12,9 @@ const roles = [
     'ბუღალტერ',
     'ბუღალტერი',
     'ბუღალტერია',
+    'ბუღალტრ',
+    'buxgalter',
+    'bugalter',
     'accountant',
     'accounting',
     'бухгалтер',
@@ -42,7 +45,18 @@ const roles = [
   ['მენეჯერ', 'მენეჯერი', 'manager', 'менеджер'],
   ['იურისტ', 'იურისტი', 'lawyer', 'юрист'],
   ['მასწავლებელ', 'მასწავლებელი', 'teacher', 'учитель'],
-  ['მცველ', 'მცველი', 'დაცვის თანამშრომ', 'security guard', 'охранник'],
+  [
+    'მცველ',
+    'მცველი',
+    'დაცვის თანამშრომ',
+    'დარაჯ',
+    'დარაჯი',
+    'guard',
+    'security',
+    'security guard',
+    'охранник',
+    'сторож',
+  ],
   ['ადმინისტრატორ', 'ადმინისტრატორი', 'administrator', 'администратор'],
   ['ოპერატორ', 'ოპერატორი', 'operator', 'оператор'],
   ['ასისტენტ', 'ასისტენტი', 'assistant', 'ассистент'],
@@ -91,12 +105,34 @@ function genitiveOf(word: string) {
 }
 // Longest suffix first; a case ending is removed once and only from a word that
 // keeps a stem of at least three letters.
-const georgianSuffixes = ['ები', 'ებს', 'ის', 'ში', 'ით', 'ს', 'ი'];
+// "ოფისებში" is plural and locative at once; -ა and -ია end nouns people type in the
+// nominative ("მედიცინა", "სტომატოლოგია") that titles decline ("მედიცინის").
+const georgianSuffixes = [
+  'ებში',
+  'ები',
+  'ებს',
+  'ის',
+  'ში',
+  'ით',
+  'ია',
+  'ს',
+  'ი',
+  'ა',
+  'ე',
+];
+/* A bare -ს and -ია come off only when four letters remain: "ოფის" is not "ოფი-" (ოფიციანტი),
+   "მედია" is not "მედ-" (მედიცინა). A short stem is matched only at a word start, so
+   "ძიძა", "პიცა" and "მუშა" may still reach "ძიძის", "პიცის" and "მუშები". */
+const letterEndings = new Set(['ია', 'ს']);
 export function stemGeorgian(term: string): string {
   if (!isGeorgianWord(term)) return term;
-  for (const suffix of georgianSuffixes)
-    if (term.endsWith(suffix) && term.length - suffix.length >= 3)
+  for (const suffix of georgianSuffixes) {
+    if (!term.endsWith(suffix)) continue;
+    if (term.length - suffix.length >= (letterEndings.has(suffix) ? 4 : 3))
       return term.slice(0, -suffix.length);
+    // A too-short -ია is not retried as -ა: "მედია" stays whole.
+    if (suffix === 'ია') return term;
+  }
   return term;
 }
 const vowels = 'აეიოუ';
@@ -156,19 +192,57 @@ export function roleFor(term: string): string[] | undefined {
         (isCyrillicWord(word) &&
           group.some(
             (known) => isCyrillicWord(known) && word.startsWith(known),
+          )) ||
+        // Georgian typed in Latin letters takes Georgian endings: buxgalteri, bugalteris.
+        (/^[a-z]+$/.test(word) &&
+          group.some(
+            (known) =>
+              /^[a-z]{5,}$/.test(known) &&
+              word.startsWith(known) &&
+              /^(i|is|ebi|ebis|s)$/.test(word.slice(known.length)),
           )),
     ),
   );
 }
 /** One group per typed word: how the reader wrote it, and everything it may match. */
 export type SearchGroup = { own: string[]; all: string[] };
+/* Spellings of one name that are not an occupation, so they stay out of the role
+   vocabulary (which also names landing pages): a word written joined or apart, and
+   employers people type in the other script. */
+const aliases = [
+  [
+    'ქოლცენტრ',
+    'ქოლ-ცენტრ',
+    'ქოლ ცენტრ',
+    'კონტაქტ ცენტრ',
+    'კონტაქტ-ცენტრ',
+    'call center',
+    'call centre',
+  ],
+  ['tbc', 'თიბისი'],
+  ['wissol', 'ვისოლ'],
+  ['rompetrol', 'რომპეტროლ'],
+  ['lukoil', 'ლუკოილ'],
+  ['waikiki', 'ვაიკიკი'],
+];
+function aliasFor(forms: string[]) {
+  return aliases.find((group) =>
+    forms.some((form) => group.some((alias) => form.startsWith(alias))),
+  );
+}
 export function searchMatchGroups(query: string): SearchGroup[] {
   return searchTerms(query).map((term) => {
     const own = writtenForms(term);
     return {
       own,
       all: withoutCoveredTerms(
-        [...new Set([...own, ...(roleFor(term) || [])])],
+        [
+          ...new Set([
+            ...own,
+            ...(roleFor(term) || []),
+            ...(aliasFor([term, ...own]) || []),
+          ]),
+        ],
         own,
       ),
     };
@@ -196,16 +270,27 @@ function distance(a: string, b: string) {
     }
   return rows[a.length][b.length];
 }
-export function suggestSearch(query: string): string | null {
+/**
+ * A correction for a query that found nothing. The reviewed roles are the first
+ * candidates; `lexicon` adds the words vacancy titles actually use, with how many
+ * titles carry each, so "დისსახლისი" and "აღნზრდელი" reach words no reviewer listed.
+ * A tie between two equally close words is broken only by a clear majority in the
+ * titles; otherwise nothing is guessed.
+ */
+export function suggestSearch(
+  query: string,
+  lexicon: ReadonlyMap<string, number> = new Map(),
+): string | null {
   const terms = searchTerms(query);
   let changed = false;
   const corrected = terms.map((term) => {
     // A word the vocabulary already knows is spelled well enough to search with.
     if (term.length < 5 || term.length > 30 || roleFor(term)) return term;
+    if (lexicon.has(term)) return term;
     /* Every reviewed word is a candidate, the Georgian one above all: it is the
        word people mistype. Only the bare stems are held back, so the offer reads
        as a word — "ბუღალტერი", not "ბუღალტერ" — whenever the group has one. */
-    const candidates = roles
+    const reviewed = roles
       .flatMap((group) =>
         group.filter(
           (word, index) =>
@@ -222,18 +307,117 @@ export function suggestSearch(query: string): string | null {
           isCyrillicWord(word) === isCyrillicWord(term) &&
           !word.includes(' ') &&
           Math.abs(word.length - term.length) <= 2,
-      )
-      .map((word) => ({ word, score: distance(term, word) }))
+      );
+    const seen = new Set(reviewed);
+    const titled = [...lexicon.keys()].filter(
+      (word) =>
+        !seen.has(word) &&
+        isGeorgianWord(word) === isGeorgianWord(term) &&
+        Math.abs(word.length - term.length) <= 2,
+    );
+    const candidates = [...reviewed, ...titled]
+      .map((word) => ({
+        word,
+        // Declined forms count as the same word: "საატუმრო" is one letter from "სასტუმროს".
+        score:
+          stemGeorgian(term).length >= 5 && stemGeorgian(word).length >= 5
+            ? Math.min(
+                distance(term, word),
+                distance(stemGeorgian(term), stemGeorgian(word)),
+              )
+            : distance(term, word),
+        // A reviewed role outranks any title word at the same distance.
+        weight: seen.has(word) ? Infinity : (lexicon.get(word) ?? 0),
+      }))
       .filter((x) => x.score <= (term.length >= 9 ? 2 : 1))
-      .sort((a, b) => a.score - b.score);
+      .sort((a, b) => a.score - b.score || b.weight - a.weight)
+      // Two forms of one word (ბუღალტერი, ბუღალტერია) are not a tie between two words.
+      .filter(
+        (x, i, all) =>
+          all.findIndex(
+            (y) => stemGeorgian(y.word) === stemGeorgian(x.word),
+          ) === i,
+      );
+    const [best, next] = candidates;
     if (
-      !candidates[0] ||
-      candidates[0].score === 0 ||
-      candidates[1]?.score === candidates[0].score
+      !best ||
+      best.score === 0 ||
+      (next?.score === best.score &&
+        (next.weight === Infinity || best.weight < next.weight * 3))
     )
       return term;
     changed = true;
-    return candidates[0].word;
+    return best.word;
   });
   return changed ? corrected.join(' ') : null;
+}
+
+/* How Georgian is commonly typed on a Latin keyboard. Digraphs are read first; a letter
+   that stands for two Georgian ones (t: თ/ტ, k: კ/ქ, p: პ/ფ) takes its usual reading and
+   the title lexicon settles the rest through the ordinary spelling correction. */
+const latinDigraphs: [string, string][] = [
+  ['sh', 'შ'],
+  ['ch', 'ჩ'],
+  ['gh', 'ღ'],
+  ['zh', 'ჟ'],
+  ['kh', 'ხ'],
+  ['ts', 'ც'],
+  ['dz', 'ძ'],
+];
+const latinLetters: Record<string, string> = {
+  a: 'ა',
+  b: 'ბ',
+  g: 'გ',
+  d: 'დ',
+  e: 'ე',
+  v: 'ვ',
+  z: 'ზ',
+  t: 'თ',
+  i: 'ი',
+  k: 'კ',
+  l: 'ლ',
+  m: 'მ',
+  n: 'ნ',
+  o: 'ო',
+  p: 'პ',
+  r: 'რ',
+  s: 'ს',
+  u: 'უ',
+  f: 'ფ',
+  q: 'ქ',
+  y: 'ყ',
+  c: 'ც',
+  x: 'ხ',
+  j: 'ჯ',
+  h: 'ჰ',
+  w: 'წ',
+};
+export function georgianFromLatin(word: string): string {
+  let out = '';
+  for (let i = 0; i < word.length;) {
+    const pair = latinDigraphs.find(([latin]) => word.startsWith(latin, i));
+    if (pair) {
+      out += pair[1];
+      i += 2;
+      continue;
+    }
+    out += latinLetters[word[i]] ?? word[i];
+    i++;
+  }
+  return out;
+}
+/**
+ * A Latin query that found nothing, read as Georgian typed on a Latin keyboard
+ * ("mzareuli" → "მზარეული"), then corrected against the titles for the letters
+ * the keyboard cannot tell apart. Null for anything that is not all Latin letters.
+ */
+export function latinGeorgianSearch(
+  query: string,
+  lexicon: ReadonlyMap<string, number> = new Map(),
+): string | null {
+  const terms = searchTerms(query);
+  if (!terms.length || !terms.every((term) => /^[a-z]{3,}$/.test(term)))
+    return null;
+  const georgian = terms.map(georgianFromLatin).join(' ');
+  return suggestSearch(georgian, lexicon) ?? georgian;
 }

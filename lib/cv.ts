@@ -491,7 +491,7 @@ export const cvText: Record<CvLanguage, CvText> = {
       native: 'მშობლიური',
     },
     storageNote:
-      'რეზიუმე ინახება ამ ბრაუზერში, PDF-ად შენახვისას კი მისი ასლი JOBX-ზეც ინახება 12 თვემდე და „გასუფთავებით“ წაიშლება.',
+      'რეზიუმე ინახება ამ ბრაუზერში, PDF-ად შენახვისას კი მისი ასლი JOBX-ზეც ინახება 12 თვემდე და „გასუფთავებით“ წაიშლება. JOBX-ზე დამატებულ ვაკანსიაზე დარეკვისას ან CV-ის გაგზავნისას ეს ასლი იმ ვაკანსიასთან აღირიცხება.',
     cleared: 'რეზიუმე გასუფთავდა.',
     saved: 'რეზიუმე შენახულია.',
     printHint: 'ჯერ შეავსე ერთი ველი მაინც',
@@ -622,7 +622,7 @@ export const cvText: Record<CvLanguage, CvText> = {
       native: 'Native',
     },
     storageNote:
-      'Your resume is saved in this browser; saving a PDF also stores a copy on JOBX for up to 12 months, and Clear deletes that copy.',
+      'Your resume is saved in this browser; saving a PDF also stores a copy on JOBX for up to 12 months, and Clear deletes that copy. Calling or sending your CV about a vacancy posted on JOBX links that copy to the vacancy.',
     cleared: 'Resume cleared.',
     saved: 'Resume saved.',
     printHint: 'Fill in at least one field first',
@@ -632,3 +632,11 @@ export const cvText: Record<CvLanguage, CvText> = {
     photoError: 'The photo could not be processed. Try another one.',
   },
 };
+
+/** Saves an open CV sheet as PDF through the browser's print dialog, named after its owner. */
+export function downloadCv(fullName: string) {
+  const title = document.title;
+  document.title = `CV — ${fullName.trim() || 'JOBX'}`;
+  window.print();
+  document.title = title;
+}

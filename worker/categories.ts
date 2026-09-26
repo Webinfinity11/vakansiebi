@@ -98,7 +98,10 @@ const rules: [RegExp, string][] = [
     /დეველოპერ|developer|პროგრამისტ|programmer|software|devops|\bsre\b|ტესტერ|tester|\bqa\b|\bit\b|\bit[- ]|ინფორმაციულ|information technolog|information security|security (?:engineer|analyst)|სისტემ(?:ურ|ის)\s+ადმინისტრატორ|sysadmin|\bdata\b|მონაცემთა|frontend|front-end|backend|back-end|full.?stack|android|\bios\b|python|java|\.net|c#|php|react|angular|node\.?js|კიბერ|cyber|database|(?<!მაღაზი(?:ათა|ების) |სავაჭრო |რესტორნების |სააფთიაქო )ქსელის (?:ინჟინერ|ადმინისტრატორ|მართვ|მონიტორინგ|სპეციალისტ|ტექნიკოს)|network (?:engineer|administrator|specialist)|\bai\b|\bml\b|machine learning|artificial intelligence|ხელოვნური ინტელექტ|\bux\b|ui\/ux|ux\/ui|(?<!\p{L})ვებ|\bweb|ერპ|\berp\b|\b1c\b|\bsap\b|helpdesk|help desk|ტექნიკური მხარდაჭერ|technical support|cloud|(?:solutions?|systems?|enterprise) architect/u,
     'ტექნოლოგიები',
   ],
-  [/დაცვ|security|guard|მცველ|ბოდიგარდ|უსაფრთხოებ/u, 'დაცვა'],
+  [
+    /^(?:(?=.*შრომის უსაფრთხოებ)|(?!.*(?:გარემოს?[- ]?დაცვ|ჯანდაცვ|მონაცემთა დაცვ|უფლებების დაცვ))).*(?:დაცვ|security|guard|მცველ|ბოდიგარდ|უსაფრთხოებ)/u,
+    'დაცვა',
+  ],
   [
     /სილამაზ|beauty|სტილისტ|stylist|პარიკმახერ|hairdress|მანიკურ|nail|კოსმეტოლოგ|cosmetolog|მასაჟისტ|massage|ვიზაჟისტ|makeup|ბარბერ|barber|(?<!\p{L})სპა(?!\p{L})|\bspa\b|ლაშმეიკერ|lash|ბროუ/u,
     'სილამაზე',
@@ -189,6 +192,42 @@ export function explicitRoleCategory(title: string): Category | '' {
           [
             /(?<!\p{L})(?:სოციალური მედიის|(?:social media|smm)(?!\p{L}))/u,
             'მარკეტინგი',
+          ],
+          /* Found by comparing every title with the role filters on 2026-09-26: sources file
+             these by the employer's industry, so a pharmacy chain's phlebotomist sat in
+             "other", a distributor's merchandiser in logistics, a bank's installment
+             manager in administration. */
+          [
+            /^(?!.*(?:სამედიცინო წარმომადგენ|ადმინისტრატორ|რეგისტრატორ|კოორდინატორ|მენეჯერ)).*(?<!\p{L})(?:ფლებოტომისტ|სანიტარ|მედდ(?:ა|ის)(?!\p{L})|ექოსკოპისტ|ლაბორანტ|მიკრობიოლოგ|(?:ოფთალმოლოგ|ენდოკრინოლოგ|უროლოგ|კარდიოლოგ|ნევროლოგ|გინეკოლოგ|დერმატოლოგ|გასტროენტეროლოგ|ოტორინოლარინგოლოგ|ტრავმატოლოგ|რევმატოლოგ|ფსიქიატრ|ორთოპედ)(?:ი|ის)?(?!\p{L}))/u,
+            'სამედიცინო',
+          ],
+          [
+            /(?<!\p{L})(?:ბელბოი|მემწვადე|მეშაურმე|ავტო ?სამრეცხაო|ავტო ?მრეცხავ|მანქანის მრეცხავ)/u,
+            'მომსახურება',
+          ],
+          [
+            /^(?!.*(?:გაყიდვ|sales|telemarket|ტელემარკეტ)).*(?<!\p{L})(?:ქოლ[- ]?ცენტრ|call[- ]?cent|კონტაქტ[- ]?ცენტრ)/u,
+            'მომსახურება',
+          ],
+          [
+            /(?<!\p{L})(?:მერჩენდა[იი]?ზერ|მერჩენდიაზერ|პრისე[ი]?ლერ|პრესელერ|merchandiser|pre-?seller)/u,
+            'გაყიდვები',
+          ],
+          [
+            /(?<!\p{L})(?:განვადებ|სესხის ოფიცერ|ლომბარდ|loan officer)/u,
+            'ფინანსები',
+          ],
+          [
+            /(?<!\p{L})(?:ინსტალატორ|მალიარ|მეთუნუქე|(?:აირ|ელ\.? ?)?შემდუღებ|სვარკ|მეამწე|ამწის ოპერატორ|welder)/u,
+            'მშენებლობა',
+          ],
+          [
+            /^(?!.*(?:გაყიდვ|sales)).*(?<!\p{L})(?:(?:პროდუქციის |შეკვეთების )?(?:ამგროვებ|შემგროვებ)|მტვირთავ|გადამზიდ|ინვენტარიზაცი)/u,
+            'ლოჯისტიკა',
+          ],
+          [
+            /(?<!\p{L})(?:ინკასატორ|ინკასაცი|დარაჯ|ვიდეო[- ]?მონიტორინგ|ბოდიგარდ)/u,
+            'დაცვა',
           ],
           [
             /^(?!.*(?<!\p{L})(?:საკრედიტო ადმინისტრატორ|credit administrator)).*(?<!\p{L})(?:იურისტ|ადვოკატ|(?:lawyer|attorney)(?!\p{L}))/u,
