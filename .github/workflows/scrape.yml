@@ -25,6 +25,9 @@ jobs:
       - id: due
         env:
           DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
+          # The URL asks for sslmode=verify-full; Node's driver checks it against the system
+          # roots, but psql looks for ~/.postgresql/root.crt unless told to use them too.
+          PGSSLROOTCERT: system
         run: |
           command -v psql >/dev/null || sudo apt-get install -y -q postgresql-client >/dev/null
           sources=$(psql "$DATABASE_URL" -Atc "SELECT coalesce(json_agg(id ORDER BY id), '[]')
