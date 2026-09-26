@@ -1,0 +1,501 @@
+/* Runs and Sources: dense, aligned tables instead of one card per item.
+   Tokens only (app/design-system.css); dark theme follows through the tokens. */
+
+/* ── Toolbar and 24h strip (Sources) ─────────────────────────────────────────────────── */
+.ops-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+}
+.ops-toolbar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-1) var(--ds-space-4);
+  margin: 0;
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+}
+.ops-toolbar-meta b {
+  color: var(--ds-ink);
+  font-weight: var(--ds-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+.ops-toolbar-meta a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  color: var(--ds-accent);
+  border-radius: var(--ds-radius-sm);
+}
+.ops-toolbar-meta a:hover {
+  text-decoration: underline;
+}
+.ops-toolbar-meta a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.ops-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+.ops-note {
+  margin: 0;
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-warning-soft);
+  color: var(--ds-warning);
+  font-size: var(--ds-text-sm);
+}
+.ops-stats {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+}
+.ops-stats > div {
+  flex: 1 1 140px;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-left: 1px solid var(--ds-line-soft);
+}
+.ops-stats > div:first-child {
+  border-left: 0;
+}
+.ops-stats dt {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+}
+.ops-stats dd {
+  margin: var(--ds-space-1) 0 0;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-xl);
+  font-weight: var(--ds-weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+.ops-stats .ops-stats-time dd {
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-md);
+  font-weight: 500;
+  line-height: 1.8;
+}
+.ops-stats dd[data-bad] {
+  color: var(--ds-danger);
+}
+
+/* ── The table ────────────────────────────────────────────────────────────────────────── */
+.ops-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+}
+.ops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-ink-2);
+}
+.ops-table th,
+.ops-table td {
+  height: var(--ds-row);
+  padding: 0 var(--ds-space-3);
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--ds-line-soft);
+}
+.ops-table :is(th, td):first-child {
+  padding-left: var(--ds-space-4);
+}
+.ops-table :is(th, td):last-child {
+  padding-right: var(--ds-space-4);
+}
+.ops-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.ops-table thead th {
+  height: var(--ds-row-dense);
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-strong);
+  border-bottom: 1px solid var(--ds-line);
+}
+.ops-table tbody tr {
+  transition: background var(--ds-duration-fast) var(--ds-ease);
+}
+.ops-table tbody tr:hover {
+  background: var(--ds-surface-muted);
+}
+.ops-table tbody tr[data-off] {
+  color: var(--ds-ink-3);
+}
+.ops-table .ops-name {
+  color: var(--ds-ink);
+  font-weight: var(--ds-weight-strong);
+}
+.ops-table tr[data-off] .ops-name-button {
+  color: var(--ds-ink-3);
+}
+.ops-table .ops-num {
+  width: 1%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ops-table td.ops-num {
+  color: var(--ds-ink);
+}
+.ops-table td[data-bad] {
+  color: var(--ds-danger);
+  font-weight: var(--ds-weight-strong);
+}
+.ops-table .ops-time {
+  font-variant-numeric: tabular-nums;
+}
+.ops-muted {
+  color: var(--ds-ink-3);
+  font-weight: 400;
+}
+/* Long text keeps one line; the full text is in the title. */
+.ops-runs .ops-message {
+  width: 40%;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-sources .ops-state,
+.ops-sources td.ops-time[title] {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ops-table .ops-actions {
+  width: 1%;
+  text-align: right;
+}
+.ops-actions .ds-btn + .ds-btn {
+  margin-left: var(--ds-space-1);
+}
+
+/* Name opens the source's sheet, like the settings button beside it. */
+.ops-name-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ds-control-sm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.ops-name-button:hover {
+  color: var(--ds-accent);
+  text-decoration: underline;
+}
+.ops-name-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+
+/* ── Status: a dot and a word ─────────────────────────────────────────────────────────── */
+.ops-state {
+  color: var(--ds-ink-2);
+}
+.ops-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-ink-3);
+  vertical-align: 1px;
+  flex: none;
+}
+.ops-dot:is([data-tone='success'], [data-tone='green']) {
+  background: var(--ds-success);
+}
+.ops-dot:is(
+  [data-tone='partial'],
+  [data-tone='amber'],
+  [data-tone='deferred']
+) {
+  background: var(--ds-warning);
+}
+.ops-dot:is([data-tone='failed'], [data-tone='interrupted']) {
+  background: var(--ds-danger);
+}
+.ops-dot:is([data-tone='running'], [data-tone='pending'], [data-tone='blue']) {
+  background: var(--ds-accent);
+}
+.ops-dot[data-tone='muted'] {
+  background: var(--ds-line-strong);
+}
+
+/* ── Collapsed parameters (Sources) ───────────────────────────────────────────────────── */
+.ops-params {
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+}
+.ops-params > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-height: var(--ds-row);
+  padding: 0 var(--ds-space-4);
+  list-style: none;
+  cursor: pointer;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-strong);
+  border-radius: var(--ds-radius-lg);
+}
+.ops-params > summary::-webkit-details-marker {
+  display: none;
+}
+.ops-params > summary:hover {
+  background: var(--ds-surface-muted);
+}
+.ops-params > summary span {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+  font-weight: 400;
+}
+.ops-params[open] > summary {
+  border-bottom: 1px solid var(--ds-line-soft);
+  border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
+}
+.ops-params-body {
+  padding: var(--ds-space-4);
+}
+.ops-params-body .scraper-preferences {
+  padding-top: 0;
+  border-top: 0;
+}
+.ops-params-body .scraper-economy {
+  margin: var(--ds-space-5) 0 var(--ds-space-3);
+}
+.ops-params-body > .admin-helper {
+  margin: 0;
+}
+
+/* ── Per-source sheet ─────────────────────────────────────────────────────────────────── */
+.edit-sheet.ops-sheet {
+  max-width: 560px !important;
+}
+.ops-sheet [data-slot='sheet-description'].ops-state {
+  display: flex;
+  align-items: center;
+  font-size: var(--ds-text-sm);
+}
+.ops-sheet-body {
+  display: grid;
+  gap: var(--ds-space-4);
+  padding: 0 var(--ds-space-4) var(--ds-space-5);
+}
+.ops-sheet-body > * {
+  margin: 0;
+}
+.ops-facts {
+  display: grid;
+  margin: 0;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+}
+.ops-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+  min-height: var(--ds-row-dense);
+  align-items: center;
+  padding: var(--ds-space-1) var(--ds-space-3);
+  border-top: 1px solid var(--ds-line-soft);
+  font-size: var(--ds-text-sm);
+}
+.ops-facts > div:first-child {
+  border-top: 0;
+}
+.ops-facts dt {
+  flex: none;
+  max-width: 55%;
+  color: var(--ds-ink-3);
+}
+.ops-facts dd {
+  margin: 0;
+  color: var(--ds-ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ops-sheet .source-quality-note {
+  padding: var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+  font-size: var(--ds-text-xs);
+  line-height: 1.8;
+}
+.ops-sheet .source-repair-note {
+  margin: 0;
+}
+.ops-switches {
+  display: grid;
+}
+.ops-switches .check-row {
+  min-height: var(--ds-row-dense);
+  margin: 0;
+}
+.ops-sheet .interval-row {
+  margin: 0;
+}
+.ops-sheet .scraper-limit-controls {
+  margin: 0;
+}
+
+/* ── Phone: rows reflow into two-line entries; every target reaches 44px ───────────────── */
+@media (max-width: 760px) {
+  .ops-toolbar-actions {
+    width: 100%;
+  }
+  .ops-toolbar-actions .ds-btn:not(.ds-btn--icon) {
+    flex: 1 1 auto;
+  }
+  .ops-toolbar-meta a {
+    min-height: var(--ds-control-touch);
+  }
+  .ops-stats > div {
+    flex: 1 1 40%;
+    border-left: 0;
+    border-top: 1px solid var(--ds-line-soft);
+  }
+  .ops-stats > div:is(:nth-child(1), :nth-child(2)) {
+    border-top: 0;
+  }
+  .ops-table-wrap {
+    overflow: visible;
+  }
+  .ops-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .ops-table,
+  .ops-table tbody {
+    display: block;
+  }
+  .ops-table tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-1) var(--ds-space-3);
+    padding: var(--ds-space-3) var(--ds-space-4);
+    border-bottom: 1px solid var(--ds-line-soft);
+  }
+  .ops-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .ops-table tbody :is(th, td),
+  .ops-table tbody :is(th, td):is(:first-child, :last-child) {
+    display: block;
+    height: auto;
+    padding: 0;
+    border: 0;
+  }
+  .ops-table .ops-name {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .ops-table .ops-state {
+    flex: 1 1 100%;
+    order: 2;
+    max-width: none;
+    white-space: normal;
+  }
+  .ops-table td.ops-num {
+    order: 3;
+    text-align: left;
+  }
+  .ops-table td[data-label]::before {
+    content: attr(data-label) ' ';
+    color: var(--ds-ink-3);
+    font-weight: 400;
+  }
+  /* Runs: name · time / status / counts / message in full. */
+  .ops-runs .ops-time {
+    order: 1;
+  }
+  .ops-runs .ops-message {
+    order: 4;
+    flex: 1 1 100%;
+    width: auto;
+    max-width: none;
+    white-space: normal;
+    color: var(--ds-warning);
+  }
+  .ops-runs .ops-message:has(.ops-muted) {
+    display: none;
+  }
+  /* Sources: name · actions / status / timing / counts. */
+  .ops-sources .ops-actions {
+    order: 1;
+    width: auto;
+  }
+  .ops-sources td.ops-time,
+  .ops-sources td.ops-time[title] {
+    order: 2;
+    flex: 1 1 100%;
+    max-width: none;
+    white-space: normal;
+  }
+  .ops-name-button {
+    min-width: var(--ds-control-touch);
+    min-height: var(--ds-control-touch);
+  }
+  .ops-actions .ds-btn--icon.ds-btn--sm {
+    width: var(--ds-control-touch);
+    min-height: var(--ds-control-touch);
+  }
+  .ops-table td.ops-num {
+    width: auto;
+  }
+  /* Runs: name · time / status · counts / message, on a grid so lines stay put. */
+  .ops-runs tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    column-gap: var(--ds-space-2);
+  }
+  .ops-runs .ops-name {
+    grid-column: 1 / 4;
+  }
+  .ops-runs .ops-state {
+    grid-column: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .ops-runs td[data-label]::before {
+    font-size: var(--ds-text-xs);
+  }
+  .ops-runs .ops-message {
+    grid-column: 1 / -1;
+  }
+  .ops-params > summary {
+    flex-wrap: wrap;
+    padding-block: var(--ds-space-2);
+  }
+  .ops-switches .check-row {
+    min-height: var(--ds-control-touch);
+  }
+  .ops-params-body .scraper-preferences a {
+    min-height: var(--ds-control-touch);
+  }
+}

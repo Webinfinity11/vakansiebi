@@ -58,6 +58,14 @@
   --ds-text-sm: 13px;
   --ds-text-md: 14px;
   --ds-text-lg: 16px;
+  /* Headings and figures: a section, a sheet, a page, and one size for every KPI number. */
+  --ds-text-section: 15px;
+  --ds-text-xl: 18px;
+  --ds-text-page: 22px;
+  --ds-text-num: 22px;
+  /* Row heights: a comfortable list row and a dense table or nav row. */
+  --ds-row: 44px;
+  --ds-row-dense: 36px;
   --ds-weight-strong: 600;
 
   /* controls — every button, input and dropdown has one of these heights */

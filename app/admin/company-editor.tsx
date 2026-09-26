@@ -110,7 +110,7 @@ export function CompanyEditor({
                 </label>
                 {sourceLogo && (
                   <button
-                    className="secondary-button full-width"
+                    className="ds-btn ds-btn--secondary full-width"
                     onClick={() =>
                       setProfile({ ...profile, logoUrl: sourceLogo })
                     }
@@ -146,7 +146,7 @@ export function CompanyEditor({
                 </label>
               </div>
               <button
-                className="secondary-button"
+                className="ds-btn ds-btn--secondary"
                 disabled={busy || Boolean(logoProblem || websiteProblem)}
                 onClick={() => void save()}
               >

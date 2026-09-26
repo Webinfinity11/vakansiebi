@@ -1747,26 +1747,30 @@
   line-height: 1.85;
   overflow-wrap: anywhere;
 }
+/* A short key–value list, not a stack of tinted cards: the label on the left, the excerpt
+   beside it, a hairline between rows. */
 .vacancy-summary dl {
   display: grid;
-  gap: var(--jobx-space-12px);
+  margin: 0;
+  border-top: 1px solid #e6eaf1;
 }
 .vacancy-summary dl > div {
-  padding: var(--jobx-space-12px) var(--jobx-space-14px);
-  border-left: 3px solid #7899e7;
-  background: #f3f6fc;
-  border-radius: 0 var(--jobx-radius-7px) var(--jobx-radius-7px) 0;
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+  gap: var(--jobx-space-12px);
+  align-items: baseline;
+  padding: var(--jobx-space-12px) 0;
+  border-bottom: 1px solid #e6eaf1;
 }
 .vacancy-summary dt {
-  font-size: var(--jobx-font-size-11px);
-  color: #4c607c;
-  margin-bottom: var(--jobx-space-5px);
+  font-size: var(--jobx-font-size-13px);
+  color: #5d6d86;
 }
 .vacancy-summary dd {
   margin: 0;
-  font-size: var(--jobx-font-size-13px);
+  font-size: var(--jobx-font-size-14px);
   color: var(--jobx-color-263a58-text);
-  line-height: 1.85;
+  line-height: 1.7;
   overflow-wrap: anywhere;
 }
 .vacancy-summary > p {
@@ -1777,7 +1781,7 @@
 }
 .vacancy-summary dl > .summary-conflict {
   background: #fff7e6;
-  border-left-color: #c58a24;
+  padding-inline: var(--jobx-space-12px);
 }
 .vacancy-summary .summary-conflict dt {
   color: #80520f;

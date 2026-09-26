@@ -1205,7 +1205,7 @@ footer > span:last-child {
   margin-top: var(--jobx-space-20px);
   gap: var(--jobx-space-10px);
 }
-.source-card > .secondary-button {
+.source-card > :is(.secondary-button, .ds-btn--secondary) {
   width: 100%;
   margin-top: var(--jobx-space-10px);
 }
@@ -1354,7 +1354,7 @@ footer > span:last-child {
   align-items: center;
   margin-top: var(--jobx-space-25px);
 }
-.editor-actions > button:not(.primary):not(.secondary-button) {
+.editor-actions > button:not(.primary):not(.secondary-button):not(.ds-btn) {
   font-size: var(--jobx-font-size-13px);
   color: #8491a4;
   padding: var(--jobx-space-7px);
@@ -3327,7 +3327,7 @@ button:disabled {
   color: #4f5562;
   margin-top: var(--jobx-space-10px);
 }
-.company-profile-editor > .secondary-button {
+.company-profile-editor > :is(.secondary-button, .ds-btn--secondary) {
   margin-top: var(--jobx-space-15px);
 }
 .company-profile-editor > .editor-logo-row {

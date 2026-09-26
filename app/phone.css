@@ -649,6 +649,11 @@
   .vacancy-summary > p {
     font-size: var(--jobx-font-size-12px);
   }
+  /* On a phone the label sits above its excerpt. */
+  .vacancy-summary dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--jobx-space-5px);
+  }
 
   .vacancy-source .job-evidence,
   .vacancy-page .job-evidence {

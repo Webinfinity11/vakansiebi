@@ -1,0 +1,685 @@
+/* Records: the history log, billing and saved CVs. Loaded by those components after admin.css
+   rules of the same names, so selectors here carry one extra class to win without !important. */
+
+/* ── History: one line per change — time · who · what · which vacancy · from → to ─────── */
+.history-days .history-row {
+  grid-template-columns: 40px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-1) var(--ds-space-3);
+  min-height: var(--ds-row-dense);
+  padding: var(--ds-space-1) 0;
+}
+.history-days .history-row > time {
+  padding-top: 0;
+}
+.history-days .history-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--ds-space-2);
+  min-width: 0;
+  margin: 0;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-sm);
+  overflow-wrap: anywhere;
+}
+.history-line > strong {
+  font-weight: var(--ds-weight-strong);
+}
+.history-target {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0 var(--ds-space-2);
+  min-width: 0;
+}
+/* Who did it: in the "all" scope a named pill, elsewhere a coloured initial. */
+.history-initial {
+  display: inline-grid;
+  text-decoration: none;
+  cursor: help;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-strong);
+  line-height: 1;
+}
+.history-initial[data-tone='admin'] {
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent-ink);
+}
+.history-initial[data-tone='employer'] {
+  background: var(--ds-violet-soft);
+  color: var(--ds-violet);
+}
+.history-initial[data-tone='source'] {
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+}
+.history-days .history-who {
+  align-self: center;
+}
+
+/* The change itself: value chips on the same line. */
+.history-days .history-diff {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-1) var(--ds-space-2);
+  margin: 0;
+}
+.history-move {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--ds-ink-3);
+}
+.history-fields {
+  color: var(--ds-ink-3);
+}
+.history-days .history-diff :is(s, ins) {
+  padding: 1px 6px;
+  border-radius: var(--ds-radius-sm);
+  line-height: 1.4;
+}
+
+/* The count of a same-minute burst, and the fold of a machine's repeated runs. */
+.history-days .history-count.ds-btn {
+  gap: 2px;
+  margin: 0;
+  padding-inline: var(--ds-space-2);
+  color: var(--ds-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.history-days .history-count.ds-btn[aria-expanded='true'] {
+  background: var(--ds-surface-muted);
+}
+.history-days .history-inner {
+  grid-column: 3 / -1;
+  margin: 0 0 var(--ds-space-1);
+}
+/* admin.css zeroes the inner list's padding with !important, so rows indent themselves. */
+.history-days .history-inner .history-row {
+  padding-inline-start: var(--ds-space-3);
+}
+
+/* On a wide screen every entry is one line: long titles and field lists end in an ellipsis,
+   the full text stays in the tooltip and one click away in the editor. */
+@media (min-width: 761px) {
+  .history-days .history-line {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+  .history-line > strong {
+    flex: none;
+  }
+  .history-target {
+    flex: 0 1 auto;
+    overflow: hidden;
+  }
+  .history-target > * {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .history-days .history-link {
+    flex: 0 1 auto;
+    min-width: 12ch;
+  }
+  .history-days .history-diff {
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .history-move {
+    flex: none;
+  }
+  /* The burst count sits inside the dense row instead of stretching it. */
+  .history-days .history-count.ds-btn {
+    min-height: calc(var(--ds-row-dense) - var(--ds-space-2));
+  }
+  .history-fields {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+.history-days .history-company {
+  color: var(--ds-ink-3);
+}
+.history-days .history-link {
+  position: relative;
+  font-weight: 500;
+}
+.history-days .history-link:hover {
+  color: var(--ds-accent);
+  text-decoration-color: currentColor;
+}
+.history-days .history-link:focus-visible {
+  outline: none;
+  border-radius: var(--ds-radius-sm);
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+
+@media (max-width: 760px) {
+  /* On a phone an entry takes two short lines: what and on which vacancy, then the change.
+     Each part stays on its line and ends in an ellipsis instead of breaking mid-word. */
+  .history-days .history-row {
+    position: relative;
+    grid-template-columns: 36px auto minmax(0, 1fr) auto;
+    gap: var(--ds-space-1) var(--ds-space-2);
+    min-height: var(--ds-row);
+  }
+  .history-days .history-row > time,
+  .history-days .history-row > :is(.history-initial, .history-who) {
+    align-self: start;
+    margin-top: 2px;
+  }
+  .history-days .history-line {
+    gap: 2px var(--ds-space-2);
+  }
+  .history-target {
+    display: flex;
+    flex: 1 1 100%;
+    gap: var(--ds-space-2);
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .history-target > *,
+  .history-fields {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .history-target > .history-company {
+    flex: 0 1 auto;
+  }
+  .history-days .history-diff {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .history-fields {
+    flex: 1 1 100%;
+  }
+  .history-days .history-diff :is(s, ins) {
+    white-space: nowrap;
+  }
+  /* The whole entry is the vacancy link's target, so the tap area is the row, 44px or more. */
+  .history-days .history-link {
+    position: static;
+  }
+  .history-days .history-link::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .history-days .history-count.ds-btn {
+    position: relative;
+    z-index: 1;
+    align-self: start;
+  }
+  .history-days .history-inner {
+    grid-column: 1 / -1;
+    margin-inline-start: 36px;
+  }
+}
+
+/* ── Billing: figures, then two full-width lists, then the payee read view, test last ──── */
+.records {
+  display: grid;
+  gap: var(--ds-space-4);
+}
+.records > .billing-totals {
+  margin: 0;
+}
+.records-card {
+  min-width: 0;
+  padding: var(--ds-space-4) var(--ds-space-5);
+}
+.records-card > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-space-2) var(--ds-space-4);
+}
+.records-card h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin: 0;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-section);
+  font-weight: var(--ds-weight-strong);
+}
+.records-card h2 > b {
+  padding: 0 7px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+}
+.records-card > header p {
+  max-width: 64ch;
+  margin: var(--ds-space-1) 0 0;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+  line-height: 1.6;
+}
+.records-empty {
+  margin: var(--ds-space-2) 0 0;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+}
+
+/* Rows of a list: a name column that takes the room, then fixed cells lined up. */
+.records-rows {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  margin: var(--ds-space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--ds-text-sm);
+}
+.records-rows--invoices {
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+}
+.records-rows > li {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  gap: var(--ds-space-4);
+  min-height: var(--ds-row);
+  padding: var(--ds-space-2) 0;
+  border-top: 1px solid var(--ds-line);
+  color: var(--ds-ink-2);
+}
+.records-rows > li:first-child {
+  border-top: 0;
+}
+.records-rows > .records-head {
+  min-height: 0;
+  padding: 0 0 var(--ds-space-2);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-strong);
+}
+.records-head + li {
+  border-top: 1px solid var(--ds-line);
+}
+.records-main {
+  display: grid;
+  min-width: 0;
+}
+.records-main > * {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.records-main > strong,
+.records-strong {
+  color: var(--ds-ink);
+  font-weight: var(--ds-weight-strong);
+}
+.records-main > span {
+  color: var(--ds-ink-3);
+}
+.records-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+.records-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.records-cell[data-soon] {
+  color: var(--ds-warning);
+  font-weight: var(--ds-weight-strong);
+}
+.records-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+}
+.records-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ds-space-2);
+  margin-top: var(--ds-space-3);
+  padding-top: var(--ds-space-3);
+  border-top: 1px solid var(--ds-line);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.records-pages > span {
+  margin-inline-end: auto;
+}
+
+/* The payee: read first, edited on request. */
+.records-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--ds-space-3) var(--ds-space-5);
+  margin: var(--ds-space-4) 0 0;
+}
+.records-values dt {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+}
+.records-values dd {
+  margin: 2px 0 0;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-strong);
+  overflow-wrap: anywhere;
+}
+.records-values dd[data-mono] {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.records-form {
+  display: grid;
+  gap: var(--ds-space-4);
+  margin-top: var(--ds-space-4);
+}
+.records-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--ds-space-3) var(--ds-space-4);
+}
+.records-fields label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+}
+.records-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+.records-hint {
+  margin: 0;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+}
+.records-message {
+  display: block;
+  margin: var(--ds-space-3) 0 0;
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+}
+.records-form .records-message {
+  margin: 0;
+}
+/* A primary that cannot be pressed yet reads as a quiet grey button, not a faded blue one. */
+.records .ds-btn--primary:disabled {
+  border-color: var(--ds-line);
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink-3);
+  opacity: 1;
+}
+
+/* The developer's test tool, folded away under the business data. */
+.records-test {
+  padding-block: 0;
+}
+.records-test > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-height: var(--ds-row);
+  color: var(--ds-ink);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
+  list-style: none;
+  cursor: pointer;
+}
+.records-test > summary::-webkit-details-marker {
+  display: none;
+}
+.records-test > summary > span {
+  color: var(--ds-ink-3);
+  font-weight: 400;
+}
+.records-test > summary > svg {
+  color: var(--ds-ink-3);
+  transition: transform var(--ds-duration-fast) var(--ds-ease);
+}
+.records-test[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.records-test > summary:focus-visible {
+  outline: none;
+  border-radius: var(--ds-radius-md);
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.records-test[open] {
+  padding-bottom: var(--ds-space-4);
+}
+.records-test > .records-form {
+  margin-top: 0;
+}
+
+/* A failed load says why and offers the retry in place. */
+.records-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2) var(--ds-space-4);
+  margin: var(--ds-space-3) 0 0;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border: 1px solid var(--ds-danger-soft);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
+  font-size: var(--ds-text-sm);
+}
+.records > .records-error {
+  margin: 0;
+}
+.records-error > p {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .records-card {
+    padding: var(--ds-space-4);
+  }
+  .records-test {
+    padding-block: 0;
+  }
+  /* Each row becomes a small card: the name on top, its cells and actions below. */
+  .records-rows,
+  .records-rows--invoices {
+    display: block;
+  }
+  .records-rows > li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2) var(--ds-space-3);
+    padding: var(--ds-space-3) 0;
+  }
+  .records-rows > .records-head {
+    display: none;
+  }
+  .records-head + li {
+    border-top: 0;
+  }
+  .records-main {
+    flex: 1 1 100%;
+    order: -1;
+  }
+  .records-rows--invoices .records-main {
+    flex-basis: calc(100% - 8ch);
+  }
+  .records-actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+  .records-actions > .ds-btn {
+    flex: 1 1 0;
+  }
+  .records .ds-input {
+    min-height: var(--ds-control-touch);
+    font-size: var(--ds-text-lg);
+  }
+  .records-form-actions > .ds-btn {
+    flex: 1 1 0;
+  }
+  .records-pages > .ds-btn {
+    flex: 1 1 0;
+  }
+  .records-pages > span {
+    flex: 1 1 100%;
+  }
+}
+
+/* ── Saved CVs: who it is, then the facts; view and delete side by side ────────────────── */
+.resumes-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--ds-space-2);
+  margin: 0;
+  min-width: 0;
+}
+.resumes-who > strong {
+  color: var(--ds-ink);
+  font-size: var(--ds-text-md);
+  font-weight: var(--ds-weight-strong);
+  overflow-wrap: anywhere;
+}
+.resumes-who > span {
+  color: var(--ds-ink-3);
+  overflow-wrap: anywhere;
+}
+.resumes-list .reports-meta {
+  margin-top: 2px;
+}
+/* A destructive action in a row: ghost weight, danger colour, the same height as its peer. */
+.ds-btn--ghost.records-danger {
+  color: var(--ds-danger);
+}
+.ds-btn--ghost.records-danger:hover:not(:disabled) {
+  background: var(--ds-danger-soft);
+}
+.resumes-list .reports-actions > .ds-btn[aria-pressed='true'] {
+  border-color: var(--ds-accent);
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent-ink);
+}
+@media (max-width: 760px) {
+  .resumes-list .reports-actions {
+    flex: 1 1 100%;
+  }
+  .resumes-list .reports-actions > .ds-btn {
+    flex: 1 1 0;
+  }
+}
+
+/* What a CV's holder did on our vacancies, above the CV itself. */
+.resume-activity {
+  display: grid;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+}
+.resume-activity h3 {
+  margin: 0;
+  font-size: var(--ds-text-section);
+}
+.resume-activity p {
+  margin: 0;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+}
+.resume-activity ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.resume-activity li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ds-space-1) var(--ds-space-2);
+  padding: var(--ds-space-2) 0;
+  border-top: 1px solid var(--ds-line-soft);
+  font-size: var(--ds-text-sm);
+}
+.resume-activity li:first-child {
+  border-top: 0;
+}
+.resume-activity li > span:last-of-type {
+  flex: 1 1 200px;
+  min-width: 0;
+  color: var(--ds-ink-2);
+}
+.resume-activity time {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Downloading an open CV prints the sheet alone, A4, the way /cv saves its PDF: the
+   browser's "Save as PDF" is the download. */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  body:has(.resumes-sheet) * {
+    visibility: hidden;
+  }
+  body:has(.resumes-sheet) .resumes-sheet,
+  body:has(.resumes-sheet) .resumes-sheet * {
+    visibility: visible;
+  }
+  body:has(.resumes-sheet) .resumes-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 210mm;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    box-shadow: none;
+  }
+  body:has(.resumes-sheet) .resumes-sheet .cv-page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    box-shadow: none;
+    transform: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  body:has(.resumes-sheet) .cv-page-break {
+    display: none !important;
+  }
+}
+
+.resumes-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}

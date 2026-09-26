@@ -2,7 +2,8 @@
 import { SkeletonRows } from '../skeleton';
 import { adminClock, adminDay } from '@/lib/admin-format';
 import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronUp, RefreshCw } from 'lucide-react';
+import './admin-records.css';
 import { placementLabels, type PlacementTier } from '@/lib/placement';
 import type { AuditEntry } from '@/lib/server/audit-history';
 
@@ -37,6 +38,7 @@ const actions: Record<string, string> = {
   'source.enriched': 'დეტალები შეივსო',
   'source.city_enriched': 'ქალაქი შეივსო',
   'source.logo_enriched': 'ლოგო შეივსო',
+  'source.city_normalized': 'ქალაქი გასწორდა',
 };
 const statuses: Record<string, string> = {
   pending: 'შემოტანილი',
@@ -96,6 +98,26 @@ const fieldNames: Record<string, string> = {
 /* Internal bookkeeping fields say nothing to a person reading the history. */
 const quietFields = new Set(['version', 'warnings', 'source', 'url']);
 
+/* Several entries on one vacancy within the same minute are one piece of work (publish, then
+   the edit saved with it): the net change reads from the oldest before to the newest after. */
+function merged(unit: AuditEntry[]): AuditEntry {
+  if (unit.length === 1) return unit[0];
+  const newest = unit[0];
+  const oldest = unit.at(-1)!;
+  return {
+    ...newest,
+    beforeStatus: oldest.beforeStatus,
+    afterStatus:
+      unit.find((e) => e.afterStatus && e.afterStatus !== e.beforeStatus)
+        ?.afterStatus ?? newest.afterStatus,
+    reason: unit.find((e) => e.reason)?.reason ?? null,
+    tier: unit.find((e) => e.tier)?.tier ?? null,
+    days: unit.find((e) => e.tier)?.days ?? null,
+    amount: unit.find((e) => e.amount)?.amount ?? null,
+    fields: unit.flatMap((e) => e.fields),
+  };
+}
+
 function Change({ e }: { e: AuditEntry }) {
   const fields = [
     ...new Set(
@@ -109,29 +131,30 @@ function Change({ e }: { e: AuditEntry }) {
     : e.amount
       ? `${e.amount} ₾`
       : '';
-  if (!fields.length && !tier && !e.reason && e.afterStatus === e.beforeStatus)
-    return null;
+  const status = e.afterStatus && e.afterStatus !== e.beforeStatus;
+  if (!fields.length && !tier && !e.reason && !status) return null;
   return (
-    <div className="history-diff">
-      {e.afterStatus && e.afterStatus !== e.beforeStatus && (
-        <>
+    <span className="history-diff">
+      {status && (
+        <span className="history-move">
           {e.beforeStatus && (
             <>
               <s>{statuses[e.beforeStatus] ?? e.beforeStatus}</s>
+              <ChevronRight size={14} aria-label="შემდეგ" />
             </>
           )}
-          <ins>{statuses[e.afterStatus] ?? e.afterStatus}</ins>
-        </>
+          <ins>{statuses[e.afterStatus!] ?? e.afterStatus}</ins>
+        </span>
       )}
       {e.reason && <span>{reasons[e.reason] ?? e.reason}</span>}
       {tier && <ins>{tier}</ins>}
       {!!fields.length && (
-        <span>
+        <span className="history-fields" title={fields.join(', ')}>
           შეიცვალა: {fields.slice(0, 6).join(', ')}
           {fields.length > 6 && ` +${fields.length - 6}`}
         </span>
       )}
-    </div>
+    </span>
   );
 }
 
@@ -186,15 +209,34 @@ function useHistory(scope: string, job?: string) {
   };
 }
 
-type Row =
-  | { kind: 'one'; entry: AuditEntry }
-  | { kind: 'many'; entries: AuditEntry[] };
+/* One unit is one line: a single entry, or a same-minute burst on one vacancy by one actor. */
+type Unit = AuditEntry[];
+type Row = { kind: 'one'; unit: Unit } | { kind: 'many'; units: Unit[] };
+
+function units(entries: AuditEntry[]): Unit[] {
+  const out: Unit[] = [];
+  for (const entry of entries) {
+    const last = out.at(-1)?.[0];
+    if (
+      last &&
+      entry.jobId &&
+      last.jobId === entry.jobId &&
+      last.actor === entry.actor &&
+      adminDay(last.createdAt) === adminDay(entry.createdAt) &&
+      adminClock(last.createdAt) === adminClock(entry.createdAt)
+    )
+      out.at(-1)!.push(entry);
+    else out.push([entry]);
+  }
+  return out;
+}
 
 /* Machines repeat themselves: three or more automatic entries of one kind in a row become a
    single line that opens on request, so a person's own decisions are not buried. */
 function rows(entries: AuditEntry[], fold: boolean): Row[] {
   const out: Row[] = [];
-  for (const entry of entries) {
+  for (const unit of units(entries)) {
+    const entry = unit[0];
     const last = out.at(-1);
     const same = (other: AuditEntry) =>
       other.action === entry.action &&
@@ -205,115 +247,162 @@ function rows(entries: AuditEntry[], fold: boolean): Row[] {
       actor(entry.actor).tone !== 'admin' &&
       actor(entry.actor).tone !== 'employer'
     ) {
-      if (last?.kind === 'many' && same(last.entries[0])) {
-        last.entries.push(entry);
+      if (last?.kind === 'many' && same(last.units[0][0])) {
+        last.units.push(unit);
         continue;
       }
-      if (last?.kind === 'one' && same(last.entry)) {
-        out[out.length - 1] = { kind: 'many', entries: [last.entry, entry] };
+      if (last?.kind === 'one' && same(last.unit[0])) {
+        out[out.length - 1] = { kind: 'many', units: [last.unit, unit] };
         continue;
       }
     }
-    out.push({ kind: 'one', entry });
+    out.push({ kind: 'one', unit });
   }
   // A pair is clearer shown than folded.
   return out.flatMap((row) =>
-    row.kind === 'many' && row.entries.length < 3
-      ? row.entries.map((entry) => ({ kind: 'one' as const, entry }))
+    row.kind === 'many' && row.units.length < 3
+      ? row.units.map((unit) => ({ kind: 'one' as const, unit }))
       : [row],
   );
 }
 
-function Entry({
-  e,
-  showJob,
-  onOpenJob,
-}: {
-  e: AuditEntry;
-  showJob: boolean;
-  onOpenJob?: (id: string) => void;
-}) {
-  const who = actor(e.actor);
-  return (
-    <li className="history-row">
-      <time dateTime={e.createdAt}>{adminClock(e.createdAt)}</time>
+/* In the mixed "all" scope the actor is named; elsewhere the scope already says who, so a
+   coloured initial is enough to tell a person from an employer. */
+function Who({ value, full }: { value: string; full: boolean }) {
+  const who = actor(value);
+  if (full)
+    return (
       <span className="history-who" data-tone={who.tone}>
         {who.name}
       </span>
-      <div className="history-body">
-        <p>
-          <strong>{actions[e.action] ?? e.action}</strong>
-          {showJob && e.jobId && (
-            <>
-              {' · '}
-              {onOpenJob ? (
-                <button
-                  type="button"
-                  className="history-link"
-                  onClick={() => onOpenJob(e.jobId!)}
-                >
-                  {e.title || 'ვაკანსია'}
-                </button>
-              ) : (
-                e.title
-              )}
-              {e.company && (
-                <span className="history-company"> · {e.company}</span>
-              )}
-            </>
-          )}
-        </p>
+    );
+  return (
+    <abbr className="history-initial" data-tone={who.tone} title={who.name}>
+      {who.name.slice(0, 1).toUpperCase()}
+    </abbr>
+  );
+}
+
+function Entry({
+  unit,
+  showJob,
+  showActor,
+  onOpenJob,
+}: {
+  unit: Unit;
+  showJob: boolean;
+  showActor: boolean;
+  onOpenJob?: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const e = merged(unit);
+  const label = [...new Set(unit.map((x) => actions[x.action] ?? x.action))]
+    .reverse()
+    .join(' · ');
+  return (
+    <li className="history-row" data-burst={unit.length > 1 || undefined}>
+      <time dateTime={e.createdAt}>{adminClock(e.createdAt)}</time>
+      <Who value={e.actor} full={showActor} />
+      <p className="history-line">
+        <strong>{label}</strong>
+        {showJob && e.jobId && (
+          <span className="history-target">
+            {onOpenJob ? (
+              <button
+                type="button"
+                className="history-link"
+                title={e.title || undefined}
+                onClick={() => onOpenJob(e.jobId!)}
+              >
+                {e.title || 'ვაკანსია'}
+              </button>
+            ) : (
+              e.title
+            )}
+            {e.company && <span className="history-company">{e.company}</span>}
+          </span>
+        )}
         <Change e={e} />
-      </div>
+      </p>
+      {unit.length > 1 && (
+        <button
+          type="button"
+          className="history-count ds-btn ds-btn--ghost ds-btn--sm"
+          aria-expanded={open}
+          aria-label={`${unit.length} ჩანაწერი ერთ წუთში — ${open ? 'დაკეცვა' : 'გაშლა'}`}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {unit.length}
+          {open ? (
+            <ChevronUp size={14} aria-hidden="true" />
+          ) : (
+            <ChevronDown size={14} aria-hidden="true" />
+          )}
+        </button>
+      )}
+      {open && (
+        <ul className="history-inner">
+          {unit.map((x) => (
+            <Entry
+              key={x.id}
+              unit={[x]}
+              showJob={false}
+              showActor={showActor}
+            />
+          ))}
+        </ul>
+      )}
     </li>
   );
 }
 
 function Folded({
-  entries,
+  units: list,
   showJob,
+  showActor,
   onOpenJob,
 }: {
-  entries: AuditEntry[];
+  units: Unit[];
   showJob: boolean;
+  showActor: boolean;
   onOpenJob?: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const first = entries[0];
-  const who = actor(first.actor);
+  const first = list[0][0];
   return (
     <li className="history-row history-folded">
       <time dateTime={first.createdAt}>{adminClock(first.createdAt)}</time>
-      <span className="history-who" data-tone={who.tone}>
-        {who.name}
-      </span>
-      <div className="history-body">
-        <p>
-          <strong>
-            {actions[first.action] ?? first.action} — {entries.length} ვაკანსია
-          </strong>
-        </p>
-        <button
-          type="button"
-          className="history-toggle ds-btn ds-btn--ghost ds-btn--sm"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? 'დაკეცვა' : 'ჩამონათვალის გაშლა'}
-          {open ? (
-            <ChevronUp size={16} aria-hidden="true" />
-          ) : (
-            <ChevronDown size={16} aria-hidden="true" />
-          )}
-        </button>
-        {open && (
-          <ul className="history-inner">
-            {entries.map((e) => (
-              <Entry key={e.id} e={e} showJob={showJob} onOpenJob={onOpenJob} />
-            ))}
-          </ul>
+      <Who value={first.actor} full={showActor} />
+      <p className="history-line">
+        <strong>{actions[first.action] ?? first.action}</strong>
+        <span className="history-company">{list.length} ვაკანსია</span>
+      </p>
+      <button
+        type="button"
+        className="history-count ds-btn ds-btn--ghost ds-btn--sm"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? 'დაკეცვა' : 'გაშლა'}
+        {open ? (
+          <ChevronUp size={14} aria-hidden="true" />
+        ) : (
+          <ChevronDown size={14} aria-hidden="true" />
         )}
-      </div>
+      </button>
+      {open && (
+        <ul className="history-inner">
+          {list.map((unit) => (
+            <Entry
+              key={unit[0].id}
+              unit={unit}
+              showJob={showJob}
+              showActor={showActor}
+              onOpenJob={onOpenJob}
+            />
+          ))}
+        </ul>
+      )}
     </li>
   );
 }
@@ -321,11 +410,13 @@ function Folded({
 function Entries({
   entries,
   showJob,
+  showActor,
   onOpenJob,
   fold = true,
 }: {
   entries: AuditEntry[];
   showJob: boolean;
+  showActor: boolean;
   onOpenJob?: (id: string) => void;
   fold?: boolean;
 }) {
@@ -345,16 +436,18 @@ function Entries({
             {rows(list, fold).map((row) =>
               row.kind === 'one' ? (
                 <Entry
-                  key={row.entry.id}
-                  e={row.entry}
+                  key={row.unit[0].id}
+                  unit={row.unit}
                   showJob={showJob}
+                  showActor={showActor}
                   onOpenJob={onOpenJob}
                 />
               ) : (
                 <Folded
-                  key={row.entries[0].id}
-                  entries={row.entries}
+                  key={row.units[0][0].id}
+                  units={row.units}
                   showJob={showJob}
+                  showActor={showActor}
                   onOpenJob={onOpenJob}
                 />
               ),
@@ -388,7 +481,12 @@ export function RecentChanges({
   if (!h.entries.length)
     return <p className="overview-empty">ჯერ არაფერი შეცვლილა.</p>;
   return (
-    <Entries entries={h.entries.slice(0, 7)} showJob onOpenJob={onOpenJob} />
+    <Entries
+      entries={h.entries.slice(0, 7)}
+      showJob
+      showActor={false}
+      onOpenJob={onOpenJob}
+    />
   );
 }
 
@@ -473,7 +571,12 @@ function HistoryList({
       {!h.loading && !h.entries.length && !h.error && (
         <p className="history-empty">ამ სიაში ჩანაწერი ჯერ არ არის.</p>
       )}
-      <Entries entries={h.entries} showJob={!job} onOpenJob={onOpenJob} />
+      <Entries
+        entries={h.entries}
+        showJob={!job}
+        showActor={scope === 'all'}
+        onOpenJob={onOpenJob}
+      />
       {h.loading && <SkeletonRows rows={4} label="ისტორია იტვირთება" />}
       {h.more && !h.loading && (
         <button

@@ -353,7 +353,7 @@
 :root[data-theme='dark'] .duplicates p {
   color: #aca290;
 }
-:root[data-theme='dark'] .editor-actions > button:not(.primary):not(.secondary-button) {
+:root[data-theme='dark'] .editor-actions > button:not(.primary):not(.secondary-button):not(.ds-btn) {
   color: #939caa;
 }
 :root[data-theme='dark'] {
@@ -1378,12 +1378,14 @@
 :root[data-theme='dark'] .vacancy-pay-details p {
   color: #b7d3c6;
 }
+:root[data-theme='dark'] .vacancy-summary dl {
+  border-top: 1px solid #252d3b;
+}
 :root[data-theme='dark'] .vacancy-summary dl > div {
-  border-left: 3px solid #b3c5f0;
-  background: #232c3e;
+  border-bottom: 1px solid #252d3b;
 }
 :root[data-theme='dark'] .vacancy-summary dt {
-  color: #9aa7ba;
+  color: #909bac;
 }
 :root[data-theme='dark'] .vacancy-summary dd {
   color: var(--jobx-color-263a58-text);
@@ -1393,7 +1395,6 @@
 }
 :root[data-theme='dark'] .vacancy-summary dl > .summary-conflict {
   background: #45381c;
-  border-left-color: #e5c080;
 }
 :root[data-theme='dark'] .vacancy-summary .summary-conflict dt {
   color: #e6c99e;

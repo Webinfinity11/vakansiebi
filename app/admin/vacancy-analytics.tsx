@@ -1,16 +1,25 @@
 'use client';
+import { Download, FileText, Mail, Phone, X } from 'lucide-react';
 import { SkeletonRows } from '../skeleton';
 import { useEffect, useState } from 'react';
+import { adminTime } from '@/lib/admin-format';
+import { downloadCv, type Cv } from '@/lib/cv';
+import { CvSheet } from '../cv/cv-builder';
+import '../cv.css';
 import { placementLabels, type PlacementTier } from '@/lib/placement';
 import {
   contactKinds,
   contacts,
   type VacancyAnalytics,
   type VacancyDay,
+  type ResumeContact,
   type VacancyEventKind,
 } from '@/lib/vacancy-analytics';
 
-type WithSeries = VacancyAnalytics & { series?: VacancyDay[] };
+type WithSeries = VacancyAnalytics & {
+  series?: VacancyDay[];
+  people?: ResumeContact[];
+};
 
 export function useVacancyAnalytics(
   ids: string[],
@@ -55,6 +64,136 @@ const labels: Record<VacancyEventKind, string> = {
   save: 'შენახვა',
 };
 const whole = new Intl.NumberFormat('ka-GE');
+const pressNames: Record<ResumeContact['kinds'][number]['kind'], string> = {
+  cv: 'CV-ის ღილაკი',
+  call: 'დარეკვა',
+  apply: 'განაცხადი',
+};
+
+/* Who pressed a contact button while holding a CV built on JOBX. Everyone else stays a
+   count above: a reader without a JOBX CV is never known. */
+function ResumeContacts({ people }: { people: ResumeContact[] }) {
+  const [open, setOpen] = useState<{
+    id: string;
+    cv?: Cv;
+    error?: string;
+  } | null>(null);
+  async function show(id: string) {
+    setOpen({ id });
+    try {
+      const response = await fetch(`/api/admin/resumes?id=${id}`, {
+        cache: 'no-store',
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw Error(body.error || 'რეზიუმე ვერ ჩაიტვირთა');
+      setOpen({ id, cv: body.cv });
+    } catch (e) {
+      setOpen({
+        id,
+        error: e instanceof Error ? e.message : 'რეზიუმე ვერ ჩაიტვირთა',
+      });
+    }
+  }
+  return (
+    <div className="resume-contacts">
+      <h4>
+        JOBX-ის CV-ით დაკავშირებული <span>{whole.format(people.length)}</span>
+      </h4>
+      {!people.length ? (
+        <p className="admin-analytics-note">
+          ჯერ არავინ. აქ ჩნდება ის, ვისაც CV JOBX-ზე აქვს შექმნილი და ამ
+          ვაკანსიაზე დარეკვას, CV-ის გაგზავნას ან განაცხადს დააჭირა.
+        </p>
+      ) : (
+        <ul>
+          {people.map((person) => (
+            <li key={person.resumeId}>
+              <div>
+                <strong>{person.fullName || 'სახელი არ წერია'}</strong>
+                {(person.title || person.city) && (
+                  <small>
+                    {[person.title, person.city].filter(Boolean).join(' · ')}
+                  </small>
+                )}
+                <small>
+                  {person.kinds
+                    .map(
+                      (k) =>
+                        pressNames[k.kind] +
+                        (k.presses > 1 ? ` ×${k.presses}` : ''),
+                    )
+                    .join(', ')}{' '}
+                  · {adminTime(person.lastAt)}
+                </small>
+              </div>
+              <div className="resume-contact-actions">
+                {person.phone && (
+                  <a
+                    className="ds-btn ds-btn--ghost ds-btn--sm"
+                    href={`tel:${person.phone.replace(/[^\d+]/g, '')}`}
+                  >
+                    <Phone size={16} aria-hidden="true" />
+                    {person.phone}
+                  </a>
+                )}
+                {person.email && (
+                  <a
+                    className="ds-btn ds-btn--ghost ds-btn--sm"
+                    href={`mailto:${person.email}`}
+                  >
+                    <Mail size={16} aria-hidden="true" />
+                    {person.email}
+                  </a>
+                )}
+                <button
+                  type="button"
+                  className="ds-btn ds-btn--secondary ds-btn--sm"
+                  onClick={() => void show(person.resumeId)}
+                >
+                  <FileText size={16} aria-hidden="true" />
+                  CV
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && (
+        <div className="resumes-preview ds-appear">
+          <div className="resumes-preview-actions">
+            {open.cv && (
+              <button
+                type="button"
+                className="ds-btn ds-btn--primary ds-btn--sm"
+                onClick={() => open.cv && downloadCv(open.cv.fullName)}
+              >
+                <Download size={16} aria-hidden="true" />
+                PDF-ად ჩამოტვირთვა
+              </button>
+            )}
+            <button
+              type="button"
+              className="ds-btn ds-btn--secondary ds-btn--sm"
+              onClick={() => setOpen(null)}
+            >
+              <X size={16} aria-hidden="true" />
+              დახურვა
+            </button>
+          </div>
+          {open.error ? (
+            <p role="alert">{open.error}</p>
+          ) : !open.cv ? (
+            <SkeletonRows rows={4} block label="რეზიუმე იტვირთება" />
+          ) : (
+            <div className="resumes-sheet">
+              <CvSheet cv={open.cv} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 /* Written out rather than left to Intl: browsers without full Georgian locale data print
    "M09 24" for a short Georgian month. */
 const months = [
@@ -258,10 +397,11 @@ export function VacancyAnalyticsBlock({
               );
             })}
           </dl>
+          {data.people && <ResumeContacts people={data.people} />}
           <p className="admin-analytics-note">
-            მოვლენების რაოდენობაა და არა უნიკალური ადამიანების: ერთმა ადამიანმა
-            შეიძლება რამდენჯერმე ნახოს ან რამდენიმე ღილაკს დააჭიროს. ღილაკზე
-            დაჭერა გაგზავნას ან დაკავშირებას არ ადასტურებს.
+            ერთ ვიზიტში ვაკანსიის ნახვა და თითოეული ღილაკი ერთხელ ითვლება;
+            ბოტები არ ითვლება. სხვა დღეს დაბრუნებული ადამიანი ხელახლა ითვლება.
+            ღილაკზე დაჭერა გაგზავნას ან დაკავშირებას არ ადასტურებს.
           </p>
         </>
       )}
@@ -276,6 +416,8 @@ type Performance = VacancyAnalytics & {
   status: string;
   tier: PlacementTier;
   series: VacancyDay[];
+  /** How many JOBX-built CVs reached this vacancy. */
+  people: number;
 };
 const statusNames: Record<string, string> = {
   pending: 'დადასტურებას ელოდება',
@@ -364,7 +506,7 @@ export function SubmissionPerformance({
         </span>
         <button
           type="button"
-          className="secondary-button"
+          className="ds-btn ds-btn--secondary"
           onClick={() => setVersion((n) => n + 1)}
         >
           განახლება
@@ -419,6 +561,13 @@ export function SubmissionPerformance({
                   </th>
                   <th scope="col" className="num">
                     შენახვა
+                  </th>
+                  <th
+                    scope="col"
+                    className="num"
+                    title="JOBX-ზე შექმნილი CV-ით დაკავშირებული ადამიანები"
+                  >
+                    CV
                   </th>
                 </tr>
               </thead>
@@ -476,6 +625,9 @@ export function SubmissionPerformance({
                       </td>
                       <td data-label="შენახვა" className="num">
                         {whole.format(r.total.save)}
+                      </td>
+                      <td data-label="CV" className="num">
+                        {whole.format(r.people)}
                       </td>
                     </tr>
                   );

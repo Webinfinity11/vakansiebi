@@ -16,7 +16,7 @@
   letter-spacing: 0.08em;
 }
 .scraper-overview h2 {
-  font-size: 22px;
+  font-size: var(--ds-text-page);
   color: var(--ds-ink);
   margin: 8px 0;
 }
@@ -173,7 +173,7 @@
   opacity: 0.72;
 }
 .admin-stats button strong {
-  font-size: 21px;
+  font-size: var(--ds-text-num);
 }
 .automation-state {
   display: grid;
@@ -252,7 +252,7 @@
 }
 .admin-analytics-totals dd {
   margin: 4px 0 0;
-  font-size: 22px;
+  font-size: var(--ds-text-num);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -537,7 +537,7 @@
 }
 .scraper-results-heading h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--ds-text-section);
 }
 .scraper-results-heading span {
   color: var(--ds-ink-3);
@@ -559,7 +559,7 @@
 }
 .scraper-metrics dd {
   margin: 6px 0 0;
-  font-size: 30px;
+  font-size: var(--ds-text-num);
   font-weight: 750;
 }
 .scraper-preferences {
@@ -747,7 +747,7 @@
 }
 .billing-totals dd {
   margin: 2px 0 0;
-  font-size: 21px;
+  font-size: var(--ds-text-num);
   font-weight: 700;
 }
 .billing-totals small {
@@ -787,7 +787,7 @@
 }
 .reports-heading h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--ds-text-section);
 }
 .reports-list {
   list-style: none;
@@ -1017,7 +1017,7 @@
 .admin-page-head h1 {
   margin: 0;
   color: var(--ds-ink);
-  font-size: 22px;
+  font-size: var(--ds-text-page);
   font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.3;
@@ -1141,9 +1141,6 @@
   .admin-main {
     padding: 16px 16px 48px;
   }
-  .admin-page-head h1 {
-    font-size: 20px;
-  }
   .admin-toast {
     right: 16px;
     left: 16px;
@@ -1198,7 +1195,7 @@
 .submission-edit > summary + * {
   margin-top: 16px;
 }
-.submission-actions .primary {
+.submission-actions :is(.primary, .ds-btn--primary) {
   flex: 1;
 }
 @media (max-width: 560px) {
@@ -1284,7 +1281,7 @@
   align-items: baseline;
   gap: 8px;
   margin: 0 0 6px;
-  font-size: 15px;
+  font-size: var(--ds-text-section);
 }
 .attention-word {
   padding: 2px 8px;
@@ -1363,7 +1360,7 @@
   font-size: var(--ds-text-xs);
 }
 .vacancy-kpis strong {
-  font-size: 22px;
+  font-size: var(--ds-text-num);
 }
 .vacancy-trend {
   margin: 0 0 16px;
@@ -1410,6 +1407,54 @@
   gap: 8px;
   margin: 0;
   font-size: var(--ds-text-sm);
+}
+.resume-contacts {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ds-line);
+}
+.resume-contacts h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--ds-text-sm);
+}
+.resume-contacts h4 span {
+  color: var(--ds-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.resume-contacts ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.resume-contacts li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-sm);
+}
+.resume-contacts li > div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.resume-contacts li small {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+}
+.resume-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .vacancy-funnel-track {
   flex: 1 1 auto;
@@ -1543,7 +1588,7 @@
 }
 .vacancy-performance-kpis dd {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--ds-text-num);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -1623,7 +1668,7 @@
 }
 .overview-kpis {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 .overview-kpis button {
@@ -1647,7 +1692,7 @@
   line-height: 1.5;
 }
 .overview-kpis strong {
-  font-size: 24px;
+  font-size: var(--ds-text-num);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
@@ -1690,7 +1735,7 @@
 }
 .overview-card > header h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--ds-text-section);
   font-weight: 600;
 }
 .overview-card > header span {
@@ -1799,11 +1844,11 @@
   border-radius: 50%;
   background: var(--ds-success);
 }
-.overview-health [data-tone='bad'] {
+.overview-health [data-tone='failed'] {
   border-color: color-mix(in srgb, var(--ds-danger) 26%, var(--ds-surface));
   background: var(--ds-danger-soft);
 }
-.overview-health [data-tone='bad'] i {
+.overview-health :is([data-tone='bad'], [data-tone='failed']) i {
   background: var(--ds-danger);
 }
 .overview-health [data-tone='amber'] i {
@@ -1822,7 +1867,7 @@
 }
 @media (max-width: 1180px) {
   .overview-kpis {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .overview-cols {
     grid-template-columns: minmax(0, 1fr);
@@ -2133,9 +2178,6 @@
   min-width: 0;
   margin-block: 0;
 }
-.admin-shell .admin-page-head h1 {
-  font-size: 24px;
-}
 .admin-shell .admin-page-head p {
   margin-top: var(--ds-space-1);
 }
@@ -2214,7 +2256,7 @@
     gap: 20px;
   }
   .admin-shell .admin-page-head h1 {
-    font-size: 21px;
+    font-size: var(--ds-text-xl);
   }
   .admin-shell :is(.reports-section, .posting) {
     padding: var(--ds-space-4);
@@ -2427,7 +2469,7 @@
 }
 .admin-shell .admin-job-text strong {
   color: var(--ds-ink);
-  font-size: 15px;
+  font-size: var(--ds-text-section);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -2615,7 +2657,7 @@ details[open] > summary > .admin-summary-mark {
   gap: var(--ds-space-2);
   margin: 0;
   color: var(--ds-ink);
-  font-size: 15px;
+  font-size: var(--ds-text-section);
   font-weight: var(--ds-weight-strong);
 }
 .admin-shell .reports-heading > h2 > b {
@@ -2689,7 +2731,7 @@ details[open] > summary > .admin-summary-mark {
 }
 .admin-shell .billing-totals dd {
   color: var(--ds-ink);
-  font-size: 22px;
+  font-size: var(--ds-text-num);
   font-variant-numeric: tabular-nums;
 }
 .admin-shell .billing-totals small {
@@ -2700,7 +2742,7 @@ details[open] > summary > .admin-summary-mark {
 .admin-shell .billing-settings h2 {
   margin: 0 0 var(--ds-space-1);
   color: var(--ds-ink);
-  font-size: 15px;
+  font-size: var(--ds-text-section);
   font-weight: var(--ds-weight-strong);
 }
 .admin-shell .billing-invoices {
@@ -2820,7 +2862,7 @@ details[open] > summary > .admin-summary-mark {
 }
 .admin-shell .admin-stats button strong {
   color: var(--ds-ink);
-  font-size: 22px;
+  font-size: var(--ds-text-num);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -2879,7 +2921,7 @@ details[open] > summary > .admin-summary-mark {
 .edit-sheet [data-slot='sheet-title'].detail-title {
   margin-top: var(--ds-space-2);
   color: var(--ds-ink);
-  font-size: 20px;
+  font-size: var(--ds-text-xl);
   font-weight: 700;
   line-height: 1.4;
 }
@@ -3196,7 +3238,7 @@ body:has(.admin-shell) .job-choice-options {
 .admin-shell .scraper-metrics dd {
   margin-top: 2px;
   color: var(--ds-ink);
-  font-size: 24px;
+  font-size: var(--ds-text-num);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -3237,7 +3279,7 @@ body:has(.admin-shell) .job-choice-options {
 @media (max-width: 760px) {
   /* The vacancy toolbar on a phone: the action and the search each take a row, the two filters
      and the refresh share the third. */
-  .admin-shell .admin-toolbar > :is(.primary, .admin-search) {
+  .admin-shell .admin-toolbar > :is(.admin-bulk, .admin-search) {
     flex: 1 1 100%;
   }
   .admin-shell .admin-toolbar > .choice {
@@ -3289,7 +3331,7 @@ body:has(.admin-shell) .job-choice-options {
 .login-page .login-box h1 {
   margin: 0;
   color: var(--ds-ink);
-  font-size: 22px;
+  font-size: var(--ds-text-num);
   font-weight: 700;
 }
 .login-page .login-box > p:not(.notice) {
@@ -3354,5 +3396,268 @@ body:has(.admin-shell) .job-choice-options {
   .admin-shell .billing-invoices article > div:last-child > .ds-btn {
     flex: 1 1 auto;
     white-space: nowrap;
+  }
+}
+
+/* Editor sheet: the decision stays in reach. The actions stick to the bottom of the scrolling
+   sheet on a hairline, and the header can step through the queue behind it. */
+.edit-sheet .editor-actions {
+  position: sticky;
+  bottom: calc(-1 * var(--jobx-space-25px));
+  z-index: 2;
+  margin: var(--ds-space-5) calc(-1 * var(--ds-space-4)) 0;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-top: 1px solid var(--ds-line);
+  background: var(--ds-surface);
+}
+.edit-sheet [data-slot='sheet-header'] {
+  position: relative;
+  padding-right: 168px;
+}
+.sheet-stepper {
+  position: absolute;
+  top: var(--ds-space-4);
+  right: calc(var(--ds-space-4) + var(--ds-control-sm) + var(--ds-space-2));
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  height: var(--ds-control-sm);
+}
+.sheet-stepper > span {
+  margin-right: var(--ds-space-1);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  /* One full-width decision, the rest side by side beneath it. */
+  .edit-sheet .editor-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ds-space-2);
+    bottom: calc(-1 * var(--jobx-space-15px));
+    margin-inline: calc(-1 * var(--ds-space-4) - var(--jobx-space-5px));
+  }
+  .edit-sheet .editor-actions > .ds-btn--primary {
+    grid-column: 1 / -1;
+  }
+  .edit-sheet .editor-actions > .ds-btn {
+    min-height: 44px;
+  }
+  .edit-sheet [data-slot='sheet-header'] {
+    padding-right: var(--ds-space-4);
+    padding-top: calc(44px + var(--ds-space-5));
+  }
+  .sheet-stepper {
+    left: var(--ds-space-4);
+    right: auto;
+  }
+  .sheet-stepper .ds-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Queue as a table: one bordered container, dense aligned rows, a status column that never
+   moves. The whole row still opens the editor; the checkbox sits outside that button. */
+.admin-shell .admin-table {
+  --admin-cols: minmax(0, 2.2fr) minmax(0, 0.9fr) minmax(0, 0.8fr)
+    minmax(0, 0.7fr) minmax(0, 2fr);
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+}
+.admin-shell .admin-table-head,
+.admin-shell .admin-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+}
+.admin-shell .admin-table.is-selectable :is(.admin-table-head, .admin-row) {
+  grid-template-columns: 32px minmax(0, 1fr);
+}
+.admin-shell .admin-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  min-height: var(--ds-row-dense);
+  padding-left: var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-line);
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-strong);
+}
+/* The head's labels share the row button's columns and padding exactly. */
+.admin-shell .admin-table-cols {
+  display: grid;
+  grid-template-columns: var(--admin-cols);
+  column-gap: var(--ds-space-4);
+  padding-right: var(--ds-space-4);
+}
+.admin-shell .admin-table-cols > span:first-child {
+  padding-left: calc(32px + var(--ds-space-3));
+}
+.admin-shell .admin-row {
+  padding-left: var(--ds-space-3);
+  border-bottom: 1px solid var(--ds-line-soft);
+  transition: background-color var(--ds-duration-fast) var(--ds-ease);
+}
+.admin-shell .admin-row:last-child {
+  border-bottom: 0;
+}
+.admin-shell .admin-row:hover,
+.admin-shell .admin-row.is-picked {
+  background: var(--ds-surface-muted);
+}
+.admin-shell .admin-row > .admin-job {
+  display: grid;
+  grid-template-columns: var(--admin-cols);
+  column-gap: var(--ds-space-4);
+  align-items: center;
+  min-height: 56px;
+  padding: var(--ds-space-2) var(--ds-space-4) var(--ds-space-2) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+.admin-shell .admin-row > .admin-job:hover {
+  border: 0;
+  box-shadow: none;
+}
+.admin-shell .admin-row > .admin-job:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--ds-accent);
+}
+.admin-shell .admin-row-title {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+.admin-shell .admin-row-title .company-logo,
+.admin-shell .admin-row-title > :first-child {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+.admin-shell .admin-row-title > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+.admin-shell .admin-row-title strong,
+.admin-shell .admin-row-title small,
+.admin-shell .admin-row-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-shell .admin-row-title strong {
+  color: var(--ds-ink);
+  font-size: var(--ds-text-md);
+}
+.admin-shell .admin-row-title small,
+.admin-shell .admin-row-meta {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-sm);
+}
+.admin-shell .admin-row-meta {
+  display: grid;
+  font-variant-numeric: tabular-nums;
+}
+.admin-shell .admin-row-meta small {
+  font-size: var(--ds-text-xs);
+}
+.admin-shell .admin-row-meta em {
+  color: var(--ds-ink-3);
+  font-style: normal;
+  opacity: 0.7;
+}
+.admin-shell :is(.admin-row-meta, .admin-table-head > span).num {
+  text-align: right;
+}
+.admin-shell .admin-row-status {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--ds-space-1);
+  min-width: 0;
+}
+/* One line per row: a long mark shortens rather than stacking the row taller. */
+.admin-shell .admin-row-status {
+  overflow: hidden;
+}
+.admin-shell .admin-row-status > * {
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-shell .admin-row-status > :first-child,
+.admin-shell .admin-row-status > :last-child:not(:first-child):not([title]) {
+  flex-shrink: 0;
+}
+/* A floating bar while rows are picked, the Hotjar/ClickUp pattern. */
+.admin-shell .admin-bulk-bar {
+  position: sticky;
+  bottom: var(--ds-space-4);
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-2);
+  width: fit-content;
+  max-width: 100%;
+  margin: var(--ds-space-3) auto 0;
+  padding: var(--ds-space-2) var(--ds-space-2) var(--ds-space-2)
+    var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-md, 0 8px 24px rgb(22 33 58 / 12%));
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
+}
+.admin-shell .admin-bulk-bar > span {
+  margin-right: var(--ds-space-2);
+}
+@media (max-width: 760px) {
+  .admin-shell .admin-table-head {
+    display: none;
+  }
+  .admin-shell .admin-row > .admin-job {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--ds-space-1);
+    padding-block: var(--ds-space-3);
+  }
+  .admin-shell .admin-row-title {
+    grid-column: 1 / -1;
+  }
+  .admin-shell .admin-row-meta:nth-of-type(3),
+  .admin-shell .admin-row-meta:nth-of-type(4) {
+    display: none;
+  }
+  .admin-shell .admin-row > .admin-job {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-shell .admin-row-meta {
+    padding-left: calc(32px + var(--ds-space-3));
+  }
+  .admin-shell .admin-row-status {
+    flex-wrap: wrap;
+    overflow: visible;
+    padding-left: calc(32px + var(--ds-space-3));
+  }
+  .admin-shell .admin-row [data-slot='checkbox'] {
+    width: 20px;
+    height: 20px;
+  }
+  .admin-shell .admin-bulk-bar {
+    width: 100%;
   }
 }

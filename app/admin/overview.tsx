@@ -60,28 +60,6 @@ function Change({ now, before }: { now: number; before: number }) {
   );
 }
 
-function Spark({ values, alert }: { values: number[]; alert?: boolean }) {
-  if (values.length < 2 || !values.some(Boolean)) return null;
-  const top = Math.max(...values);
-  const points = values
-    .map(
-      (v, i) =>
-        `${((i / (values.length - 1)) * 100).toFixed(1)},${(24 - (v / top) * 20).toFixed(1)}`,
-    )
-    .join(' ');
-  return (
-    <svg viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true">
-      <polyline
-        points={points}
-        fill="none"
-        style={{ stroke: alert ? 'var(--ds-danger)' : 'var(--ds-accent)' }}
-        strokeWidth="1.6"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
-}
-
 type Item = {
   id: string;
   tone: 'crit' | 'warn';
@@ -292,7 +270,7 @@ export function OverviewPanel({
         </fieldset>
         <button
           type="button"
-          className="ds-btn ds-btn--primary ds-btn--sm"
+          className="ds-btn ds-btn--secondary ds-btn--sm"
           onClick={() => go('vacancies')}
         >
           შესამოწმებელი ვაკანსიები · {whole.format(counts.review ?? 0)}
@@ -311,9 +289,6 @@ export function OverviewPanel({
             {shown ? whole.format(shown.imported.now) : <SkeletonNumber />}
           </strong>
           {shown && <Change {...shown.imported} />}
-          {shown && (
-            <Spark values={shown.imported.series.map((d) => d.count)} />
-          )}
         </button>
         <button type="button" onClick={() => go('history')}>
           <span>არქივში გადავიდა</span>
@@ -339,23 +314,6 @@ export function OverviewPanel({
                 : 'მოლოდინში არაფერია'}
             </small>
           )}
-        </button>
-        <button
-          type="button"
-          className={items.length ? 'overview-kpi-alert' : undefined}
-          onClick={() =>
-            document
-              .getElementById('overview-attention')
-              ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }
-        >
-          <span>ყურადღება სჭირდება</span>
-          <strong>{whole.format(items.length)}</strong>
-          <small>
-            {items.length
-              ? 'ქვემოთ, მნიშვნელობის მიხედვით'
-              : 'ყველაფერი რიგზეა'}
-          </small>
         </button>
         <button type="button" onClick={() => go('billing')}>
           <span>შემოსავალი</span>
@@ -460,7 +418,14 @@ export function OverviewPanel({
               s.enabled &&
               hours(s.last_success_at, now) >
                 Math.max((3 * (s.interval_minutes || 180)) / 60, 6);
-            const tone = !s.enabled ? 'off' : late ? 'bad' : health.tone;
+            // Red fills only a source whose last run failed; a late one gets a red dot.
+            const tone = !s.enabled
+              ? 'off'
+              : s.latest_run?.status === 'failed'
+                ? 'failed'
+                : late
+                  ? 'bad'
+                  : health.tone;
             return (
               <button
                 type="button"

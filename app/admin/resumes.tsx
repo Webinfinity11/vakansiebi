@@ -1,20 +1,39 @@
 'use client';
-import { Eye, FileText, RefreshCw, Trash2, X } from 'lucide-react';
+import { Download, Eye, FileText, RefreshCw, Trash2, X } from 'lucide-react';
 import { SkeletonRows } from '../skeleton';
 import { adminTime } from '@/lib/admin-format';
 import { useEffect, useState } from 'react';
-import type { Cv } from '@/lib/cv';
+import { cvText, downloadCv, type Cv, type CvTemplate } from '@/lib/cv';
 import { CvSheet } from '../cv/cv-builder';
 import '../cv.css';
+import './admin-records.css';
 
 type Resume = {
   id: string;
   createdAt: string;
   updatedAt: string;
   expiresAt: string;
+  fullName: string;
+  /** How many of our vacancies this CV's holder reached. */
+  contacted: number;
+  title: string;
   language: string;
   template: string;
   completeness: number;
+};
+
+type Activity = {
+  jobId: string;
+  title: string;
+  company: string;
+  kind: 'cv' | 'call' | 'apply';
+  presses: number;
+  lastAt: string;
+};
+const actionNames: Record<Activity['kind'], string> = {
+  cv: 'CV-ის გაგზავნა',
+  call: 'დარეკვა',
+  apply: 'განაცხადი',
 };
 
 export function ResumesPanel() {
@@ -22,7 +41,11 @@ export function ResumesPanel() {
   const [page, setPage] = useState(0);
   const [more, setMore] = useState(false);
   const [version, setVersion] = useState(0);
-  const [selected, setSelected] = useState<{ id: string; cv: Cv } | null>(null);
+  const [selected, setSelected] = useState<{
+    id: string;
+    cv: Cv;
+    activity: Activity[];
+  } | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -58,7 +81,7 @@ export function ResumesPanel() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw Error(data.error || 'რეზიუმე ვერ ჩაიტვირთა');
-      setSelected({ id, cv: data.cv });
+      setSelected({ id, cv: data.cv, activity: data.activity ?? [] });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'ოპერაცია ვერ შესრულდა');
     } finally {
@@ -106,9 +129,22 @@ export function ResumesPanel() {
         </button>
       </div>
       {error && (
-        <p role="alert" className="notice">
-          {error}
-        </p>
+        <div role="alert" className="records-error">
+          <p>{error}</p>
+          <button
+            type="button"
+            className="ds-btn ds-btn--secondary ds-btn--sm"
+            disabled={loading}
+            onClick={() => {
+              setError('');
+              setLoading(true);
+              setVersion((n) => n + 1);
+            }}
+          >
+            <RefreshCw size={16} aria-hidden="true" />
+            ხელახლა ცდა
+          </button>
+        </div>
       )}
       {loading && <SkeletonRows rows={4} label="რეზიუმეები იტვირთება" />}
       {!loading && !rows.length && !error && (
@@ -123,6 +159,10 @@ export function ResumesPanel() {
           {rows.map((row) => (
             <li key={row.id} className="reports-item">
               <div className="reports-details">
+                <p className="resumes-who">
+                  <strong>{row.fullName || 'უსახელო რეზიუმე'}</strong>
+                  {row.title && <span>{row.title}</span>}
+                </p>
                 <div className="reports-meta">
                   <time dateTime={row.createdAt}>
                     {adminTime(row.createdAt)}
@@ -130,16 +170,25 @@ export function ResumesPanel() {
                   <span className="ds-badge">
                     {row.language === 'ka' ? 'ქართული' : 'ინგლისური'}
                   </span>
-                  <span>{row.template}</span>
+                  <span>
+                    შაბლონი:{' '}
+                    {cvText.ka.templates[row.template as CvTemplate]?.name ??
+                      row.template}
+                  </span>
                   <span className="resumes-complete">
                     სისრულე: {row.completeness}%
                   </span>
+                  {row.contacted > 0 && (
+                    <span className="ds-badge ds-badge--violet">
+                      დაუკავშირდა {row.contacted} ვაკანსიას
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="reports-actions">
                 <button
                   type="button"
-                  className="ds-btn ds-btn--ghost ds-btn--sm"
+                  className="ds-btn ds-btn--secondary ds-btn--sm"
                   disabled={busy}
                   aria-pressed={selected?.id === row.id}
                   onClick={() => void open(row.id)}
@@ -149,8 +198,9 @@ export function ResumesPanel() {
                 </button>
                 <button
                   type="button"
-                  className="ds-btn ds-btn--danger ds-btn--sm"
+                  className="ds-btn ds-btn--ghost ds-btn--sm records-danger"
                   disabled={busy}
+                  aria-label={`წაშლა — ${row.fullName || 'უსახელო რეზიუმე'}`}
                   onClick={() => void remove(row.id)}
                 >
                   <Trash2 size={16} aria-hidden="true" />
@@ -188,14 +238,47 @@ export function ResumesPanel() {
       </div>
       {selected && (
         <div className="resumes-preview ds-appear">
-          <button
-            type="button"
-            className="ds-btn ds-btn--secondary ds-btn--sm"
-            onClick={() => setSelected(null)}
-          >
-            <X size={16} aria-hidden="true" />
-            დახურვა
-          </button>
+          <div className="resumes-preview-actions">
+            <button
+              type="button"
+              className="ds-btn ds-btn--primary ds-btn--sm"
+              onClick={() => downloadCv(selected.cv.fullName)}
+            >
+              <Download size={16} aria-hidden="true" />
+              PDF-ად ჩამოტვირთვა
+            </button>
+            <button
+              type="button"
+              className="ds-btn ds-btn--secondary ds-btn--sm"
+              onClick={() => setSelected(null)}
+            >
+              <X size={16} aria-hidden="true" />
+              დახურვა
+            </button>
+          </div>
+          <section className="resume-activity" aria-label="რა გააკეთა">
+            <h3>რა გააკეთა ჩვენს ვაკანსიებზე</h3>
+            {!selected.activity.length ? (
+              <p>
+                ჯერ არაფერი: ამ CV-ით JOBX-ზე დამატებულ ვაკანსიას არ
+                დაკავშირებია.
+              </p>
+            ) : (
+              <ul>
+                {selected.activity.map((a) => (
+                  <li key={a.jobId + a.kind}>
+                    <strong>{actionNames[a.kind]}</strong>
+                    {a.presses > 1 && <span> ×{a.presses}</span>}
+                    <span>
+                      {a.title || 'ვაკანსია'}
+                      {a.company && ` · ${a.company}`}
+                    </span>
+                    <time dateTime={a.lastAt}>{adminTime(a.lastAt)}</time>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <div className="resumes-sheet">
             <CvSheet cv={selected.cv} />
           </div>
