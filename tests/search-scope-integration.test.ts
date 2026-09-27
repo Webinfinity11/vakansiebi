@@ -50,6 +50,22 @@ void test(
         company: 'მაღაზია',
         city: 'ქ. თბილისი, რუსთავის გზატკეცილი 24',
       },
+      {
+        title: 'სუპერვაიზერი',
+        company: 'მაღაზია',
+        city: 'ვაკე, ჭავჭავაძის 74გ',
+      },
+      {
+        title: 'სესხის ოფიცერი',
+        company: 'ბანკი',
+        city: 'საქართველოს მასშტაბით',
+      },
+      {
+        title: 'ოპერატორი',
+        company: 'კომპანია',
+        city: 'საქართველო',
+        description: 'სამუშაო ადგილი: ქ. ბათუმი.',
+      },
       { title: 'მოლარე', company: 'მაღაზია', city: 'რუსთავი' },
     ];
     const ids = fixtures.map(() => randomUUID());
@@ -90,10 +106,25 @@ void test(
         new URLSearchParams({ ids: ids.join(','), city: 'რუსთავი' }),
       );
       assert.deepEqual(
-        rustavi.jobs.map((job) => job.city),
-        ['რუსთავი'],
-        'a Tbilisi street named after Rustavi is not Rustavi',
+        rustavi.jobs.map((job) => job.city).sort((a, b) => a.localeCompare(b)),
+        ['რუსთავი', 'საქართველოს მასშტაბით'],
+        'a Tbilisi street named after Rustavi is not Rustavi; a nationwide posting is everywhere',
       );
+      const inCity = async (city: string) =>
+        (
+          await publicJobs(new URLSearchParams({ ids: ids.join(','), city }))
+        ).jobs
+          .map((job) => job.title)
+          .sort((a, b) => a.localeCompare(b));
+      assert.ok(
+        (await inCity('თბილისი')).includes('სუპერვაიზერი'),
+        'a Tbilisi district is Tbilisi',
+      );
+      assert.ok(
+        (await inCity('ბათუმი')).includes('ოპერატორი'),
+        'a bare "Georgia" is read from the text like an empty city',
+      );
+      assert.ok(!(await inCity('სხვა')).includes('სუპერვაიზერი'));
       const tbilisi = await publicJobs(
         new URLSearchParams({
           ids: ids.join(','),

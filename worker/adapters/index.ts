@@ -1072,7 +1072,9 @@ export function applyListingHints(
   };
   if (!j.city && hints.city) {
     j.city = hints.city.replace(/\s+/g, ' ').trim();
-    if (source === 'jobs') Object.assign(j, jobsPlace(j));
+    /* Every source's location field can hold an address or a district; the town is read out
+     and the text is kept as the address. Only jobs.ge also reads a bare street as Tbilisi. */
+    Object.assign(j, jobsPlace(j, source === 'jobs'));
     j.warnings = j.warnings.filter((w) => w !== unclearLocation);
   }
   if (hints.categoryLabel && !j.facts.some((f) => f.label === 'კატეგორია'))
@@ -1093,8 +1095,9 @@ export function applyListingHints(
  */
 export function jobsPlace(
   j: Pick<Vacancy, 'city' | 'mode' | 'facts'>,
+  tbilisiBoard = true,
 ): Pick<Vacancy, 'city' | 'mode' | 'facts'> {
-  const place = jobsLocation(j.city);
+  const place = jobsLocation(j.city, tbilisiBoard);
   const facts = j.facts || [];
   return {
     city: place.city,
@@ -1131,7 +1134,9 @@ function finishVacancy(
     j.datePosted = hints.firstListed;
   // A listing already named the work location when the detail page did not.
   if (!j.city && hints?.city) j.city = hints.city.replace(/\s+/g, ' ').trim();
-  if (source === 'jobs') Object.assign(j, jobsPlace(j));
+  /* Every source's location field can hold an address or a district; the town is read out
+     and the text is kept as the address. Only jobs.ge also reads a bare street as Tbilisi. */
+  Object.assign(j, jobsPlace(j, source === 'jobs'));
   j.category = classify(j.title, fromSource);
   if (!j.company) j.warnings.push('კომპანიის სახელი წყაროზე ვერ მოიძებნა.');
   // Nothing parsed: the page's shape is not what this adapter expects.

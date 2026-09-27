@@ -41,7 +41,9 @@ const stationPatterns = [
   ),
 );
 
-export function jobsLocation(raw: string): JobsLocation {
+/* `tbilisiBoard` is true for jobs.ge, a Tbilisi board: there a bare street with a house number
+   means Tbilisi. Other sources are read the same way except for that last guess. */
+export function jobsLocation(raw: string, tbilisiBoard = true): JobsLocation {
   const text = raw
     .normalize('NFKC')
     .replace(/\s+/g, ' ')
@@ -62,6 +64,7 @@ export function jobsLocation(raw: string): JobsLocation {
     stationPatterns.some((re) => re.test(text))
   )
     return withAddress('თბილისი');
+  if (!tbilisiBoard) return { city: text };
   // A street with a house number and no town named: jobs.ge is a Tbilisi board.
   const streets = streetAddresses(text, 'თბილისი');
   if (streets.length && streets.every((s) => s.city === 'თბილისი'))

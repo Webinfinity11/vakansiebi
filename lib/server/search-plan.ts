@@ -11,6 +11,7 @@ import {
 } from '../job-intelligence';
 import { negatedRequirement, requiredExperiencePattern } from '../experience';
 import { cities, cityStem, otherCity } from '../cities';
+import { tbilisiDistricts } from '../street-address';
 import { legalFormSql } from '../employer-identity';
 import { db } from './db';
 import { ApiError } from './auth';
@@ -363,7 +364,7 @@ export function searchPlan(
         : '',
       // A posting without a city field often names the city in its own text.
       cityStemPattern
-        ? `(CASE WHEN ${normalized(scalar(alias, 'city'))}='' THEN ${document(alias)} ~ ${cityStemPattern} ELSE false END) AS city_text`
+        ? `(CASE WHEN ${normalized(scalar(alias, 'city'))} IN ('','საქართველო','საქართველო.') THEN ${document(alias)} ~ ${cityStemPattern} ELSE false END) AS city_text`
         : '',
       entryLevelPattern
         ? `((${experienceText(alias)} ~ ${entryLevelPattern} OR ${factsText(alias)} ~ ${bind(entryLevelFacts)}) AND NOT (regexp_replace(${experienceText(alias)}, ${bind(negatedRequirement)}, '', 'g') ~ ${requiredExperience})) AS entry_level`
@@ -445,12 +446,27 @@ export function searchPlan(
   ];
   const salary =
     filters.salaryPeriod === 'day' ? 'j.salary_day' : 'j.salary_month';
+  /* A Tbilisi district with no town beside it ("გლდანი, შეშელიძის #7") is Tbilisi, and a
+     posting for the whole country ("საქართველოს მასშტაბით", "რეგიონები") is open in every
+     city. Neither is an "other" city. */
+  const districtPattern =
+    '(^|[^[:alnum:]ა-ჰ])(' +
+    tbilisiDistricts
+      .map((d) => escapeRegex(d.endsWith('ი') ? d.slice(0, -1) : d))
+      .join('|') +
+    ')';
+  // A bare "საქართველო" is a classified with no town given, read from its text instead.
+  const nationwidePattern = '(მასშტაბ|მაშტაბ|(^|[^[:alnum:]ა-ჰ])რეგიონებ)';
   const cityCondition = () => {
     if (filters.city === 'ყველა') return 'true';
     if (filters.city === otherCity)
-      return `j.city_norm<>'' AND NOT EXISTS(SELECT 1 FROM unnest(${bind(cities.map(cityPattern))}::text[]) known WHERE j.city_norm ~ known)`;
+      return `j.city_norm NOT IN ('','საქართველო','საქართველო.') AND NOT EXISTS(SELECT 1 FROM unnest(${bind(cities.map(cityPattern))}::text[]) known WHERE j.city_norm ~ known) AND j.city_norm !~ ${bind(districtPattern)} AND j.city_norm !~ ${bind(nationwidePattern)}`;
     // Stored cities, text fallback and "other" share the same city boundaries.
-    return `CASE WHEN j.city_norm ~ ${cityStemPattern} THEN true WHEN j.city_norm='' THEN j.city_text ELSE false END`;
+    const tbilisi =
+      filters.city === 'თბილისი'
+        ? ` WHEN j.city_norm ~ ${bind(districtPattern)} AND NOT EXISTS(SELECT 1 FROM unnest(${bind(cities.filter((c) => c !== 'თბილისი').map(cityPattern))}::text[]) other WHERE j.city_norm ~ other) THEN true`
+        : '';
+    return `CASE WHEN j.city_norm ~ ${cityStemPattern} THEN true${tbilisi} WHEN j.city_norm ~ ${bind(nationwidePattern)} THEN true WHEN j.city_norm IN ('','საქართველო','საქართველო.') THEN j.city_text ELSE false END`;
   };
   const conditions: Record<FilterKey, string> = {
     query: searching ? 'j.q_match' : 'true',

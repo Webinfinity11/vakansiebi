@@ -1,6 +1,7 @@
 import type { PublicJob } from './types';
 import { privateListingLabel } from './types';
 import { cities, cityStem } from './cities';
+import { tbilisiDistricts } from './street-address';
 import { safeExternalUrl } from './vacancy-media';
 import { genericCompanyKeys, logoCompanyKey } from './company-logo-identity';
 import { vacancySegment } from './vacancy-navigation';
@@ -66,8 +67,15 @@ const htmlText = (text: string) =>
    cities in the same posting is not a location, it is a guess, and the posting
    falls back to the country it was published in. Before this, those postings
    carried no structured data at all and could not appear in a job search. */
-const namedCity = (job: PublicJob) =>
-  cities.filter((c) => job.city.includes(c));
+/* A Tbilisi district with no town beside it ("ვაკე, ჭავჭავაძის 74გ") names Tbilisi. */
+const districtOnly = (city: string) =>
+  tbilisiDistricts.some((d) =>
+    new RegExp(`(^|[^ა-ჰ])${d.endsWith('ი') ? d.slice(0, -1) : d}`).test(city),
+  );
+const namedCity = (job: PublicJob) => {
+  const named = cities.filter((c) => job.city.includes(c));
+  return named.length || !districtOnly(job.city) ? named : ['თბილისი'];
+};
 const remote = (job: PublicJob) =>
   /დისტანციურ|სამუშაო სახლიდან|remote/i.test(`${job.mode} ${job.title}`);
 function citiesInText(job: PublicJob) {
