@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { emptyCv, sampleCv } from '../lib/cv';
-import { createResumeSync } from '../lib/resume-client';
+import { createResumeSync, randomId } from '../lib/resume-client';
 import {
   maxResumeBodyBytes,
   readResumeBody,
@@ -182,3 +182,40 @@ void test(
     }
   },
 );
+
+void test('every save reports whether it reached the server; ids work without randomUUID', async () => {
+  const outcomes: boolean[] = [];
+  const answers = [
+    Response.json({ ok: true }),
+    Response.json({ error: 'x' }, { status: 403 }),
+  ];
+  const sync = createResumeSync(
+    storage(),
+    async () => {
+      const answer = answers.shift();
+      if (!answer) throw Error('offline');
+      return answer;
+    },
+    (ok) => outcomes.push(ok),
+  );
+  await sync.save(emptyCv());
+  await sync.save(emptyCv());
+  await sync.save(emptyCv());
+  assert.deepEqual(outcomes, [true, false, false]);
+  const original = Object.getOwnPropertyDescriptor(crypto, 'randomUUID');
+  try {
+    // Older iPhones have no randomUUID; the fallback must still be a v4 id the server accepts.
+    Object.defineProperty(crypto, 'randomUUID', {
+      value: undefined,
+      configurable: true,
+    });
+    const id = randomId();
+    assert.match(
+      id,
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  } finally {
+    if (original) Object.defineProperty(crypto, 'randomUUID', original);
+    else delete (crypto as { randomUUID?: unknown }).randomUUID;
+  }
+});

@@ -524,7 +524,9 @@ export function CvBuilder() {
 
   useEffect(() => {
     try {
-      resumeSync.current = createResumeSync(window.localStorage);
+      resumeSync.current = createResumeSync(window.localStorage, fetch, (ok) =>
+        track('resume', ok ? 'stored' : 'store_failed'),
+      );
     } catch {
       return;
     }

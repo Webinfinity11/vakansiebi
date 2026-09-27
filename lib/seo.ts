@@ -79,14 +79,59 @@ function citiesInText(job: PublicJob) {
   );
   return found.length === 1 ? found : [];
 }
-const place = (city: string) => ({
+/* The region each offered city lies in: a fact of geography, not of the posting. */
+const regions: Record<string, string> = {
+  თბილისი: 'თბილისი',
+  ბათუმი: 'აჭარა',
+  ქუთაისი: 'იმერეთი',
+  რუსთავი: 'ქვემო ქართლი',
+  გორი: 'შიდა ქართლი',
+  ზუგდიდი: 'სამეგრელო-ზემო სვანეთი',
+  ფოთი: 'სამეგრელო-ზემო სვანეთი',
+  თელავი: 'კახეთი',
+  კასპი: 'შიდა ქართლი',
+  მცხეთა: 'მცხეთა-მთიანეთი',
+  ახალციხე: 'სამცხე-ჯავახეთი',
+  ბორჯომი: 'სამცხე-ჯავახეთი',
+  ოზურგეთი: 'გურია',
+};
+/* A street address is published only when the posting states one for a single workplace:
+   something with a street word or a house number, never a bare city or a region. */
+const streetAddress = (value: string) =>
+  value.length <= 160 &&
+  /(ქუჩ|გამზირ|ხეივან|შესახვევ|ჩიხ|მოედან|გზატკეცილ|დასახლებ|\d)/u.test(value)
+    ? value
+    : '';
+const place = (city: string, street = '') => ({
   '@type': 'Place',
   address: {
     '@type': 'PostalAddress',
+    ...(street ? { streetAddress: street } : {}),
     ...(city ? { addressLocality: city } : {}),
+    ...(regions[city] ? { addressRegion: regions[city] } : {}),
     addressCountry: 'GE',
   },
 });
+/* Employment type as the posting states it, in any of the spellings sources use. Nothing is
+   assumed: a posting that says nothing gets no type. */
+function employmentOf(job: PublicJob): string {
+  const text = `${job.employmentType || ''} ${job.title}`
+    .normalize('NFKC')
+    .toLowerCase();
+  if (/სტაჟიორ|სტაჟირებ|\bintern(ship)?\b/u.test(text)) return 'INTERN';
+  if (
+    /(ნახევარი?|არასრული?|ნაწილობრივი?|½|1\/2)\s*განაკვეთ|part[ -]?time/u.test(
+      text,
+    )
+  )
+    return 'PART_TIME';
+  if (
+    /(დღიური|ერთდღიანი|ერთჯერადი)\s+(სამუშაო|მუშა|მშრომელ)|დროებით/u.test(text)
+  )
+    return 'TEMPORARY';
+  if (/სრული\s+განაკვეთ|full[ -]?time/u.test(text)) return 'FULL_TIME';
+  return '';
+}
 export function jobPosting(
   job: PublicJob,
   today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tbilisi' }),
@@ -125,13 +170,8 @@ export function jobPosting(
   const website = safeExternalUrl(job.companyProfile?.website || '');
   const logo = safeExternalUrl(job.logoUrl || '');
   const pay = salaryFacts(job.salary || '', job.salaryPeriod || '');
-  const employment = (
-    {
-      'სრული განაკვეთი': 'FULL_TIME',
-      'ნახევარი განაკვეთი': 'PART_TIME',
-      სტაჟირება: 'INTERN',
-    } as Record<string, string>
-  )[job.employmentType || ''];
+  const employment = employmentOf(job);
+  const street = working.length === 1 ? streetAddress(address) : '';
   return {
     '@context': 'https://schema.org',
     '@type': 'JobPosting',
@@ -156,9 +196,15 @@ export function jobPosting(
             '@type': 'Country',
             name: 'Georgia',
           },
-          ...(located.length ? { jobLocation: located.map(place) } : {}),
+          ...(located.length
+            ? { jobLocation: located.map((city) => place(city)) }
+            : {}),
         }
-      : { jobLocation: (working.length ? working : ['']).map(place) }),
+      : {
+          jobLocation: (working.length ? working : ['']).map((city) =>
+            place(city, street),
+          ),
+        }),
     ...(employment ? { employmentType: employment } : {}),
     /* Google prints the pay beside a job result when the posting publishes it,
        and thousands here do. Only what the board itself shows is published: one

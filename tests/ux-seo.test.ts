@@ -166,7 +166,12 @@ void test('a vacancy without a city of its own still says where the work is', ()
     'a village outside the list keeps the posting, at country level',
   );
   assert.deepEqual(
-    address(at({ city: '', facts: [{label: 'მისამართი', value: 'თბილისი, რუსთავი და ქუთაისი'}] })),
+    address(
+      at({
+        city: '',
+        facts: [{ label: 'მისამართი', value: 'თბილისი, რუსთავი და ქუთაისი' }],
+      }),
+    ),
     ['თბილისი', 'ქუთაისი', 'რუსთავი'],
     'explicit workplace addresses preserve every named city',
   );
@@ -256,4 +261,60 @@ void test('the footer expands to eligible cities and roles and ranks by availabl
   assert.equal(links.length, 2);
   assert.match(links[0].label, /ბარისტას/);
   assert.match(links[1].label, /ფოთში/);
+});
+
+// Search Console on 2026-09-27 flagged missing region, street and employment type.
+void test('job locations carry the region, a stated street, and the employment type as written', () => {
+  type Loc = { address: Record<string, string> };
+  const located = jobPosting(
+    {
+      ...job,
+      city: 'ბათუმი',
+      employmentType: 'სრული განაკვეთი (5/2)',
+      description: 'მისამართი: ჭავჭავაძის ქუჩა 28\nპასუხისმგებლობები.',
+    },
+    '2026-09-14',
+  ) as unknown as { jobLocation: Loc[]; employmentType?: string };
+  assert.equal(located.jobLocation[0].address.addressRegion, 'აჭარა');
+  assert.equal(
+    located.jobLocation[0].address.streetAddress,
+    'ჭავჭავაძის ქუჩა 28',
+  );
+  assert.equal(located.employmentType, 'FULL_TIME');
+  const plain = jobPosting(
+    { ...job, description: 'მისამართი: ქ.გორი\nპასუხისმგებლობები.' },
+    '2026-09-14',
+  ) as unknown as { jobLocation: Loc[]; employmentType?: string };
+  assert.equal(
+    'streetAddress' in plain.jobLocation[0].address,
+    false,
+    'a city is not a street',
+  );
+  assert.equal(
+    'employmentType' in plain,
+    false,
+    'nothing stated, nothing claimed',
+  );
+  assert.equal(
+    (
+      jobPosting(
+        { ...job, title: 'ნახევარ განაკვეთზე ოპერატორი' },
+        '2026-09-14',
+      ) as unknown as {
+        employmentType?: string;
+      }
+    ).employmentType,
+    'PART_TIME',
+  );
+  assert.equal(
+    (
+      jobPosting(
+        { ...job, title: 'ოპერატორი (ნახევარი განაკვეთი)' },
+        '2026-09-14',
+      ) as unknown as {
+        employmentType?: string;
+      }
+    ).employmentType,
+    'PART_TIME',
+  );
 });
