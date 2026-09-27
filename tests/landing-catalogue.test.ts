@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { cities } from '../lib/cities';
 import { categories } from '../lib/types';
 import { roleVocabulary } from '../lib/search-language';
+import { subcategories } from '../lib/subcategories';
 import {
   eligibleLandings,
   landingCopy,
@@ -29,6 +30,9 @@ function completeCatalogue(): LandingCount[] {
   for (const { label: role } of roleVocabulary)
     for (const city of [null, ...cities])
       rows.push({ category: null, city, trait: null, role, count: 20 });
+  for (const { id: subcategory, category } of subcategories)
+    for (const city of [null, ...cities])
+      rows.push({ category, city, trait: null, subcategory, count: 20 });
   return eligibleLandings(rows);
 }
 
@@ -44,7 +48,8 @@ void test('every eligible combination can be reached from the compact footer', (
     const landing = landingFor(new URLSearchParams(path.slice(2)))!;
     const children = relatedLandings(landing, rows);
     assert.ok(
-      children.length <= 20,
+      // A field: its cities, its conditions and up to eight subcategories.
+      children.length <= 30,
       `${path} has too many immediate neighbours`,
     );
     assert.equal(
@@ -95,6 +100,60 @@ void test('thin pages remain searches but disappear from all navigation and inde
     [],
   );
   assert.equal(eligibleLandings(rows).length, 2);
+});
+
+void test('a subcategory page is a field narrowed once, listed only when populated', () => {
+  const rows: LandingCount[] = [
+    { category: 'სამედიცინო', city: null, trait: null, count: 50 },
+    {
+      category: 'სამედიცინო',
+      city: null,
+      trait: null,
+      subcategory: 'medical-dental',
+      count: minimumLandingJobs,
+    },
+    {
+      category: 'სამედიცინო',
+      city: 'თბილისი',
+      trait: null,
+      subcategory: 'medical-dental',
+      count: minimumLandingJobs - 1,
+    },
+    {
+      category: 'სილამაზე',
+      city: 'თბილისი',
+      trait: null,
+      subcategory: 'beauty-nails',
+      count: 12,
+    },
+  ];
+  assert.deepEqual(eligibleLandings(rows).map(landingPath).map(decodeURI), [
+    '/?category=sameditsino',
+    '/?category=sameditsino&subcategory=medical-dental',
+    '/?category=silamaze&subcategory=beauty-nails&city=tbilisi',
+  ]);
+  for (const row of rows) {
+    const landing = landingFor(new URLSearchParams(landingPath(row).slice(2)))!;
+    assert.equal(landing.subcategory, row.subcategory ?? null);
+    assert.equal(landing.path, landingPath(row), 'round trip');
+    assert.equal(
+      landingIndexable(landing, rows),
+      row.count >= minimumLandingJobs,
+    );
+  }
+  // Only whole fields, cities, conditions and professions belong in the footer.
+  assert.deepEqual(
+    landingLinks(rows).map((row) => row.path),
+    [landingPath(rows[0])],
+  );
+  // The field's page offers its populated subcategory.
+  assert.deepEqual(
+    relatedLandings(
+      landingFor(new URLSearchParams('category=sameditsino'))!,
+      rows,
+    ).map((row) => row.label),
+    ['სტომატოლოგიის ვაკანსიები'],
+  );
 });
 
 void test('every landing has a distinct heading and description, including condition combinations', () => {

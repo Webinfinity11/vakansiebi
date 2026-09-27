@@ -9,6 +9,7 @@ import {
   traitKeys,
 } from '../lib/seo-landing';
 import { readSearch } from '../lib/search-state';
+import { subcategories } from '../lib/subcategories';
 
 /* What the index is opened to decides what the site is found by — and what it is
    buried under. The rule is narrow on purpose, so it is checked from both ends. */
@@ -29,6 +30,9 @@ void test('a category, a city and remote work are pages; everything else is a fi
     'city=ბათუმი&salaryPeriod=day',
     // A field, a city and a condition together is the shape most searched for.
     'category=ლოჯისტიკა&city=ბათუმი&salaryPeriod=day',
+    // A subcategory inside its own field, alone or in a city.
+    'category=sameditsino&subcategory=medical-dental',
+    'category=silamaze&subcategory=beauty-nails&city=tbilisi',
   ])
     assert.ok(landingFor(new URLSearchParams(address)), address);
   for (const address of [
@@ -56,6 +60,12 @@ void test('a category, a city and remote work are pages; everything else is a fi
     'q=მოლარე&remote=true',
     'employment=all',
     'salaryPeriod=month',
+    // A subcategory needs its own field and takes no condition or profession.
+    'subcategory=medical-dental',
+    'category=silamaze&subcategory=medical-dental',
+    'category=sameditsino&subcategory=unknown',
+    'category=sameditsino&subcategory=medical-dental&remote=true',
+    'category=sameditsino&subcategory=medical-dental&q=ექიმი',
   ])
     assert.equal(landingFor(new URLSearchParams(address)), null, address);
 });
@@ -214,5 +224,53 @@ void test('a profession names its page the way a job seeker would search for it'
   assert.equal(
     decodeURIComponent(landingFor(new URLSearchParams('q=მოლარე'))!.path),
     '/?q=molare',
+  );
+});
+
+void test('a subcategory page names its work in a grammatical Georgian heading', () => {
+  const heading = (address: string) =>
+    landingHeading(landingFor(new URLSearchParams(address))!);
+  assert.equal(
+    heading('category=sameditsino&subcategory=medical-dental'),
+    'სტომატოლოგიის ვაკანსიები საქართველოში',
+  );
+  assert.equal(
+    heading('category=silamaze&subcategory=beauty-nails&city=tbilisi'),
+    'მანიკურისა და პედიკურის ვაკანსიები თბილისში',
+  );
+  assert.equal(
+    heading('category=momsakhureba&subcategory=service-hospitality'),
+    'მიმტანის, ბარისტასა და ბარმენის ვაკანსიები საქართველოში',
+  );
+  for (const { id, category, label } of subcategories) {
+    const landing = landingFor(
+      new URLSearchParams({ category, subcategory: id }),
+    )!;
+    assert.equal(landing.subcategory, id, label);
+    const text = landingHeading(landing);
+    // A filter label ("X / Y") is not a phrase: nothing undeclined leaks through.
+    assert.ok(!text.includes('/') && !text.includes('undefined'), text);
+    assert.match(text, /^\S.* ვაკანსიები საქართველოში$/, text);
+    assert.ok(landingCopy(landing).startsWith(text), label);
+  }
+  // The address keeps the board's own filter spelling.
+  assert.equal(
+    decodeURIComponent(
+      landingFor(
+        new URLSearchParams('category=სილამაზე&subcategory=beauty-nails'),
+      )!.path,
+    ),
+    '/?category=silamaze&subcategory=beauty-nails',
+  );
+  // The board's own filtered list claims the page, and only without extras.
+  const of = (address: string) =>
+    landingOf(readSearch(new URLSearchParams(address)));
+  assert.equal(
+    of('city=tbilisi&category=silamaze&subcategory=beauty-nails')?.subcategory,
+    'beauty-nails',
+  );
+  assert.equal(
+    of('category=silamaze&subcategory=beauty-nails&postedWithin=7'),
+    null,
   );
 });

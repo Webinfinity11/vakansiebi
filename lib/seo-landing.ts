@@ -1,6 +1,7 @@
 import { cities, cityStem } from './cities';
 import { searchUrlValue, searchValueFromUrl } from './search-url';
 import { roleVocabulary } from './search-language';
+import { subcategoryFor } from './subcategories';
 import { categories } from './types';
 import type { SearchFilters } from './personal-space';
 
@@ -68,10 +69,17 @@ export type Landing = {
      stays out of the index for good reason. A word from the reviewed vocabulary
      is not free text: it is a term with a page behind it. */
   role: string | null;
+  /* A subcategory id inside `category`: "სტომატოლოგიის ვაკანსიები" is a search
+     people make that the whole medical field answers only loosely. It pairs
+     with a category and, at most, a city — never a condition or a profession. */
+  subcategory: string | null;
   path: string;
 };
-/* `role` is the newest of the four and the rarest, so it may be left out. */
-type Choice = Omit<Landing, 'path' | 'role'> & { role?: string | null };
+/* `role` and `subcategory` are the newest and the rarest, so they may be left out. */
+type Choice = Omit<Landing, 'path' | 'role' | 'subcategory'> & {
+  role?: string | null;
+  subcategory?: string | null;
+};
 // Ten active results is the site's publication floor, not a search-engine rule.
 export const minimumLandingJobs = 10;
 export type LandingCount = Choice & { count: number };
@@ -121,6 +129,99 @@ const genitive: Record<string, string> = {
   იურიდიული: 'იურიდიული',
   სილამაზე: 'სილამაზის სფეროს',
 };
+/* Each subcategory as the head of "… ვაკანსიები", written out: the labels are
+   filter names ("მანიკური / პედიკური"), and a slash does not decline. Where a
+   label names a field, the phrase names it; where people search by the worker,
+   it names the worker. Joined pairs take -ა before და, as Georgian does. */
+export const subcategoryGenitive: Record<string, string> = {
+  'tech-security': 'კიბერუსაფრთხოების',
+  'tech-business-systems': 'ERP და ბიზნესსისტემების',
+  'tech-product': 'ციფრული პროდუქტის, პროექტებისა და UX',
+  'tech-data': 'მონაცემთა ანალიტიკისა და ხელოვნური ინტელექტის',
+  'tech-qa': 'QA და ტესტირების',
+  'tech-development': 'პროგრამირების',
+  'tech-systems': 'IT ინფრასტრუქტურისა და ქსელების',
+  'tech-support': 'IT მხარდაჭერის',
+  'sales-property': 'უძრავი ქონების გაყიდვების',
+  'sales-store': 'მაღაზიის მენეჯერის',
+  'sales-retail': 'გამყიდველისა და მოლარის',
+  'sales-representative': 'სავაჭრო წარმომადგენლისა და მერჩენდაიზერის',
+  'sales-operations': 'გაყიდვების მხარდაჭერის',
+  'sales-management': 'გაყიდვების მენეჯერის',
+  'marketing-promotion': 'პრომოუტერისა და რეკლამის დამრიგებლის',
+  'marketing-design': 'გრაფიკული დიზაინერის',
+  'marketing-media': 'ფოტო- და ვიდეოწარმოების',
+  'marketing-social': 'სოციალური მედიისა და ციფრული რეკლამის',
+  'marketing-content': 'კონტენტისა და ჟურნალისტიკის',
+  'marketing-pr': 'PR-ისა და ღონისძიებების',
+  'marketing-management': 'მარკეტინგისა და ბრენდის მართვის',
+  'admin-hr': 'HR-ისა და რეკრუტინგის',
+  'admin-reception': 'მიმღებისა და რეგისტრატორის',
+  'admin-projects': 'პროექტების მართვის',
+  'admin-branch': 'ფილიალისა და სივრცის მართვის',
+  'admin-office': 'ოფისის მართვისა და საქმისწარმოების',
+  'finance-audit': 'აუდიტის',
+  'finance-accounting': 'ბუღალტერიის',
+  'finance-risk': 'რისკებისა და დაზღვევის',
+  'finance-credit': 'სესხებისა და განვადების',
+  'finance-cash': 'სალაროსა და საკასო ოპერაციების',
+  'finance-banking': 'ბანკირის',
+  'finance-analysis': 'ფინანსური ანალიზის',
+  'logistics-customs': 'საბაჟოს, იმპორტისა და ექსპორტის',
+  'logistics-driving': 'მძღოლისა და კურიერის',
+  'logistics-distribution': 'დისტრიბუციისა და ექსპედიციის',
+  'logistics-warehouse': 'საწყობისა და მარაგების',
+  'logistics-procurement': 'შესყიდვებისა და მომარაგების',
+  'logistics-dispatch': 'ლოჯისტიკოსისა და დისპეტჩერის',
+  'service-reception': 'რეცეფციისა და სასტუმროს მართვის',
+  'service-kitchen': 'სამზარეულოსა და საცხობის',
+  'service-hospitality': 'მიმტანის, ბარისტასა და ბარმენის',
+  'service-auto': 'ავტოსამრეცხაოს',
+  'service-cleaning': 'დასუფთავების',
+  'service-care': 'ძიძისა და მომვლელის',
+  'service-support': 'მომხმარებელთა მხარდაჭერის',
+  'medical-administration': 'კლინიკის ადმინისტრატორის',
+  'medical-commercial': 'სამედიცინო წარმომადგენლის',
+  'medical-dental': 'სტომატოლოგიის',
+  'medical-nursing': 'საექთნო საქმისა და სანიტარიის',
+  'medical-pharmacy': 'ფარმაციის',
+  'medical-mental-rehab': 'ფსიქოლოგიისა და რეაბილიტაციის',
+  'medical-laboratory': 'ლაბორატორიისა და დიაგნოსტიკის',
+  'medical-doctors': 'ექიმების',
+  'education-support': 'სწავლის მხარდაჭერის',
+  'education-preschool': 'სკოლამდელი აღზრდის',
+  'education-vocational': 'პროფესიული სწავლების',
+  'education-training': 'ტრენერისა და ინსტრუქტორის',
+  'education-academic': 'უმაღლესი განათლების',
+  'education-school': 'მასწავლებლისა და რეპეტიტორის',
+  'construction-architecture': 'პროექტირებისა და გეოდეზიის',
+  'construction-management': 'მშენებლობის მართვის',
+  'construction-electrical': 'ელექტრიკოსისა და სანტექნიკოსის',
+  'construction-furniture': 'ავეჯისა და დურგლობის',
+  'construction-installation': 'მონტაჟისა და შედუღების',
+  'construction-finishing': 'მოპირკეთებისა და შეღებვის',
+  'construction-structure': 'ბეტონის სამუშაოებისა და მძიმე ტექნიკის',
+  'construction-labor': 'სამშენებლო მუშის',
+  'security-safety': 'შრომისა და სახანძრო უსაფრთხოების',
+  'security-monitoring': 'ვიდეომონიტორინგის',
+  'security-cash': 'ინკასატორის',
+  'security-guard': 'დაცვისა და დარაჯის',
+  'production-engineering': 'საინჟინრო',
+  'production-maintenance': 'ტექნიკოსისა და მექანიკოსის',
+  'production-sewing': 'კერვისა და ტექსტილის',
+  'production-furniture': 'ავეჯის აწყობის',
+  'production-packing': 'შეფუთვისა და დაფასოების',
+  'production-line': 'საწარმოო ხაზისა და დანადგარების',
+  'production-labor': 'საწარმოო მუშის',
+  'legal-assistance': 'იურიდიული თანაშემწის',
+  'legal-proceedings': 'სასამართლოსა და სამართალწარმოების',
+  'legal-practice': 'იურიდიული პრაქტიკის',
+  'beauty-management': 'სალონისა და სპა-ცენტრის მართვის',
+  'beauty-nails': 'მანიკურისა და პედიკურის',
+  'beauty-cosmetics': 'კოსმეტოლოგისა და ვიზაჟისტის',
+  'beauty-spa': 'მასაჟისა და სპა-ცენტრის',
+  'beauty-hair': 'სტილისტისა და ბარბერის',
+};
 /** თბილისი → თბილისში, მცხეთა → მცხეთაში: the stem the search already uses. */
 export const cityIn = (city: string) => cityStem(city) + 'ში';
 
@@ -129,6 +230,7 @@ export function landingPath(landing: Choice) {
   // One spelling per page: the order is fixed, so the canonical never varies.
   if (landing.category)
     params.set('category', searchUrlValue('category', landing.category));
+  if (landing.subcategory) params.set('subcategory', landing.subcategory);
   if (landing.city) params.set('city', searchUrlValue('city', landing.city));
   if (landing.role) params.set('q', searchUrlValue('q', landing.role));
   if (landing.trait) {
@@ -146,7 +248,13 @@ export function landingFor(params: URLSearchParams): Landing | null {
   const traitNames = new Set<string>(
     traitKeys.map((key) => traits[key].param[0]),
   );
-  const allowed = new Set(['category', 'city', 'q', ...traitNames]);
+  const allowed = new Set([
+    'category',
+    'subcategory',
+    'city',
+    'q',
+    ...traitNames,
+  ]);
   let trait: TraitKey | null = null;
   for (const [key, value] of params) {
     const ignorable =
@@ -194,12 +302,23 @@ export function landingFor(params: URLSearchParams): Landing | null {
      of saying the same thing, and a condition on top of that empties the page. */
   if (role && (category || trait)) return null;
   if (!category && !city && !trait && !role) return null;
-  const landing = { category, city, trait, role };
+  /* A subcategory lives inside its field, and it is already as narrow as a page
+     should be: a city may follow it, a condition or a profession may not. */
+  const named = params.has('subcategory')
+    ? subcategoryFor(category ?? '', params.get('subcategory'))
+    : null;
+  if (params.has('subcategory') && (!named || trait || role)) return null;
+  const subcategory = named?.id ?? null;
+  const landing = { category, city, trait, role, subcategory };
   return { ...landing, path: landingPath(landing) };
 }
 
 /** What such a page calls itself, on the page and in a result. */
 export function landingHeading(landing: Choice) {
+  if (landing.subcategory) {
+    const where = landing.city ? ' ' + cityIn(landing.city) : ' საქართველოში';
+    return `${subcategoryGenitive[landing.subcategory]} ვაკანსიები${where}`;
+  }
   if (landing.role) {
     const role = roleFor(landing.role);
     const where = landing.city ? ' ' + cityIn(landing.city) : ' საქართველოში';
@@ -221,6 +340,8 @@ export function landingHeading(landing: Choice) {
    repeating its title: a list with nothing to read is the thin page Google is
    right to ignore. */
 export function landingCopy(landing: Choice) {
+  if (landing.subcategory && landing.category)
+    return `${landingHeading(landing)} — ${genitive[landing.category]} ვაკანსიებიდან მხოლოდ ამ მიმართულების აქტიური განცხადებები. სია ყოველდღიურად ახლდება; შეადარე ანაზღაურება, გრაფიკი და პირობები, შემდეგ კი გაეცანი განცხადებას პირველწყაროზე.`;
   if (landing.role) {
     const role = roleFor(landing.role);
     const where = landing.city ? cityIn(landing.city) : 'საქართველოს მასშტაბით';
@@ -254,6 +375,7 @@ export function landingOf(filters: SearchFilters): Landing | null {
     params.set('q', role.label);
   }
   if (filters.category !== 'ყველა') params.set('category', filters.category);
+  if (filters.subcategory) params.set('subcategory', filters.subcategory);
   if (filters.city !== 'ყველა') params.set('city', filters.city);
   if (filters.remote) params.set('remote', 'true');
   if (filters.paid) params.set('paid', 'true');
@@ -267,7 +389,6 @@ export function landingOf(filters: SearchFilters): Landing | null {
     filters.salaryTo !== null ||
     filters.deep ||
     filters.postedWithin ||
-    filters.subcategory ||
     // A page that is sorted another way is one reader's view, not the page.
     filters.sort !== 'უახლესი'
   )
@@ -339,6 +460,8 @@ function parentLandingPath(choice: Choice) {
     return landingPath({ ...choice, trait: null });
   if (choice.city && (choice.category || choice.role))
     return landingPath({ ...choice, city: null });
+  // A subcategory's broader page is its own field.
+  if (choice.subcategory) return landingPath({ ...choice, subcategory: null });
   return '/';
 }
 function directoryIndex(rows: readonly LandingCount[]) {
@@ -358,7 +481,7 @@ function directoryIndex(rows: readonly LandingCount[]) {
     group.push(link);
     children.set(parent, group);
     // A city reader can narrow by field too, without returning to the footer.
-    if (row.category && row.city && !row.trait) {
+    if (row.category && row.city && !row.trait && !row.subcategory) {
       const cityPath = landingPath({
         category: null,
         city: row.city,
@@ -404,7 +527,19 @@ export function relatedLandings(
       trait: null,
       role: landing.role,
     });
-  if (landing.category)
+  if (landing.subcategory)
+    nearby.push(
+      ...(landing.city
+        ? [
+            { ...landing, city: null },
+            { category: landing.category, city: landing.city, trait: null },
+          ]
+        : [
+            { category: landing.category, city: null, trait: null },
+            ...linkedCities.slice(0, 4).map((city) => ({ ...landing, city })),
+          ]),
+    );
+  else if (landing.category)
     nearby.push(
       ...(fieldRoles[landing.category] ?? []).map((role) => ({
         category: null,
@@ -461,6 +596,7 @@ export function landingLinks(rows?: readonly LandingCount[] | null) {
     return eligibleLandings(rows)
       .filter(
         (row) =>
+          !row.subcategory &&
           [row.category, row.city, row.trait, row.role].filter(Boolean)
             .length === 1,
       )

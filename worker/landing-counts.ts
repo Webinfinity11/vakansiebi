@@ -4,6 +4,7 @@ import { cities } from '../lib/cities';
 import { traitKeys, traits, type LandingCount } from '../lib/seo-landing';
 import { categories } from '../lib/types';
 import { roleVocabulary } from '../lib/search-language';
+import { subcategories, subcategoryForTitle } from '../lib/subcategories';
 
 // Background work gets a bounded ten minutes, independent of crawler requests.
 export const censusBudgetMs = 600_000;
@@ -47,14 +48,27 @@ export async function refreshLandingCounts({
         grouped: canonicalIds === undefined,
         jobIds: canonicalIds,
       });
+      /* Only the base pass reads titles; the other passes reuse its ids. The
+         subcategory is matched here, in the worker, with the same patterns the
+         search sends to SQL: 87 regular expressions per title cost the database
+         seconds of awake time on a real catalogue, and the worker ~60 ms. */
+      const title = canonicalIds === undefined ? ',j.p_title AS title' : '';
       return (
-        await client.query<{ id: string; category: string }>(
-          `${plan.cte} SELECT j.id,j.p_category AS category FROM searchable j WHERE ${plan.where}`,
+        await client.query<{
+          id: string;
+          category: string;
+          title?: string | null;
+        }>(
+          `${plan.cte} SELECT j.id,j.p_category AS category${title} FROM searchable j WHERE ${plan.where}`,
           plan.args,
         )
       ).rows;
     };
-    const base = await matching(new URLSearchParams());
+    const base = (await matching(new URLSearchParams())).map((job) => ({
+      ...job,
+      subcategory:
+        subcategoryForTitle(job.category ?? '', job.title ?? '')?.id ?? null,
+    }));
     const canonicalIds = base.map((row) => row.id);
     const byCity = new Map<string, Set<string>>();
     for (const city of cities)
@@ -68,19 +82,28 @@ export async function refreshLandingCounts({
       );
     const rows: LandingCount[] = [];
     const countPlaces = (
-      jobs: typeof base,
+      jobs: readonly { id: string }[],
       category: string | null,
       trait: LandingCount['trait'],
       role: string | null = null,
+      subcategory: string | null = null,
     ) => {
       if (category || trait || role)
-        rows.push({ category, city: null, trait, role, count: jobs.length });
+        rows.push({
+          category,
+          city: null,
+          trait,
+          role,
+          subcategory,
+          count: jobs.length,
+        });
       for (const city of cities)
         rows.push({
           category,
           city,
           trait,
           role,
+          subcategory,
           count: jobs.filter((job) => byCity.get(city)!.has(job.id)).length,
         });
     };
@@ -106,14 +129,22 @@ export async function refreshLandingCounts({
         null,
         label,
       );
+    for (const { id, category } of subcategories)
+      countPlaces(
+        base.filter((job) => job.subcategory === id),
+        category,
+        null,
+        null,
+        id,
+      );
     // Publish the entire snapshot atomically; failed refreshes retain the old one.
     await client.query('DELETE FROM landing_counts');
     await client.query(
       `
-      INSERT INTO landing_counts (category, city, trait, role, count, computed_at)
-      SELECT category, city, trait, role, count, transaction_timestamp()
+      INSERT INTO landing_counts (category, city, trait, role, subcategory, count, computed_at)
+      SELECT category, city, trait, role, subcategory, count, transaction_timestamp()
       FROM jsonb_to_recordset($1::jsonb)
-        AS r(category text, city text, trait text, role text, count integer)
+        AS r(category text, city text, trait text, role text, subcategory text, count integer)
     `,
       [JSON.stringify(rows)],
     );

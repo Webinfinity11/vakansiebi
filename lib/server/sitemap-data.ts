@@ -63,7 +63,7 @@ export const landingCountsMaxAgeMs = 24 * 60 * 60 * 1000;
 /** One small SELECT, with no job search or census on the request path. */
 export async function readLandingSnapshot(now = Date.now()) {
   const query = {
-    text: 'SELECT category, city, trait, role, count, computed_at FROM landing_counts',
+    text: 'SELECT category, city, trait, role, subcategory, count, computed_at FROM landing_counts',
     query_timeout: 2_000,
   };
   const result = await db().query<LandingCount & { computed_at: Date }>(query);

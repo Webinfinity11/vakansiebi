@@ -19,8 +19,8 @@ export async function searchesEntries() {
   const rows = eligibleLandings(counts);
   if (!rows.length) throw new Error('No eligible landing counts');
   const paths = rows
-    .map(({ category, city, trait, role }) =>
-      landingPath({ category, city, trait, role }),
+    .map(({ category, city, trait, role, subcategory }) =>
+      landingPath({ category, city, trait, role, subcategory }),
     )
     // The same guard the page itself uses, so a listed address is an indexable one.
     .filter(

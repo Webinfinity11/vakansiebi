@@ -268,6 +268,19 @@ void test(
         );
         assert.equal(row.count, result.rows[0].count, landingPath(row));
       }
+      // The developer fixtures fill a subcategory page, which the sitemap lists.
+      const developers = rows.find(
+        (row) =>
+          row.subcategory === 'tech-development' && !row.city && !row.trait,
+      )!;
+      assert.ok(developers.count >= 10, String(developers.count));
+      assert.ok(
+        (await searchesEntries()).some(
+          (row) =>
+            row.url ===
+            'https://jobx.ge/?category=teknologiebi&subcategory=tech-development',
+        ),
+      );
       assert.deepEqual(
         (await searchesEntries()).map((row) => row.url).sort(),
         eligibleLandings(rows)
