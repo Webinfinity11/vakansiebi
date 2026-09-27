@@ -1,12 +1,6 @@
 import { ServerSiteFooter } from '../../server-site-footer';
 import { compactSalary } from '@/lib/vacancy-presentation';
-import {
-  breadcrumbs,
-  jobPosting,
-  jsonLd,
-  shareImage,
-  vacancyUrl,
-} from '@/lib/seo';
+import { breadcrumbs, jobPosting, jsonLd, vacancyUrl } from '@/lib/seo';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { isAdmin } from '@/lib/server/auth';
@@ -60,14 +54,16 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     description,
     alternates: { canonical },
     robots: preview ? { index: false, follow: false } : undefined,
+    // The picture is this vacancy's own card (opengraph-image.tsx beside this page).
     openGraph: {
-      images: [shareImage],
       title,
       description,
       url: canonical,
       type: 'website',
       locale: 'ka_GE',
+      siteName: 'JOBX',
     },
+    twitter: { card: 'summary_large_image', title, description },
   };
 }
 export default async function Page(props: Props) {
