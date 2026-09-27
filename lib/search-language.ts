@@ -79,6 +79,17 @@ const roles = [
   ['ჟურნალისტ', 'ჟურნალისტი', 'journalist', 'журналист'],
   ['მასაჟისტ', 'მასაჟისტი', 'massage', 'массажист'],
   ['მებაღე', 'gardener', 'садовник'],
+  // Added 2026-09-27: each has enough live vacancies for a page of its own.
+  ['მცხობელ', 'მცხობელი', 'baker', 'пекарь'],
+  ['მერჩენდაიზერ', 'მერჩენდაიზერი', 'merchandiser', 'мерчендайзер'],
+  [
+    'პროექტის მენეჯერ',
+    'პროექტის მენეჯერი',
+    'project manager',
+    'менеджер проектов',
+  ],
+  ['აუდიტორ', 'აუდიტორი', 'auditor', 'аудитор'],
+  ['პრომოუტერ', 'პრომოუტერი', 'promoter', 'промоутер'],
 ];
 /* The reviewed roles, each as the word a reader would tap and the stem that
    finds it in a title. They are the vocabulary behind "popular searches": every
@@ -99,6 +110,7 @@ export const roleVocabulary = roles.map((group) => {
    მასწავლებლის, never მასწავლებელის. */
 function genitiveOf(word: string) {
   if (word.endsWith('ებელი')) return word.slice(0, -5) + 'ებლის';
+  if (word.endsWith('ობელი')) return word.slice(0, -5) + 'ობლის';
   if (word.endsWith('ი') || word.endsWith('ე')) return word.slice(0, -1) + 'ის';
   if (word.endsWith('ა')) return word + 'ს';
   return word + 'ის';
