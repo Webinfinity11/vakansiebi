@@ -53,6 +53,9 @@ export function jobsLocation(raw: string, tbilisiBoard = true): JobsLocation {
   if (!text) return { city: '' };
   if (/^დისტანციურ(?:ად|ი)$/i.test(text))
     return { city: '', mode: 'დისტანციური' };
+  // "თბილისი, რეგიონები" or "საქართველოს მასშტაბით" is wider than one town: kept as written,
+  // so the city filter can show it everywhere.
+  if (/მასშტაბ|მაშტაბ|(?<![\p{L}])რეგიონებ/u.test(text)) return { city: text };
   const named = townPatterns.filter((t) => t.re.test(text)).map((t) => t.town);
   const withAddress = (city: string): JobsLocation =>
     city === text ? { city } : { city, address: text };
