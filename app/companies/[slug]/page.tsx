@@ -18,8 +18,12 @@ import { formatDate } from '../../vacancy-text';
 import { db } from '@/lib/server/db';
 import { publicJobs } from '@/lib/server/jobs';
 import { employerPages } from '@/lib/server/employers';
+import { verifiedCompanyInfo } from '@/lib/server/verified-company-info';
 import { resolveCompanyLogos } from '@/lib/server/company-logos';
 import { companyKey } from '@/lib/company-key';
+import { companyVacancyTitle } from '@/lib/company-vacancy-title';
+import { companyOverview } from '@/lib/company-overview';
+import { companyFilters, companyResultsPath } from '@/lib/company-filters';
 import { logoCompanyKey } from '@/lib/company-logo-identity';
 import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import { vacancyPath } from '@/lib/vacancy-navigation';
@@ -39,7 +43,10 @@ import {
   siteUrl as site,
 } from '@/lib/seo';
 
-const load = cache(async (rawSlug: string, rawPage: string) => {
+const load = cache(async (rawSlug: string, rawQuery: string) => {
+  const filters = companyFilters(new URLSearchParams(rawQuery));
+  const { page } = filters;
+  const filtered = !!(filters.query || filters.city);
   let slug = rawSlug;
   try {
     slug = decodeURIComponent(rawSlug);
@@ -47,17 +54,23 @@ const load = cache(async (rawSlug: string, rawPage: string) => {
   const directory = await employerPages();
   const canonicalSlug = directory.aliases.get(slug);
   if (canonicalSlug) {
-    const page = Math.max(1, Math.min(10000, Math.floor(Number(rawPage)) || 1));
     permanentRedirect(
-      `/companies/${encodeURIComponent(canonicalSlug)}${page > 1 ? `?page=${page}` : ''}`,
+      companyResultsPath(
+        `/companies/${encodeURIComponent(canonicalSlug)}`,
+        filters,
+      ),
     );
   }
   const employer = directory.bySlug.get(slug);
   if (!employer) notFound();
-  const page = Math.max(1, Math.min(10000, Math.floor(Number(rawPage)) || 1));
   const [result, profile] = await Promise.all([
     publicJobs(
-      new URLSearchParams({ summary: '1', page: String(page) }),
+      new URLSearchParams({
+        summary: '1',
+        page: String(page),
+        q: filters.query,
+        city: filters.city,
+      }),
       false,
       {
         jobIds: employer.jobIds,
@@ -89,7 +102,8 @@ const load = cache(async (rawSlug: string, rawPage: string) => {
       }),
   ]);
   // Vacancies can end between directory rebuilds; an employer with nothing left has no page.
-  if (!result.total || page > result.pages) notFound();
+  if ((!filtered && !result.total) || (page > 1 && page > result.pages))
+    notFound();
   // Same priority as a vacancy card: an admin's own logo first, then one a source embedded on a
   // current vacancy, then one shared from another spelling of this employer. Only the last of
   // these needs its own query, and only when the first two found nothing.
@@ -108,7 +122,22 @@ const load = cache(async (rawSlug: string, rawPage: string) => {
   const today = new Date().toLocaleDateString('sv-SE', {
     timeZone: 'Asia/Tbilisi',
   });
-  return { employer, result, page, profile, logoUrl: logoUrl || '', today };
+  const verified = verifiedCompanyInfo(employer.names);
+  return {
+    employer,
+    result,
+    page,
+    filters,
+    filtered,
+    profile: {
+      ...profile,
+      website: profile?.website || verified?.website || '',
+      description: profile?.description || verified?.description || '',
+      descriptionSource: profile?.description ? null : verified?.source,
+    },
+    logoUrl: logoUrl || '',
+    today,
+  };
 });
 
 async function read(props: Props) {
@@ -116,14 +145,20 @@ async function read(props: Props) {
     props.params,
     props.searchParams,
   ]);
-  return load(slug, typeof query.page === 'string' ? query.page : '1');
+  const params = new URLSearchParams();
+  for (const key of ['q', 'city', 'page']) {
+    const value = query[key];
+    if (typeof value === 'string') params.set(key, value);
+  }
+  return load(slug, params.toString());
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { employer, result, page } = await read(props);
-  const title = `${employer.name} — ${result.total} ვაკანსია | JOBX`;
+  const { employer, result, page, filtered } = await read(props);
+  const heading = companyVacancyTitle(employer.name);
+  const title = `${heading}${page > 1 ? ` — გვერდი ${page}` : ''} | JOBX`;
   const description = [
-    `${employer.name}-ის აქტიური ვაკანსიები`,
+    `${heading}: ${result.total} აქტიური განცხადება`,
     employer.cities
       .slice(0, 3)
       .map((c) => c.name)
@@ -133,11 +168,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     .join(' · ')
     .slice(0, 180);
   const path = `/companies/${encodeURIComponent(employer.slug)}`;
-  const canonical = `${site}${path}${page > 1 ? `?page=${page}` : ''}`;
+  const canonical = `${site}${path}${!filtered && page > 1 ? `?page=${page}` : ''}`;
   return {
     title,
     description,
     alternates: { canonical },
+    robots: { index: !filtered, follow: true },
     openGraph: {
       images: [shareImage],
       title,
@@ -159,10 +195,12 @@ function daysFrom(later: string, earlier: string) {
 }
 
 export default async function CompanyPage(props: Props) {
-  const { employer, result, page, profile, logoUrl, today } = await read(props);
+  const { employer, result, page, filters, filtered, profile, logoUrl, today } =
+    await read(props);
   const path = `/companies/${encodeURIComponent(employer.slug)}`;
-  const here = page > 1 ? `${path}?page=${page}` : path;
+  const here = companyResultsPath(path, filters);
   const website = profile?.website ? safeExternalUrl(profile.website) : '';
+  const overview = companyOverview(profile?.description);
   return (
     <div className="board-shell vacancy-page company-page">
       {/* The employer, and what it is hiring for. */}
@@ -174,6 +212,7 @@ export default async function CompanyPage(props: Props) {
               name: employer.name,
               path: here,
               website,
+              description: profile?.description,
               logoUrl,
               cities: employer.cities.map((c) => c.name),
               jobs: result.jobs,
@@ -183,7 +222,7 @@ export default async function CompanyPage(props: Props) {
             breadcrumbs([
               { name: 'ვაკანსიები', path: '/' },
               { name: 'კომპანიები', path: '/companies' },
-              { name: employer.name, path: here },
+              { name: companyVacancyTitle(employer.name), path: here },
             ]),
           ]),
         }}
@@ -206,25 +245,43 @@ export default async function CompanyPage(props: Props) {
             <CompanyLogo large company={employer.name} url={logoUrl} />
             <div>
               <span>კომპანია</span>
-              <h1 id="company-title">{employer.name}</h1>
+              <h1 id="company-title">{companyVacancyTitle(employer.name)}</h1>
             </div>
           </div>
           {employer.cities.length > 0 && (
             <p className="company-page-cities">
               <MapPin size={14} aria-hidden="true" />
-              {employer.cities.map((c) => c.name).join(' · ')}
+              {employer.cities
+                .slice(0, 8)
+                .map((c) => c.name)
+                .join(' · ')}
             </p>
           )}
-          {(profile?.description || website) && (
+          {(overview || website) && (
             <div className="company-about">
-              {profile?.description && (
-                <details className="company-description">
-                  <summary>
-                    <ChevronDown aria-hidden="true" />
-                    კომპანიის შესახებ
-                  </summary>
-                  <p>{profile.description}</p>
-                </details>
+              {overview && (
+                <div className="company-overview">
+                  <h2>კომპანიის შესახებ</h2>
+                  <p>{overview.summary}</p>
+                  {profile.descriptionSource && (
+                    <a
+                      href={profile.descriptionSource}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      ოფიციალური წყარო
+                    </a>
+                  )}
+                  {overview.full && (
+                    <details className="company-description">
+                      <summary>
+                        <ChevronDown aria-hidden="true" />
+                        სრულად წაკითხვა
+                      </summary>
+                      <p>{overview.full}</p>
+                    </details>
+                  )}
+                </div>
               )}
               {website && (
                 <a
@@ -241,12 +298,60 @@ export default async function CompanyPage(props: Props) {
           )}
         </section>
         <section className="similar-vacancies" aria-labelledby="company-jobs">
+          <search aria-label="კომპანიის ვაკანსიების ძიება">
+            <form action={path} method="get" className="company-filters">
+              <label>
+                <span>ვაკანსიის ძიება</span>
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={filters.query}
+                  maxLength={200}
+                  placeholder="მაგ. მოლარე, მენეჯერი"
+                />
+              </label>
+              <label>
+                <span>ქალაქი</span>
+                <select name="city" defaultValue={filters.city}>
+                  <option value="">ყველა ქალაქი</option>
+                  {[
+                    ...new Set([
+                      ...employer.cities.map((city) => city.name),
+                      ...(filters.city ? [filters.city] : []),
+                    ]),
+                  ].map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="submit" className="ds-btn ds-btn--primary">
+                ძებნა
+              </button>
+              {filtered && (
+                <Link
+                  href={path}
+                  prefetch={false}
+                  className="ds-btn ds-btn--secondary"
+                >
+                  გასუფთავება
+                </Link>
+              )}
+            </form>
+          </search>
           <h2 id="company-jobs">
-            აქტიური ვაკანსიები{' '}
+            {filtered ? 'ძიების შედეგები' : 'აქტიური ვაკანსიები'}{' '}
             <span className="ds-badge ds-badge--accent company-count">
               {result.total}
             </span>
           </h2>
+          {!result.total && (
+            <output>
+              ამ ფილტრებით ვაკანსია ვერ მოიძებნა. შეცვალე ძიება ან გაასუფთავე
+              ფილტრები.
+            </output>
+          )}
           <ul className="company-jobs">
             {result.jobs.map((job) => {
               const salary = vacancyCardSalary(
@@ -307,7 +412,7 @@ export default async function CompanyPage(props: Props) {
               {page > 1 ? (
                 <Link
                   className="secondary-button"
-                  href={page === 2 ? path : `${path}?page=${page - 1}`}
+                  href={companyResultsPath(path, filters, page - 1)}
                   prefetch={false}
                 >
                   <ChevronLeft aria-hidden="true" />
@@ -322,7 +427,7 @@ export default async function CompanyPage(props: Props) {
               {page < result.pages ? (
                 <Link
                   className="secondary-button"
-                  href={`${path}?page=${page + 1}`}
+                  href={companyResultsPath(path, filters, page + 1)}
                   prefetch={false}
                 >
                   შემდეგი

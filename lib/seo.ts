@@ -3,7 +3,8 @@ import { privateListingLabel } from './types';
 import { cities, cityStem } from './cities';
 import { tbilisiDistricts } from './street-address';
 import { safeExternalUrl } from './vacancy-media';
-import { genericCompanyKeys, logoCompanyKey } from './company-logo-identity';
+import { isGenericCompanyName } from './company-logo-identity';
+import { companyVacancyTitle } from './company-vacancy-title';
 import { vacancySegment } from './vacancy-navigation';
 import { salaryFacts } from './salary-summary';
 import { vacancySummary } from './vacancy-summary';
@@ -151,7 +152,7 @@ export function jobPosting(
     job.datePosted > today ||
     !job.company.trim() ||
     job.company === privateListingLabel ||
-    genericCompanyKeys.has(logoCompanyKey(job.company)) ||
+    isGenericCompanyName(job.company) ||
     (job.deadline && (!calendarDate(job.deadline) || job.deadline < today))
   )
     return null;
@@ -275,6 +276,7 @@ export function siteIdentity() {
    engine they were text, and the vacancies on them belonged to nobody. */
 export function employerPage(employer: {
   name: string;
+  description?: string | null;
   path: string;
   website?: string | null;
   logoUrl?: string | null;
@@ -292,6 +294,9 @@ export function employerPage(employer: {
       '@context': 'https://schema.org',
       '@type': 'Organization',
       name: employer.name,
+      ...(employer.description?.trim()
+        ? { description: employer.description.trim() }
+        : {}),
       url,
       ...(website ? { sameAs: [website] } : {}),
       ...(logo ? { logo } : {}),
@@ -308,7 +313,7 @@ export function employerPage(employer: {
     {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
-      name: `${employer.name} — ვაკანსიები`,
+      name: companyVacancyTitle(employer.name),
       url,
       numberOfItems: employer.total,
       itemListElement: employer.jobs.slice(0, 30).map((job, index) => ({
@@ -338,7 +343,7 @@ export function companiesCollection(
       itemListElement: employers.slice(0, 100).map((employer, index) => ({
         '@type': 'ListItem',
         position: index + 1,
-        name: employer.name,
+        name: companyVacancyTitle(employer.name),
         url: `${url}/${encodeURIComponent(employer.slug)}`,
       })),
     },

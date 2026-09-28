@@ -114,6 +114,9 @@ void test('structured vacancies use the real domain and only supported public fa
   );
   for (const patch of [
     { company: 'კერძო განცხადება' },
+    { company: 'კომპანია' },
+    { company: 'შპს მარკეტი' },
+    { company: 'Restaurant' },
     { datePosted: '0001-01-01' },
     { datePosted: '2026-02-30' },
     { deadline: '2026-09-13' },

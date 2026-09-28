@@ -16,13 +16,15 @@ export const genericCompanyKeys = new Set([
   'hotel',
   'მაღაზია',
   'shop',
+  'მარკეტი',
+  'market',
   'ირინა',
   'გიორგი',
   'ნიკა',
   'თამარი',
 ]);
 // Conservative exact identities only. Do not use substring/fuzzy matches for branding.
-export function logoCompanyKey(name: string) {
+function normalizedCompanyKey(name: string) {
   const normalized = name
     .normalize('NFKC')
     .toLowerCase()
@@ -32,8 +34,14 @@ export function logoCompanyKey(name: string) {
   // Unsupported alphabets remain unlinked, rather than collapsing different names.
   if (/[^a-z0-9ა-ჰ\p{P}\p{Z}\p{S}]/u.test(normalized)) return '';
   const key = normalized.replace(/[^a-z0-9ა-ჰ]/g, '');
-  if (key.length < 3 || genericCompanyKeys.has(key)) return '';
   return key;
+}
+export function isGenericCompanyName(name: string) {
+  return genericCompanyKeys.has(normalizedCompanyKey(name));
+}
+export function logoCompanyKey(name: string) {
+  const key = normalizedCompanyKey(name);
+  return key.length < 3 || genericCompanyKeys.has(key) ? '' : key;
 }
 // Verified on the bank's own site, not inferred from the vacancy description.
 // https://bankofgeorgia.ge/blog/ supplies this logo in its header.

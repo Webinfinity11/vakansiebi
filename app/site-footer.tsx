@@ -24,7 +24,10 @@ export function SiteFooter({
     <>
       {/* Reader-facing, and the only way a crawler reaches these lists by
           following links rather than by reading the sitemap. */}
-      <nav className="search-directory" aria-label="მსგავსი ძიებები">
+      <nav
+        className="search-directory"
+        aria-label="სწრაფი ბმულები და ვაკანსიების ძიება"
+      >
         {/* Below the vacancies, not above them: a list with nothing to read is
             a thin page, but the reader came for the list and the sentence that
             describes it has no business standing between them. */}

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { db, transaction } from './db';
-import { publicRead } from './search-plan';
+import { publicRead, searchPlan } from './search-plan';
+import { employerJobCount } from '../employer-job-count';
 import { ApiError } from './auth';
 import {
   candidatePairs,
@@ -222,7 +223,8 @@ async function buildEmployerPages() {
       logoUrl: g.logo,
       names: names.map((x) => x.name),
       jobIds: g.ids,
-      cities: ranked(g.cities).slice(0, 8),
+      // Filters need every location; each display chooses its own short list.
+      cities: ranked(g.cities),
     });
     if (g.ids.length >= 3) {
       for (const id of g.ids) byJob.set(id, slug);
@@ -280,6 +282,18 @@ async function buildEmployerDirectory(
   pages: Awaited<ReturnType<typeof buildEmployerPages>>,
 ): Promise<DirectoryEmployer[]> {
   const list = [...pages.bySlug.values()];
+  // One catalogue scan for all companies, with the public list's visibility
+  // and grouping keys. Raw job IDs include duplicates and hidden postings.
+  const plan = searchPlan(new URLSearchParams(), false, { grouped: true });
+  const visible = await publicRead(
+    // Keep every member so an employer's subset can count its own distinct
+    // groups even if the catalogue-wide representative is another spelling.
+    `${plan.cte} SELECT j.id::text AS id,j.group_key FROM searchable j`,
+    plan.args,
+  );
+  const visibleGroups = new Map<string, string>(
+    visible.rows.map((row) => [row.id, row.group_key]),
+  );
   const profiles = new Map<string, string>(
     (
       await publicRead(
@@ -306,26 +320,27 @@ async function buildEmployerDirectory(
           .map((n) => shared.get(logoCompanyKey(n))?.logoUrl)
           .find(Boolean) ||
         '',
-      jobs: p.jobIds.length,
+      jobs: employerJobCount(p.jobIds, visibleGroups),
       cities: p.cities.slice(0, 2).map((c) => c.name),
     }))
-    .filter((e) => e.logoUrl)
+    .filter((e) => e.logoUrl && e.jobs > 0)
     .sort((a, b) => b.jobs - a.jobs || a.name.localeCompare(b.name, 'ka'));
 }
 
 let directory: {
+  at: number;
   from: ReturnType<typeof buildEmployerPages>;
   value: Promise<DirectoryEmployer[]>;
 } | null = null;
-/** Rebuilt with the employer pages it is made from, never more often. */
+/** Refresh live counts each minute even while employer identities are cached. */
 export function companiesDirectory() {
   const from = employerPages();
-  if (directory?.from !== from) {
+  if (directory?.from !== from || Date.now() - directory.at >= 60_000) {
     const value = from.then(buildEmployerDirectory).catch((error) => {
       directory = null;
       throw error;
     });
-    directory = { from, value };
+    directory = { at: Date.now(), from, value };
   }
   return directory.value;
 }

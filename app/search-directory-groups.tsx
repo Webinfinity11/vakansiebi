@@ -4,9 +4,27 @@ import { DirectoryLinks, useSearchDirectory } from './search-directory-context';
 
 export function SearchDirectoryGroups() {
   return (
-    <Suspense fallback={null}>
-      <DirectoryGroups />
-    </Suspense>
+    <div className="search-directory-browse">
+      <h2>მოძებნე ვაკანსია</h2>
+      <div className="search-directory-groups">
+        {/* Keep the main destinations in the initial HTML even while the
+            vacancy-dependent directory is loading or unavailable. */}
+        <section className="search-directory-group">
+          <h3>სწრაფი ბმულები</h3>
+          <DirectoryLinks
+            links={[
+              { path: '/', label: 'ყველა ვაკანსია' },
+              { path: '/companies', label: 'კომპანიები' },
+              { path: '/cv', label: 'რეზიუმეს შექმნა' },
+              { path: '/map', label: 'ვაკანსიები რუკაზე' },
+            ]}
+          />
+        </section>
+        <Suspense fallback={null}>
+          <DirectoryGroups />
+        </Suspense>
+      </div>
+    </div>
   );
 }
 
@@ -28,18 +46,15 @@ function DirectoryGroups() {
   }));
 
   return (
-    <div className="search-directory-browse">
-      <h2>მოძებნე ვაკანსია</h2>
-      <div className="search-directory-groups">
-        {groups
-          .filter((group) => group.links.length > 0)
-          .map(({ title, key, links: groupLinks }) => (
-            <section key={key} className="search-directory-group">
-              <h3>{title}</h3>
-              <DirectoryLinks links={groupLinks} />
-            </section>
-          ))}
-      </div>
-    </div>
+    <>
+      {groups
+        .filter((group) => group.links.length > 0)
+        .map(({ title, key, links: groupLinks }) => (
+          <section key={key} className="search-directory-group">
+            <h3>{title}</h3>
+            <DirectoryLinks links={groupLinks} />
+          </section>
+        ))}
+    </>
   );
 }

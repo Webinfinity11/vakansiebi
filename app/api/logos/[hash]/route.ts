@@ -14,7 +14,9 @@ export async function GET(
       headers: { 'Cache-Control': 'private, no-store' },
     });
   const { hash } = await context.params;
-  if (!/^[a-f0-9]{64}$/.test(hash) || new URL(request.url).search)
+  // Next.js may append its deployment identifier to image requests.
+  const query = new URL(request.url).searchParams;
+  if (!/^[a-f0-9]{64}$/.test(hash) || [...query.keys()].some((key) => key !== 'dpl'))
     return notFound();
   try {
     const logo = (

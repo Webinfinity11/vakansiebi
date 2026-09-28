@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isLocalLogoUrl, safeExternalUrl } from '@/lib/vacancy-media';
 
 const legalForms = /^(შპს|სს|ი\/მ|ააიპ|სპს|კს|llc|ltd|inc|jsc)$/i;
@@ -20,18 +20,41 @@ export function CompanyLogo({
   company,
   url,
   large = false,
+  defer = false,
 }: {
   company: string;
   url?: string;
   large?: boolean;
+  defer?: boolean;
   category?: string;
 }) {
   const [failed, setFailed] = useState('');
   const [loaded, setLoaded] = useState('');
+  const container = useRef<HTMLSpanElement>(null);
+  const [nearby, setNearby] = useState(!defer);
+  useEffect(() => {
+    if (!defer || nearby || !container.current) return;
+    if (!('IntersectionObserver' in window)) {
+      const timer = setTimeout(() => setNearby(true), 0);
+      return () => clearTimeout(timer);
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setNearby(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(container.current);
+    return () => observer.disconnect();
+  }, [defer, nearby]);
   const src = isLocalLogoUrl(url) ? url : safeExternalUrl(url || '');
-  const showLogo = Boolean(src && failed !== src);
+  const showLogo = Boolean(src && failed !== src && (!defer || nearby));
   return (
     <span
+      ref={container}
       className={`company-avatar ${showLogo && loaded === src ? '' : 'company-placeholder'} ${showLogo ? '' : 'company-none'} ${large ? 'avatar-large' : ''}`}
     >
       {showLogo && (
