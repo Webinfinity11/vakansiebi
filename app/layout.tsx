@@ -1,8 +1,7 @@
 import { siteUrl, shareImage, homeTitle, homeDescription } from '@/lib/seo';
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
-import { GoogleAnalytics } from './google-analytics';
-import { YandexMetrika } from './yandex-metrika';
+import { SiteTracking } from './site-tracking';
 import './tokens.css';
 import './globals.css';
 import './board.css';
@@ -72,8 +71,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         {children}
         <Suspense fallback={null}>
-          <GoogleAnalytics measurementId="G-9S8J0W7QXM" />
-          <YandexMetrika counterId={112737833} />
+          <SiteTracking />
         </Suspense>
       </body>
     </html>

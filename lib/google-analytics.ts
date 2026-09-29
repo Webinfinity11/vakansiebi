@@ -7,7 +7,8 @@ export function analyticsPage(url: string) {
     if (
       path !== '/' &&
       path !== '/post-job' &&
-      !/^\/vacancies\/[\da-f-]{36}$/.test(path) &&
+      path !== '/companies' &&
+      !/^\/vacancies\/[^/]+$/.test(path) &&
       !/^\/companies\/[^/]+$/.test(path)
     )
       return null;

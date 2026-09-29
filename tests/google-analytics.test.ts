@@ -55,3 +55,15 @@ void test('referrers retain attribution without private paths or search text', (
   assert.equal(analyticsReferrer(''), '');
   assert.equal(analyticsReferrer('javascript:alert(1)'), '');
 });
+
+void test('company directory and slug-based vacancy URLs are public analytics pages', () => {
+  assert.equal(
+    analyticsPage('https://jobx.ge/companies?page=2'),
+    'https://jobx.ge/companies',
+  );
+  assert.equal(
+    analyticsPage('https://jobx.ge/vacancies/example-123?q=private'),
+    'https://jobx.ge/vacancies/example-123',
+  );
+  assert.equal(analyticsPage('https://jobx.ge/cv/private-token'), null);
+});

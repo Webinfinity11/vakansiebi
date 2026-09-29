@@ -25,7 +25,13 @@ const aiBots = [
 export default function robots(): MetadataRoute.Robots {
   const open = {
     // Public resources needed to render company links and submitted logos.
-    allow: ['/', '/api/company-links$', '/api/company-links?', '/api/logos/'],
+    allow: [
+      '/',
+      '/api/company-links$',
+      '/api/company-links?',
+      '/api/logos/',
+      '/api/tracking$',
+    ],
     disallow: ['/admin', '/api/'],
   };
   return {

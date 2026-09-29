@@ -1,0 +1,87 @@
+.tracking-settings {
+  max-width: 960px;
+}
+.tracking-settings form,
+.tracking-settings fieldset {
+  display: grid;
+  gap: 20px;
+}
+.tracking-settings fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.tracking-card {
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.tracking-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tracking-card h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.tracking-card p,
+.tracking-settings form > p {
+  margin: 0;
+  color: var(--ds-ink-2);
+  line-height: 1.65;
+  font-size: 14px;
+}
+.tracking-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.tracking-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: #2455ef;
+}
+.tracking-field {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+.tracking-field .ds-input {
+  width: 100%;
+}
+.tracking-code {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 200px;
+}
+.tracking-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+.tracking-actions output {
+  font-size: 14px;
+}
+.tracking-error {
+  color: #b42318;
+  padding: 16px 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .tracking-card {
+    padding: 16px;
+  }
+}

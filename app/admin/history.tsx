@@ -19,6 +19,7 @@ const actions: Record<string, string> = {
   'confirm-payment': 'გადახდის დადასტურება',
   'confirm-refund': 'თანხის დაბრუნების დადასტურება',
   'placement.approved': 'განთავსების დადასტურება',
+  'tracking.settings.updated': 'პიქსელები და კოდები',
   'billing.settings.updated': 'ბილინგის პარამეტრები',
   'company.save': 'კომპანიის გვერდი',
   'employer.decide': 'კომპანიის სახელები',

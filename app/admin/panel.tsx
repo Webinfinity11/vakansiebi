@@ -1,4 +1,5 @@
 'use client';
+import { TrackingSettings } from './tracking-settings';
 import { BillingSettings } from './billing-settings';
 import { invoiceNumber, invoiceStatuses } from '@/lib/billing';
 import {
@@ -834,6 +835,11 @@ export default function AdminPanel() {
       title: 'ბიზნესი',
       items: [
         { id: 'billing', label: 'ინვოისები', icon: ReceiptText },
+        {
+          id: 'tracking',
+          label: 'პიქსელები და კოდები',
+          icon: SlidersHorizontal,
+        },
         { id: 'analytics', label: 'ანალიტიკა', icon: ChartColumn },
         { id: 'resumes', label: 'CV-ები', icon: FileText },
       ],
@@ -1097,6 +1103,14 @@ export default function AdminPanel() {
                 }
               />
             )}
+          </section>
+        )}
+        {tab === 'tracking' && (
+          <section className="admin-panel">
+            <SectionHeading title="პიქსელები და კოდები">
+              ანალიტიკისა და მარკეტინგის მართვა
+            </SectionHeading>
+            <TrackingSettings />
           </section>
         )}
         {tab === 'billing' && (

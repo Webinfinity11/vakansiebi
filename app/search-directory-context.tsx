@@ -65,6 +65,19 @@ export function DirectoryLinks({
         <details>
           <summary>მეტის ჩვენება ({links.length - limit})</summary>
           {list(links.slice(limit))}
+          <button
+            type="button"
+            className="directory-collapse"
+            onClick={(event) => {
+              const details = event.currentTarget.closest('details');
+              if (details) {
+                details.open = false;
+                details.querySelector('summary')?.focus();
+              }
+            }}
+          >
+            ნაკლების ჩვენება
+          </button>
         </details>
       )}
     </>

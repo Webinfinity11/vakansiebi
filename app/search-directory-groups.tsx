@@ -52,7 +52,7 @@ function DirectoryGroups() {
         .map(({ title, key, links: groupLinks }) => (
           <section key={key} className="search-directory-group">
             <h3>{title}</h3>
-            <DirectoryLinks links={groupLinks} />
+            <DirectoryLinks links={groupLinks} limit={3} />
           </section>
         ))}
     </>

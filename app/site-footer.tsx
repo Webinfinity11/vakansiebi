@@ -71,9 +71,9 @@ export function SiteFooter({
             სტატისტიკა სერვერზე ინახება, ზოგი ლოგო კი გარე საიტიდან იტვირთება.
             PDF-ად შენახვისას რეზიუმეს ასლი ფოტოსთან ერთად JOBX-ზეც ინახება ბოლო
             შენახვიდან 12 თვემდე და CV-ის გვერდზე „გასუფთავებით“ წაიშლება.
-            საჯარო გვერდების ვიზიტებს Google Analytics-ითაც ვზომავთ; ის
-            ანალიტიკურ ქუქი-ფაილებს იყენებს. ფორმებში შეყვანილ პირად მონაცემებს
-            Google Analytics-ს არ ვუგზავნით.{' '}
+            საჯარო გვერდებზე შეიძლება გამოიყენებოდეს Google Analytics, Yandex
+            Metrika და Meta Pixel ვიზიტების, საიტთან ურთიერთქმედებისა და
+            რეკლამის შედეგების გასაზომად. ეს სერვისები იყენებს ქუქი-ფაილებს.{' '}
             <a
               href="https://policies.google.com/technologies/partner-sites"
               target="_blank"
@@ -88,7 +88,7 @@ export function SiteFooter({
           <span>ვაკანსიები სხვადასხვა წყაროდან</span>
           <span className="footer-copyright">
             © {new Date().getFullYear()} JOBX
-            <TopGeCounter siteId={118973} />
+            <TopGeCounter />
           </span>
         </div>
       </footer>
