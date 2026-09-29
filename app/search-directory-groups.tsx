@@ -28,6 +28,22 @@ export function SearchDirectoryGroups() {
   );
 }
 
+// September 2026 GSC clicks and Georgia Keyword Planner measurements.
+// Priority is editorial: ranges for transliterations are not Georgian volumes.
+const measuredPriority = [
+  '/?city=tbilisi',
+  '/?city=batumi',
+  '/?city=kutaisi',
+  '/?salaryPeriod=day',
+  '/?remote=true',
+  '/?employment=part-time',
+  '/?q=molare',
+];
+const priority = (path: string) => {
+  const index = measuredPriority.indexOf(path);
+  return index < 0 ? measuredPriority.length : index;
+};
+
 function DirectoryGroups() {
   const links = landingLinks(useSearchDirectory());
   const groups = [
@@ -37,12 +53,14 @@ function DirectoryGroups() {
     { title: 'პროფესია', key: 'q' },
   ].map((group) => ({
     ...group,
-    links: links.filter(({ path }) => {
-      const params = new URLSearchParams(path.split('?')[1]);
-      return group.key === 'conditions'
-        ? !['category', 'city', 'q'].some((key) => params.has(key))
-        : params.has(group.key);
-    }),
+    links: links
+      .filter(({ path }) => {
+        const params = new URLSearchParams(path.split('?')[1]);
+        return group.key === 'conditions'
+          ? !['category', 'city', 'q'].some((key) => params.has(key))
+          : params.has(group.key);
+      })
+      .sort((a, b) => priority(a.path) - priority(b.path)),
   }));
 
   return (

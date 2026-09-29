@@ -12,7 +12,7 @@ import { vacancySummary } from './vacancy-summary';
 export const siteUrl = 'https://jobx.ge';
 export const homeTitle = 'ვაკანსიები საქართველოში — სამსახურის ძებნა | JOBX';
 export const homeDescription =
-  'ვაკანსიები თბილისში, ბათუმში და საქართველოს სხვა ქალაქებში. მოძებნე სამსახური და დასაქმების შესაძლებლობა პროფესიის, მდებარეობის, ანაზღაურებისა და სამუშაო გრაფიკის მიხედვით.';
+  'ვაკანსიები თბილისში, ბათუმში, ქუთაისსა და საქართველოს სხვა ქალაქებში. მოძებნე სამსახური პროფესიის, ხელფასისა და გრაფიკის მიხედვით — მათ შორის დღიური ანაზღაურებით და დისტანციურად.';
 /* The picture a messenger shows for any page of the site, built by
    scripts/build-og-image.ts. Every page that writes its own openGraph block has
    to name it: a page-level block replaces the layout's, images and all, which is
