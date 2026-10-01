@@ -48,3 +48,35 @@ void test('migration preserves free text, tracking and pagination; employer name
   assert.equal(employerSlug('Café Brød'), 'cafe-brod');
   assert.equal(employerSlug('Данило Панчишин'), 'danilo-panchishin');
 });
+
+void test('Latin city variants resolve to one canonical landing without losing the search', () => {
+  for (const [variants, canonical, city] of [
+    [['Tbilisi', 'tbilisshi', 'tbilishi', 'tbilsi'], 'tbilisi', 'თბილისი'],
+    [['batumshi'], 'batumi', 'ბათუმი'],
+    [['kutaisi', 'qutaisshi', 'kutaisshi'], 'kutaisi', 'ქუთაისი'],
+    [['rustavshi'], 'rustavi', 'რუსთავი'],
+  ] as const) {
+    for (const variant of variants) {
+      const old = new URLSearchParams({
+        city: variant,
+        page: '2',
+        utm_source: 'qa',
+      });
+      const next = canonicalSearchParams(old);
+      assert.equal(next.get('city'), canonical);
+      assert.equal(readSearch(old).city, city);
+      assert.equal(
+        landingFor(new URLSearchParams({ city: variant }))?.path,
+        `/?city=${canonical}`,
+      );
+      assert.equal(next.get('page'), '2');
+      assert.equal(next.get('utm_source'), 'qa');
+      assert.equal(canonicalSearchParams(next).toString(), next.toString());
+    }
+  }
+  // A city's alias is not a replacement for a user's free-text query.
+  assert.equal(
+    canonicalSearchParams(new URLSearchParams({ q: 'tbilisshi' })).get('q'),
+    'tbilisshi',
+  );
+});

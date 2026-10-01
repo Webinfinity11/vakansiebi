@@ -57,6 +57,14 @@ void test('referrers retain attribution without private paths or search text', (
 });
 
 void test('company directory and slug-based vacancy URLs are public analytics pages', () => {
+  for (const path of ['/business', '/map']) {
+    assert.equal(
+      analyticsPage(`https://jobx.ge${path}?q=private#section`),
+      `https://jobx.ge${path}`,
+    );
+    assert.equal(analyticsPage(`https://jobx.ge${path}?preview=1`), null);
+    assert.equal(analyticsPage(`http://127.0.0.1:3004${path}`), null);
+  }
   assert.equal(
     analyticsPage('https://jobx.ge/companies?page=2'),
     'https://jobx.ge/companies',

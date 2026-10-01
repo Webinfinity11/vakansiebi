@@ -3,7 +3,10 @@ import { SearchDirectoryProvider } from './search-directory-context';
 import { SiteFooter } from './site-footer';
 
 /** Start the snapshot read without holding up the page; only the directory suspends. */
-export function ServerSiteFooter() {
+export function ServerSiteFooter({
+  showDirectory = true,
+}: { showDirectory?: boolean } = {}) {
+  if (!showDirectory) return <SiteFooter showDirectory={false} />;
   const rows = landingCounts().catch(() => null);
   return (
     <SearchDirectoryProvider rows={rows}>

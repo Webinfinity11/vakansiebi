@@ -1,0 +1,14 @@
+Generated with the built-in image_gen tool on 2026-10-01.
+Project asset: public/images/jobx-business-team-v2.webp
+Reference page reviewed for layout direction: https://awork.ge/user/for-business
+The illustration is original; no Awork assets were supplied to the image generator.
+
+Use case: ads-marketing.
+Asset type: original illustrated website hero background for JOBX, a Georgian recruitment and vacancies website, intended for the employer landing page.
+Primary request: a joyful, comfortable, stylish recruitment banner with an unmistakably human, commissioned editorial illustration character, avoiding generic AI startup art.
+Composition: wide panoramic landscape, approximately 2:1 aspect ratio. The left 45 percent is completely quiet warm ivory negative space for live HTML headline and buttons, with no objects or lettering there. Scene is concentrated in the right 55 percent and stays entirely within that area, with generous margins for mobile cropping. Keep the left background close to #f7f3eb, no gradient.
+Scene: three adult coworkers warmly welcoming a new adult teammate around a casual shared work table in a light Georgian small-business studio; natural friendly body language, one person offers a chair, another greets the newcomer. Small plant, notebook and a coffee cup give the scene a lived-in approachable feeling. People have believable simplified anatomy, distinct faces, individual clothes, and textured expressive silhouettes rather than generic blob figures.
+Style: premium contemporary hand-drawn editorial illustration, flat screenprint-like gouache with pencil accents, tactile paper grain, confidently irregular ink contours, thoughtful asymmetric composition. Human and playful, restrained and professionally art-directed, not childish.
+Palette: JOBX cobalt blue #2457e6 and deep ink navy #16213a as dominant accents, warm ivory paper, small butter yellow and warm coral accents.
+Text: absolutely no text, no words, no letters, no typography, no logos; all actual Georgian page text will be laid out separately in HTML.
+Avoid: stock business handshake cliches, laptop dashboard mockups, floating UI cards, fake statistics, neon gradients, generic 3D clay characters, emoji, glossy plastic, excessive confetti, robot or AI motifs. No copied competitor assets. The background is opaque ivory.

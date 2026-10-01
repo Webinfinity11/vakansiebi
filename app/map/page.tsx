@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { shareImage } from '@/lib/seo';
 import { PublicHeader } from '../public-header';
 import { JobMap } from './job-map';
@@ -6,7 +7,7 @@ import './map.css';
 
 const title = 'ვაკანსიები რუკაზე — JOBX';
 const description =
-  'იპოვე სამსახური სახლთან ახლოს: ვაკანსიები რუკაზე, ზუსტი მისამართით, თბილისში, ბათუმსა და ქუთაისში.';
+  'იპოვე სამსახური სახლთან ან მეტროსთან ახლოს: ვაკანსიები რუკაზე, ზუსტი მისამართით, თბილისში, ბათუმსა და ქუთაისში.';
 // A page-level openGraph block replaces the layout's, so it names everything it needs.
 export const metadata: Metadata = {
   title,
@@ -33,7 +34,11 @@ export default function MapPage() {
   return (
     <div className="board-shell job-map-shell">
       <PublicHeader />
-      <JobMap />
+      <Suspense
+        fallback={<output className="job-map-hint">რუკა იტვირთება…</output>}
+      >
+        <JobMap />
+      </Suspense>
     </div>
   );
 }

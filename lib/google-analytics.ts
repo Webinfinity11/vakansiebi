@@ -8,6 +8,8 @@ export function analyticsPage(url: string) {
       path !== '/' &&
       path !== '/post-job' &&
       path !== '/companies' &&
+      path !== '/business' &&
+      path !== '/map' &&
       !/^\/vacancies\/[^/]+$/.test(path) &&
       !/^\/companies\/[^/]+$/.test(path)
     )

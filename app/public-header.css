@@ -4,7 +4,7 @@
    radius:
      nav links        ghost, neutral until they are the current page
      personal actions secondary (search, saved, CV) — one look for all three
-     post a vacancy   the single primary
+     for businesses   the single primary
      theme            secondary icon button
    The prefix below outranks the older topbar rules in globals.css and board.css
    (`.board-shell .topbar nav a` gave nav links a 72px height and 13px text). */
@@ -148,3 +148,21 @@
   }
 }
 /* Phones (≤760px) are laid out in app/phone.css. */
+@media (max-width: 430px) {
+  .board-shell .topbar.public-header .header-inner.header-inner {
+    gap: var(--ds-space-1);
+  }
+  .board-shell .topbar.public-header .header-inner .jobx-brand,
+  .board-shell .topbar.public-header .header-inner .jobx-brand img {
+    width: 80px;
+    height: 27px;
+  }
+  .board-shell .topbar.public-header .header-inner .site-nav-link {
+    padding-inline: var(--ds-space-1);
+  }
+}
+@media (max-width: 380px) {
+  .board-shell .topbar.public-header .site-nav {
+    display: none;
+  }
+}

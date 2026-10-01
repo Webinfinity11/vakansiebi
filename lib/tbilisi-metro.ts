@@ -166,7 +166,7 @@ export const metroStations: MetroStation[] = [
 export const stationBySlug = (slug: string | undefined) =>
   slug ? metroStations.find((s) => s.slug === slug) : undefined;
 
-export const metroPath = (s: MetroStation) => `/metro?station=${s.slug}`;
+export const metroPath = (s: MetroStation) => `/map?station=${s.slug}`;
 
 /** The walks a station page offers; the page loads everything within the longest. */
 export const metroWalkChoices = [5, 10, 15] as const;

@@ -1,6 +1,7 @@
 'use client';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type {
   Map as MapLibre,
   GeoJSONSource,
@@ -13,6 +14,8 @@ import {
   MapPin,
   MapPinOff,
   Search,
+  TrainFront,
+  Footprints,
   X,
 } from 'lucide-react';
 import { trackAction } from '@/lib/analytics-client';
@@ -22,6 +25,28 @@ import { CompanyLogo } from '../company-logo';
 import { compactSalary } from '@/lib/vacancy-presentation';
 import { vacancySegment } from '@/lib/vacancy-navigation';
 import type { MapVacancy } from '@/lib/server/job-map';
+import {
+  metroDefaultWalk,
+  metroWalkChoices,
+  stationBySlug,
+  type MetroStation,
+} from '@/lib/tbilisi-metro';
+import { distanceMeters, formatWalk, walkMinutes } from '@/lib/geo';
+import { nearestMetro, vacanciesNearStation } from '@/lib/map-metro';
+import {
+  addMetroLines,
+  addMetroStations,
+  frameStation,
+  stationHitLayers,
+  stationAtPoint,
+  updateMetro,
+} from './metro-layers';
+import { VacancyPanel } from './vacancy-panel';
+import { installMapPreviews } from './map-preview';
+import {
+  addClusterLayoutSources,
+  installClusterLayout,
+} from './cluster-layout';
 
 /* Free vector tiles with no key and no request limit; labels are switched to Georgian below. */
 const styleUrl = 'https://tiles.openfreemap.org/styles/positron';
@@ -45,6 +70,36 @@ const inBounds = (v: MapVacancy, b: Bounds) =>
 const href = (v: MapVacancy) =>
   `/vacancies/${encodeURIComponent(vacancySegment(v))}`;
 
+function MetroDistance({
+  place,
+  station,
+}: {
+  place: MapVacancy['places'][number] | undefined;
+  station?: MetroStation;
+}) {
+  if (!place) return null;
+  const near = station
+    ? {
+        station,
+        minutes: walkMinutes(
+          distanceMeters(station.lat, station.lon, place[0], place[1]),
+        ),
+      }
+    : nearestMetro(place);
+  if (!near) return null;
+  return (
+    <span
+      className="job-map-walk-time"
+      title={`მიახლოებითი სავალი დრო მეტროდან მისამართამდე: ${place[2]}`}
+    >
+      <TrainFront size={13} aria-hidden="true" />
+      <span>
+        მეტრო {near.station.name} · ≈{formatWalk(near.minutes)}
+      </span>
+    </span>
+  );
+}
+
 function features(list: MapVacancy[]) {
   return {
     type: 'FeatureCollection' as const,
@@ -63,10 +118,19 @@ function features(list: MapVacancy[]) {
 }
 
 export function JobMap() {
+  const params = useSearchParams();
+  const station = stationBySlug(params.get('station') || '');
+  const requestedWalk = Number(params.get('walk'));
+  const walk = (metroWalkChoices as readonly number[]).includes(requestedWalk)
+    ? requestedWalk
+    : metroDefaultWalk;
+  const [detail, setDetail] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLElement>(null);
   const map = useRef<MapLibre | null>(null);
   const [all, setAll] = useState<MapVacancy[] | null>(null);
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
   const [paid, setPaid] = useState(false);
@@ -74,6 +138,15 @@ export function JobMap() {
   const [active, setActive] = useState<string | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
+  const sheetOpen = useRef(false);
+  const returnToList = useRef(false);
+  const [pagination, setPagination] = useState<{
+    list: MapVacancy[];
+    limit: number;
+  } | null>(null);
+  useEffect(() => {
+    sheetOpen.current = sheet;
+  }, [sheet]);
   const [ready, setReady] = useState(false);
   // The city chip the map was last sent to; a pan or zoom by hand clears it.
   const [city, setCity] = useState<string | null>(null);
@@ -81,6 +154,41 @@ export function JobMap() {
   const [group, setGroup] = useState<string[] | null>(null);
   // Where the last tap on the map landed, for the ripple that answers it.
   const [ripple, setRipple] = useState<{ x: number; y: number; n: number }>();
+  const [beacon, setBeacon] = useState<{
+    x: number;
+    y: number;
+    id: string;
+  } | null>(null);
+  useEffect(() => {
+    list.current?.scrollTo({ top: 0 });
+  }, [group, station]);
+  const pickStation = useCallback((slug: string) => {
+    const url = new URL(window.location.href);
+    if (stationBySlug(slug)) {
+      url.searchParams.set('station', slug);
+      trackAction('metro_station');
+    } else {
+      url.searchParams.delete('station');
+      url.searchParams.delete('walk');
+    }
+    window.history.replaceState(null, '', url.pathname + url.search);
+    setDetail(null);
+    setActive(null);
+    setGroup(null);
+    setCity(null);
+    if (slug && matchMedia('(max-width: 900px)').matches) setSheet(true);
+  }, []);
+  const openVacancy = useCallback((id: string) => {
+    returnToList.current = sheetOpen.current;
+    setActive(id);
+    setDetail(id);
+    setSheet(false);
+    trackAction('map_open');
+  }, []);
+  const closeVacancy = useCallback(() => {
+    setDetail(null);
+    setSheet(returnToList.current);
+  }, []);
 
   // Once per visit: that the map page itself was opened.
   useEffect(() => trackAction('map_page'), []);
@@ -96,29 +204,38 @@ export function JobMap() {
         if (e.name !== 'AbortError') setError(e.message);
       });
     return () => controller.abort();
-  }, []);
+  }, [attempt]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (all ?? []).filter(
+    const matches = (all ?? []).filter(
       (v) =>
         (!q || `${v.title} ${v.company}`.toLowerCase().includes(q)) &&
         (!category || v.category === category) &&
         (!paid || !!v.salary),
     );
-  }, [all, query, category, paid]);
+    return station ? vacanciesNearStation(matches, station, walk) : matches;
+  }, [all, query, category, paid, station, walk]);
   const categories = useMemo(() => {
     const count = new Map<string, number>();
     for (const v of all ?? [])
       if (v.category) count.set(v.category, (count.get(v.category) ?? 0) + 1);
-    return [...count].sort((a, b) => b[1] - a[1]).slice(0, 8);
+    return [...count].sort((a, b) => b[1] - a[1]);
   }, [all]);
   const visible = useMemo(
     () => filtered.filter((v) => inBounds(v, bounds)),
     [filtered, bounds],
   );
-  const byId = useMemo(() => new Map((all ?? []).map((v) => [v.id, v])), [all]);
+  const byId = useMemo(
+    () => new Map(filtered.map((v) => [v.id, v])),
+    [filtered],
+  );
+  const latestVacancies = useRef(byId);
+  useEffect(() => {
+    latestVacancies.current = byId;
+  }, [byId]);
   const selected = active ? byId.get(active) : undefined;
+  const opened = detail ? byId.get(detail) : undefined;
   /* The phone's card rail: what the map shows, nearest to its centre first, with the opened
      vacancy always on it. */
   const grouped = useMemo(
@@ -147,6 +264,10 @@ export function JobMap() {
   const rail = useRef<HTMLDivElement>(null);
   const railMoved = useRef(false);
   const railTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(railTimer.current), []);
+  useEffect(() => {
+    clearTimeout(railTimer.current);
+  }, [detail]);
   // A pin tapped on the map brings its card to the middle of the rail.
   useEffect(() => {
     if (!active || railMoved.current) {
@@ -243,6 +364,7 @@ export function JobMap() {
               ['get', 'name:nonlatin'],
               ['get', 'name'],
             ]);
+        addMetroLines(m);
         m.addSource('jobs', {
           type: 'geojson',
           data: features([]),
@@ -250,40 +372,91 @@ export function JobMap() {
           clusterRadius: 44,
           clusterMaxZoom: 15,
         });
+        addClusterLayoutSources(m);
+        const motion = matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 0
+          : 180;
         m.addLayer({
-          id: 'clusters',
+          id: 'cluster-shadow',
           type: 'circle',
-          source: 'jobs',
+          source: 'job-cluster-display',
           filter: ['has', 'point_count'],
           paint: {
-            'circle-color': '#2457e6',
-            'circle-opacity': 0.92,
             'circle-radius': [
               'step',
               ['get', 'point_count'],
-              16,
+              18,
               10,
-              20,
+              21,
               50,
-              26,
+              25,
             ],
-            'circle-stroke-width': 3,
-            'circle-stroke-color': 'rgba(255,255,255,0.9)',
+            'circle-color': '#1f3558',
+            'circle-opacity': 0.16,
+            'circle-blur': 0.65,
+            'circle-translate': [0, 3],
+            'circle-translate-anchor': 'viewport',
+          },
+        });
+        m.addLayer({
+          id: 'clusters',
+          type: 'circle',
+          source: 'job-cluster-display',
+          filter: ['has', 'point_count'],
+          paint: {
+            'circle-color': '#ffffff',
+            'circle-opacity': 0.97,
+            'circle-radius': [
+              'step',
+              ['get', 'point_count'],
+              14,
+              10,
+              17,
+              50,
+              21,
+            ],
+            'circle-stroke-width': 1.2,
+            'circle-stroke-color': '#8da7db',
           },
         });
         m.addLayer({
           id: 'cluster-count',
           type: 'symbol',
-          source: 'jobs',
+          source: 'job-cluster-display',
           filter: ['has', 'point_count'],
           layout: {
             'text-field': ['get', 'point_count_abbreviated'],
-            'text-size': 13,
+            'text-size': 12,
             'text-font': ['Noto Sans Bold'],
+            'text-allow-overlap': true,
+            'text-ignore-placement': true,
           },
-          paint: { 'text-color': '#ffffff' },
+          paint: { 'text-color': '#244aaf' },
         });
         // A pin is 15px across; a finger needs about 40. This invisible ring takes the taps.
+        m.addLayer({
+          id: 'point-halo',
+          type: 'circle',
+          source: 'jobs',
+          filter: ['!', ['has', 'point_count']],
+          paint: {
+            'circle-radius': [
+              'case',
+              ['boolean', ['feature-state', 'on'], false],
+              21,
+              11,
+            ],
+            'circle-color': '#2457e6',
+            'circle-opacity': [
+              'case',
+              ['boolean', ['feature-state', 'on'], false],
+              0.14,
+              0.06,
+            ],
+            'circle-radius-transition': { duration: motion },
+            'circle-opacity-transition': { duration: motion },
+          },
+        });
         m.addLayer({
           id: 'points-hit',
           type: 'circle',
@@ -313,8 +486,15 @@ export function JobMap() {
             ],
             'circle-stroke-width': 3,
             'circle-stroke-color': '#ffffff',
+            'circle-radius-transition': { duration: motion },
+            'circle-color-transition': { duration: motion },
           },
         });
+        addMetroStations(m, pickStation);
+        installClusterLayout(m);
+        installMapPreviews(m, maplibre.Popup, (id) =>
+          latestVacancies.current.get(id),
+        );
         // The layout settles after the map is created (fonts, the phone sheet); keep the canvas
         // matched to its box so the first view is where it should be.
         const fit = new ResizeObserver(() => m.resize());
@@ -325,6 +505,7 @@ export function JobMap() {
           setBounds([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
         };
         m.on('moveend', report);
+        m.on('movestart', () => setBeacon(null));
         m.on('dragstart', () => setCity(null));
         m.on('zoomstart', (e: { originalEvent?: Event }) => {
           if (e.originalEvent) setGroup(null);
@@ -334,6 +515,7 @@ export function JobMap() {
         });
         report();
         m.on('click', 'clusters', (e: MapMouseEvent) => {
+          if (stationAtPoint(m, e.point)) return;
           const f = m.queryRenderedFeatures(e.point, {
             layers: ['clusters'],
           })[0];
@@ -346,34 +528,42 @@ export function JobMap() {
           trackAction('map_cluster');
           const source = m.getSource('jobs') as GeoJSONSource;
           const id = f.properties.cluster_id;
-          const center = (
-            f.geometry as unknown as { coordinates: [number, number] }
-          ).coordinates;
-          void source.getClusterExpansionZoom(id).then(async (zoom) => {
-            // Past the last clustering zoom the pins share one building: zooming cannot part them.
-            if (f.properties.point_count > groupLimit && zoom <= 15) {
-              setGroup(null);
-              m.easeTo({ center, zoom, duration: 650 });
-              return;
-            }
-            const leaves = await source.getClusterLeaves(id, 200, 0);
-            const ids = [
-              ...new Set(leaves.map((l) => String(l.properties?.job))),
-            ];
-            setActive(null);
-            setGroup(ids);
-            railMoved.current = false;
-            rail.current?.scrollTo({ left: 0 });
-            m.easeTo({
-              center,
-              duration: 650,
-              padding: matchMedia('(max-width: 900px)').matches
-                ? { top: 0, bottom: 190, left: 0, right: 0 }
-                : { top: 0, bottom: 0, left: 0, right: 0 },
+          const center: [number, number] = [
+            Number(f.properties.anchorLon),
+            Number(f.properties.anchorLat),
+          ];
+          void source
+            .getClusterExpansionZoom(id)
+            .then(async (zoom) => {
+              // Past the last clustering zoom the pins share one building: zooming cannot part them.
+              if (f.properties.point_count > groupLimit && zoom <= 15) {
+                setGroup(null);
+                m.easeTo({ center, zoom, duration: 650 });
+                return;
+              }
+              const leaves = await source.getClusterLeaves(
+                id,
+                Number(f.properties.point_count),
+                0,
+              );
+              const ids = [
+                ...new Set(leaves.map((l) => String(l.properties?.job))),
+              ];
+              setActive(null);
+              setDetail(null);
+              setGroup(ids);
+              if (matchMedia('(max-width: 900px)').matches) setSheet(true);
+              railMoved.current = false;
+              rail.current?.scrollTo({ left: 0 });
+            })
+            .catch(() => {
+              /* Filters can replace the clustered source mid-request. */
             });
-          });
         });
         m.on('click', 'points-hit', (e: MapMouseEvent) => {
+          if (stationAtPoint(m, e.point)) return;
+          if (m.queryRenderedFeatures(e.point, { layers: ['clusters'] }).length)
+            return;
           const f = m.queryRenderedFeatures(e.point, {
             layers: ['points', 'points-hit'],
           })[0];
@@ -384,17 +574,18 @@ export function JobMap() {
               y: e.point.y,
               n: (r?.n ?? 0) + 1,
             }));
-            setActive(String(f.properties.job));
+            openVacancy(String(f.properties.job));
             trackAction('map_pin');
           }
         });
         m.on('click', (e: MapMouseEvent) => {
           if (
             !m.queryRenderedFeatures(e.point, {
-              layers: ['points', 'points-hit', 'clusters'],
+              layers: ['points', 'points-hit', 'clusters', ...stationHitLayers],
             }).length
           ) {
             setActive(null);
+            setDetail(null);
             setGroup(null);
           }
         });
@@ -418,7 +609,17 @@ export function JobMap() {
       map.current?.remove();
       map.current = null;
     };
-  }, []);
+  }, [openVacancy, pickStation]);
+
+  useEffect(() => {
+    if (!ready || !map.current) return;
+    updateMetro(map.current, station, walk);
+  }, [ready, station, walk]);
+
+  useEffect(() => {
+    if (ready && map.current && station)
+      frameStation(map.current, station, walk);
+  }, [ready, station, walk]);
 
   useEffect(() => {
     if (!ready) return;
@@ -441,26 +642,55 @@ export function JobMap() {
         m.setFeatureState({ source: 'jobs', id: f.id }, { on: true });
   }, [ready, hovered, active, group, filtered]);
 
+  useEffect(() => {
+    const m = map.current;
+    const id = hovered || active;
+    const place =
+      id && m
+        ? byId
+            .get(id)
+            ?.places.find(([lat, lon]) => m.getBounds().contains([lon, lat]))
+        : undefined;
+    if (
+      !ready ||
+      !m ||
+      m.isMoving() ||
+      !place ||
+      matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      return;
+    const point = m.project([place[1], place[0]]);
+    const timer = setTimeout(
+      () => setBeacon({ x: point.x, y: point.y, id: id! }),
+      0,
+    );
+    return () => clearTimeout(timer);
+  }, [ready, hovered, active, byId]);
+
   const focus = (v: MapVacancy) => {
     trackAction('map_card');
-    setGroup(null);
-    setActive(v.id);
+    openVacancy(v.id);
     setSheet(false);
-    const [lat, lon] = v.places[0];
-    map.current?.easeTo({
-      center: [lon, lat],
-      zoom: Math.max(map.current.getZoom(), 15),
-    });
   };
 
+  const listed = group ? (grouped ?? []) : visible;
   const total = filtered.length;
+  // A changed area/filter starts a fresh list; opening a detail preserves pagination.
+  const shownLimit = pagination?.list === listed ? pagination.limit : listLimit;
+  const hasFilters = !!(query.trim() || category || paid || station || group);
+  const clearFilters = () => {
+    setQuery('');
+    setCategory('');
+    setPaid(false);
+    pickStation('');
+  };
   return (
-    <div className="job-map">
+    <div className="job-map" data-detail={!!opened}>
       <div className="job-map-bar">
         <div className="job-map-title">
           <h1>ვაკანსიები რუკაზე</h1>
           {all ? (
-            <p>{whole.format(total)} ვაკანსია ზუსტი მისამართით</p>
+            <p>სულ {whole.format(total)} ვაკანსია ზუსტი მისამართით</p>
           ) : (
             <p aria-label="ვაკანსიები იტვირთება">
               <span className="ds-skeleton job-map-count-skeleton" />
@@ -471,6 +701,7 @@ export function JobMap() {
           <Search size={16} aria-hidden="true" />
           <input
             type="search"
+            aria-label="პოზიცია ან კომპანია"
             value={query}
             placeholder="პოზიცია ან კომპანია"
             onChange={(e) => setQuery(e.target.value)}
@@ -481,6 +712,11 @@ export function JobMap() {
           />
         </label>
         <fieldset className="job-map-chips" aria-label="ფილტრები">
+          {hasFilters && (
+            <button type="button" className="ds-chip" onClick={clearFilters}>
+              <X aria-hidden="true" /> გასუფთავება
+            </button>
+          )}
           <button
             type="button"
             className="ds-chip"
@@ -509,6 +745,7 @@ export function JobMap() {
               className="ds-chip"
               aria-pressed={city === name}
               onClick={() => {
+                pickStation('');
                 setCity(name);
                 trackAction('map_city');
                 map.current?.easeTo({ center, zoom });
@@ -522,7 +759,7 @@ export function JobMap() {
       </div>
 
       <div className="job-map-body">
-        <aside className="job-map-list" data-open={sheet}>
+        <aside ref={list} className="job-map-list" data-open={sheet}>
           <button
             type="button"
             className="job-map-handle"
@@ -535,7 +772,7 @@ export function JobMap() {
             <span aria-hidden="true" />
             <b>
               {all ? (
-                `${whole.format(visible.length)} ვაკანსია ამ ტერიტორიაზე`
+                `${whole.format(listed.length)} ვაკანსია ამ ტერიტორიაზე`
               ) : (
                 <span className="ds-skeleton job-map-count-skeleton" />
               )}
@@ -546,27 +783,127 @@ export function JobMap() {
               <ChevronUp size={16} aria-hidden="true" />
             )}
           </button>
+          {station && (
+            <div className="job-map-station-context">
+              <div className="job-map-station-heading">
+                <TrainFront size={17} aria-hidden="true" />
+                <strong>{station.name}</strong>
+                <button
+                  type="button"
+                  className="ds-btn ds-btn--ghost ds-btn--sm"
+                  onClick={() => pickStation('')}
+                >
+                  ფილტრის მოხსნა
+                </button>
+              </div>
+              <fieldset
+                className="job-map-walk"
+                aria-label="სავარაუდო სავალი დრო"
+              >
+                <Footprints size={16} aria-hidden="true" />
+                {metroWalkChoices.map((minutes) => (
+                  <button
+                    key={minutes}
+                    type="button"
+                    className="ds-chip"
+                    aria-pressed={walk === minutes}
+                    onClick={() => {
+                      const url = new URL(window.location.href);
+                      url.searchParams.set('walk', String(minutes));
+                      window.history.replaceState(
+                        null,
+                        '',
+                        url.pathname + url.search,
+                      );
+                      setDetail(null);
+                      setActive(null);
+                      setGroup(null);
+                      trackAction('metro_walk');
+                    }}
+                  >
+                    {minutes} წთ
+                  </button>
+                ))}
+              </fieldset>
+              <small>ფეხით სავალი დრო მიახლოებითია.</small>
+            </div>
+          )}
+
+          {group && (
+            <div className="job-map-selection">
+              <div>
+                <strong>
+                  {whole.format(listed.length)} ვაკანსია ამ ადგილას
+                </strong>
+                <span>არჩეული წერტილის შედეგები</span>
+              </div>
+              <button
+                type="button"
+                className="ds-btn ds-btn--ghost ds-btn--sm"
+                onClick={() => {
+                  setGroup(null);
+                  setActive(null);
+                  setDetail(null);
+                }}
+              >
+                ტერიტორიის სია
+              </button>
+            </div>
+          )}
+          {all && !station && !group && (
+            <div className="job-map-list-heading">
+              <strong>
+                {whole.format(listed.length)} ვაკანსია ამ ტერიტორიაზე
+              </strong>
+            </div>
+          )}
           <p className="job-map-hint">
             <MapPin size={14} aria-hidden="true" />
-            რუკაზე მხოლოდ ის ვაკანსიებია, რომელთა მისამართიც ზუსტად, შენობამდე
-            დადგინდა.
+            ნაჩვენებია მხოლოდ ზუსტი მისამართის მქონე ვაკანსიები.
           </p>
           {error && (
-            <p className="job-map-error" role="alert">
-              {error}
-            </p>
+            <div className="job-map-error" role="alert">
+              <p>{error}</p>
+              <button
+                type="button"
+                className="ds-btn ds-btn--secondary ds-btn--sm"
+                onClick={() => {
+                  setError('');
+                  setAttempt((n) => n + 1);
+                }}
+              >
+                თავიდან ცდა
+              </button>
+            </div>
           )}
           {!all && !error && (
             <SkeletonRows rows={4} block label="ვაკანსიები იტვირთება" />
           )}
-          {all && !visible.length && (
+          {all && !listed.length && (
             <div className="job-map-empty">
               <MapPinOff aria-hidden="true" />
-              <p>ამ ტერიტორიაზე ვაკანსია არ ჩანს. გაადიდე ან გადაიტანე რუკა.</p>
+              <p>
+                {group
+                  ? 'არჩეულ ადგილას ამ ფილტრებით ვაკანსია არ ჩანს.'
+                  : station
+                    ? 'ამ პირობებით ვაკანსია არ ჩანს. გაზარდე სავალი დრო ან აირჩიე სხვა სადგური.'
+                    : query.trim() || category || paid
+                      ? 'ამ ტერიტორიაზე ამ ფილტრებით ვაკანსია ვერ მოიძებნა.'
+                      : 'ამ ტერიტორიაზე ვაკანსია არ ჩანს. დააპატარავე ან გადაიტანე რუკა.'}
+              </p>
+              {hasFilters && (
+                <button
+                  type="button"
+                  className="ds-btn ds-btn--secondary ds-btn--sm"
+                  onClick={clearFilters}
+                >
+                  ფილტრების გასუფთავება
+                </button>
+              )}
             </div>
           )}
           <ul className="ds-appear-list">
-            {visible.slice(0, listLimit).map((v) => (
+            {listed.slice(0, shownLimit).map((v) => (
               <li key={v.id} data-active={active === v.id}>
                 <button
                   type="button"
@@ -584,6 +921,7 @@ export function JobMap() {
                     )}
                     <strong>{v.title}</strong>
                     <span>{v.company}</span>
+                    <MetroDistance place={v.places[0]} station={station} />
                     {v.salary && (
                       <b>{compactSalary(v.salary, v.salaryPeriod)}</b>
                     )}
@@ -596,16 +934,43 @@ export function JobMap() {
               </li>
             ))}
           </ul>
-          {visible.length > listLimit && (
-            <p className="job-map-more">
-              და კიდევ {whole.format(visible.length - listLimit)} — გაადიდე
-              რუკა, რომ სია შემცირდეს.
-            </p>
+          {listed.length > listLimit && (
+            <div className="job-map-more">
+              <span aria-live="polite">
+                ნაჩვენებია {whole.format(Math.min(shownLimit, listed.length))} /{' '}
+                {whole.format(listed.length)}
+              </span>
+              {listed.length > shownLimit && (
+                <button
+                  type="button"
+                  className="ds-btn ds-btn--secondary"
+                  onClick={() =>
+                    setPagination({
+                      list: listed,
+                      limit: shownLimit + listLimit,
+                    })
+                  }
+                >
+                  მეტი ვაკანსიის ჩვენება
+                </button>
+              )}
+            </div>
           )}
         </aside>
 
-        <div className="job-map-canvas">
+        <div className="job-map-canvas" data-ready={ready} inert={!!opened}>
           <div ref={box} className="job-map-gl" />
+          {beacon && (
+            <span
+              key={beacon.id}
+              className="job-map-beacon"
+              style={{ left: beacon.x, top: beacon.y }}
+              aria-hidden="true"
+            >
+              <i />
+              <i onAnimationEnd={() => setBeacon(null)} />
+            </span>
+          )}
           {ripple && (
             <span
               key={`ripple:${ripple.n}`}
@@ -615,114 +980,18 @@ export function JobMap() {
               onAnimationEnd={() => setRipple(undefined)}
             />
           )}
-          {grouped && grouped.length > 0 && !selected && (
-            <section
-              className="job-map-group ds-appear"
-              // Siblings share one key space: each panel's key names its kind.
-              key={`group:${group!.join()}`}
-              aria-label="ვაკანსიები ამ წერტილში"
-            >
-              <header>
-                <strong>
-                  {whole.format(grouped.length)} ვაკანსია ამ წერტილში
-                </strong>
-                <button
-                  type="button"
-                  className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm"
-                  aria-label="დახურვა"
-                  onClick={() => setGroup(null)}
-                >
-                  <X aria-hidden="true" />
-                </button>
-              </header>
-              <ul className="ds-appear-list">
-                {grouped.map((v) => (
-                  <li key={v.id}>
-                    <a
-                      href={href(v)}
-                      onClick={() => trackAction('map_open')}
-                      onMouseEnter={() => setHovered(v.id)}
-                      onMouseLeave={() => setHovered(null)}
-                      onFocus={() => setHovered(v.id)}
-                      onBlur={() => setHovered(null)}
-                    >
-                      <CompanyLogo company={v.company} url={v.logoUrl} />
-                      <span>
-                        <strong>{v.title}</strong>
-                        <small>{v.company}</small>
-                      </span>
-                      {v.salary && (
-                        <b>{compactSalary(v.salary, v.salaryPeriod)}</b>
-                      )}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {selected && (
-            <article
-              className="job-map-pop ds-appear"
-              key={`pop:${selected.id}`}
-            >
-              <button
-                type="button"
-                className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm job-map-pop-close"
-                aria-label="დახურვა"
-                onClick={() => setActive(null)}
-              >
-                <X aria-hidden="true" />
-              </button>
-              <div className="job-map-pop-head">
-                <CompanyLogo
-                  company={selected.company}
-                  url={selected.logoUrl}
-                />
-                <div>
-                  <strong>{selected.title}</strong>
-                  <span>{selected.company}</span>
-                </div>
-              </div>
-              {selected.salary && (
-                <b className="job-map-pop-salary">
-                  {compactSalary(selected.salary, selected.salaryPeriod)}
-                </b>
-              )}
-              <p>
-                <MapPin size={14} aria-hidden="true" />
-                {selected.places.map((p) => p[2]).join(' · ')}
-              </p>
-              <a
-                className="ds-btn ds-btn--primary"
-                href={href(selected)}
-                onClick={() => trackAction('map_open')}
-              >
-                ვაკანსიის ნახვა
-              </a>
-            </article>
-          )}
-          {grouped?.length ? (
-            <button
-              type="button"
-              className="ds-btn ds-btn--secondary job-map-listbtn"
-              onClick={() => setGroup(null)}
-            >
-              {whole.format(grouped.length)} ვაკანსია ამ წერტილში
-              <X size={16} aria-hidden="true" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="ds-btn ds-btn--secondary job-map-listbtn"
-              onClick={() => {
-                trackAction('map_sheet');
-                setSheet(true);
-              }}
-            >
-              <List size={16} aria-hidden="true" />
-              სია · {whole.format(visible.length)}
-            </button>
-          )}
+          <button
+            type="button"
+            className="ds-btn ds-btn--secondary job-map-listbtn"
+            onClick={() => {
+              trackAction('map_sheet');
+              setSheet(true);
+            }}
+          >
+            <List size={16} aria-hidden="true" />
+            სია · {whole.format(listed.length)}
+          </button>
+
           {!!nearby.length && (
             <div
               className="job-map-rail"
@@ -760,10 +1029,16 @@ export function JobMap() {
                       {v.places[0][2]}
                     </span>
                   </p>
+                  <MetroDistance place={v.places[0]} station={station} />
                   <a
                     className="ds-btn ds-btn--primary ds-btn--sm"
                     href={href(v)}
-                    onClick={() => trackAction('map_open')}
+                    onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+                        return;
+                      e.preventDefault();
+                      focus(v);
+                    }}
                   >
                     ვაკანსიის ნახვა
                   </a>
@@ -772,6 +1047,13 @@ export function JobMap() {
             </div>
           )}
         </div>
+        {opened && (
+          <VacancyPanel
+            key={opened.id}
+            vacancy={opened}
+            onClose={closeVacancy}
+          />
+        )}
       </div>
     </div>
   );

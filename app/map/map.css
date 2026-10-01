@@ -127,6 +127,7 @@
   font-feature-settings: normal;
 }
 .job-map-body {
+  position: relative;
   display: grid;
   flex: 1;
   grid-template-columns: 400px minmax(0, 1fr);
@@ -157,6 +158,20 @@
 .job-map-hint svg {
   flex: none;
   margin-top: 2px;
+}
+.job-map-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 16px 0;
+  font-size: var(--ds-text-sm);
+}
+.job-map-more {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+  padding-bottom: 12px;
 }
 .job-map-more,
 .job-map-error {
@@ -218,7 +233,9 @@
   cursor: pointer;
   transition:
     border-color var(--ds-duration-fast) var(--ds-ease),
-    box-shadow var(--ds-duration) var(--ds-ease);
+    box-shadow var(--ds-duration) var(--ds-ease),
+    background-color var(--ds-duration) var(--ds-ease),
+    transform 180ms var(--ds-ease);
 }
 .job-map-card:hover,
 .job-map-list li[data-active='true'] .job-map-card {
@@ -232,9 +249,14 @@
 }
 .job-map-list li[data-active='true'] .job-map-card {
   border-color: var(--ds-accent);
+  background: var(--ds-accent-soft);
 }
-.job-map-card .company-avatar,
-.job-map-pop .company-avatar {
+@media (hover: hover) and (pointer: fine) {
+  .job-map-card:hover {
+    transform: translateY(-2px);
+  }
+}
+.job-map-card .company-avatar {
   width: 44px;
   height: 44px;
 }
@@ -278,81 +300,52 @@
   position: relative;
   min-width: 0;
   min-height: 0;
+  background: #eef1f0;
+  overflow: hidden;
 }
 /* maplibre-gl.css makes every map container position: relative; the box must stay absolute
    and fill its cell, or the canvas is drawn at the wrong size and the view lands off-centre. */
 .job-map .job-map-canvas .job-map-gl {
   position: absolute;
   inset: 0;
+  opacity: 0;
+  transition: opacity 450ms ease;
 }
-.job-map-pop {
+.job-map-canvas[data-ready='true'] .job-map-gl {
+  opacity: 1;
+}
+.job-map-beacon {
   position: absolute;
-  z-index: 5;
-  top: var(--ds-space-4);
-  left: var(--ds-space-4);
-  display: grid;
-  gap: var(--ds-space-2);
-  width: min(340px, calc(100% - 32px));
-  padding: var(--ds-space-4);
-  border: 1px solid var(--ds-line);
-  border-radius: var(--ds-radius-xl);
-  background: var(--ds-surface);
-  color: var(--ds-ink);
-  box-shadow: var(--ds-shadow-lg);
+  z-index: 3;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
-.job-map-pop .job-map-pop-close {
+.job-map-beacon i {
   position: absolute;
-  top: var(--ds-space-2);
-  right: var(--ds-space-2);
-  width: var(--ds-control-sm);
-  min-height: var(--ds-control-sm);
-  color: var(--ds-ink-3);
+  inset: -18px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ds-accent);
+  border-radius: 50%;
+  animation: job-map-beacon 900ms ease-out both;
 }
-.job-map-pop .job-map-pop-close:hover {
-  background: var(--ds-surface-muted);
-  color: var(--ds-ink);
+.job-map-beacon i + i {
+  animation-delay: 140ms;
 }
-.job-map-pop-head {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: var(--ds-space-3);
-  padding-inline-end: var(--ds-space-5);
+@keyframes job-map-beacon {
+  from {
+    transform: scale(0.5);
+    opacity: 0.45;
+  }
+  to {
+    transform: scale(1.8);
+    opacity: 0;
+  }
 }
-.job-map-pop-head strong {
-  display: block;
-  font-size: var(--ds-text-lg);
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-.job-map-pop-head span {
-  color: var(--ds-ink-2);
-  font-size: var(--ds-text-sm);
-}
-.job-map-pop-salary {
-  color: var(--ds-success);
-  font-size: var(--ds-text-md);
-  font-variant-numeric: tabular-nums;
-}
-.job-map-pop p {
-  display: flex;
-  gap: var(--ds-space-1);
-  margin: 0;
-  color: var(--ds-ink-3);
-  font-size: var(--ds-text-xs);
-}
-.job-map-pop p svg,
-.job-map-hint svg,
 .job-map-card-text small svg {
   width: var(--ds-icon-sm);
   height: var(--ds-icon-sm);
-}
-.job-map-pop p svg {
-  flex: none;
-  margin-top: 2px;
-}
-.job-map-pop .ds-btn {
-  margin-top: var(--ds-space-1);
-  font-feature-settings: normal;
 }
 .job-map-listbtn {
   display: none;
@@ -482,12 +475,6 @@
     border-radius: var(--ds-radius-pill);
     background: var(--ds-line-strong);
   }
-  .job-map-pop {
-    top: auto;
-    bottom: 68px;
-    left: var(--ds-space-3);
-    width: calc(100% - 24px);
-  }
   .job-map-listbtn {
     display: none;
   }
@@ -527,10 +514,6 @@
   }
   .job-map-body {
     height: calc(100dvh - 160px);
-  }
-  /* The rail shows the opened vacancy; the separate popup would cover it. */
-  .job-map-pop {
-    display: none;
   }
   /* The list sheet is reached from the "სია" button, not a strip that eats the rail's place. */
   .job-map-list:not([data-open='true']) {
@@ -656,91 +639,6 @@
   }
 }
 
-/* ── A small cluster, listed where it was tapped. ── */
-.job-map-group {
-  position: absolute;
-  z-index: 5;
-  top: var(--ds-space-4);
-  left: var(--ds-space-4);
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  width: min(360px, calc(100% - 32px));
-  max-height: calc(100% - 32px);
-  border: 1px solid var(--ds-line);
-  border-radius: var(--ds-radius-xl);
-  background: var(--ds-surface);
-  color: var(--ds-ink);
-  box-shadow: var(--ds-shadow-lg);
-  overflow: hidden;
-}
-.job-map-group header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ds-space-2);
-  padding: var(--ds-space-3) var(--ds-space-2) var(--ds-space-3)
-    var(--ds-space-4);
-  border-bottom: 1px solid var(--ds-line);
-  font-size: var(--ds-text-md);
-}
-.job-map-group header .ds-btn {
-  color: var(--ds-ink-3);
-}
-.job-map-group ul {
-  display: grid;
-  margin: 0;
-  padding: var(--ds-space-1);
-  overflow-y: auto;
-  list-style: none;
-}
-.job-map-group a {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
-  gap: var(--ds-space-3);
-  align-items: center;
-  padding: var(--ds-space-2) var(--ds-space-3);
-  border-radius: var(--ds-radius-md);
-  color: inherit;
-  text-decoration: none;
-  transition: background var(--ds-duration-fast) var(--ds-ease);
-}
-.job-map-group a:hover,
-.job-map-group a:focus-visible {
-  background: var(--ds-surface-muted);
-  outline: none;
-}
-.job-map-group a:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--ds-focus);
-}
-.job-map-group .company-avatar {
-  width: 36px;
-  height: 36px;
-}
-.job-map-group a > span {
-  display: grid;
-  min-width: 0;
-}
-.job-map-group a strong {
-  overflow: hidden;
-  font-size: var(--ds-text-sm);
-  font-weight: var(--ds-weight-strong);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.job-map-group a small {
-  overflow: hidden;
-  color: var(--ds-ink-3);
-  font-size: var(--ds-text-xs);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.job-map-group a b {
-  color: var(--ds-success);
-  font-size: var(--ds-text-xs);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
 /* The tap answered: a ring spreads from where the finger landed. */
 .job-map-ripple {
   position: absolute;
@@ -779,11 +677,6 @@
 .job-map-rail[data-group='true'] .job-map-slide:nth-child(3) {
   animation-delay: 100ms;
 }
-@media (max-width: 900px) {
-  .job-map-group {
-    display: none;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .job-map-ripple,
   .job-map-rail[data-group='true'] .job-map-slide {
@@ -794,11 +687,346 @@
   }
 }
 
-/* Panels over the map get their own compositing layer. Without one, Chrome repainted the
-   group list's shadow over the WebGL canvas without clearing it, and a dark smear built up
-   around the panel as its rows animated in and the pins below were relit on hover. */
-.job-map-group,
-.job-map-pop {
-  isolation: isolate;
-  will-change: transform;
+.job-map-walk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.job-map-station-context {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--ds-surface);
+  border-bottom: 1px solid var(--ds-line);
+}
+.job-map-station-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--ds-text-sm);
+}
+.job-map-station-heading > svg {
+  color: var(--ds-accent);
+  flex: none;
+}
+.job-map-station-heading button {
+  margin-left: auto;
+  flex: none;
+}
+.job-map-station-context small {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+}
+.job-map-card-text .job-map-walk-time,
+.job-map-slide .job-map-walk-time {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  color: var(--ds-accent);
+  font-size: var(--ds-text-xs);
+  line-height: 1.5;
+}
+.job-map-walk-time > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.job-map-card-text .job-map-walk-time > span {
+  color: inherit;
+  font-size: inherit;
+}
+.job-map-selection {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--ds-surface);
+  border-bottom: 1px solid var(--ds-line);
+}
+.job-map-selection > div {
+  display: grid;
+  gap: 3px;
+}
+.job-map-selection strong {
+  font-size: var(--ds-text-sm);
+}
+.job-map-selection span {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+
+.job-map-preview {
+  pointer-events: none;
+}
+.job-map-preview .maplibregl-popup-content {
+  padding: 16px;
+  border: 1px solid var(--ds-line);
+  border-radius: 16px;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  box-shadow: var(--ds-shadow-lg);
+  font-family: inherit;
+  animation: job-map-preview-in 180ms ease-out both;
+}
+@keyframes job-map-preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+.job-map-preview.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: var(--ds-surface);
+}
+.job-map-preview.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: var(--ds-surface);
+}
+.job-map-preview-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+}
+.job-map-preview-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  background: var(--ds-surface-muted);
+  color: var(--ds-accent);
+  overflow: hidden;
+}
+.job-map-preview-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+  object-fit: contain;
+  background: white;
+}
+.job-map-preview-card > div {
+  display: grid;
+  gap: 4px;
+}
+.job-map-preview-card strong {
+  font-size: 13px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.job-map-preview-card span,
+.job-map-preview-card small {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ds-ink-3);
+}
+.job-map-preview-card b {
+  font-size: 12px;
+  color: var(--ds-success);
+}
+.job-map-preview-card small {
+  padding-top: 4px;
+  color: var(--ds-accent);
+}
+
+/* Keep the list on the left; the full vacancy takes the map's place on the right. */
+.job-map-detail {
+  position: absolute;
+  z-index: 8;
+  inset: 0 0 0 400px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--ds-line);
+  background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-md);
+  animation: job-map-detail-in 240ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes job-map-detail-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+.job-map-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--ds-line);
+}
+.job-map-detail-header > :first-child {
+  margin-right: auto;
+}
+.job-map-detail-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+  flex: 1;
+}
+.job-map-detail-scroll > .ds-skeleton-group {
+  padding: 16px;
+}
+.job-map-detail-loading-title {
+  margin: 20px;
+  font-size: 20px;
+}
+.job-map-detail .vacancy-embedded {
+  min-height: 0;
+  padding: 0;
+  background: var(--ds-surface);
+}
+.job-map-detail .vacancy-page-main {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.job-map-detail .vacancy-page .vacancy-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.job-map-detail .vacancy-page .vacancy-layout > * {
+  position: static;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 20px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  order: 3;
+  animation: none;
+}
+.job-map-detail .vacancy-page .vacancy-layout > .vacancy-overview {
+  order: 0;
+}
+.job-map-detail .vacancy-page .vacancy-layout > .vacancy-contact {
+  order: 2;
+  border-block: 1px solid var(--ds-line);
+}
+.job-map-detail .vacancy-page .vacancy-layout > .vacancy-description-panel {
+  order: 1;
+}
+.job-map-detail .vacancy-page .vacancy-description-panel::before {
+  display: none;
+}
+.job-map-detail .vacancy-page .detail-title {
+  font-size: 26px;
+  line-height: 1.4;
+}
+.job-map-detail .detail-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.job-map-detail .vacancy-title-tools {
+  flex-wrap: wrap;
+}
+.job-map-detail .vacancy-tools {
+  flex-wrap: wrap;
+}
+.job-map-detail .vacancy-inline-apply {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.job-map-detail .vacancy-inline-apply .primary {
+  min-height: 42px;
+}
+.job-map-detail .vacancy-page .detail-company {
+  margin-bottom: 12px;
+}
+.job-map-detail .vacancy-page .detail-title {
+  margin: 10px 0 14px;
+}
+.job-map-detail .vacancy-page .detail-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 0 0;
+  margin-top: 20px;
+}
+.job-map-detail .vacancy-page .detail-facts > div {
+  flex: 1 1 180px;
+  padding: 12px 14px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+}
+.job-map-detail .vacancy-page .detail-facts dd {
+  font-size: var(--ds-text-md);
+}
+.job-map-detail .company-identity {
+  max-width: 100%;
+}
+.job-map[data-detail='true'] .job-map-canvas {
+  visibility: hidden;
+}
+@media (max-width: 900px) {
+  .job-map-detail {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    height: 78dvh;
+    border: 1px solid var(--ds-line);
+    border-bottom: 0;
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -6px 32px #0002;
+    animation-name: job-map-sheet-in;
+  }
+  @keyframes job-map-sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(22px);
+    }
+  }
+  .job-map-detail .detail-facts {
+    grid-template-columns: 1fr;
+  }
+  .job-map-detail .vacancy-page .detail-facts > div {
+    flex-basis: 130px;
+  }
+  .job-map-selection {
+    top: 56px;
+  }
+  .job-map[data-detail='true'] .job-map-canvas {
+    visibility: visible;
+  }
+  .job-map[data-detail='true'] .job-map-list {
+    visibility: hidden;
+  }
+  .job-map[data-detail='true'] .job-map-rail,
+  .job-map[data-detail='true'] .job-map-listbtn {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .job-map-beacon {
+    display: none;
+  }
+  .job-map-detail,
+  .job-map-preview .maplibregl-popup-content {
+    animation: none;
+  }
+  .job-map-card,
+  .job-map .job-map-canvas .job-map-gl {
+    transition: none;
+  }
+  .job-map-card:hover {
+    transform: none;
+  }
 }

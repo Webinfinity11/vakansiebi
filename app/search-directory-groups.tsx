@@ -13,7 +13,7 @@ export function SearchDirectoryGroups() {
           <h3>სწრაფი ბმულები</h3>
           <DirectoryLinks
             links={[
-              { path: '/', label: 'ყველა ვაკანსია' },
+              { path: '/', label: 'ვაკანსიები' },
               { path: '/companies', label: 'კომპანიები' },
               { path: '/cv', label: 'რეზიუმეს შექმნა' },
               { path: '/map', label: 'ვაკანსიები რუკაზე' },

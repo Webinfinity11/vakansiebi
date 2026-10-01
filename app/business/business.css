@@ -1,0 +1,519 @@
+.business-page {
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+}
+.business-main {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 28px 48px;
+}
+.business-main :is(h1, h2, h3, p) {
+  margin: 0;
+}
+.business-hero {
+  position: relative;
+  min-height: 540px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f6f2ea;
+}
+.business-hero-art {
+  position: absolute;
+  inset: 0;
+}
+.business-hero-art img {
+  object-fit: cover;
+  object-position: center;
+}
+.business-hero-copy {
+  position: relative;
+  z-index: 1;
+  width: 46%;
+  padding: 68px 0 60px 40px;
+}
+.business-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ds-accent-ink);
+}
+.business-hero .business-eyebrow {
+  color: #1f3f96;
+}
+.business-hero h1 {
+  margin: 22px 0;
+  color: #16213a;
+  font-size: clamp(32px, 3.3vw, 45px);
+  line-height: 1.35;
+  letter-spacing: -1px;
+}
+.business-hero h1 > span {
+  color: #2457e6;
+}
+.business-hero-copy > p {
+  max-width: 375px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #4a5871;
+}
+.business-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 26px 0 16px;
+}
+.business-actions .ds-btn,
+.business-start-actions .ds-btn {
+  min-height: 46px;
+  padding-inline: 15px;
+}
+.business-hero .ds-btn--secondary {
+  background: #fffaf3;
+  color: #34415c;
+  border-color: #d9d7d2;
+}
+.business-hero-note {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #59677c;
+}
+.business-hero-note > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.business-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  list-style: none;
+  margin: 0;
+  padding: 26px 12px;
+  color: var(--ds-ink-2);
+}
+.business-facts li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.business-facts svg {
+  flex: none;
+  color: var(--ds-success);
+}
+.business-section-heading {
+  margin-bottom: 30px;
+  max-width: 700px;
+}
+.business-section-heading h2 {
+  margin-top: 12px;
+  font-size: clamp(23px, 2.5vw, 30px);
+  line-height: 1.5;
+  letter-spacing: -0.5px;
+}
+.business-section-heading > p {
+  margin-top: 12px;
+  color: var(--ds-ink-3);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.business-process,
+.business-placements,
+.business-faq {
+  padding: 56px 0;
+  border-top: 1px solid var(--ds-line);
+}
+.business-plan-grid,
+.business-process ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.business-main h3 {
+  font-size: 17px;
+  line-height: 1.6;
+}
+.business-process li p {
+  margin-top: 10px;
+  color: var(--ds-ink-2);
+  font-size: 13px;
+  line-height: 1.85;
+}
+.business-process li {
+  padding: 12px 24px 8px 0;
+}
+.business-process li > span {
+  display: block;
+  margin-bottom: 15px;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--ds-accent-border);
+  font-weight: 600;
+}
+.business-placements {
+  scroll-margin-top: 90px;
+}
+.business-plan {
+  --plan-color: #167454;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 26px;
+  border: 1px solid color-mix(in srgb, var(--plan-color) 24%, var(--ds-line));
+  border-top: 3px solid var(--plan-color);
+  border-radius: 12px;
+  background: var(--ds-surface);
+}
+.business-plan-vip {
+  --plan-color: #2457e6;
+}
+.business-plan-premium {
+  --plan-color: #6941c6;
+}
+:root[data-theme='dark'] .business-plan {
+  --plan-color: #43b58e;
+}
+:root[data-theme='dark'] .business-plan-vip {
+  --plan-color: #7297ff;
+}
+:root[data-theme='dark'] .business-plan-premium {
+  --plan-color: #b397ef;
+}
+.business-plan-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--ds-ink-2);
+}
+.business-main .business-plan-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--plan-color) 22%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--plan-color) 8%, var(--ds-surface));
+  color: var(--plan-color);
+  font-size: 13px;
+  font-weight: 700;
+}
+.business-plan-offer {
+  font-size: 10px;
+  color: var(--ds-ink-2);
+}
+.business-plan-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: auto;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid var(--plan-color);
+  border-radius: 7px;
+  background: var(--plan-color);
+  color: #fff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+.business-plan-button:hover {
+  background: color-mix(in srgb, var(--plan-color) 85%, #000);
+  border-color: color-mix(in srgb, var(--plan-color) 85%, #000);
+}
+:root[data-theme='dark'] .business-plan-button {
+  color: #101827;
+}
+.business-plan-button:focus-visible {
+  outline: 2px solid var(--plan-color);
+  outline-offset: 4px;
+}
+.business-plan-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.business-main .business-plan-price {
+  font-size: 32px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  color: var(--plan-color);
+}
+.business-plan-price span {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ds-ink-3);
+}
+.business-plan-description {
+  min-height: 48px;
+  color: var(--ds-ink-2);
+  font-size: 13px;
+  line-height: 1.8;
+}
+.business-plan ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 18px 0 0;
+  list-style: none;
+  border-top: 1px solid var(--ds-line);
+}
+.business-plan li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--ds-ink-2);
+}
+.business-plan li > svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--ds-success);
+}
+.business-plan-unavailable {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--ds-ink-3);
+}
+.business-main .business-plan-terms {
+  max-width: 900px;
+  margin-top: 20px;
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--ds-ink-3);
+}
+.business-faq {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 64px;
+}
+.business-faq details {
+  border-bottom: 1px solid var(--ds-line);
+}
+.business-faq summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.business-faq summary::-webkit-details-marker {
+  display: none;
+}
+.business-faq summary > svg {
+  flex: none;
+  transition: transform 160ms ease;
+  color: var(--ds-ink-3);
+}
+.business-faq details[open] summary > svg {
+  transform: rotate(180deg);
+}
+.business-faq details p {
+  padding-bottom: 22px;
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--ds-ink-2);
+}
+.business-faq summary:focus-visible,
+.business-contact:focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.business-start {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 40px;
+  margin-top: 24px;
+  padding: 40px;
+  border-radius: 20px;
+  background: var(--ds-surface-muted);
+}
+.business-start h2 {
+  margin-top: 12px;
+  font-size: clamp(24px, 2.5vw, 30px);
+  line-height: 1.5;
+  letter-spacing: -0.6px;
+}
+.business-start p {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--ds-ink-2);
+}
+.business-start-actions {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+.business-contact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 240px;
+  color: var(--ds-ink-2);
+  font-size: 11px;
+  line-height: 1.9;
+  text-decoration: none;
+}
+.business-contact svg {
+  flex: none;
+}
+.business-page .site-footer {
+  margin-top: 0;
+}
+
+@media (max-width: 1000px) {
+  .business-hero {
+    min-height: 500px;
+  }
+  .business-hero-copy {
+    width: 48%;
+    padding: 44px 0 40px 28px;
+  }
+  .business-hero h1 {
+    font-size: 34px;
+  }
+  .business-hero-copy > p {
+    font-size: 14px;
+  }
+  .business-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .business-plan {
+    padding: 20px;
+  }
+  .business-plan-grid {
+    gap: 12px;
+  }
+  .business-faq {
+    gap: 28px;
+  }
+}
+@media (max-width: 760px) {
+  .business-main {
+    padding: 16px 16px 32px;
+  }
+  .business-hero {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .business-hero-copy {
+    order: 0;
+    width: 100%;
+    padding: 28px 24px 12px;
+  }
+  .business-hero h1 {
+    font-size: clamp(28px, 7.7vw, 40px);
+    letter-spacing: -0.6px;
+    margin: 18px 0;
+  }
+  .business-hero-copy > p {
+    max-width: 100%;
+    font-size: 14px;
+  }
+  .business-actions {
+    align-items: stretch;
+    margin-top: 20px;
+  }
+  .business-actions .ds-btn {
+    justify-content: center;
+  }
+  .business-hero-art {
+    order: 1;
+    position: relative;
+    inset: auto;
+    height: 260px;
+    width: 100%;
+    overflow: hidden;
+  }
+  .business-hero-art img {
+    left: auto !important;
+    right: 0 !important;
+    width: 190% !important;
+    max-width: none;
+    object-position: right center;
+  }
+  .business-facts {
+    flex-direction: column;
+    gap: 12px;
+    padding: 24px 8px;
+  }
+  .business-plan-grid,
+  .business-process ol,
+  .business-faq {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .business-process,
+  .business-placements,
+  .business-faq {
+    padding: 32px 0;
+  }
+  .business-section-heading {
+    margin-bottom: 22px;
+  }
+  .business-section-heading h2 {
+    font-size: 23px;
+  }
+  .business-process li {
+    padding: 8px 0;
+  }
+  .business-process li > span {
+    font-size: 25px;
+  }
+  .business-plan-description {
+    min-height: 0;
+  }
+  .business-plan {
+    padding: 24px;
+  }
+  .business-faq {
+    gap: 0;
+  }
+  .business-start {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px;
+  }
+  .business-start h2 {
+    font-size: 23px;
+  }
+  .business-start-actions {
+    justify-items: stretch;
+  }
+  .business-start-actions .ds-btn {
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .business-faq summary > svg,
+  .business-plan-button {
+    transition: none;
+  }
+}

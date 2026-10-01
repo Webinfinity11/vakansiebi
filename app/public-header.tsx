@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type MouseEvent } from 'react';
-import { Bookmark, Search, Plus, FilePlus2 } from 'lucide-react';
+import { Bookmark, Search, Building2, FilePlus2 } from 'lucide-react';
 import { Brand } from './brand';
 import { ThemeToggle } from './theme-toggle';
 import { enterTab } from '@/lib/vacancy-navigation';
@@ -79,10 +79,10 @@ export function PublicHeader({
         ? 'map'
         : pathname === '/companies'
           ? 'companies'
-          : pathname === '/cv'
-            ? 'cv'
-            : pathname === '/post-job'
-              ? 'post'
+          : pathname === '/business'
+            ? 'business'
+            : pathname === '/cv'
+              ? 'cv'
               : null;
   const here = (place: string) =>
     current === place ? ('page' as const) : undefined;
@@ -95,12 +95,12 @@ export function PublicHeader({
             href="/"
             prefetch={false}
             className="ds-btn ds-btn--ghost site-nav-link"
-            aria-label="ყველა ვაკანსია"
+            aria-label="ვაკანსიები"
             aria-current={here('all')}
             onClick={(event) => localAction(event, onVacancies)}
           >
-            <span className="header-label-full">ყველა ვაკანსია</span>
-            <span className="header-label-short">ყველა</span>
+            <span className="header-label-full">ვაკანსიები</span>
+            <span className="header-label-short">ვაკანსიები</span>
           </Link>
           <Link
             href="/map"
@@ -168,15 +168,15 @@ export function PublicHeader({
           </Link>
           {/* The one primary action in the masthead. */}
           <Link
-            href="/post-job"
+            href="/business"
             prefetch={false}
             className="ds-btn ds-btn--primary site-post"
-            aria-label="განცხადების დამატება"
-            title="განცხადების დამატება"
-            aria-current={here('post')}
+            aria-label="ბიზნესისთვის"
+            title="ბიზნესისთვის"
+            aria-current={here('business')}
           >
-            <Plus aria-hidden="true" />
-            <span className="site-action-label">განცხადების დამატება</span>
+            <Building2 aria-hidden="true" />
+            <span className="site-action-label">ბიზნესისთვის</span>
           </Link>
           <ThemeToggle />
         </div>

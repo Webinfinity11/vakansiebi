@@ -2990,19 +2990,14 @@
   align-items: center;
   gap: var(--jobx-space-10px);
 }
-/* top.ge serves an 88×31 image; shown at half size and muted, it stays out of the way. */
+/* Keep the official badge at its original size and opacity, as TOP.GE requires. */
 .board-shell .jobx-footer .top-ge-counter {
   display: inline-flex;
-  opacity: 0.55;
-  transition: opacity 0.15s;
-}
-.board-shell .jobx-footer .top-ge-counter:hover {
-  opacity: 1;
 }
 .board-shell .jobx-footer .top-ge-counter img {
   display: block;
-  width: 44px;
-  height: 16px;
+  width: 88px;
+  height: 31px;
 }
 .board-shell.editorial-board .discovery-shortcut > svg {
   width: 20px;

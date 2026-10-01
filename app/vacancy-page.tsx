@@ -264,6 +264,7 @@ export default function VacancyPage({
   returnTo: initialReturnTo,
   companyPath = null,
   footer,
+  embedded = false,
 }: {
   job: PublicJob;
   preview: boolean;
@@ -271,6 +272,8 @@ export default function VacancyPage({
   /** The employer's own page, when it has one. */
   companyPath?: string | null;
   footer?: ReactNode;
+  /** Reuse the full vacancy inside the map's scrollable detail panel. */
+  embedded?: boolean;
 }) {
   const activity = useVacancyActivity();
   const { markSeen } = activity;
@@ -301,11 +304,12 @@ export default function VacancyPage({
   const [returnTo, setReturnTo] = useState(initialReturnTo);
   const steppedFromList = useRef(false);
   useEffect(() => {
+    if (embedded) return;
     const path = resolveReturnPath(initialReturnTo);
     steppedFromList.current = planListReturn(path);
     const frame = requestAnimationFrame(() => setReturnTo(path));
     return () => cancelAnimationFrame(frame);
-  }, [job.id, initialReturnTo]);
+  }, [job.id, initialReturnTo, embedded]);
   const leftFor = useRef(false);
   const [saved, setSaved] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
@@ -484,43 +488,47 @@ export default function VacancyPage({
       ? 'შენახულებში დაბრუნება'
       : // A reader who arrived from a search engine has no results to return to.
         returnTo === '/'
-        ? 'ყველა ვაკანსია'
+        ? 'ვაკანსიები'
         : 'შედეგებზე დაბრუნება';
+  const Content = embedded ? 'div' : 'main';
+  const Title = embedded ? 'h2' : 'h1';
   return (
     <div
       onClickCapture={recordContactOpen}
       onAuxClickCapture={(event) => {
         if (event.button === 1) recordContactOpen(event);
       }}
-      className="board-shell vacancy-page has-contact"
+      className={`board-shell vacancy-page has-contact${embedded ? ' vacancy-embedded' : ''}`}
     >
-      <PublicHeader savedCount={saved.length} />
-      <main className="vacancy-page-main">
+      {!embedded && <PublicHeader savedCount={saved.length} />}
+      <Content className="vacancy-page-main">
         {preview && (
           <p className="vacancy-preview">
             ადმინის წინასწარი ნახვა — გამოუქვეყნებელი მონაცემები
           </p>
         )}
-        <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
-          <Link
-            href={returnTo}
-            prefetch={false}
-            onClick={(event) => {
-              if (!steppedFromList.current || !canStepBack()) return;
-              event.preventDefault();
-              router.back();
-            }}
-          >
-            <ChevronLeft size={16} aria-hidden="true" />
-            {returnLabel}
-          </Link>
-          {job.category !== 'სხვა' && (
-            <>
-              <span aria-hidden="true">/</span>
-              <span>{job.category}</span>
-            </>
-          )}
-        </nav>
+        {!embedded && (
+          <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
+            <Link
+              href={returnTo}
+              prefetch={false}
+              onClick={(event) => {
+                if (!steppedFromList.current || !canStepBack()) return;
+                event.preventDefault();
+                router.back();
+              }}
+            >
+              <ChevronLeft size={16} aria-hidden="true" />
+              {returnLabel}
+            </Link>
+            {job.category !== 'სხვა' && (
+              <>
+                <span aria-hidden="true">/</span>
+                <span>{job.category}</span>
+              </>
+            )}
+          </nav>
+        )}
         <article className="vacancy-layout">
           <section className="vacancy-overview" aria-labelledby="vacancy-title">
             <div className="detail-company">
@@ -542,9 +550,9 @@ export default function VacancyPage({
                 {job.placement.tier === 'premium' ? 'პრემიუმი' : 'VIP'}
               </span>
             )}
-            <h1 id="vacancy-title" className="detail-title">
+            <Title id="vacancy-title" className="detail-title">
               {job.title}
-            </h1>
+            </Title>
             <div className="vacancy-title-tools">
               <div className="detail-dates">
                 {job.datePosted && (
@@ -587,6 +595,22 @@ export default function VacancyPage({
                 )}
               </div>
             </div>
+            {embedded && (
+              <div className="vacancy-inline-apply">
+                {hasAction ? (
+                  <ApplyAction job={job} />
+                ) : (
+                  <a
+                    className="primary"
+                    href={job.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Send aria-hidden="true" /> განაცხადის გაგზავნა
+                  </a>
+                )}
+              </div>
+            )}
             {facts.length > 0 && (
               <dl
                 className={`detail-facts ${facts.filter(([label]) => label !== 'სამუშაო გრაფიკი').length < 2 ? 'single-fact-column' : ''}`}
@@ -608,7 +632,7 @@ export default function VacancyPage({
                 ))}
               </dl>
             )}
-            {summary.length > 1 && (
+            {!embedded && summary.length > 1 && (
               <section
                 className="vacancy-summary"
                 aria-labelledby="summary-title"
@@ -837,29 +861,33 @@ export default function VacancyPage({
             )}
             {!preview && <JobReportForm key={job.id} jobId={job.id} />}
           </footer>
-          {!preview && <SimilarVacancies id={job.id} returnTo={returnTo} />}
+          {!preview && !embedded && (
+            <SimilarVacancies id={job.id} returnTo={returnTo} />
+          )}
         </article>
-      </main>
+      </Content>
       {footer}
       {/* On a phone the contact column sits below the vacancy, so the way to apply stays in reach here. */}
-      <section
-        className="vacancy-mobile-action"
-        aria-label="დამსაქმებელთან დაკავშირება"
-      >
-        {hasAction ? (
-          <ApplyAction job={job} />
-        ) : (
-          <a
-            className="primary"
-            href={job.url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Send aria-hidden="true" />
-            განაცხადის გაგზავნა
-          </a>
-        )}
-      </section>
+      {!embedded && (
+        <section
+          className="vacancy-mobile-action"
+          aria-label="დამსაქმებელთან დაკავშირება"
+        >
+          {hasAction ? (
+            <ApplyAction job={job} />
+          ) : (
+            <a
+              className="primary"
+              href={job.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Send aria-hidden="true" />
+              განაცხადის გაგზავნა
+            </a>
+          )}
+        </section>
+      )}
       {feedback && (
         <output className="feedback-toast">
           <Check size={16} />

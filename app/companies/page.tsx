@@ -80,7 +80,7 @@ export default async function CompaniesPage() {
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
           <Link href="/" prefetch={false}>
             <ChevronLeft size={16} aria-hidden="true" />
-            ყველა ვაკანსია
+            ვაკანსიები
           </Link>
           <span aria-hidden="true">/</span>
           <span>კომპანიები</span>

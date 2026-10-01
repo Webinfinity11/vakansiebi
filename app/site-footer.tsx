@@ -16,25 +16,29 @@ import { SearchDirectoryGroups } from './search-directory-groups';
 export function SiteFooter({
   landing,
   onSaved,
+  showDirectory = true,
 }: {
   landing?: Landing | null;
   onSaved?: () => void;
+  showDirectory?: boolean;
 }) {
   return (
     <>
       {/* Reader-facing, and the only way a crawler reaches these lists by
           following links rather than by reading the sitemap. */}
-      <nav
-        className="search-directory"
-        aria-label="სწრაფი ბმულები და ვაკანსიების ძიება"
-      >
-        {/* Below the vacancies, not above them: a list with nothing to read is
+      {showDirectory && (
+        <nav
+          className="search-directory"
+          aria-label="სწრაფი ბმულები და ვაკანსიების ძიება"
+        >
+          {/* Below the vacancies, not above them: a list with nothing to read is
             a thin page, but the reader came for the list and the sentence that
             describes it has no business standing between them. */}
-        {landing && <p className="landing-copy">{landingCopy(landing)}</p>}
-        {landing && <SearchDirectoryRelated landing={landing} />}
-        <SearchDirectoryGroups />
-      </nav>
+          {landing && <p className="landing-copy">{landingCopy(landing)}</p>}
+          {landing && <SearchDirectoryRelated landing={landing} />}
+          <SearchDirectoryGroups />
+        </nav>
+      )}
       <footer className="site-footer jobx-footer">
         <div className="footer-main">
           <Brand />
@@ -56,6 +60,10 @@ export function SiteFooter({
             </Link>
             <Link href="/companies" prefetch={false}>
               <Building2 size={16} aria-hidden="true" /> კომპანიები
+            </Link>
+            <Link href="/business" prefetch={false}>
+              <Building2 size={16} aria-hidden="true" /> ვაკანსიის უფასო
+              განთავსება
             </Link>
           </nav>
         </div>
@@ -86,10 +94,10 @@ export function SiteFooter({
         </details>
         <div className="footer-meta">
           <span>ვაკანსიები სხვადასხვა წყაროდან</span>
-          <span className="footer-copyright">
+          <div className="footer-copyright">
             © {new Date().getFullYear()} JOBX
             <TopGeCounter />
-          </span>
+          </div>
         </div>
       </footer>
     </>

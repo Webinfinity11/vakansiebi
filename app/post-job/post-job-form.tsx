@@ -6,6 +6,7 @@ import {
   placementTiers,
   placementLabels,
   introductoryDays,
+  type PlacementTier,
 } from '@/lib/placement';
 import { track } from '@/lib/analytics-client';
 import {
@@ -223,8 +224,15 @@ function DateField({
   );
 }
 
-export function PostJobForm() {
-  const [values, setValues] = useState<Values>(initial);
+export function PostJobForm({
+  initialPlacement,
+}: {
+  initialPlacement?: PlacementTier;
+}) {
+  const [values, setValues] = useState<Values>(() => ({
+    ...initial,
+    placement: initialPlacement ?? initial.placement,
+  }));
   const [consent, setConsent] = useState(false);
   const [ready, setReady] = useState(false);
   const [dateBounds, setDateBounds] = useState({ min: '', max: '' });
@@ -303,6 +311,9 @@ export function PostJobForm() {
             restored.city = otherCity;
           }
           if (restored.city === 'დისტანციური') restored.mode = 'დისტანციური';
+          // An explicit plan choice updates an editable draft, never a sent payload.
+          if (initialPlacement && !payload)
+            restored.placement = initialPlacement;
           setValues(restored);
           if (
             typeof stored.requestId === 'string' &&
@@ -333,7 +344,7 @@ export function PostJobForm() {
       setReady(true);
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [initialPlacement]);
   useEffect(() => {
     if (!ready || receipt || sent) return;
     if (
