@@ -2,11 +2,7 @@ import { siteUrl } from '../seo';
 import { eligibleLandings, landingFor, landingPath } from '../seo-landing';
 import { vacancyPath } from '../vacancy-navigation';
 import { employerPages } from './employers';
-import {
-  readLandingSnapshot,
-  newest,
-  publicVacancyDates,
-} from './sitemap-data';
+import { readLandingSnapshot, publicVacancyDates } from './sitemap-data';
 
 export function pagesEntries() {
   return ['/', '/companies', '/cv', '/map', '/business'].map((path) => ({
@@ -15,7 +11,7 @@ export function pagesEntries() {
 }
 
 export async function searchesEntries() {
-  const { rows: counts, computedAt } = await readLandingSnapshot();
+  const { rows: counts } = await readLandingSnapshot();
   const rows = eligibleLandings(counts);
   if (!rows.length) throw new Error('No eligible landing counts');
   const paths = rows
@@ -26,10 +22,8 @@ export async function searchesEntries() {
     .filter(
       (path) => !!landingFor(new URLSearchParams(path.split('?')[1] || '')),
     );
-  const lastModified = computedAt;
-  return [...new Set(paths)]
-    .sort()
-    .map((path) => ({ url: siteUrl + path, lastModified }));
+  // A census refresh time does not tell us when this page's content changed.
+  return [...new Set(paths)].sort().map((path) => ({ url: siteUrl + path }));
 }
 
 export async function vacanciesEntries() {
@@ -41,14 +35,10 @@ export async function vacanciesEntries() {
 }
 
 export async function companiesEntries() {
-  const [employers, vacancies] = await Promise.all([
-    employerPages(),
-    publicVacancyDates(),
-  ]);
-  // A company page changes when one of its vacancies does.
-  const changed = new Map(vacancies.map((v) => [v.id, v.lastModified]));
+  const employers = await employerPages();
+  // The newest remaining job misses removals and company profile edits. Omit lastmod
+  // until a timestamp tracks all meaningful changes to the company page.
   return [...employers.bySlug.values()].slice(0, 4999).map((page) => ({
     url: `${siteUrl}/companies/${encodeURIComponent(page.slug)}`,
-    lastModified: newest(page.jobIds.flatMap((id) => changed.get(id) || [])),
   }));
 }

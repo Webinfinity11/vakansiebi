@@ -77,6 +77,7 @@ export function sitemapLeaves(base: string) {
   }));
 }
 
+/** An index lastModified, if provided, must be the sitemap file's modification time. */
 export function sitemapIndexResponse(entries: readonly SitemapEntry[]) {
   const body =
     sitemapIndexStart + entries.map(sitemapXml).join('') + '</sitemapindex>\n';
@@ -149,37 +150,4 @@ export function createSitemapHandler(
       clearTimeout(timer);
     }
   };
-}
-
-/** The newest <lastmod> in a sitemap body, or undefined when it lists none. */
-export function newestLastmod(xml: string): Date | undefined {
-  let newest: number | undefined;
-  for (const [, value] of xml.matchAll(/<lastmod>([^<]+)<\/lastmod>/g)) {
-    const time = Date.parse(value);
-    if (!Number.isNaN(time) && (newest === undefined || time > newest))
-      newest = time;
-  }
-  return newest === undefined ? undefined : new Date(newest);
-}
-
-/* The index names each leaf with the date of its newest address, so a crawler can tell which
-   leaf changed. The dates are read from the leaves as the edge already serves them — the index
-   itself still never touches the database — and a leaf that cannot be read is listed without
-   a date rather than holding the index up. */
-export async function datedSitemapLeaves(
-  base: string,
-  read: (url: string) => Promise<string> = (url) =>
-    fetch(url, {
-      next: { revalidate: 3600 },
-      signal: AbortSignal.timeout(10_000),
-    }).then((r) => (r.ok ? r.text() : '')),
-) {
-  return Promise.all(
-    sitemapLeaves(base).map(async (leaf) => ({
-      ...leaf,
-      lastModified: await read(leaf.url)
-        .then(newestLastmod)
-        .catch(() => undefined),
-    })),
-  );
 }

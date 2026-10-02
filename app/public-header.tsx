@@ -159,12 +159,12 @@ export function PublicHeader({
             href="/cv"
             prefetch={false}
             className="ds-btn ds-btn--secondary site-action"
-            aria-label="რეზიუმეს შექმნა"
-            title="რეზიუმეს შექმნა"
+            aria-label="სივის შექმნა"
+            title="სივის შექმნა"
             aria-current={here('cv')}
           >
             <FilePlus2 aria-hidden="true" />
-            <span className="site-action-label">CV შექმნა</span>
+            <span className="site-action-label">სივის შექმნა</span>
           </Link>
           {/* The one primary action in the masthead. */}
           <Link

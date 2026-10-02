@@ -27,10 +27,13 @@ async function withoutDatabase(run: () => Promise<void>) {
   }
 }
 
-void test('the sitemap index lists the four leaf sitemaps and never touches the database', async () => {
+void test('the sitemap indexes list all leaves even when the network and database are unavailable', async (t) => {
+  const fetch = t.mock.method(globalThis, 'fetch', async () => {
+    throw new Error('network unavailable');
+  });
   await withoutDatabase(async () => {
     for (const get of [indexGET, vacanciesIndexGET]) {
-      const response = await get();
+      const response = get();
       assert.equal(response.status, 200);
       assert.equal(
         response.headers.get('Content-Type'),
@@ -38,6 +41,8 @@ void test('the sitemap index lists the four leaf sitemaps and never touches the 
       );
       const body = await response.text();
       assert.match(body, /<sitemapindex /);
+      assert.doesNotMatch(body, /<lastmod>/);
+      assert.equal(body.match(/<sitemap>/g)?.length, 4);
       for (const name of ['pages', 'categories', 'companies', 'jobs']) {
         assert.ok(
           body.includes(`<loc>https://jobx.ge/sitemap-${name}.xml</loc>`),
@@ -45,6 +50,7 @@ void test('the sitemap index lists the four leaf sitemaps and never touches the 
       }
     }
   });
+  assert.equal(fetch.mock.callCount(), 0);
 });
 
 void test('sitemap-pages.xml has no database dependency', async () => {
@@ -171,7 +177,13 @@ void test('categories sitemap reads stored counts and uses curated fallback for 
     const body = await fresh.text();
     assert.equal(fresh.headers.get('Cache-Control'), sitemapCacheControl);
     assert.equal(body.match(/<loc>/g)?.length, 1);
-    assert.ok(body.includes(computedAt.toISOString()));
+    assert.doesNotMatch(body, /<lastmod>/);
+    rows = [{ ...row, computed_at: new Date() }];
+    assert.equal(
+      await (await categoriesGET()).text(),
+      body,
+      'refreshing unchanged counts does not change sitemap metadata',
+    );
     for (const unavailable of [
       [],
       [{ ...row, count: 9 }],
@@ -392,28 +404,4 @@ void test('persistent snapshots preserve dates and fit a large catalogue in one 
   assert.ok(Buffer.byteLength(snapshot) < 1_900_000);
   assert.deepEqual(decodeSitemapSnapshot(snapshot), entries);
   assert.throws(() => encodeSitemapSnapshot([]), /no URLs/);
-});
-
-void test('the index dates each leaf by its newest address and survives a leaf that fails', async () => {
-  const { datedSitemapLeaves, sitemapIndexResponse } =
-    await import('../lib/sitemap');
-  const bodies: Record<string, string> = {
-    'https://x.ge/sitemap-jobs.xml':
-      '<url><lastmod>2026-09-24T08:00:00.000Z</lastmod></url><url><lastmod>2026-09-25T10:53:21.536Z</lastmod></url>',
-    'https://x.ge/sitemap-categories.xml':
-      '<url><lastmod>not a date</lastmod></url>',
-    'https://x.ge/sitemap-pages.xml': '<url><loc>https://x.ge/</loc></url>',
-  };
-  const leaves = await datedSitemapLeaves('https://x.ge', async (url) => {
-    if (url.endsWith('companies.xml')) throw Error('offline');
-    return bodies[url];
-  });
-  const xml = await sitemapIndexResponse(leaves).text();
-  assert.match(
-    xml,
-    /sitemap-jobs\.xml<\/loc><lastmod>2026-09-25T10:53:21\.536Z<\/lastmod>/,
-  );
-  // No date is better than a wrong one: pages list none, a failed or dateless leaf gets none.
-  for (const name of ['pages', 'categories', 'companies'])
-    assert.match(xml, new RegExp(`sitemap-${name}\\.xml</loc></sitemap>`));
 });

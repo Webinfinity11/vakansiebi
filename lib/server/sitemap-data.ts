@@ -51,12 +51,6 @@ export async function publicVacancyDatesOrLast(now = Date.now()) {
   }
 }
 
-export function newest(dates: Iterable<Date>) {
-  let latest: Date | undefined;
-  for (const date of dates) if (!latest || date > latest) latest = date;
-  return latest;
-}
-
 export type { LandingCount } from '../seo-landing';
 export const landingCountsMaxAgeMs = 24 * 60 * 60 * 1000;
 

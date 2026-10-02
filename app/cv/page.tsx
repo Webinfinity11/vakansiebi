@@ -5,9 +5,9 @@ import { PublicHeader } from '../public-header';
 import { CvBuilder } from './cv-builder';
 import '../cv.css';
 
-const title = 'CV | რეზიუმე | შექმენი რეზიუმე უფასოდ | JOBX';
+const title = 'CV-ის შექმნა უფასოდ — რეზიუმე ონლაინ | JOBX';
 const description =
-  'შეადგინე რეზიუმე (CV) ონლაინ, უფასოდ. აირჩიე მზა შაბლონი, შეავსე გამოცდილება და შეინახე PDF-ად. რეზიუმე ქართულად ან ინგლისურად.';
+  'სივის შექმნა ონლაინ, უფასოდ: აირჩიე რეზიუმეს შაბლონი, შეავსე გამოცდილება და ჩამოტვირთე PDF ქართულად ან ინგლისურად.';
 // A page-level openGraph block replaces the layout's, so it names everything it needs.
 export const metadata: Metadata = {
   title,
