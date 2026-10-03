@@ -6,7 +6,11 @@ import { Pool } from 'pg';
 import { stageVacancy, discoverItems } from '../worker/importer';
 import { tbilisiDate } from '../worker/adapters';
 import { vacancySchema } from '../lib/vacancy-schema';
-import { pendingNewItemsSql } from '../worker/new-only';
+import {
+  pendingNewItemsSql,
+  pendingNewItemsWhere,
+  retireStaleNewItemsSql,
+} from '../worker/new-only';
 import { reconcileJob } from '../worker/automation';
 
 void test(
@@ -142,6 +146,50 @@ void test(
       assert.deepEqual(
         (await pool.query(pendingNewItemsSql('external_id'), ['hr', 20])).rows,
         [{ external_id: '126' }],
+      );
+      const beforeRetirement = (
+        await pool.query('SELECT * FROM source_items ORDER BY id')
+      ).rows;
+      assert.equal(
+        (await pool.query(retireStaleNewItemsSql, ['hr'])).rowCount,
+        2,
+        'only expired and exhausted new-item attempts are retired',
+      );
+      const afterRetirement = (
+        await pool.query('SELECT * FROM source_items ORDER BY id')
+      ).rows;
+      for (const item of beforeRetirement) {
+        const after = afterRetirement.find((row) => row.id === item.id);
+        if (['127', '128'].includes(item.external_id)) {
+          assert.equal(after.next_check_at, Infinity);
+          assert.equal(after.raw, null);
+          assert.equal(after.job_id, null);
+        } else assert.deepEqual(after, item);
+      }
+      assert.equal(
+        (await pool.query(retireStaleNewItemsSql, ['hr'])).rowCount,
+        0,
+      );
+      assert.equal(
+        (
+          await pool.query(
+            `SELECT count(*)::int queued FROM source_items i WHERE i.source_id=$1 AND ${pendingNewItemsWhere('i')}`,
+            ['hr'],
+          )
+        ).rows[0].queued,
+        1,
+        'admin counters exclude abandoned IDs and completed snapshots',
+      );
+      assert.equal(
+        await discoverItems('hr', [
+          { externalId: '128', url: 'https://www.hr.ge/announcement/128/test' },
+        ]),
+        0,
+        'retired IDs remain known to discovery',
+      );
+      assert.equal(
+        (await pool.query(pendingNewItemsSql('id'), ['hr', 20])).rowCount,
+        1,
       );
     } finally {
       globalDb.ertadPool = previous;

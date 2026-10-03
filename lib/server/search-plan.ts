@@ -10,6 +10,10 @@ import {
   termScope,
 } from '../job-intelligence';
 import { negatedRequirement, requiredExperiencePattern } from '../experience';
+import {
+  describedPartTimePattern,
+  unavailablePartTimePattern,
+} from '../employment';
 import { cities, cityStem, otherCity } from '../cities';
 import { tbilisiDistricts } from '../street-address';
 import { legalFormSql } from '../employer-identity';
@@ -347,6 +351,11 @@ export function searchPlan(
         'გამოცდილების[[:space:]]+გარეშე|გამოცდილებას[[:space:]]+(არ[[:space:]]+აქვს[[:space:]]+მნიშვნელობა|მნიშვნელობა[[:space:]]+არ[[:space:]]+აქვს)|გამოცდილება[[:space:]:–-]+(არ[[:space:]]+(არის[[:space:]]+)?(სავალდებულო|აუცილებელი|საჭირო)|არ[[:space:]]+მოითხოვება)|no[[:space:]]+(previous[[:space:]]+|prior[[:space:]]+)?experience[[:space:]]+(is[[:space:]]+)?(required|needed|necessary)|experience[[:space:]]+(is[[:space:]]+)?not[[:space:]]+(required|needed|necessary)',
       )
     : null;
+  const describedPartTime =
+    filters.employment === 'part-time' ? bind(describedPartTimePattern) : null;
+  const unavailablePartTime = describedPartTime
+    ? bind(unavailablePartTimePattern)
+    : null;
   /* "Beginner" and "graduate" say entry level only in the experience field itself; in a
      description they as often address graduates of a programme that still wants years. */
   const entryLevelFacts = '(^|[^ა-ჰ])(დამწყებ|კურსდამთავრებულ)';
@@ -370,7 +379,7 @@ export function searchPlan(
         ? `((${experienceText(alias)} ~ ${entryLevelPattern} OR ${factsText(alias)} ~ ${bind(entryLevelFacts)}) AND NOT (regexp_replace(${experienceText(alias)}, ${bind(negatedRequirement)}, '', 'g') ~ ${requiredExperience})) AS entry_level`
         : '',
       employmentPattern
-        ? `(${filters.employment === 'daily' ? `(${employmentText(alias)} || ' ' || ${document(alias)})` : employmentText(alias)} ~ ${employmentPattern}) AS employment_match`
+        ? `(${filters.employment === 'daily' ? `(${employmentText(alias)} || ' ' || ${document(alias)})` : employmentText(alias)} ~ ${employmentPattern}${describedPartTime ? ` OR (${document(alias)} ~ ${describedPartTime} AND ${document(alias)} !~ ${unavailablePartTime})` : ''}) AS employment_match`
         : '',
     ]
       .filter(Boolean)

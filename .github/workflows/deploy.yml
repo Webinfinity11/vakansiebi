@@ -1,9 +1,8 @@
-name: Scheduled production deployment
+name: Production deployment
 
 on:
-  schedule:
-    # Asia/Tbilisi (UTC+4): 09:00, 15:00, 21:00. GitHub can delay schedules.
-    - cron: '0 5,11,17 * * *'
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

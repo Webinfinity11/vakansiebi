@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { nextRunAt } from '@/worker/next-run';
+import { pendingNewItemsWhere } from '@/worker/new-only';
 import { db } from '@/lib/server/db';
 import { githubScraperStatus } from '@/lib/server/scraper-github';
 import { wakeScraper } from '@/lib/server/scraper-control';
@@ -27,8 +28,8 @@ export async function GET() {
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id) discovered,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.quality_warning IS NOT NULL) quality_held,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NOT NULL) imported,
-        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NULL AND (i.error IS NULL OR i.failures>0)) queued,
-        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NULL AND i.error IS NULL AND i.next_check_at<=now()) due,
+        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND ${pendingNewItemsWhere('i')}) queued,
+        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND ${pendingNewItemsWhere('i')} AND i.next_check_at<=now()) due,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.error NOT IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410')) errored,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.error IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410')) removed_count,
         (SELECT COALESCE(jsonb_agg(e),'[]'::jsonb) FROM (SELECT left(i.error,120) message,count(*)::int count FROM source_items i WHERE i.source_id=s.id AND i.error NOT IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410') GROUP BY 1 ORDER BY 2 DESC LIMIT 3) e) top_errors,

@@ -1943,6 +1943,11 @@
   background: transparent;
   box-shadow: none;
 }
+:root[data-theme='dark'] .board-shell .category-options .check-row.category-parent-context:has(input:checked) {
+  color: var(--jobx-text);
+  background: transparent;
+  box-shadow: none;
+}
 
 /* ── from app/phone.css ── */
 :root[data-theme='dark'] .board-shell .job-new {

@@ -67,6 +67,33 @@ void test(
         description: 'სამუშაო ადგილი: ქ. ბათუმი.',
       },
       { title: 'მოლარე', company: 'მაღაზია', city: 'რუსთავი' },
+      {
+        title: 'კონტენტკრეატორი',
+        description: 'სამუშაო გრაფიკი: შეთანხმებით (ნახევარ განაკვეთზე)',
+      },
+      {
+        title: 'გუნდის წევრი',
+        employmentType: 'სრული განაკვეთი',
+        description: 'სრული ან ნახევარი განაკვეთი (თქვენი სურვილისამებრ).',
+      },
+      {
+        title: 'გრაფიკული დიზაინერი/ადმინისტრატორი',
+        description:
+          'ნახევარი განაკვეთი დაეთმობა გრაფიკას ხოლო დღის მეორე ნახევარი საიტის ადმინისტრირებას.',
+      },
+      {
+        title: 'საოფისე აგენტი',
+        description: 'სამუშაო გრაფიკი: ნახევარი განაკვეთი არ განიხილება.',
+      },
+      {
+        title: 'იურისტი',
+        description: 'Work Hours: Part-time, 20-30 hrs. per week',
+      },
+      {
+        title: 'გამოცდილი თანამშრომელი',
+        description:
+          'მინიმუმ 2 წელი ნახევარ განაკვეთზე მუშაობის გამოცდილება. სამუშაო გრაფიკი: სრული განაკვეთი.',
+      },
     ];
     const ids = fixtures.map(() => randomUUID());
     try {
@@ -133,6 +160,21 @@ void test(
         }),
       );
       assert.equal(tbilisi.total, 1);
+      const partTime = await publicJobs(
+        new URLSearchParams({
+          ids: ids.slice(12).join(','),
+          employment: 'part-time',
+        }),
+      );
+      assert.deepEqual(
+        partTime.jobs
+          .map((job) => job.title)
+          .sort((a, b) => a.localeCompare(b)),
+        ['კონტენტკრეატორი', 'გუნდის წევრი', 'იურისტი'].sort((a, b) =>
+          a.localeCompare(b),
+        ),
+        'offered schedules in descriptions qualify, duty splits, unavailable schedules and past experience do not',
+      );
     } finally {
       clearPublicJobsCache();
       await db().query('DELETE FROM source_items WHERE id=ANY($1::uuid[])', [

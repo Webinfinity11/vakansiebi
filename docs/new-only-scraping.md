@@ -11,6 +11,11 @@ failed attempts; unavailable pages stop immediately. Historical description repa
 are not part of the scheduled cycle. New vacancies can still fetch the linked employer
 text during their initial import.
 
+Each source cycle retires unprocessed records outside the three-day discovery window
+and records whose three attempts are exhausted. Their IDs remain stored, so later listing
+discovery cannot resurrect them. Admin queue and due counts use the same eligibility
+rules as the worker, excluding completed and retired records.
+
 Listing discovery begins at page one instead of rotating through the archive. It stops
 after two consecutive pages introduce no new IDs, or at the configured page/time budget.
 This keeps a second page for promoted/pinned listings. Listing order and pagination

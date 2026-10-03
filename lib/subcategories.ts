@@ -14,20 +14,20 @@ const roleRules = [
   {
     id: 'tech-business-systems',
     category: 'ტექნოლოგიები',
-    label: 'ბიზნესსისტემები / ERP',
+    label: 'ბიზნესსისტემები (ERP)',
     pattern: '(^|[^ა-ჰa-z])(1c|erp|sap)([^ა-ჰa-z]|$)|ბიზნეს.*სისტემ',
   },
   {
     id: 'tech-product',
     category: 'ტექნოლოგიები',
-    label: 'ციფრული პროდუქტი / პროექტები / UX',
+    label: 'პროდუქტი / პროექტები / UX',
     pattern:
       'პროდუქტ.*(მფლობელ|მენეჯერ)|პროექტ.*(მართვ|მენეჯერ)|პროცეს.*დანერგვ|product (owner|manager)|project manager|(^|[^ა-ჰa-z])(ui|ux)([^ა-ჰa-z]|$)',
   },
   {
     id: 'tech-data',
     category: 'ტექნოლოგიები',
-    label: 'მონაცემები / AI / ანალიტიკა',
+    label: 'მონაცემები და AI',
     pattern:
       'მონაცემთა.*(ანალიტ|ინჟინერ|მეცნიერ|ბაზ.*ადმინისტრატორ)|(^|[^ა-ჰa-z])data (analyst|engineer|scientist)|(^|[^ა-ჰa-z])(ai|ml) (ინჟინერ|სპეციალისტ|developer|პროგრამისტ)|ბიზნეს.*ანალიტ|business analy|machine learning|ხელოვნურ.*ინტელექტ.*(ინჟინერ|სპეციალისტ|დეველოპერ)',
   },
@@ -55,7 +55,7 @@ const roleRules = [
   {
     id: 'tech-support',
     category: 'ტექნოლოგიები',
-    label: 'IT / აპლიკაციების მხარდაჭერა',
+    label: 'IT მხარდაჭერა',
     pattern:
       '(^|[^ა-ჰa-z])it([^ა-ჰa-z]|$).*(მხარდაჭერ|მხარდამჭერ|support|სპეციალისტ)|ტექნიკურ.*მხარდაჭერ|ტექნოლოგიების.*სპეციალისტ|აპლიკაცი.*მხარდაჭერ|help.?desk',
   },
@@ -611,6 +611,26 @@ const titleRules = subcategories.map((item) => ({
   item,
   regex: new RegExp(item.pattern, 'i'),
 }));
+
+// Presentation order is separate from classification priority. Keep it stable
+// while other filters change, so a choice never moves under the reader's cursor.
+const techDisplayOrder = [
+  'tech-support',
+  'tech-development',
+  'tech-systems',
+  'tech-data',
+  'tech-qa',
+  'tech-business-systems',
+  'tech-product',
+  'tech-security',
+];
+export function subcategoryChoices(category: string) {
+  const children = subcategories.filter((item) => item.category === category);
+  if (category !== 'ტექნოლოგიები') return children;
+  return children.sort(
+    (a, b) => techDisplayOrder.indexOf(a.id) - techDisplayOrder.indexOf(b.id),
+  );
+}
 
 export function subcategoryFor(category: string, id?: string | null) {
   return subcategories.find(

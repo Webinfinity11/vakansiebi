@@ -1,7 +1,11 @@
 import { nextRunAt, quietIntervalMinutes } from './next-run';
 import { completeDescription } from './linked-description';
 import { detailQueueProjection } from './detail-queue';
-import { importDateReason, pendingNewItemsSql } from './new-only';
+import {
+  importDateReason,
+  pendingNewItemsSql,
+  retireStaleNewItemsSql,
+} from './new-only';
 import { effectiveScraperLimits } from '../lib/scraper-limits';
 import { assessReportedTotal, structuralFailure } from './quality';
 import { randomUUID } from 'node:crypto';
@@ -100,6 +104,9 @@ export async function runSource(
       await db().query('SELECT * FROM sources WHERE id=$1', [source])
     ).rows[0];
     if (!config?.enabled || config.retired) return { skipped: true };
+    // Pending work ages out of the three-day window even without another fetch.
+    // Run under the source lease, before discovering or processing new records.
+    await db().query(retireStaleNewItemsSql, [source]);
     const configuredPages = Number(process.env.DISCOVERY_PAGE_BUDGET ?? 20);
     const limits = effectiveScraperLimits(config, {
       batch: limit,

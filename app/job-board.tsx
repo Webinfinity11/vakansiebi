@@ -21,7 +21,11 @@ import {
   takeBoard,
   type BoardInitial,
 } from '@/lib/board-return-cache';
-import { subcategories, subcategoryFor } from '@/lib/subcategories';
+import {
+  subcategories,
+  subcategoryFor,
+  subcategoryChoices,
+} from '@/lib/subcategories';
 import { SalaryFilter } from './salary-filter';
 import AdvancedFilterControls, {
   advancedDefaults,
@@ -1282,7 +1286,10 @@ export default function JobBoard({
                   const CategoryIcon = categoryIcons[c];
                   return (
                     <Fragment key={c}>
-                      <label className="check-row" htmlFor={`${prefix}-${c}`}>
+                      <label
+                        className={`check-row${draft.category === c && draft.subcategory ? ' category-parent-context' : ''}`}
+                        htmlFor={`${prefix}-${c}`}
+                      >
                         <input
                           type="radio"
                           name={`${prefix}-category`}
@@ -1290,6 +1297,10 @@ export default function JobBoard({
                           id={`${prefix}-${c}`}
                           checked={draft.category === c}
                           onChange={() => changeCategory(c)}
+                          onClick={() => {
+                            if (draft.category === c && draft.subcategory)
+                              setSubcategory('');
+                          }}
                         />
                         <CategoryIcon
                           className="category-icon"
@@ -1314,15 +1325,18 @@ export default function JobBoard({
                             aria-label={`${c} — ქვემიმართულება`}
                           >
                             {[
-                              { id: '', label: 'ყველა' },
-                              ...subcategories.filter(
-                                (item) => item.category === c,
-                              ),
+                              { id: '', label: 'ყველა პოზიცია' },
+                              ...subcategoryChoices(c),
                             ].map((item) => (
                               <label
                                 className="check-row"
                                 key={item.id}
                                 htmlFor={`${prefix}-subcategory-${item.id || 'all'}`}
+                                title={
+                                  item.id
+                                    ? undefined
+                                    : 'ამ მიმართულების ყველა ვაკანსია, დაუზუსტებელი პოზიციების ჩათვლით'
+                                }
                               >
                                 <input
                                   type="radio"
@@ -1384,9 +1398,10 @@ export default function JobBoard({
                     value: allSubcategories,
                     label: `ყველა — ${draft.category}`,
                   },
-                  ...subcategories
-                    .filter((item) => item.category === draft.category)
-                    .map((item) => ({ value: item.id, label: item.label })),
+                  ...subcategoryChoices(draft.category).map((item) => ({
+                    value: item.id,
+                    label: item.label,
+                  })),
                 ]}
               />
               <p

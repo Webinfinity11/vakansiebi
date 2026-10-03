@@ -4087,6 +4087,13 @@
 .board-shell .subcategory-options .facet-count {
   flex-shrink: 0;
 }
+.board-shell
+  .category-options
+  .check-row.category-parent-context:has(input:checked) {
+  color: var(--jobx-text);
+  background: transparent;
+  box-shadow: none;
+}
 
 /* Compact, expandable directory; all links remain reachable without JS. */
 .search-directory-group details {
