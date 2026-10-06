@@ -1,4 +1,4 @@
-import { latinUrl } from './latin-url';
+import { latinUrl, legacyLatinUrl } from './latin-url';
 import { companyKey } from './company-key';
 import { genericCompanyKeys } from './company-logo-identity';
 
@@ -193,4 +193,46 @@ export function legacyEmployerSlug(name: string) {
 
 export function employerSlug(name: string) {
   return latinUrl(legacyEmployerSlug(name));
+}
+
+/** Preserve ownership of both Georgian and older Latin addresses during URL migrations. */
+export function employerUrlSlugs(
+  employers: readonly { identity: string; name: string }[],
+) {
+  const assign = (
+    spelling: (name: string) => string,
+    reserved: readonly Map<string, string>[] = [],
+  ) => {
+    const owners = new Map<string, string>();
+    const slugs = new Map<string, string>();
+    for (const { identity, name } of employers) {
+      const base = spelling(name) || identity;
+      let slug = base;
+      for (
+        let n = 2;
+        owners.has(slug) ||
+        reserved.some((map) => map.has(slug) && map.get(slug) !== identity);
+        n++
+      )
+        slug = `${base}-${n}`;
+      owners.set(slug, identity);
+      slugs.set(identity, slug);
+    }
+    return { owners, slugs };
+  };
+  const georgian = assign(legacyEmployerSlug);
+  const previousLatin = assign(
+    (name) => legacyLatinUrl(legacyEmployerSlug(name)),
+    [georgian.owners],
+  );
+  const current = assign(employerSlug, [georgian.owners, previousLatin.owners]);
+  const aliases = new Map<string, string>();
+  for (const { identity } of employers) {
+    const canonical = current.slugs.get(identity)!;
+    for (const previous of [georgian, previousLatin]) {
+      const slug = previous.slugs.get(identity)!;
+      if (slug !== canonical) aliases.set(slug, canonical);
+    }
+  }
+  return { slugs: current.slugs, aliases };
 }

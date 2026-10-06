@@ -1,5 +1,5 @@
 import type { Vacancy } from './types';
-import { latinUrl } from './latin-url';
+import { latinUrl, legacyLatinUrl } from './latin-url';
 const cities = [
   'თბილისი',
   'რუსთავი',
@@ -103,7 +103,7 @@ export function explicitWorkCity(
         : city + '(?:ში|ს)?';
       if (
         new RegExp(
-          `(?<![\\p{L}])(?:${forms}|${latinUrl(city)})(?![\\p{L}])`,
+          `(?<![\\p{L}])(?:${forms}|${latinUrl(city)}|${legacyLatinUrl(city)})(?![\\p{L}])`,
           'iu',
         ).test(value)
       )

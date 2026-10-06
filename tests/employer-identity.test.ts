@@ -3,7 +3,29 @@ import assert from 'node:assert/strict';
 import {
   contactAsCompany,
   employerIdentity as id,
+  employerUrlSlugs,
 } from '../lib/employer-identity';
+
+void test('company URL migrations preserve old links and Latin brands in either order', () => {
+  const employers = [
+    { identity: 'ge', name: 'ყაზბეგი' },
+    { identity: 'q', name: 'Qazbegi' },
+    { identity: 'y', name: 'Yazbegi' },
+  ];
+  for (const ordered of [employers, employers.toReversed()]) {
+    const { slugs, aliases } = employerUrlSlugs(ordered);
+    assert.equal(slugs.get('ge'), 'yazbegi-2');
+    assert.equal(slugs.get('q'), 'qazbegi');
+    assert.equal(slugs.get('y'), 'yazbegi');
+    assert.equal(aliases.get('ყაზბეგი'), 'yazbegi-2');
+    assert.equal(aliases.get('qazbegi-2'), 'yazbegi-2');
+    assert.equal(aliases.has('qazbegi'), false);
+    assert.equal(aliases.has('yazbegi'), false);
+  }
+  const simple = employerUrlSlugs([{ identity: 'ge', name: 'ყაზბეგი' }]);
+  assert.equal(simple.slugs.get('ge'), 'yazbegi');
+  assert.equal(simple.aliases.get('qazbegi'), 'yazbegi');
+});
 
 void test('a poster contact typed as the employer is not a company name', () => {
   for (const v of [

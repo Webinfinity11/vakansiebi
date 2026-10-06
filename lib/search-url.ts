@@ -1,7 +1,7 @@
 import { categories } from './types';
 import { cities } from './cities';
 import { roleVocabulary } from './search-language';
-import { latinUrl } from './latin-url';
+import { latinUrl, legacyLatinUrl } from './latin-url';
 
 const values: Record<string, readonly string[]> = {
   category: categories,
@@ -31,7 +31,11 @@ export function searchValueFromUrl(key: string, value: string) {
   const lower = value.toLowerCase();
   if (key === 'city' && Object.hasOwn(cityAliases, lower))
     return cityAliases[lower];
-  return values[key]?.find((label) => latinUrl(label) === lower) ?? value;
+  return (
+    values[key]?.find((label) => latinUrl(label) === lower) ??
+    values[key]?.find((label) => legacyLatinUrl(label) === lower) ??
+    value
+  );
 }
 
 export function canonicalSearchParams(params: URLSearchParams) {

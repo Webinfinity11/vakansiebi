@@ -17,7 +17,7 @@ void test('paginated landing pages retain their topic and strip tracking', () =>
     'city=ბათუმი&category=გაყიდვები&page=3&utm_source=mail',
   );
   const seo = searchSeo(params);
-  assert.equal(seo.path, '/?category=gaqidvebi&city=batumi&page=3');
+  assert.equal(seo.path, '/?category=gayidvebi&city=batumi&page=3');
   assert.equal(seo.index, true);
   assert.match(seo.title, /გაყიდვების ვაკანსიები ბათუმში.*გვერდი 3/);
   assert.match(seo.description, /ბათუმში/);

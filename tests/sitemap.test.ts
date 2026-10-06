@@ -336,10 +336,10 @@ void test('a cold leaf that cannot count still names the curated pages', async (
   const get = createSitemapHandler(
     () => new Promise(() => {}),
     20,
-    () => [{ url: 'https://jobx.ge/?category=gaqidvebi' }],
+    () => [{ url: 'https://jobx.ge/?category=gayidvebi' }],
   );
   const body = await (await get()).text();
-  assert.match(body, /category=gaqidvebi/);
+  assert.match(body, /category=gayidvebi/);
 });
 
 void test('a hung cold leaf reports temporary failure within its deadline and retries', async () => {

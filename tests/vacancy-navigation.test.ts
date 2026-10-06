@@ -24,6 +24,15 @@ void test('vacancy links keep search context separate from their stable share UR
   );
   assert.equal(vacancyIdFrom(`მოლარე-კონსულტანტი-${id}`), id);
   assert.equal(vacancyIdFrom(id.toUpperCase()), id);
+  assert.equal(
+    vacancyPath({ id, title: 'ვაკანსია გაყიდვების აგენტი' }),
+    `/vacancies/vakansia-gayidvebis-agenti-${id}`,
+  );
+  for (const prefix of [
+    'vakansia-gaqidvebis-agenti',
+    'vakansia-gayidvebis-agenti',
+  ])
+    assert.equal(vacancyIdFrom(`${prefix}-${id}`), id);
   assert.equal(vacancyIdFrom('მოლარე'), null);
   // A title of punctuation alone leaves the identifier to name the page.
   assert.equal(vacancyPath({ id, title: '!!! ???' }), '/vacancies/' + id);

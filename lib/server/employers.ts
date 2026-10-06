@@ -6,8 +6,7 @@ import { ApiError } from './auth';
 import {
   candidatePairs,
   employerIdentity,
-  employerSlug,
-  legacyEmployerSlug,
+  employerUrlSlugs,
   mergedIdentities,
 } from '../employer-identity';
 import { companyKey } from '../company-key';
@@ -193,30 +192,15 @@ async function buildEmployerPages() {
     .sort(
       (a, b) => b[1].ids.length - a[1].ids.length || a[0].localeCompare(b[0]),
     );
-  // Reserve every old address before transliteration to avoid stealing another employer's URL.
-  const legacyOwners = new Map<string, string>();
-  const legacyByIdentity = new Map<string, string>();
-  for (const [identity, g] of ordered) {
-    const base = legacyEmployerSlug(ranked(g.names)[0].name) || identity;
-    let slug = base;
-    for (let n = 2; legacyOwners.has(slug); n++) slug = `${base}-${n}`;
-    legacyOwners.set(slug, identity);
-    legacyByIdentity.set(identity, slug);
-  }
-  const aliases = new Map<string, string>();
+  const { slugs, aliases } = employerUrlSlugs(
+    ordered.map(([identity, g]) => ({
+      identity,
+      name: ranked(g.names)[0].name,
+    })),
+  );
   for (const [identity, g] of ordered) {
     const names = ranked(g.names);
-    const base = employerSlug(names[0].name) || identity;
-    let slug = base;
-    for (
-      let n = 2;
-      bySlug.has(slug) ||
-      (legacyOwners.has(slug) && legacyOwners.get(slug) !== identity);
-      n++
-    )
-      slug = `${base}-${n}`;
-    const legacy = legacyByIdentity.get(identity)!;
-    if (legacy !== slug) aliases.set(legacy, slug);
+    const slug = slugs.get(identity)!;
     bySlug.set(slug, {
       slug,
       name: names[0].name,

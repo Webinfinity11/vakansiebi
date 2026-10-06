@@ -1943,10 +1943,26 @@
   background: transparent;
   box-shadow: none;
 }
-:root[data-theme='dark'] .board-shell .category-options .check-row.category-parent-context:has(input:checked) {
+:root[data-theme='dark'] .board-shell
+  .category-options
+  .check-row.category-parent-context:has(input:checked) {
   color: var(--jobx-text);
   background: transparent;
   box-shadow: none;
+}
+:root[data-theme='dark'] .search-directory-group summary {
+  color: var(--jobx-accent);
+}
+:root[data-theme='dark'] .search-directory-group summary:focus-visible {
+  outline: 2px solid var(--jobx-accent);
+}
+:root[data-theme='dark'] .search-directory-group .directory-collapse {
+  border: 0;
+  background: transparent;
+  color: var(--jobx-accent);
+}
+:root[data-theme='dark'] .search-directory-group .directory-collapse:focus-visible {
+  outline: 2px solid var(--jobx-accent);
 }
 
 /* ── from app/phone.css ── */

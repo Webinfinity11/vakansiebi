@@ -27,7 +27,7 @@ const letters: Record<string, string> = Object.fromEntries(
         'f',
         'k',
         'gh',
-        'q',
+        'y',
         'sh',
         'ch',
         'ts',
@@ -41,15 +41,26 @@ const letters: Record<string, string> = Object.fromEntries(
     ]),
 );
 
-export function latinUrl(value: string) {
+const legacyLetters = { ...letters, ყ: 'q' };
+
+function transliterate(value: string, alphabet: Record<string, string>) {
   return value
     .normalize('NFKC')
     .toLowerCase()
-    .replace(/[ა-ჰ]/g, (letter) => letters[letter])
+    .replace(/[ა-ჰ]/g, (letter) => alphabet[letter])
     .replace(/[а-яёіїєґ]/g, (letter) => cyrillic[letter])
     .replace(/ø/g, 'o')
     .normalize('NFKD')
     .replace(/\p{M}/gu, '');
+}
+
+export function latinUrl(value: string) {
+  return transliterate(value, letters);
+}
+
+// Recognize URLs shared before ყ changed from q to y; Latin company names stay literal.
+export function legacyLatinUrl(value: string) {
+  return transliterate(value, legacyLetters);
 }
 
 const cyrillic: Record<string, string> = {
