@@ -4,6 +4,18 @@ import { salarySummary, salaryDetails } from '../lib/salary-summary';
 import { compactSalary } from '../lib/vacancy-presentation';
 import { vacancyCardSalary } from '../lib/vacancy-card-labels';
 
+void test('Georgian amount bounds before currency remain visible on vacancy cards', () => {
+  for (const [input, expected] of [
+    ['2000-დან ₾ / თვე · ხელზე', '2 000+ ₾ / თვე'],
+    ['2000-დან ₾ / დღე · დარიცხული', '2 000+ ₾ / დღე'],
+    ['2000 დან GEL', '2 000+ ₾'],
+    ['2000-მდე ₾ / თვე', '≤ 2 000 ₾ / თვე'],
+  ]) {
+    assert.equal(salarySummary(input), expected, input);
+    assert.equal(vacancyCardSalary(input, '', 'JOBX'), expected);
+  }
+});
+
 void test('long salary sentences, bank details and contact text produce only a price', () => {
   for (const [input, expected] of [
     ['1200 ლარი (ირიცხება ბარათზე)', '1 200 ₾'],

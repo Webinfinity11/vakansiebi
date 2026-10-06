@@ -13,6 +13,7 @@ import {
   applicationDestination,
 } from '../lib/vacancy-details';
 import { POST } from '../app/api/submissions/route';
+import { vacancyCardSalary } from '../lib/vacancy-card-labels';
 
 export function validSubmission() {
   return {
@@ -37,6 +38,20 @@ export function validSubmission() {
     fax: '',
   };
 }
+
+void test('a submission with only a minimum salary has a visible card salary', () => {
+  const data = submissionSchema.parse({
+    ...validSubmission(),
+    salaryFrom: '2000',
+    salaryTo: '',
+  });
+  const vacancy = submissionVacancy(data, randomUUID());
+  assert.equal(vacancy.salaryMin, 2000);
+  assert.equal(
+    vacancyCardSalary(vacancy.salary, vacancy.salaryPeriod, vacancy.source),
+    '2 000+ ₾ / თვე',
+  );
+});
 
 void test('submission validates ranges, contacts, dates and removes client publication flags', () => {
   const data = validSubmission();

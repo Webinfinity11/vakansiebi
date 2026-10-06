@@ -97,20 +97,20 @@ export function salarySummary(input: string, period = '') {
   for (const price of prices)
     for (let i = price.start; i < price.end; i++) rest[i] = ' ';
   const single = new RegExp(
-    `(?<![\\d.,])(?:(${currency})\\s*(${number})|(${number})\\s*(${currency}))(?![\\p{L}\\d])`,
+    `(?<![\\d.,])(?:(${currency})\\s*(${number})|(${number})(?:\\s*[-–—]?\\s*(დან|მდე))?\\s*(${currency}))(?![\\p{L}\\d])`,
     'giu',
   );
   for (const m of rest.join('').matchAll(single)) {
     const value = amount(m[2] || m[3]);
     if (!value) return '';
-    const curr = m[1] || m[4];
+    const curr = m[1] || m[5];
     prices.push({
       start: m.index!,
       end: m.index! + m[0].length,
       low: value.label,
       currency: unit(curr),
-      from: curr.endsWith('დან'),
-      to: curr.endsWith('მდე'),
+      from: m[4] === 'დან' || curr.endsWith('დან'),
+      to: m[4] === 'მდე' || curr.endsWith('მდე'),
     });
   }
   if (!prices.length)

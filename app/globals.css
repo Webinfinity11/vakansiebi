@@ -1620,7 +1620,7 @@ button:disabled {
   height: 100%;
   object-fit: contain;
   background: var(--jobx-white-fixed-keyword);
-  padding: 15%;
+  padding: 0;
 }
 .avatar-1 {
   background: #f3edf8;

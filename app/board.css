@@ -2025,7 +2025,7 @@
   color: var(--jobx-accent);
 }
 .board-shell .company-avatar img {
-  padding: 15%;
+  padding: 0;
 }
 .board-shell .company-avatar.company-placeholder {
   background: #f4f6f8;
