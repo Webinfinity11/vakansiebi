@@ -37,7 +37,7 @@ void test('the sitemap indexes list all leaves even when the network and databas
       assert.equal(response.status, 200);
       assert.equal(
         response.headers.get('Content-Type'),
-        'application/xml; charset=utf-8',
+        'text/xml; charset=utf-8',
       );
       const body = await response.text();
       assert.match(body, /<sitemapindex /);

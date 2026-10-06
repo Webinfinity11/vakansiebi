@@ -56,7 +56,7 @@ export function combinedSitemapResponse(
   const body = urlsetStart + fragments.join('') + footer;
   return new Response(body, {
     headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
+      'Content-Type': 'text/xml; charset=utf-8',
       'Cache-Control': options.cache ?? sitemapCacheControl,
       'CDN-Cache-Control': options.cache ?? sitemapCacheControl,
       'Vercel-CDN-Cache-Control': options.cache ?? sitemapCacheControl,
@@ -83,7 +83,7 @@ export function sitemapIndexResponse(entries: readonly SitemapEntry[]) {
     sitemapIndexStart + entries.map(sitemapXml).join('') + '</sitemapindex>\n';
   return new Response(body, {
     headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
+      'Content-Type': 'text/xml; charset=utf-8',
       'Cache-Control': sitemapCacheControl,
     },
   });
