@@ -1,5 +1,6 @@
 'use client';
 import { SiteFooter } from './site-footer';
+import { HeroHeading } from './hero-heading';
 import './board-features.css';
 import { VacancySections } from './vacancy-sections';
 import { VacancyStatus } from './vacancy-status';
@@ -1539,15 +1540,13 @@ export default function JobBoard({
           <div className="hero-brand-trail" aria-hidden="true" />
           <div className="hero-inner">
             <div className="hero-copy">
-              <h1 id="search-heading">
-                {landing ? (
-                  landingHeading(landing)
-                ) : (
-                  <>
-                    იპოვე შენი შემდეგი <em>სამსახური.</em>
-                  </>
-                )}
-              </h1>
+              {landing ? (
+                <HeroHeading text={landingHeading(landing)} />
+              ) : (
+                <h1 id="search-heading">
+                  იპოვე შენი შემდეგი <em>სამსახური.</em>
+                </h1>
+              )}
             </div>
           </div>
           <div className="hero-search-wrap">
