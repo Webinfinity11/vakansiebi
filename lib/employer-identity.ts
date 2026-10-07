@@ -86,10 +86,16 @@ export function personalName(
   legalForm.lastIndex = 0;
   return (
     !hasLogo &&
-    sources.length > 0 &&
-    sources.every((s) => s === 'ss') &&
-    words.length === 1 &&
-    !legalForm.test(name)
+    ((words.length === 2 &&
+      /^(გიორგი|გელა|ნიკა|ნინო|ნანა|დავით|ლაშა|ლუკა|მარიამ|თამარ|თამარი)$/i.test(
+        words[0],
+      ) &&
+      /(?:ძე|შვილი|იანი|ავა)$/u.test(words[1]) &&
+      !legalForm.test(name)) ||
+      (sources.length > 0 &&
+        sources.every((s) => s === 'ss') &&
+        words.length === 1 &&
+        !legalForm.test(name)))
   );
 }
 

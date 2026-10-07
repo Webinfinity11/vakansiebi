@@ -22,6 +22,15 @@ export const genericCompanyKeys = new Set([
   'გიორგი',
   'ნიკა',
   'თამარი',
+  'გელა',
+  'giorgi',
+  'gela',
+  'nika',
+  'გიო',
+  'კერძოდამსაქმებელი',
+  'კერძოვილა',
+  'კერძოსაბავშვობაღი',
+  'კერძოსაწარმოოკომპანია',
 ]);
 // Conservative exact identities only. Do not use substring/fuzzy matches for branding.
 function normalizedCompanyKey(name: string) {

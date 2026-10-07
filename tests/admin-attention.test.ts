@@ -38,7 +38,7 @@ void test('the two government sources are told to be collected here, not run the
     now,
   );
   assert.equal(first.severity, 'stopped');
-  assert.match(first.advice, /worker:gov/);
+  assert.match(first.advice, /ავტომატური შემკრები/);
   // There is no button for it: the fix is on this machine, not on the server.
   assert.equal(first.action, undefined);
 });

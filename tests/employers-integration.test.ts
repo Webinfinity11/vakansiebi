@@ -51,6 +51,19 @@ void test(
       );
 
       await decideEmployers({ a: ge, b: en, decision: 'merge' });
+      const { reconcileEmployers } = await import('../worker/employers');
+      await reconcileEmployers(true);
+      const decision = (
+        await db().query(
+          'SELECT decision,automatic FROM employer_decisions WHERE a=$1 AND b=$2',
+          [a, b],
+        )
+      ).rows[0];
+      assert.deepEqual(
+        decision,
+        { decision: 'merge', automatic: false },
+        'automation preserves the editor decision even without matching logo/domain evidence',
+      );
       assert.equal(
         mine(await employerCandidates(1000)).length,
         0,

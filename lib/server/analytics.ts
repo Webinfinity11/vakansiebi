@@ -107,6 +107,7 @@ export type AnalyticsSummary = {
   steps: Ranked[];
   /** How far the CV builder got, by step name. */
   resume: Ranked[];
+  resumeStorage?: { active: number; created: number; updated: number };
   /** Public controls used and errors met, by code name; every code, not a top list. */
   actions: Ranked[];
   searches: Ranked[];
@@ -206,6 +207,14 @@ export async function analyticsSummary(
       [days],
     )
   ).rows as ActivityPoint[];
+  const resumeStorage = (
+    await db().query(
+      `SELECT count(*) FILTER(WHERE expires_at>now())::int active,
+       count(*) FILTER(WHERE created_at >= ${since})::int created,
+       count(*) FILTER(WHERE updated_at >= ${since})::int updated FROM resumes`,
+      [days],
+    )
+  ).rows[0] as { active: number; created: number; updated: number };
   return {
     days,
     unit,
@@ -217,6 +226,7 @@ export async function analyticsSummary(
     searchPerformance,
     steps: ranked('post'),
     resume: ranked('resume'),
+    resumeStorage,
     actions: ranked('action'),
     searches: ranked('search'),
     emptySearches: ranked('search_empty'),

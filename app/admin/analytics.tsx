@@ -327,7 +327,23 @@ function Report({ data }: { data: AnalyticsSummary }) {
         <Funnel
           title="CV კონსტრუქტორი"
           report={resume}
-          extras={<ResumeExtras rows={data.resume} />}
+          independent
+          extras={
+            <>
+              {data.resumeStorage && (
+                <p className="aa-hint">
+                  ბაზაში არსებული აქტიური CV:{' '}
+                  <strong>{whole.format(data.resumeStorage.active)}</strong>.
+                  არჩეულ პერიოდში შექმნილი:{' '}
+                  <strong>{whole.format(data.resumeStorage.created)}</strong>;
+                  განახლებული:{' '}
+                  <strong>{whole.format(data.resumeStorage.updated)}</strong>.
+                  ერთი CV-ის განმეორებითი შენახვა ახალ CV-ად არ ითვლება.
+                </p>
+              )}
+              <ResumeExtras rows={data.resume} />
+            </>
+          }
         />
       ),
     },
@@ -798,17 +814,23 @@ function Funnel({
   report,
   fieldLabels = {},
   extras,
+  independent = false,
 }: {
   title: string;
   report: ReturnType<typeof buildFunnel>;
   /** Readable names for the fields in "ფორმამ არ მიიღო". */
   fieldLabels?: Record<string, string>;
   extras?: ReactNode;
+  independent?: boolean;
 }) {
   return (
     <Card
       title={title}
-      hint="წილი გახსნებთან, კლება — წინა საფეხურთან. ითვლება საფეხურები, არა ადამიანები."
+      hint={
+        independent
+          ? 'ითვლება მოქმედებები, არა ადამიანები. სექციები შეიძლება ნებისმიერი რიგით გაიხსნას; ბეჭდვის დაჭერა PDF-ის შენახვას არ ადასტურებს.'
+          : 'წილი გახსნებთან, კლება — წინა საფეხურთან. ითვლება საფეხურები, არა ადამიანები.'
+      }
     >
       <Rows
         unit="ჯერ"
@@ -816,10 +838,13 @@ function Funnel({
         rows={report.steps.map((step, index) => ({
           key: step.name,
           label: step.label,
-          bar: step.share / 100,
+          bar: independent
+            ? step.count / Math.max(1, ...report.steps.map((s) => s.count))
+            : step.share / 100,
           value: whole.format(step.count),
-          note:
-            index > 0 && step.drop > 0
+          note: independent
+            ? undefined
+            : index > 0 && step.drop > 0
               ? `${step.share}% · −${step.drop}%`
               : `${step.share}%`,
         }))}

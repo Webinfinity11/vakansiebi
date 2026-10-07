@@ -5,6 +5,8 @@ import {
   importDateReason,
   pendingNewItemsSql,
   retireStaleNewItemsSql,
+  retireUnusedReviewsSql,
+  pendingNewItemsWhere,
 } from './new-only';
 import { effectiveScraperLimits } from '../lib/scraper-limits';
 import { assessReportedTotal, structuralFailure } from './quality';
@@ -107,6 +109,7 @@ export async function runSource(
     // Pending work ages out of the three-day window even without another fetch.
     // Run under the source lease, before discovering or processing new records.
     await db().query(retireStaleNewItemsSql, [source]);
+    await db().query(retireUnusedReviewsSql, [source]);
     const configuredPages = Number(process.env.DISCOVERY_PAGE_BUDGET ?? 20);
     const limits = effectiveScraperLimits(config, {
       batch: limit,
@@ -368,9 +371,7 @@ export async function runSource(
     const warning =
       [
         discoveryWarning,
-        qualityHeld
-          ? `${qualityHeld} detail snapshots held for quality review`
-          : null,
+        qualityHeld ? `${qualityHeld} invalid new snapshots skipped` : null,
         stoppedEarly
           ? 'Stopped after 3 consecutive detail failures; remaining items retained for retry'
           : null,
@@ -411,7 +412,7 @@ export async function runSource(
     const unresolvedQuality = Number(
       (
         await db().query(
-          'SELECT count(*)::int AS count FROM source_items WHERE source_id=$1 AND quality_warning IS NOT NULL',
+          `SELECT count(*)::int AS count FROM source_items WHERE source_id=$1 AND quality_warning IS NOT NULL AND ${pendingNewItemsWhere()}`,
           [source],
         )
       ).rows[0].count,

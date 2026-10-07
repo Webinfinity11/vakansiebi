@@ -320,6 +320,16 @@ export function listLinks(
           const link = $(row).find('a[href*="view=jobs&id="]').first();
           if (!link.length) return;
           const hints: ListingHints = {};
+          const today = tbilisiDate();
+          const dateText = $(row)
+            .children('td')
+            .map((_, cell) => $(cell).text().trim())
+            .get()
+            .find((text) => /^\d{1,2}\s+\S+(?:\s+\d{4})?$/.test(text));
+          let posted = georgianDate(dateText || '', Number(today.slice(0, 4)));
+          if (posted && posted > today && !/\d{4}$/.test(dateText || ''))
+            posted = georgianDate(dateText!, Number(today.slice(0, 4)) - 1);
+          if (posted) hints.datePosted = posted;
           const city = link
             .parent()
             .children('i')

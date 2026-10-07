@@ -1,3 +1,4 @@
+import { companyDisplayName } from './company-display-name';
 // Reviewed possessives: arbitrary employer names (especially mixed scripts and
 // legal names) cannot be safely declined by appending a Georgian suffix.
 const possessives = new Map([
@@ -16,7 +17,7 @@ const possessives = new Map([
 ]);
 
 export function companyVacancyTitle(name: string): string {
-  const clean = name.trim().replace(/\s+/g, ' ');
+  const clean = companyDisplayName(name);
   const possessive = possessives.get(clean.toLocaleLowerCase('ka'));
   return possessive ? `${possessive} ვაკანსიები` : `${clean} — ვაკანსიები`;
 }

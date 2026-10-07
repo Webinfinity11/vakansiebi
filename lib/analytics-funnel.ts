@@ -103,8 +103,8 @@ export const resumeLadder = [
   ['section_education', 'განათლებამდე მივიდა'],
   ['section_skills', 'უნარებამდე მივიდა'],
   ['section_languages', 'ენებამდე მივიდა'],
-  ['printed', 'PDF-ად შეინახა'],
-  ['stored', 'CV JOBX-ზე შეინახა'],
+  ['printed', 'ბეჭდვის ღილაკზე დაჭერა'],
+  ['stored', 'JOBX-ზე წარმატებული შენახვის მოთხოვნა'],
 ] as const;
 
 export const resumeLabels: Record<string, string> = {
@@ -135,8 +135,8 @@ export const resumeLabels: Record<string, string> = {
   photo_removed: 'ფოტო წაიშალა',
   language_ka: 'ქართული',
   language_en: 'ინგლისური',
-  printed: 'PDF-ად შეინახა',
-  stored: 'CV JOBX-ზე შეინახა',
+  printed: 'ბეჭდვის ღილაკზე დაჭერა',
+  stored: 'JOBX-ზე წარმატებული შენახვის მოთხოვნა',
   store_failed: 'CV-ის შენახვა ჩავარდა',
   cleared: 'გასუფთავება',
   left_contact: 'პირადი მონაცემები',

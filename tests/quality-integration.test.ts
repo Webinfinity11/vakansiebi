@@ -50,7 +50,7 @@ void test(
           external,
         ])
       ).rows[0].id;
-      // New-only still validates a first fetch and retries a held, unimported ID.
+      // Invalid source data has a terminal result, never a misleading pending review.
       const invalid = { ...v, company: '' };
       assert.equal(await stageVacancy(itemId!, invalid), 'quality_held');
       const held = (
@@ -58,8 +58,10 @@ void test(
       ).rows[0];
       assert.equal(held.job_id, null);
       assert.equal(held.raw, null);
-      assert.deepEqual(held.quality_candidate, invalid);
-      assert.ok(held.quality_warning);
+      assert.equal(held.quality_candidate, null);
+      assert.equal(held.quality_warning, null);
+      assert.match(held.error, /invalid source data/);
+      assert.equal(held.next_check_at, Infinity);
       assert.equal(await stageVacancy(itemId!, v), 'imported');
       const old = (
         await db().query('SELECT * FROM source_items WHERE id=$1', [itemId])

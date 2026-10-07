@@ -4128,3 +4128,59 @@
   outline: 2px solid var(--jobx-accent);
   outline-offset: 3px;
 }
+
+/* Artwork fades in without moving the card or cropping the uploaded logo. */
+.company-avatar img.logo-ready {
+  animation: company-logo-arrive 220ms ease-out;
+}
+.company-logo-skeleton {
+  position: absolute;
+  inset: 18%;
+  border-radius: 12px;
+  background: linear-gradient(100deg, #edf1f8 20%, #f8faff 45%, #edf1f8 70%);
+  background-size: 250% 100%;
+}
+.company-avatar:has(img.logo-loading) .company-logo-skeleton {
+  animation: company-logo-shimmer 1.4s ease-in-out infinite;
+}
+.companies-grid > .company-card-entered {
+  animation: company-card-arrive 360ms ease-out both;
+}
+.companies-grid > .company-card-entered:nth-child(3n + 2) {
+  animation-delay: 40ms;
+}
+.companies-grid > .company-card-entered:nth-child(3n) {
+  animation-delay: 80ms;
+}
+@keyframes company-card-arrive {
+  from {
+    transform: translateY(8px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes company-logo-arrive {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes company-logo-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .company-avatar img.logo-ready,
+  .company-logo-skeleton,
+  .company-avatar:has(img.logo-loading) .company-logo-skeleton,
+  .companies-grid > .company-card-entered {
+    animation: none;
+  }
+}

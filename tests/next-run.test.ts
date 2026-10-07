@@ -12,7 +12,7 @@ void test('a completed cron batch remains eligible for the next three-hour slot'
   );
   assert.equal(
     nextRunAt(180, Date.parse('2026-09-14T23:59:00Z'), 180).toISOString(),
-    '2026-09-15T00:17:00.000Z',
+    '2026-09-15T03:17:00.000Z',
   );
 });
 void test('local workers wait a full interval while longer cron intervals keep the slot', () => {
@@ -27,12 +27,23 @@ void test('local workers wait a full interval while longer cron intervals keep t
   );
   assert.equal(
     nextRunAt(240, now, 180).toISOString(),
-    '2026-09-14T16:25:00.000Z',
+    '2026-09-14T18:17:00.000Z',
+  );
+});
+void test('last daytime batch waits for the next actual scheduled morning run', () => {
+  assert.equal(
+    nextRunAt(180, Date.parse('2026-10-07T19:03:00Z'), 180).toISOString(),
+    '2026-10-08T03:17:00.000Z',
+  );
+  assert.equal(
+    nextRunAt(180, Date.parse('2026-10-07T19:03:00Z'), 0).toISOString(),
+    '2026-10-07T22:03:00.000Z',
   );
 });
 
 void test('a quiet source waits longer, up to twelve hours, and stays on the slot', async () => {
-  const { quietIntervalMinutes, nextRunAt } = await import('../worker/next-run');
+  const { quietIntervalMinutes, nextRunAt } =
+    await import('../worker/next-run');
   // One empty check is a quiet hour, not a quiet board.
   assert.equal(quietIntervalMinutes(180, 0), 180);
   assert.equal(quietIntervalMinutes(180, 1), 180);

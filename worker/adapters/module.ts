@@ -21,6 +21,8 @@ export class UnpublishableVacancy extends Error {
 
 /** What a listing page already says about a vacancy before its detail is fetched. */
 export type ListingHints = {
+  /** Actual publication date printed by the source listing. */
+  datePosted?: string;
   city?: string;
   /** Catalogue category the source's own classification maps to. */
   category?: string;

@@ -28,6 +28,38 @@ function storage() {
   };
 }
 
+void test('failed CV save retries after returning online without creating another identity', async () => {
+  const saved = storage();
+  let firstBody = '';
+  const offline = createResumeSync(saved, async (_url, init) => {
+    firstBody = typeof init?.body === 'string' ? init.body : '';
+    throw Error('offline');
+  });
+  await offline.save(sampleCv('ka'));
+  const sent: string[] = [];
+  const online = createResumeSync(saved, async (_url, init) => {
+    sent.push(typeof init?.body === 'string' ? init.body : '');
+    return new Response('{"ok":true}');
+  });
+  await online.retry();
+  await online.retry();
+  assert.deepEqual(sent, [firstBody]);
+});
+void test('clearing an offline CV cancels its retained save before reconnecting', async () => {
+  const saved = storage();
+  const offline = createResumeSync(saved, async () => {
+    throw Error('offline');
+  });
+  await offline.save(sampleCv('ka'));
+  await offline.clear();
+  const methods: string[] = [];
+  await createResumeSync(saved, async (_url, init) => {
+    methods.push(init?.method || '');
+    return new Response('{"ok":true}');
+  }).retry();
+  assert.deepEqual(methods, ['DELETE']);
+});
+
 void test('resume photo is bounded, resized and stripped of metadata; bad/oversized photos are omitted', async () => {
   const input = await sharp({
     create: { width: 1000, height: 600, channels: 3, background: '#334455' },

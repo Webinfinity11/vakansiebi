@@ -1964,6 +1964,9 @@
 :root[data-theme='dark'] .search-directory-group .directory-collapse:focus-visible {
   outline: 2px solid var(--jobx-accent);
 }
+:root[data-theme='dark'] .company-logo-skeleton {
+  background: linear-gradient(100deg, #272e3a 20%, #1c2845 45%, #272e3a 70%);
+}
 
 /* ── from app/phone.css ── */
 :root[data-theme='dark'] .board-shell .job-new {

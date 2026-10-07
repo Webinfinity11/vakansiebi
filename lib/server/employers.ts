@@ -94,7 +94,7 @@ export async function decideEmployers(input: unknown) {
     ).rows[0];
     await c.query(
       `INSERT INTO employer_decisions(a,b,decision) VALUES($1,$2,$3)
-       ON CONFLICT (a,b) DO UPDATE SET decision=excluded.decision, decided_at=now()`,
+       ON CONFLICT (a,b) DO UPDATE SET decision=excluded.decision, decided_at=now(),automatic=false,evidence=NULL`,
       [a, b, data.decision],
     );
     await c.query(
@@ -107,6 +107,8 @@ export async function decideEmployers(input: unknown) {
       ],
     );
   });
+  pages = null;
+  directory = null;
   return { a, b, decision: data.decision };
 }
 

@@ -51,6 +51,13 @@ const roles = [
     'დაცვის თანამშრომ',
     'დარაჯ',
     'დარაჯი',
+    'დაცვა',
+    'დაცვის',
+    'dacva',
+    'უსაფრთხოება',
+    'უსაფრთხოებ',
+    'usaptxoeba',
+    'usaprtxoeba',
     'guard',
     'security',
     'security guard',
@@ -236,6 +243,8 @@ const aliases = [
   ['rompetrol', 'რომპეტროლ'],
   ['lukoil', 'ლუკოილ'],
   ['waikiki', 'ვაიკიკი'],
+  ['დამხმარე', 'damxmare'],
+  ['მრეცხავ', 'მრეცხავი', 'mrecxavi'],
 ];
 function aliasFor(forms: string[]) {
   return aliases.find((group) =>
@@ -243,6 +252,30 @@ function aliasFor(forms: string[]) {
   );
 }
 export function searchMatchGroups(query: string): SearchGroup[] {
+  // Explicit lists of reviewed occupations match either role; ordinary phrases stay AND.
+  const choices = query.split(',').map((part) => part.trim().toLowerCase());
+  if (
+    choices.length >= 2 &&
+    choices.length <= 4 &&
+    choices.every((part) => searchTerms(part).length === 1)
+  ) {
+    const occupations = choices.map(
+      (part) =>
+        roleFor(part) ||
+        (/^[a-z]+$/.test(part) ? roleFor(georgianFromLatin(part)) : undefined),
+    );
+    if (occupations.every(Boolean)) {
+      const own = [...new Set(choices.flatMap(writtenForms))];
+      return [
+        {
+          own,
+          all: [
+            ...new Set([...own, ...occupations.flatMap((group) => group!)]),
+          ],
+        },
+      ];
+    }
+  }
   return searchTerms(query).map((term) => {
     const own = writtenForms(term);
     return {

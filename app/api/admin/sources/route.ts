@@ -26,13 +26,13 @@ export async function GET() {
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at)) refresh_pending,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.error IS NOT NULL AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at)) refresh_retrying,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id) discovered,
-        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.quality_warning IS NOT NULL) quality_held,
+        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.quality_warning IS NOT NULL AND ${pendingNewItemsWhere('i')}) quality_held,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.raw IS NOT NULL) imported,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND ${pendingNewItemsWhere('i')}) queued,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND ${pendingNewItemsWhere('i')} AND i.next_check_at<=now()) due,
-        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.error NOT IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410')) errored,
+        (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND ${pendingNewItemsWhere('i')} AND i.error NOT IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410')) errored,
         (SELECT count(*)::int FROM source_items i WHERE i.source_id=s.id AND i.error IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410')) removed_count,
-        (SELECT COALESCE(jsonb_agg(e),'[]'::jsonb) FROM (SELECT left(i.error,120) message,count(*)::int count FROM source_items i WHERE i.source_id=s.id AND i.error NOT IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410') GROUP BY 1 ORDER BY 2 DESC LIMIT 3) e) top_errors,
+        (SELECT COALESCE(jsonb_agg(e),'[]'::jsonb) FROM (SELECT left(i.error,120) message,count(*)::int count FROM source_items i WHERE i.source_id=s.id AND ${pendingNewItemsWhere('i')} AND i.error NOT IN ('Source vacancy unavailable','Source returned HTTP 404','Source returned HTTP 410') GROUP BY 1 ORDER BY 2 DESC LIMIT 3) e) top_errors,
         (SELECT count(*)::int FROM source_runs r WHERE r.source_id=s.id AND r.status='deferred' AND r.started_at>now()-interval '3 days') deferred_runs,
         (SELECT count(DISTINCT j.id)::int FROM source_items i JOIN jobs j ON j.id=i.job_id WHERE i.source_id=s.id AND j.status='published' AND (COALESCE(j.search_deadline,'')='' OR j.search_deadline>=to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))) published_count,
         (SELECT count(*)::int FROM source_discovery_pages p WHERE p.source_id=s.id AND p.observed_at>now()-interval '24 hours') observed_pages
@@ -114,10 +114,11 @@ export async function POST(req: Request) {
         await db().query(
           `UPDATE source_items i SET next_check_at=now() FROM sources s
            WHERE s.id=i.source_id AND s.enabled AND NOT s.retired AND ($1='all' OR s.id=$1)
-           AND i.refresh_requested_at IS NOT NULL AND (i.refresh_completed_at IS NULL OR i.refresh_requested_at>i.refresh_completed_at)`,
+           AND ${pendingNewItemsWhere('i')}`,
           [data.id],
         );
-      } else {
+      }
+      {
         const r = await db().query(
           "UPDATE sources SET requested_at=COALESCE(requested_at,now()) WHERE ($1='all' OR id=$1) AND enabled AND NOT retired RETURNING id",
           [data.id],
@@ -150,7 +151,8 @@ export async function POST(req: Request) {
        discovery_page_limit=COALESCE($11,discovery_page_limit),repair_limit=COALESCE($12,repair_limit),
        requested_at=CASE WHEN $2=false OR $3=false THEN NULL ELSE requested_at END,
        next_run_at=CASE WHEN $7::timestamptz IS NOT NULL THEN
-         CASE WHEN consecutive_failures>0 THEN GREATEST(next_run_at,$7::timestamptz) ELSE $7::timestamptz END
+         CASE WHEN consecutive_failures>0 THEN GREATEST(next_run_at,CASE WHEN id IN ('hrgov','worknet') THEN $13::timestamptz ELSE $7::timestamptz END)
+         ELSE CASE WHEN id IN ('hrgov','worknet') THEN $13::timestamptz ELSE $7::timestamptz END END
          WHEN $3=true AND NOT auto_enabled THEN now() ELSE next_run_at END
        WHERE ($1='all' OR id=$1) AND NOT retired AND id<>'jobx'`,
       [
@@ -161,13 +163,20 @@ export async function POST(req: Request) {
         data.autoPublish,
         data.detailIntervalHours,
         data.intervalMinutes
-          ? nextRunAt(data.intervalMinutes, Date.now(), 180)
+          ? nextRunAt(
+              data.intervalMinutes,
+              Date.now(),
+              ['hrgov', 'worknet'].includes(data.id) ? 0 : 180,
+            )
           : null,
         data.processingMode,
         data.batchLimit,
         data.budgetMinutes,
         data.discoveryPageLimit,
         data.repairLimit,
+        data.intervalMinutes
+          ? nextRunAt(data.intervalMinutes, Date.now(), 0)
+          : null,
       ],
     );
     return Response.json({ ok: true });

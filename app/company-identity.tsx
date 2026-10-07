@@ -3,6 +3,7 @@ import Link, { useLinkStatus } from 'next/link';
 import { LoaderCircle } from 'lucide-react';
 import { vacancyCardCompany } from '@/lib/vacancy-card-labels';
 import { CompanyLogo } from './company-logo';
+import { companyDisplayName } from '@/lib/company-display-name';
 
 function NavigationHint() {
   const { pending } = useLinkStatus();
@@ -34,6 +35,7 @@ export function CompanyIdentity({
   onOpen?: () => void;
   disabled?: boolean;
 }) {
+  const displayName = companyDisplayName(company);
   const content = (
     <>
       <CompanyLogo
@@ -42,8 +44,8 @@ export function CompanyIdentity({
         category={category}
         large={large}
       />
-      <span className="company-identity-name" title={company}>
-        {(large ? company : vacancyCardCompany(company)) || 'კომპანია'}
+      <span className="company-identity-name" title={displayName}>
+        {(large ? displayName : vacancyCardCompany(displayName)) || 'კომპანია'}
       </span>
     </>
   );
@@ -52,7 +54,7 @@ export function CompanyIdentity({
       className={`company-identity ${large ? 'identity-large' : ''}`}
       href={href}
       prefetch={false}
-      title={`${company} — კომპანიის ვაკანსიები`}
+      title={`${displayName} — კომპანიის ვაკანსიები`}
       aria-disabled={disabled || undefined}
       tabIndex={disabled ? -1 : undefined}
       onClick={(event) => {

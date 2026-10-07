@@ -39,9 +39,9 @@ export async function stageVacancy(itemId: string, v: Vacancy, _hours = 6) {
       lastSeen: item.quality_last_seen,
       observations: item.quality_observations || 0,
     });
-    if (quality.hold && quality.structural && quality.observations >= 3) {
-      /* Seen invalid three times: the source keeps publishing it broken. It is recorded as a
-         source error and left off the site, instead of sitting in the review queue. */
+    if (quality.hold && quality.structural) {
+      // Structural invalidity has no scheduled retry. Record its terminal result
+      // immediately instead of displaying a review that can never run again.
       await c.query(
         `UPDATE source_items SET last_checked_at=now(),error=$2,failures=failures+1,
         ${clearedQualitySql},next_check_at='infinity'::timestamptz WHERE id=$1`,
@@ -161,19 +161,42 @@ export async function discoverItems(
         a.externalId,
         a.url,
         a.hints && Object.keys(a.hints).length ? a.hints : null,
+        Boolean(a.hints?.datePosted && importDateReason(a.hints.datePosted)),
       );
-      const n = k * 5;
-      return `($${n + 1},$${n + 2},$${n + 3},$${n + 4},$${n + 5})`;
+      const n = k * 6;
+      return `($${n + 1},$${n + 2},$${n + 3},$${n + 4},$${n + 5},CASE WHEN $${n + 6}::boolean THEN 'infinity'::timestamptz ELSE now() END)`;
     });
     if (chunk.length)
       inserted +=
         (
           await db().query(
-            `INSERT INTO source_items(id,source_id,external_id,url,listing_hints) VALUES ${placeholders.join(',')}
+            `INSERT INTO source_items(id,source_id,external_id,url,listing_hints,next_check_at) VALUES ${placeholders.join(',')}
         ON CONFLICT(source_id,external_id) DO NOTHING`,
             values,
           )
         ).rowCount || 0;
+    // A new listing can give a still-pending ID its actual publication date.
+    // Completed IDs and retired tombstones never receive a rewrite or revival.
+    const dated = chunk.filter((a) => a.hints?.datePosted);
+    if (dated.length)
+      await db().query(
+        `UPDATE source_items i SET listing_hints=COALESCE(i.listing_hints,'{}'::jsonb)||d.hints,
+          next_check_at=CASE WHEN d.old THEN 'infinity'::timestamptz ELSE i.next_check_at END
+         FROM jsonb_to_recordset($2::jsonb) AS d(external_id text,hints jsonb,old boolean)
+         WHERE i.source_id=$1 AND i.external_id=d.external_id
+           AND i.job_id IS NULL AND i.raw IS NULL AND i.next_check_at<'infinity'::timestamptz
+           AND (i.listing_hints IS DISTINCT FROM COALESCE(i.listing_hints,'{}'::jsonb)||d.hints OR d.old)`,
+        [
+          source,
+          JSON.stringify(
+            dated.map((a) => ({
+              external_id: a.externalId,
+              hints: a.hints,
+              old: Boolean(importDateReason(a.hints!.datePosted)),
+            })),
+          ),
+        ],
+      );
     if (chunk.length && updateStoredHints)
       await applyStoredHints(
         source,

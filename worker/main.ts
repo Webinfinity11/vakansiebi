@@ -15,6 +15,7 @@ import { rollupAnalytics } from '../lib/server/analytics';
 import { refreshLandingCounts } from './landing-counts';
 import { placeVacancies } from './places';
 import { drainIndexingQueue } from '../lib/server/indexing-queue';
+import { reconcileEmployers } from './employers';
 let stopped = false;
 let lastPurge = 0;
 process.on('SIGTERM', () => {
@@ -129,6 +130,10 @@ try {
         },
       });
     }
+    if (!arg || arg === 'hr')
+      await reconcileEmployers().catch(() =>
+        console.warn('Employer identity automation will retry next cycle.'),
+      );
     // Retry persisted notifications independently of whether this cycle found new jobs.
     const indexing = await drainIndexingQueue().catch(() => {
       console.warn(

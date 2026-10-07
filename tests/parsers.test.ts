@@ -511,19 +511,26 @@ void test('Jobs listing rows carry the work location and the salary marker as hi
     })),
   );
   const byId = Object.fromEntries(links.map((l) => [l.externalId, l]));
+  const datePosted = `${tbilisiDate().slice(0, 4)}-09-04`;
   assert.deepEqual(byId['750087'].hints, {
+    datePosted,
     city: 'თბილისი, რუსთავი',
     salaried: true,
   });
-  assert.deepEqual(byId['750001'].hints, { city: 'თბილისი', salaried: true });
-  assert.deepEqual(byId['750089'].hints, { city: 'ბათუმი' });
+  assert.deepEqual(byId['750001'].hints, {
+    datePosted,
+    city: 'თბილისი',
+    salaried: true,
+  });
+  assert.deepEqual(byId['750089'].hints, { datePosted, city: 'ბათუმი' });
   // Without a category listing there is no category hint at all.
-  assert.equal(byId['750088'].hints, undefined);
+  assert.deepEqual(byId['750088'].hints, { datePosted });
   assert.equal(byId['750090'].hints, undefined);
 });
 
 void test('a category listing names the category for standard rows but never for the site-wide VIP block', () => {
   const listing = { categoryLabel: 'გაყიდვები', category: 'გაყიდვები' };
+  const datePosted = `${tbilisiDate().slice(0, 4)}-09-04`;
   const byId = Object.fromEntries(
     listLinks('jobs', jobsListing, undefined, listing).map((l) => [
       l.externalId,
@@ -531,15 +538,24 @@ void test('a category listing names the category for standard rows but never for
     ]),
   );
   assert.deepEqual(byId['750087'].hints, {
+    datePosted,
     city: 'თბილისი, რუსთავი',
     salaried: true,
     ...listing,
   });
-  assert.deepEqual(byId['750088'].hints, listing);
-  assert.deepEqual(byId['750089'].hints, { city: 'ბათუმი', ...listing });
+  assert.deepEqual(byId['750088'].hints, { datePosted, ...listing });
+  assert.deepEqual(byId['750089'].hints, {
+    datePosted,
+    city: 'ბათუმი',
+    ...listing,
+  });
   assert.equal(byId['750090'].hints, undefined);
   // The VIP block repeats on every category page and belongs to none of them.
-  assert.deepEqual(byId['750001'].hints, { city: 'თბილისი', salaried: true });
+  assert.deepEqual(byId['750001'].hints, {
+    datePosted,
+    city: 'თბილისი',
+    salaried: true,
+  });
 });
 
 const jobsDetail = (title = 'Designer') =>

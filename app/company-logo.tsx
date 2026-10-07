@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { isLocalLogoUrl, safeExternalUrl } from '@/lib/vacancy-media';
+import { companyDisplayName } from '@/lib/company-display-name';
 
 const legalForms = /^(შპს|სს|ი\/მ|ააიპ|სპს|კს|llc|ltd|inc|jsc)$/i;
 /* Two letters say more than one: "JOBX ტესტი" becomes two initials, skipping legal forms like შპს. */
@@ -52,6 +53,7 @@ export function CompanyLogo({
   }, [defer, nearby]);
   const src = isLocalLogoUrl(url) ? url : safeExternalUrl(url || '');
   const showLogo = Boolean(src && failed !== src && (!defer || nearby));
+  const waiting = Boolean(src && failed !== src && loaded !== src);
   return (
     <span
       ref={container}
@@ -60,7 +62,7 @@ export function CompanyLogo({
       {showLogo && (
         <Image
           src={src}
-          alt={`${company} — ლოგო`}
+          alt={`${companyDisplayName(company)} — ლოგო`}
           width={large ? 80 : 52}
           height={large ? 80 : 52}
           unoptimized
@@ -76,7 +78,10 @@ export function CompanyLogo({
           A CSS background, not an <img>: as an image element the stand-in was the largest
           picture on a company page, and Google showed a briefcase as that page's thumbnail. */}
       {(!showLogo || loaded !== src) && (
-        <span className="company-fallback-3d" aria-hidden="true" />
+        <span
+          className={waiting ? 'company-logo-skeleton' : 'company-fallback-3d'}
+          aria-hidden="true"
+        />
       )}
     </span>
   );

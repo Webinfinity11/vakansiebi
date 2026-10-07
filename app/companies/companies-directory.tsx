@@ -1,9 +1,17 @@
 'use client';
 import Link from 'next/link';
-import { useDeferredValue, useMemo, useState, type ReactNode } from 'react';
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { MapPin, Search, X } from 'lucide-react';
 import { CompanyLogo } from '../company-logo';
 import { companyVacancyTitle } from '@/lib/company-vacancy-title';
+import { companyDisplayName } from '@/lib/company-display-name';
 import type { DirectoryEmployer } from '@/lib/server/employers';
 
 /* Quotes and legal forms are how names differ on paper, not what a reader types. */
@@ -26,12 +34,36 @@ export function CompaniesDirectory({
 }) {
   const [query, setQuery] = useState('');
   const deferred = useDeferredValue(query);
-  const names = useMemo(() => companies.map((c) => plain(c.name)), [companies]);
+  const names = useMemo(
+    () => companies.map((c) => plain(companyDisplayName(c.name))),
+    [companies],
+  );
   const needle = plain(deferred);
   const shown = companies.filter(
     (_c, i) => !needle || names[i].includes(needle),
   );
   const vacancies = companies.reduce((sum, c) => sum + c.jobs, 0);
+  const grid = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    if (
+      !grid.current ||
+      !('IntersectionObserver' in window) ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries)
+          if (entry.isIntersecting) {
+            entry.target.classList.add('company-card-entered');
+            observer.unobserve(entry.target);
+          }
+      },
+      { threshold: 0.08 },
+    );
+    for (const card of grid.current.children) observer.observe(card);
+    return () => observer.disconnect();
+  }, [needle, companies]);
   return (
     <>
       <header className="companies-head">
@@ -68,7 +100,7 @@ export function CompaniesDirectory({
           {needle ? `ნაპოვნია ${shown.length}` : ''}
         </p>
       </div>
-      <ul className="companies-grid ds-appear-list" hidden={!shown.length}>
+      <ul ref={grid} className="companies-grid" hidden={!shown.length}>
         {shown.map((company, index) => (
           <li key={company.slug} data-slug={company.slug}>
             <Link

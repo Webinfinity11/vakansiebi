@@ -4,6 +4,7 @@ import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CompanyLogo } from './company-logo';
+import { companyDisplayName } from '@/lib/company-display-name';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { markListHop, vacancyPath } from '@/lib/vacancy-navigation';
 import type { SimilarVacancy } from '@/lib/similar-vacancies';
@@ -99,7 +100,7 @@ export function SimilarVacancies({
             >
               <div className="similar-company">
                 <CompanyLogo company={job.company} url={job.logoUrl} />
-                <span>{job.company}</span>
+                <span>{companyDisplayName(job.company)}</span>
               </div>
               <h3 title={job.title}>
                 {vacancyCardTitle(job.title, job.source)}

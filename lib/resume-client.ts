@@ -13,6 +13,7 @@ export function randomId() {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 const pendingKey = 'jobx-resume-delete-v1';
+const pendingSaveKey = 'jobx-resume-save-v1';
 type Identity = { id: string; token: string };
 
 // The queue orders print/clear requests, including a clear while saving is in flight.
@@ -56,8 +57,32 @@ export function createResumeSync(
       }
     }
   }
+  async function flushSave(
+    body: string | null = storage.getItem(pendingSaveKey),
+  ) {
+    if (!body) return;
+    let ok = false;
+    try {
+      const response = await send('/api/resumes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        signal: timeout(15000),
+      });
+      ok = response.ok;
+      // A newer edit may already be waiting while this request is in flight.
+      if (ok && storage.getItem(pendingSaveKey) === body)
+        storage.removeItem(pendingSaveKey);
+    } finally {
+      onSaved(ok);
+    }
+  }
   return {
-    retry: () => enqueue(flushDeletes),
+    retry: () =>
+      enqueue(async () => {
+        await flushDeletes();
+        await flushSave();
+      }),
     save(cv: Cv) {
       try {
         let identity: Identity = JSON.parse(
@@ -74,20 +99,8 @@ export function createResumeSync(
           cv: text,
           photo: photo.length <= 170000 ? photo : '',
         });
-        return enqueue(async () => {
-          let ok = false;
-          try {
-            const response = await send('/api/resumes', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body,
-              signal: timeout(15000),
-            });
-            ok = response.ok;
-          } finally {
-            onSaved(ok);
-          }
-        });
+        storage.setItem(pendingSaveKey, body);
+        return enqueue(() => flushSave(body));
       } catch {
         onSaved(false);
         return Promise.resolve();
@@ -95,6 +108,7 @@ export function createResumeSync(
     },
     clear() {
       try {
+        storage.removeItem(pendingSaveKey);
         const identity: Identity | null = JSON.parse(
           storage.getItem(identityKey) || 'null',
         );

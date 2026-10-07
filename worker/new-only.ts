@@ -30,7 +30,7 @@ export function pendingNewItemsWhere(alias = '') {
 export function pendingNewItemsSql(projection: string) {
   return `SELECT ${projection} FROM source_items WHERE source_id=$1
     AND ${pendingNewItemsWhere()} AND next_check_at<=now()
-    ORDER BY discovered_at DESC,id LIMIT $2`;
+    ORDER BY listing_hints->>'datePosted' DESC NULLS LAST,discovered_at DESC,id LIMIT $2`;
 }
 
 /** Keep source IDs as tombstones, so discovery cannot enqueue abandoned work again. */
@@ -39,3 +39,10 @@ export const retireStaleNewItemsSql = `UPDATE source_items
   WHERE source_id=$1 AND job_id IS NULL AND raw IS NULL
     AND next_check_at<'infinity'::timestamptz
     AND (discovered_at < ${newItemsStartSql} OR failures>=3)`;
+
+/** Old snapshot repairs are not work the new-only collector can complete. */
+export const retireUnusedReviewsSql = `UPDATE source_items
+  SET refresh_requested_at=NULL,quality_candidate=NULL,quality_signature=NULL,
+    quality_warning=NULL,quality_first_seen=NULL,quality_last_seen=NULL,quality_observations=0
+  WHERE source_id=$1 AND (refresh_requested_at IS NOT NULL OR quality_warning IS NOT NULL)
+    AND NOT (${pendingNewItemsWhere()})`;

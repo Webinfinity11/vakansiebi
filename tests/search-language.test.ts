@@ -151,7 +151,7 @@ void test('Georgian typed on a Latin keyboard is read as Georgian, English is le
     latinGeorgianSearch('mzareuli, mcxobeli', lexicon),
     'მზარეული მცხობელი',
   );
-  assert.equal(latinGeorgianSearch('usaptxoeba', lexicon), 'უსაფრთხოების');
+  assert.equal(latinGeorgianSearch('usaptxoeba', lexicon), 'უსაფრთხოება');
   assert.equal(latinGeorgianSearch('მზარეული'), null);
   assert.equal(latinGeorgianSearch('c++'), null);
 });
@@ -183,4 +183,13 @@ void test('aliases, guard words and glue words', () => {
   assert.ok(searchGroups('buxgalteri')[0].includes('ბუღალტერ'));
   assert.deepEqual(searchTerms('Bank of Georgia'), ['bank', 'georgia']);
   assert.deepEqual(searchTerms('.*'), []);
+});
+
+void test('comma-separated occupations match either role without changing ordinary phrases', () => {
+  const roles = searchGroups('mzareuli, mcxobeli');
+  assert.equal(roles.length, 1);
+  assert.ok(roles[0].includes('მზარეულ'));
+  assert.ok(roles[0].includes('მცხობელ'));
+  assert.equal(searchGroups('მზარეული სასტუმრო').length, 2);
+  assert.equal(searchGroups('React, Angular').length, 2);
 });

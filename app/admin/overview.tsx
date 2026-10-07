@@ -145,7 +145,7 @@ export function attentionItems({
       icon: Terminal,
       title: `${name(a)} — ამ კომპიუტერიდან იკრიფება`,
       detail: a.detail,
-      chips: ['npm run worker:gov'],
+      chips: ['ავტომატური შემკრები · Mac ჩართული უნდა იყოს'],
     });
   for (const a of found.filter((a) => a.severity === 'stuck'))
     items.push({
@@ -448,7 +448,7 @@ export function OverviewPanel({
                 {s.enabled && (
                   <span>
                     {locallyCollected.includes(s.name)
-                      ? 'ხელით · npm run worker:gov'
+                      ? 'ავტომატურად · ამ კომპიუტერიდან'
                       : s.queued
                         ? `რიგში: ${whole.format(s.queued)}`
                         : health.label}
