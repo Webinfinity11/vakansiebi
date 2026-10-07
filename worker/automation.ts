@@ -16,6 +16,7 @@ import {
   publishIndexingNotifications,
   type IndexingNotification,
 } from '../lib/server/google-indexing';
+import { enqueueIndexingNotifications } from '../lib/server/indexing-queue';
 
 export function publishable(
   raw: unknown,
@@ -188,7 +189,9 @@ export async function reconcileJob(
     `INSERT INTO audit_log(job_id,action,actor,before_data,after_data) VALUES($1,$2,'automation',$3,$4)`,
     [id, 'automation.' + status, from, to],
   );
-  notifications.push(...indexingTransition(id, job, { status, published }));
+  const events = indexingTransition(id, job, { status, published });
+  await enqueueIndexingNotifications(events, c);
+  notifications.push(...events);
   return status;
 }
 

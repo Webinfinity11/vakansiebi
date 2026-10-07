@@ -146,11 +146,13 @@ Environment-only changes do not change the Git SHA: use Vercel Redeploy once, wi
 
 ## Google Analytics და Search Console
 
+Google-ში ვაკანსიების საიმედო გაგზავნის რიგი, ლიმიტი და შემოწმება აღწერილია [ოპერაციულ გზამკვლევში](docs/google-indexing-operations.md).
+
 `jobx.ge`-ის GA4 ანგარიშია **JOBX** (`408126196`), property — **JOBX — jobx.ge** (`554293924`), ვებნაკადი — **JOBX Website** (`15781177095`), Measurement ID — `G-9S8J0W7QXM`. დროის სარტყელია საქართველო (UTC+4), ვალუტა — GEL.
 
-Search Console-ის ერთადერთი sitemap: `https://jobx.ge/sitemap.xml`; `robots.txt` ამ მისამართს უთითებს. ერთი `<urlset>` შეიცავს ძირითად გვერდებს, ინდექსირებად ძიებებს მინიმუმ 10 ვაკანსიით, საჯარო აქტიური ვაკანსიების კანონიკურ მისამართებს და კომპანიებს, ამ თანმიმდევრობით.
+Search Console-ში გასაგზავნი sitemap: `https://jobx.ge/sitemap.xml`; `robots.txt` ამ მისამართს უთითებს. ეს `<sitemapindex>` აერთიანებს ოთხ დამოუკიდებელ სიას: `/sitemap-pages.xml`, `/sitemap-categories.xml`, `/sitemap-companies.xml` და `/sitemap-jobs.xml`.
 
-XML წინასწარ გენერირდება (prerender) და საათში ერთხელ ახლდება (`revalidate: 3600`); მონაცემების განახლებისთვის ახალი build საჭირო არ არის. CDN პასუხს 1 საათით ინახავს, ხოლო განახლებისას ძველ ასლს კიდევ 1 დღის განმავლობაში გასცემს (`stale-while-revalidate: 86400`). პასუხი ერთ ნაჭრად იქმნება. 50,000 URL-ის ან 4 MiB-ის ლიმიტის გადაჭარბებისას სია ბოლოდან იკვეთება გაფრთხილების ჩაწერით. ბაზის შეცდომაზე ბრუნდება ძირითადი გვერდებისა და წარმატებით მიღებული სექციების ნაწილობრივი სია HTTP 200-ით და `Cache-Control: no-store`-ით, რათა მომდევნო მოთხოვნამ სრული სიის შექმნა ხელახლა სცადოს. ძველი `/sitemap-index.xml`, `/sitemap-pages.xml`, `/sitemap-searches.xml`, `/vacancies/sitemap.xml` და `/companies/sitemap.xml` მისამართები 301-ით გადამისამართდება `/sitemap.xml`-ზე.
+ყოველი სია დამოუკიდებლად ახლდება და ქეშირდება; მონაცემების განახლებისთვის ახალი build საჭირო არ არის. CDN წარმატებულ პასუხს 1 საათით ინახავს (`s-maxage=3600`) და განახლებისას ძველ ასლს დროებით გასცემს (`stale-while-revalidate=86400`). ცალკეული სიის დროებითი ხარვეზი სხვა სიებს არ ცვლის. ვაკანსიების სიას მაქსიმუმ 25,000 URL აქვს; საერთო XML დამხმარე დამატებით იცავს 50,000 URL-ისა და 4 MiB-ის ლიმიტებს.
 
 
 `app/google-analytics.tsx` ტვირთავს Google tag-ს მხოლოდ production `https://jobx.ge`-ის საჯარო გვერდებზე. `page_view` იგზავნება ერთხელ თითო გვერდზე, Next.js-ის ნავიგაციის დროსაც. URL-ის query/hash და referrer-ის კერძო გზები იშლება. ადმინი, ინვოისები და preview გამორიცხულია; ფორმების ველები, აპლიკანტის კონტაქტები და შიდა ძიების ტექსტი არ იგზავნება. სარეკლამო პერსონალიზაცია და Google signals გამორთულია.

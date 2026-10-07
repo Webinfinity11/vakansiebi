@@ -200,6 +200,21 @@ void test(
       assert.ok(sent[0].url.endsWith(jobId));
       assert.equal(await stageVacancy(itemId, vacancy), 'unchanged');
       assert.equal(sent.length, 1);
+      const changed = {
+        ...vacancy,
+        description: vacancy.description + ' New responsibilities added.',
+      };
+      await pool.query('UPDATE source_items SET raw=$1 WHERE id=$2', [
+        changed,
+        itemId,
+      ]);
+      assert.equal(await reconcileAndNotify(jobId), 'published');
+      assert.equal(sent.length, 2);
+      assert.equal(
+        (await pool.query('SELECT status FROM google_indexing_queue')).rows[0]
+          .status,
+        'sent',
+      );
       await pool.query(
         "UPDATE source_items SET raw=jsonb_set(raw,'{deadline}',$2::jsonb) WHERE id=$1",
         [itemId, JSON.stringify(tbilisiDate(new Date(Date.now() - 86400000)))],
@@ -207,13 +222,13 @@ void test(
       // Archival announces nothing and spends no budget: the sitemap and the
       // page itself already tell Google the vacancy is gone.
       assert.equal(await reconcileAndNotify(jobId), 'archived');
-      assert.equal(sent.length, 1);
+      assert.equal(sent.length, 2);
       await reconcileAndNotify(jobId);
-      assert.equal(sent.length, 1);
+      assert.equal(sent.length, 2);
       assert.equal(
         (await pool.query('SELECT requests FROM google_indexing_daily')).rows[0]
           .requests,
-        1,
+        2,
       );
       // Force the import transaction to fail before it can commit.
       await pool.query(
@@ -248,7 +263,15 @@ void test(
       // must leave only the initial committed publication's URL_UPDATED.
       assert.deepEqual(
         sent.map((notification) => notification.type),
-        ['URL_UPDATED'],
+        ['URL_UPDATED', 'URL_UPDATED'],
+      );
+      assert.equal(
+        (
+          await pool.query(
+            'SELECT count(*)::int AS n FROM google_indexing_queue',
+          )
+        ).rows[0].n,
+        1,
       );
     } finally {
       globalThis.fetch = originalFetch;

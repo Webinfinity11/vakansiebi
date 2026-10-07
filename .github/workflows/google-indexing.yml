@@ -1,0 +1,46 @@
+name: Google vacancy notifications
+on:
+  schedule:
+    - cron: '23,53 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: google-indexing-production
+  cancel-in-progress: false
+jobs:
+  notify:
+    if: github.repository == 'Webinfinity11/vakansiebi' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - id: due
+        name: Check for due notifications before installing dependencies
+        env:
+          PGDATABASE: ${{ secrets.SCRAPER_DATABASE_URL }}
+          PGSSLROOTCERT: system
+        run: |
+          command -v psql >/dev/null || sudo apt-get install -y -q postgresql-client >/dev/null
+          pending=$(psql "$PGDATABASE" -X -Atc "SELECT EXISTS(SELECT 1 FROM google_indexing_queue
+            WHERE status='pending' AND available_at<=now() AND (locked_until IS NULL OR locked_until<now()))
+            AND COALESCE((SELECT requests FROM google_indexing_daily
+              WHERE day=(now() AT TIME ZONE 'America/Los_Angeles')::date),0)<200")
+          echo "pending=$pending" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: steps.due.outputs.pending == 't'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: steps.due.outputs.pending == 't'
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        if: steps.due.outputs.pending == 't'
+      - name: Send queued vacancies within the shared daily quota
+        if: steps.due.outputs.pending == 't'
+        run: npx tsx scripts/google-indexing-worker.ts
+        env:
+          DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
+          GOOGLE_INDEXING_CLIENT_EMAIL: ${{ secrets.GOOGLE_INDEXING_CLIENT_EMAIL }}
+          GOOGLE_INDEXING_PRIVATE_KEY: ${{ secrets.GOOGLE_INDEXING_PRIVATE_KEY }}

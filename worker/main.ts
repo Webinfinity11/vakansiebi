@@ -14,6 +14,7 @@ import { failureNeedsPerson, timeoutsBeforeAlarm } from './http';
 import { rollupAnalytics } from '../lib/server/analytics';
 import { refreshLandingCounts } from './landing-counts';
 import { placeVacancies } from './places';
+import { drainIndexingQueue } from '../lib/server/indexing-queue';
 let stopped = false;
 let lastPurge = 0;
 process.on('SIGTERM', () => {
@@ -128,6 +129,21 @@ try {
         },
       });
     }
+    // Retry persisted notifications independently of whether this cycle found new jobs.
+    const indexing = await drainIndexingQueue().catch(() => {
+      console.warn(
+        'Indexing delivery unavailable; notifications retained for retry.',
+      );
+      return null;
+    });
+    if (
+      indexing &&
+      (indexing.sent ||
+        indexing.retried ||
+        indexing.rejected ||
+        indexing.deferred)
+    )
+      console.log(JSON.stringify({ indexing }));
     // Ended vacancies past their window are deleted at most hourly: the continuous worker loops
     // every few seconds, and parallel scraper jobs skip on the lock.
     const purgeDue = Date.now() - lastPurge >= 3600000;

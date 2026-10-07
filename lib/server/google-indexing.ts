@@ -2,8 +2,9 @@ import { createHash, createSign } from 'node:crypto';
 import { load } from 'cheerio';
 import type { Pool } from 'pg';
 import { db } from './db';
-import { siteUrl, vacancyUrl } from '../seo';
+import { jobPosting, siteUrl } from '../seo';
 import { vacancyIdFrom } from '../vacancy-navigation';
+import type { Vacancy } from '../types';
 
 const tokenUrl = 'https://oauth2.googleapis.com/token';
 const publishUrl =
@@ -11,24 +12,34 @@ const publishUrl =
 export type IndexingNotification = {
   url: string;
   type: 'URL_UPDATED' | 'URL_DELETED';
+  contentHash?: string;
 };
-type Snapshot = { status: string; published: { title?: string } | null };
+type Snapshot = { status: string; published: Vacancy | null };
 
-// Only transitions, never an inventory/backfill or an unchanged reconciliation.
+function posting(id: string, snapshot: Snapshot) {
+  return snapshot.status === 'published' && snapshot.published
+    ? jobPosting({ ...snapshot.published, id, createdAt: '', sources: [] })
+    : null;
+}
+
+// Notify only supported job pages whose visible structured content changed.
 export function indexingTransition(
   id: string,
   before: Snapshot,
   after: Snapshot,
 ): IndexingNotification[] {
+  const current = posting(id, after);
   if (
-    before.status !== 'published' &&
-    after.status === 'published' &&
-    after.published
+    current &&
+    JSON.stringify(current) !== JSON.stringify(posting(id, before))
   )
     return [
       {
-        url: vacancyUrl({ id, title: after.published.title }),
+        url: current.url,
         type: 'URL_UPDATED',
+        contentHash: createHash('sha256')
+          .update(JSON.stringify(current))
+          .digest('hex'),
       },
     ];
   /* An archived vacancy is not announced. A listing lives about a month and then
@@ -165,15 +176,16 @@ export function createGoogleIndexing({
   async function publish(
     url: string,
     type: IndexingNotification['type'],
-  ): Promise<void> {
+  ): Promise<IndexingDelivery> {
     let stage = 'configuration';
     try {
       const settings = env();
       const email = settings.GOOGLE_INDEXING_CLIENT_EMAIL?.trim();
       const key = settings.GOOGLE_INDEXING_PRIVATE_KEY?.trim();
-      if (!email || !key) return;
+      if (!email || !key)
+        return { status: 'deferred', reason: 'credentials-unavailable' };
       const limit = indexingDailyLimit(settings.GOOGLE_INDEXING_DAILY_LIMIT);
-      if (!limit) return;
+      if (!limit) return { status: 'deferred', reason: 'disabled' };
       const target = new URL(url);
       const segment = decodeURIComponent(
         target.pathname.slice('/vacancies/'.length),
@@ -186,7 +198,7 @@ export function createGoogleIndexing({
         segment.includes('/') ||
         !vacancyIdFrom(segment)
       )
-        return;
+        return { status: 'skipped', reason: 'invalid-url' };
       if (type === 'URL_DELETED') {
         stage = 'deletion precondition';
         // Check the actual public page after COMMIT. Redirects and still-live
@@ -205,12 +217,13 @@ export function createGoogleIndexing({
             page.status === 200 ? await page.text() : '',
           )
         )
-          return;
+          return { status: 'skipped', reason: 'live-page' };
       }
       stage = 'authorization';
       const token = await accessToken(email, key);
       stage = 'daily budget';
-      if (!(await reserve(limit))) return;
+      if (!(await reserve(limit)))
+        return { status: 'deferred', reason: 'daily-budget' };
       stage = 'publish';
       const response = await request(publishUrl, {
         method: 'POST',
@@ -224,19 +237,47 @@ export function createGoogleIndexing({
       if (response.status === 401) cached = undefined;
       if (!response.ok) {
         stage = `publish HTTP ${response.status}`;
-        throw new Error('publish HTTP failure');
+        warn(
+          `[google-indexing] ${stage} failed; notification retained for retry`,
+        );
+        return {
+          status: 'failed',
+          httpStatus: response.status,
+          reason: `http-${response.status}`,
+        };
       }
+      return { status: 'sent', httpStatus: response.status };
     } catch {
       // Never log response bodies, JWTs, env values, or crypto errors containing keys.
-      warn(`[google-indexing] ${stage} failed; notification skipped`);
+      warn(
+        `[google-indexing] ${stage} failed; notification retained for retry`,
+      );
+      return { status: 'failed', reason: stage };
     }
   }
   return { publish };
 }
 
+export type IndexingDelivery = {
+  status: 'sent' | 'deferred' | 'skipped' | 'failed';
+  httpStatus?: number;
+  reason?: string;
+};
+
 export const { publish } = createGoogleIndexing();
 export async function publishIndexingNotifications(
   events: readonly IndexingNotification[],
 ) {
-  for (const event of events) await publish(event.url, event.type);
+  if (!events.length) return;
+  const { drainIndexingQueue } = await import('./indexing-queue');
+  try {
+    await drainIndexingQueue({
+      urls: events.map((event) => event.url),
+      limit: events.length,
+    });
+  } catch {
+    console.warn(
+      '[google-indexing] delivery unavailable; committed notifications retained for retry',
+    );
+  }
 }

@@ -4,6 +4,7 @@ import {
   publishIndexingNotifications,
   type IndexingNotification,
 } from './google-indexing';
+import { enqueueIndexingNotifications } from './indexing-queue';
 import { placementTiers } from '../placement';
 import { bonusCompanyKey } from './job-placement';
 import { approvePlacement } from './job-placement';
@@ -757,9 +758,9 @@ export async function mutateJob(input: unknown) {
       { draft: job.draft, published: job.published, status: job.status },
       { draft, published, status },
     );
-    notifications.push(
-      ...indexingTransition(job.id, job, { status, published }),
-    );
+    const events = indexingTransition(job.id, job, { status, published });
+    await enqueueIndexingNotifications(events, c);
+    notifications.push(...events);
     return { ok: true };
   });
   clearPublicJobsCache();

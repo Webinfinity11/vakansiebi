@@ -8,6 +8,7 @@ import {
   indexingJwt,
   indexingTransition,
 } from '../lib/server/google-indexing';
+import type { Vacancy } from '../lib/types';
 
 // Ephemeral test-only material: no key literal, file, service account, or network.
 const { privateKey, publicKey } = generateKeyPairSync('rsa', {
@@ -113,14 +114,58 @@ void test('deletion requires 404/410 or an actual robots noindex meta element on
     );
 });
 
-void test('only a new publication generates an event; archival spends nothing', () => {
+void test('new and changed supported publications generate events; unchanged and archived pages spend nothing', () => {
   const id = '11111111-1111-4111-8111-111111111111';
-  const live = { status: 'published', published: { title: 'Developer' } };
+  const vacancy: Vacancy = {
+    title: 'Developer',
+    company: 'Indexing fixture',
+    city: 'თბილისი',
+    category: 'ტექნოლოგიები',
+    salary: '',
+    salaryMin: null,
+    currency: '',
+    salaryPeriod: '',
+    mode: '',
+    description: 'Join our development team and build useful products.',
+    url: 'https://www.hr.ge/announcement/123/test',
+    source: 'hr.ge',
+    datePosted: '2026-10-07',
+    deadline: '',
+  };
+  const live = { status: 'published', published: vacancy };
   const pending = { status: 'pending', published: null };
   const archived = { status: 'archived', published: null };
-  assert.deepEqual(indexingTransition(id, pending, live), [
-    { url, type: 'URL_UPDATED' },
-  ]);
+  const events = indexingTransition(id, pending, live);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].url, url);
+  assert.equal(events[0].type, 'URL_UPDATED');
+  assert.match(events[0].contentHash!, /^[a-f0-9]{64}$/);
+  const changed = indexingTransition(id, live, {
+    ...live,
+    published: {
+      ...vacancy,
+      salary: '2000 GEL',
+      salaryMin: 2000,
+      currency: 'GEL',
+      salaryPeriod: 'month',
+    },
+  });
+  assert.equal(changed.length, 1);
+  assert.notEqual(changed[0].contentHash, events[0].contentHash);
+  assert.deepEqual(
+    indexingTransition(id, pending, {
+      ...live,
+      published: { ...vacancy, company: '' },
+    }),
+    [],
+  );
+  assert.deepEqual(
+    indexingTransition(id, live, {
+      ...live,
+      published: { ...vacancy, warnings: ['Source rechecked'] },
+    }),
+    [],
+  );
   for (const [before, after] of [
     // Archival is left to the sitemap and the page itself: removals outnumber
     // publications several times over and would eat the whole daily budget.
@@ -242,7 +287,7 @@ void test('404, 410 and streamed noindex pages are checked before deletion is se
   }
 });
 
-void test('exhausted budget silently skips publish; failed attempts are not refunded or retried', async () => {
+void test('exhausted budget returns a deferral; failed attempts return retryable delivery results without refunding quota', async () => {
   for (const allowed of [false, true]) {
     let sends = 0;
     let warnings = 0;
@@ -263,7 +308,12 @@ void test('exhausted budget silently skips publish; failed attempts are not refu
         warnings++;
       },
     });
-    await api.publish(url, 'URL_UPDATED');
+    assert.deepEqual(
+      await api.publish(url, 'URL_UPDATED'),
+      allowed
+        ? { status: 'failed', httpStatus: 429, reason: 'http-429' }
+        : { status: 'deferred', reason: 'daily-budget' },
+    );
     assert.equal(sends, allowed ? 1 : 0);
     assert.equal(warnings, allowed ? 1 : 0);
   }
