@@ -65,7 +65,6 @@ import { track, trackAction } from '@/lib/analytics-client';
 import type { ActionCode } from '@/lib/analytics-actions';
 import {
   ChevronDown,
-  Crown,
   Search,
   SlidersHorizontal,
   MapPin,
@@ -251,7 +250,6 @@ const JobCard = memo(function JobCard({
             )}
             {featured === 'vip' && (
               <span className="featured-label featured-label-vip">
-                <Crown size={14} aria-hidden="true" />
                 VIP
               </span>
             )}
