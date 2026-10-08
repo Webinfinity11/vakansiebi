@@ -27,13 +27,14 @@ import type {
 } from '@/lib/server/analytics';
 
 const windows = [
-  { days: 1, label: '24 საათი' },
-  { days: 7, label: '7 დღე' },
-  { days: 30, label: '30 დღე' },
-  { days: 90, label: '3 თვე' },
-  { days: 365, label: 'წელი' },
+  { period: 'today', label: 'დღეს' },
+  { period: 'yesterday', label: 'გუშინ' },
+  { period: 7, label: '7 დღე' },
+  { period: 30, label: '30 დღე' },
+  { period: 90, label: '3 თვე' },
+  { period: 365, label: 'წელი' },
 ] as const;
-type Window = (typeof windows)[number]['days'];
+type Window = (typeof windows)[number]['period'];
 
 /* Three hues in the documented order, validated against this panel's white
    surface: worst adjacent CVD ΔE 9.2, normal-vision ΔE 27.6. The chart draws one
@@ -106,15 +107,17 @@ const ofHighest = (rows: Ranked[]) => {
 
 /* Loads only when the tab is opened, so the vacancy list never waits on these counts. */
 export function AnalyticsPanel() {
-  const [days, setDays] = useState<Window>(7);
+  const [period, setPeriod] = useState<Window>('today');
   const [state, setState] = useState<{
-    days: number;
+    period: Window;
     data?: AnalyticsSummary;
     error?: string;
   } | null>(null);
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(`/api/admin/analytics?days=${days}`, {
+    const query =
+      typeof period === 'number' ? `days=${period}` : `period=${period}`;
+    void fetch(`/api/admin/analytics?${query}`, {
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -122,14 +125,14 @@ export function AnalyticsPanel() {
         if (!response.ok) throw Error(body.error || 'ანალიტიკა ვერ ჩაიტვირთა');
         return body as AnalyticsSummary;
       })
-      .then((data) => setState({ days, data }))
+      .then((data) => setState({ period, data }))
       .catch((error) => {
         if (error.name !== 'AbortError')
-          setState({ days, error: String(error.message || error) });
+          setState({ period, error: String(error.message || error) });
       });
     return () => controller.abort();
-  }, [days]);
-  const current = state?.days === days ? state : null;
+  }, [period]);
+  const current = state?.period === period ? state : null;
   const data = current?.data;
   return (
     <section className="admin-analytics">
@@ -138,17 +141,21 @@ export function AnalyticsPanel() {
           <legend className="sr-only">პერიოდი</legend>
           {windows.map((w) => (
             <button
-              key={w.days}
+              key={w.period}
               type="button"
               className="ds-chip"
-              aria-pressed={days === w.days}
-              onClick={() => setDays(w.days)}
+              aria-pressed={period === w.period}
+              onClick={() => setPeriod(w.period)}
             >
               {w.label}
             </button>
           ))}
         </fieldset>
-        {data && <p className="admin-analytics-range">{rangeLabel(data)}</p>}
+        {data && (
+          <p className="admin-analytics-range">
+            {rangeLabel(data)} · თბილისის დრო
+          </p>
+        )}
       </div>
       {!current ? (
         <SkeletonRows rows={3} block label="ანალიტიკა იტვირთება" />

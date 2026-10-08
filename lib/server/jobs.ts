@@ -438,7 +438,8 @@ export async function adminJobs(
           ELSE true END)
       OR ($1='paused' AND j.automation_paused AND j.status<>'rejected')
       OR ($1='manual' AND NOT j.automation_managed AND j.status<>'rejected')
-      OR ($1='blocked' AND j.automation_reason IS NOT NULL AND j.status<>'published')
+      OR ($1='blocked' AND j.status='pending' AND j.automation_reason IS NOT NULL
+        AND j.automation_reason<>'employer_submission')
       OR j.status=$1)
     AND ($2='' OR strpos(lower(concat_ws(' ',j.draft->>'title',j.draft->>'company')),lower($2))>0)
     AND (${idParam}::uuid IS NULL OR j.id=${idParam}::uuid)
@@ -463,7 +464,7 @@ export async function adminJobs(
       count(*) FILTER(WHERE status='archived')::int archived,
       count(*) FILTER(WHERE automation_paused AND status NOT IN ('merged','rejected'))::int paused,
       count(*) FILTER(WHERE NOT automation_managed AND status NOT IN ('merged','rejected'))::int manual,
-      count(*) FILTER(WHERE automation_reason IS NOT NULL AND status NOT IN ('merged','rejected','published'))::int blocked,
+      count(*) FILTER(WHERE status='pending' AND automation_reason IS NOT NULL AND automation_reason<>'employer_submission')::int blocked,
       count(*) FILTER(WHERE status='pending' AND EXISTS (SELECT 1 FROM job_submissions sub WHERE sub.job_id=jobs.id AND NOT sub.is_test))::int submissions
       FROM jobs`,
     )

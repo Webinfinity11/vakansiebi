@@ -15,6 +15,7 @@ void test(
     const marker = 'ADMINAUTO' + Date.now();
     const id = randomUUID();
     const itemId = randomUUID();
+    const filterIds = Array.from({ length: 6 }, () => randomUUID());
     const vacancy: Vacancy = {
       title: marker + ' მოლარე',
       company: 'ადმინის ფიქსტურა',
@@ -105,6 +106,40 @@ void test(
         'handing a record back is recorded',
       );
       assert.equal((await adminJobs('manual', marker, 1)).total, 0);
+      const baseline = (await adminJobs('blocked', '', 1)).counts.blocked;
+      for (const [index, [status, reason]] of [
+        ['pending', 'invalid_source_data'],
+        ['pending', 'awaiting_source'],
+        ['archived', 'expired'],
+        ['archived', 'unverified'],
+        ['pending', 'employer_submission'],
+        ['rejected', 'invalid_source_data'],
+      ].entries()) {
+        await db().query(
+          `INSERT INTO jobs(id,draft,status,fingerprint,automation_reason) VALUES($1,$2,$3,$4,$5)`,
+          [filterIds[index], vacancy, status, marker + index, reason],
+        );
+      }
+      const blocked = await adminJobs('blocked', marker, 1);
+      assert.equal(
+        blocked.total,
+        2,
+        'only actionable pending automation blocks appear',
+      );
+      assert.equal(
+        blocked.counts.blocked,
+        baseline + 2,
+        'tab counts use the same rule as its rows',
+      );
+      assert.deepEqual(
+        new Set(blocked.jobs.map((job) => job.id)),
+        new Set(filterIds.slice(0, 2)),
+      );
+      assert.equal(
+        (await adminJobs('archived', marker, 1)).total,
+        2,
+        'ended vacancies remain in the archive',
+      );
     } finally {
       await db().query('UPDATE sources SET auto_publish=$1 WHERE id=$2', [
         previous,
@@ -113,6 +148,9 @@ void test(
       await db().query('DELETE FROM audit_log WHERE job_id=$1', [id]);
       await db().query('DELETE FROM source_items WHERE id=$1', [itemId]);
       await db().query('DELETE FROM jobs WHERE id=$1', [id]);
+      await db().query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [
+        filterIds,
+      ]);
       await db().end();
     }
   },

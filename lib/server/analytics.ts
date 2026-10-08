@@ -97,6 +97,7 @@ export type ActivityPoint = {
 };
 export type AnalyticsSummary = {
   days: number;
+  period?: 'today' | 'yesterday';
   /** How wide one point of the curve is; a day of activity is read by the hour. */
   unit: 'hour' | 'day' | 'week';
   from: string;
@@ -129,22 +130,46 @@ const grainOf = (days: number): AnalyticsSummary['unit'] =>
    day cannot fall between them. A vacancy row is matched for its title where it still exists; a deleted
    vacancy keeps its count and simply has no title. */
 export async function analyticsSummary(
-  days = 30,
+  period: number | 'today' | 'yesterday' = 30,
   top = 20,
 ): Promise<AnalyticsSummary> {
+  const days = typeof period === 'number' ? period : 1;
   // Daily rollups cannot represent a partial day. Long windows start at local
-  // midnight; short windows retain the exact rolling-hour boundary.
+  // midnight; calendar days use Tbilisi midnight regardless of server/browser time.
+  // Resolve both edges once so queries cannot cross into different days mid-report.
+  const midnight = `date_trunc('day',instant AT TIME ZONE 'Asia/Tbilisi') AT TIME ZONE 'Asia/Tbilisi'`;
   const since =
-    days > 30
-      ? `date_trunc('day', now() AT TIME ZONE 'Asia/Tbilisi' - ($1::int * interval '1 day')) AT TIME ZONE 'Asia/Tbilisi'`
-      : `now() - ($1::int * interval '1 day')`;
-  const counted = `(SELECT kind, value, count(*)::int n FROM analytics_events WHERE created_at >= ${since} GROUP BY 1,2
+    period === 'today'
+      ? midnight
+      : period === 'yesterday'
+        ? `(${midnight}) - interval '1 day'`
+        : days > 30
+          ? `date_trunc('day', instant AT TIME ZONE 'Asia/Tbilisi' - (days * interval '1 day')) AT TIME ZONE 'Asia/Tbilisi'`
+          : `instant - (days * interval '1 day')`;
+  const until = period === 'yesterday' ? midnight : 'instant';
+  const bounds = (
+    await db().query(
+      `SELECT starts_at::text AS from_instant,ends_at::text AS to_instant,
+       to_char(starts_at AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD"T"HH24:MI') AS local_from,
+       to_char(ends_at AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD"T"HH24:MI') AS local_to
+       FROM (SELECT ${since} AS starts_at,${until} AS ends_at
+         FROM (SELECT now() AS instant,$1::int AS days) clock) edges`,
+      [days],
+    )
+  ).rows[0];
+  // Keep PostgreSQL's microseconds; converting through JS Date would round away
+  // events recorded in the report's final millisecond.
+  const params = [bounds.from_instant, bounds.to_instant];
+  const rawRange = `created_at >= $1::timestamptz AND created_at < $2::timestamptz`;
+  const dailyRange = `day >= ($1::timestamptz AT TIME ZONE 'Asia/Tbilisi')::date
+    AND (day::timestamp AT TIME ZONE 'Asia/Tbilisi') < $2::timestamptz`;
+  const counted = `(SELECT kind, value, count(*)::int n FROM analytics_events WHERE ${rawRange} GROUP BY 1,2
      UNION ALL
-     SELECT kind, value, sum(count)::int n FROM analytics_daily WHERE day >= ((${since}) AT TIME ZONE 'Asia/Tbilisi')::date GROUP BY 1,2)`;
+     SELECT kind, value, sum(count)::int n FROM analytics_daily WHERE ${dailyRange} GROUP BY 1,2)`;
   const totals = (
     await db().query(
       `SELECT kind, sum(n)::int n FROM ${counted} c GROUP BY 1`,
-      [days],
+      params,
     )
   ).rows;
   // Rank all event kinds in one scan, rather than rescanning both tables for
@@ -156,8 +181,8 @@ export async function analyticsSummary(
       ranked AS (SELECT *,row_number() OVER (PARTITION BY kind ORDER BY count DESC,value) position FROM counted)
      SELECT r.kind,r.value,r.count,j.published->>'title' title,j.published->>'company' company
      FROM ranked r LEFT JOIN jobs j ON r.kind IN ('view','outbound') AND j.id::text=r.value
-     WHERE (r.position<=$2 OR r.kind IN ('post','resume','action')) ORDER BY r.kind,r.position`,
-      [days, top],
+     WHERE (r.position<=$3 OR r.kind IN ('post','resume','action')) ORDER BY r.kind,r.position`,
+      [...params, top],
     )
   ).rows;
   const ranked = (kind: EventKind): Ranked[] =>
@@ -173,8 +198,8 @@ export async function analyticsSummary(
       `SELECT value,COALESCE(sum(n) FILTER (WHERE kind='search'),0)::int searches,
       COALESCE(sum(n) FILTER (WHERE kind='search_empty'),0)::int empty
      FROM ${counted} c WHERE kind IN ('search','search_empty') GROUP BY value
-     ORDER BY empty DESC,searches DESC,value LIMIT $2`,
-      [days, top],
+     ORDER BY empty DESC,searches DESC,value LIMIT $3`,
+      [...params, top],
     )
   ).rows;
   const byKind = Object.fromEntries(eventKinds.map((k) => [k, 0])) as Record<
@@ -188,15 +213,15 @@ export async function analyticsSummary(
   const unit = grainOf(days);
   const step = { hour: '1 hour', day: '1 day', week: '1 week' }[unit];
   const counts = `(SELECT date_trunc('${unit}',created_at AT TIME ZONE 'Asia/Tbilisi') AS bucket,kind,count(*)::int n
-       FROM analytics_events WHERE created_at >= ${since} GROUP BY 1,2
+       FROM analytics_events WHERE ${rawRange} GROUP BY 1,2
      UNION ALL
      SELECT date_trunc('${unit}',day::timestamp),kind,sum(count)::int
-       FROM analytics_daily WHERE day >= ((${since}) AT TIME ZONE 'Asia/Tbilisi')::date GROUP BY 1,2)`;
+       FROM analytics_daily WHERE ${dailyRange} GROUP BY 1,2)`;
   const activity = (
     await db().query(
-      `WITH edge AS (SELECT date_trunc('${unit}',now() AT TIME ZONE 'Asia/Tbilisi') AS last_bucket),
+      `WITH edge AS (SELECT date_trunc('${unit}',($2::timestamptz - interval '1 microsecond') AT TIME ZONE 'Asia/Tbilisi') AS last_bucket),
          buckets AS (SELECT generate_series(
-           date_trunc('${unit}',(${since}) AT TIME ZONE 'Asia/Tbilisi'),
+           date_trunc('${unit}',$1::timestamptz AT TIME ZONE 'Asia/Tbilisi'),
            (SELECT last_bucket FROM edge), interval '${step}') AS bucket)
        SELECT to_char(b.bucket,'YYYY-MM-DD"T"HH24:MI') AS bucket,
          COALESCE(sum(c.n) FILTER (WHERE c.kind='search'),0)::int AS search,
@@ -204,22 +229,29 @@ export async function analyticsSummary(
          COALESCE(sum(c.n) FILTER (WHERE c.kind='outbound'),0)::int AS outbound
        FROM buckets b LEFT JOIN ${counts} c ON c.bucket=b.bucket
        GROUP BY b.bucket ORDER BY b.bucket`,
-      [days],
+      params,
     )
   ).rows as ActivityPoint[];
   const resumeStorage = (
     await db().query(
       `SELECT count(*) FILTER(WHERE expires_at>now())::int active,
-       count(*) FILTER(WHERE created_at >= ${since})::int created,
-       count(*) FILTER(WHERE updated_at >= ${since})::int updated FROM resumes`,
-      [days],
+       count(*) FILTER(WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz)::int created,
+       count(*) FILTER(WHERE updated_at >= $1::timestamptz AND updated_at < $2::timestamptz)::int updated FROM resumes`,
+      params,
     )
   ).rows[0] as { active: number; created: number; updated: number };
   return {
     days,
+    ...(typeof period === 'string' ? { period } : {}),
     unit,
-    from: activity[0]?.bucket ?? '',
-    to: activity.at(-1)?.bucket ?? '',
+    from:
+      typeof period === 'string'
+        ? bounds.local_from
+        : (activity[0]?.bucket ?? ''),
+    to:
+      typeof period === 'string'
+        ? bounds.local_to
+        : (activity.at(-1)?.bucket ?? ''),
     totals: byKind,
     activity,
     filters: ranked('filter'),

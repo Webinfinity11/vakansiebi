@@ -102,6 +102,81 @@ void test(
         `curve matches total for ${days} days`,
       );
     }
+    // Calendar-day filters must split at Tbilisi midnight, even on a UTC server.
+    await db()
+      .query(`WITH edge AS (SELECT date_trunc('day',now() AT TIME ZONE 'Asia/Tbilisi') AT TIME ZONE 'Asia/Tbilisi' midnight)
+      INSERT INTO analytics_events(kind,value,created_at)
+      SELECT 'search',value,midnight+delta FROM edge CROSS JOIN (VALUES
+        ('calendar-before',interval '-1 day' - interval '1 millisecond'),
+        ('calendar-yesterday-start',interval '-1 day'),
+        ('calendar-yesterday-end',interval '-1 millisecond'),
+        ('calendar-today',interval '0 days'),
+        ('calendar-future',interval '1 day')
+      ) fixture(value,delta)`);
+    await db()
+      .query(`WITH edge AS (SELECT date_trunc('day',now() AT TIME ZONE 'Asia/Tbilisi') AT TIME ZONE 'Asia/Tbilisi' midnight)
+      INSERT INTO analytics_events(kind,value,created_at)
+      SELECT kind,value,midnight+delta FROM edge CROSS JOIN (VALUES
+        ('view','11111111-1111-4111-8111-111111111111'),
+        ('outbound','11111111-1111-4111-8111-111111111111'),
+        ('resume','stored'),('post','opened'),('action','preview'),('filter','city')
+      ) kinds(kind,value) CROSS JOIN (VALUES(interval '-1 day'),(interval '0 days'),(interval '1 day')) days(delta)`);
+    const today = await analyticsSummary('today');
+    const yesterday = await analyticsSummary('yesterday');
+    assert.equal(today.period, 'today');
+    assert.equal(today.from.slice(10), 'T00:00');
+    assert.deepEqual(
+      today.searches
+        .filter((r) => r.value.startsWith('calendar-'))
+        .map((r) => r.value),
+      ['calendar-today'],
+    );
+    assert.equal(yesterday.period, 'yesterday');
+    assert.equal(yesterday.from.slice(10), 'T00:00');
+    assert.equal(
+      yesterday.to,
+      today.from,
+      'yesterday ends exactly where today starts',
+    );
+    assert.equal(
+      yesterday.activity.length,
+      24,
+      'a completed day has exactly 24 hourly buckets',
+    );
+    assert.equal(yesterday.activity.at(-1)?.bucket.slice(10), 'T23:00');
+    assert.deepEqual(
+      new Set(
+        yesterday.searches
+          .filter((r) => r.value.startsWith('calendar-'))
+          .map((r) => r.value),
+      ),
+      new Set(['calendar-yesterday-start', 'calendar-yesterday-end']),
+    );
+    for (const summary of [today, yesterday]) {
+      for (const kind of [
+        'view',
+        'outbound',
+        'resume',
+        'post',
+        'action',
+        'filter',
+      ] as const) {
+        assert.equal(
+          summary.totals[kind],
+          1,
+          `${summary.period}: ${kind} excludes the adjacent day and future events`,
+        );
+      }
+      assert.equal(
+        summary.activity.reduce((n, p) => n + p.search, 0),
+        summary.totals.search,
+        'calendar-day chart and all totals use the same two edges',
+      );
+      assert.equal(
+        summary.searches.some((r) => r.value === 'calendar-future'),
+        false,
+      );
+    }
     await assert.rejects(
       db().query(
         `INSERT INTO analytics_events(kind,value) VALUES('ip','1.2.3.4')`,
