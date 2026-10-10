@@ -1790,9 +1790,9 @@ export default function JobBoard({
                         (searchMeta?.wider ?? 0) > total) && (
                         <p className="search-scope">
                           {searchMeta?.corrected ? (
-                            `„${searchMeta.corrected.from}“ ვერ მოიძებნა — ნაჩვენებია „${searchMeta.corrected.to}“.`
+                            `„${searchMeta.corrected.from}“ ვერ მოიძებნა, ნაჩვენებია „${searchMeta.corrected.to}“.`
                           ) : searchMeta?.widened ? (
-                            'სათაურებში ვერ მოიძებნა — ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.'
+                            'სათაურებში ვერ მოიძებნა, ამიტომ ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.'
                           ) : searchMeta?.wider && searchMeta.wider > total ? (
                             <button
                               className="ds-btn ds-btn--ghost ds-btn--sm"
@@ -2278,7 +2278,9 @@ export default function JobBoard({
               )}
               <div className="results-foot">
                 <ShieldCheck size={16} />
-                <span>ვაკანსიები დამსაქმებლებისა და სამუშაოს საიტებიდან</span>
+                <span>
+                  ვაკანსიები დამსაქმებლებისგან და დასაქმების საიტებიდან
+                </span>
               </div>
             </section>
           </div>
@@ -2341,7 +2343,7 @@ export default function JobBoard({
               გასუფთავება
             </button>
             <SheetDescription>
-              მონიშნე პირობები — სია განახლდება „შედეგების ჩვენებაზე“ დაჭერისას.
+              მონიშნე პირობები. სია განახლდება „შედეგების ჩვენებაზე“ დაჭერისას.
             </SheetDescription>
           </SheetHeader>
           <div className="filters">{renderFilters('mobile')}</div>

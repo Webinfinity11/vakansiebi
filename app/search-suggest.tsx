@@ -111,7 +111,7 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
                 <button
                   type="button"
                   className="search-start-forget"
-                  aria-label={`„${value}" ისტორიიდან წაშლა`}
+                  aria-label={`„${value}“ ისტორიიდან წაშლა`}
                   onClick={() => {
                     forgetRecentSearch(value);
                     setRecent(readRecentSearches());

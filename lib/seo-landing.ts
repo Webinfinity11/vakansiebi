@@ -439,7 +439,7 @@ export function landingDescription(landing: Choice, count?: number) {
     ? `${heading}: ${new Intl.NumberFormat('ka-GE').format(count)} აქტიური განცხადება.`
     : `${heading}.`;
   for (const tail of [
-    ' სია ყოველდღიურად ახლდება — შეადარე ანაზღაურება, გრაფიკი და პირობები.',
+    ' სია ყოველდღიურად ახლდება. შეადარე ანაზღაურება, გრაფიკი და პირობები.',
     ' სია ყოველდღიურად ახლდება.',
     '',
   ])

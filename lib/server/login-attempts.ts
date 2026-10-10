@@ -51,6 +51,6 @@ export async function recordLoginAttempt(c: PoolClient, client: string) {
     )
   ).rows[0];
   if (mine >= perClientLimit || total >= totalLimit)
-    throw new ApiError('მრავალი მცდელობა. სცადე 15 წუთში.', 429);
+    throw new ApiError('ძალიან ბევრი მცდელობაა. სცადე 15 წუთში.', 429);
   await c.query('INSERT INTO login_attempts(client) VALUES($1)', [client]);
 }

@@ -35,7 +35,7 @@ export default async function InvoicePage({
       <article className="invoice-paper">
         {process.env.NODE_ENV === 'development' && (
           <p className="invoice-test-notice">
-            სატესტო ინვოისი — არ გამოიყენო თანხის გადასარიცხად.
+            სატესტო ინვოისი. თანხის გადასარიცხად არ გამოიყენო.
           </p>
         )}
         <header className="invoice-heading">
@@ -130,7 +130,7 @@ export default async function InvoicePage({
           <p className="invoice-payment">თანხის დაბრუნება დადასტურებულია.</p>
         )}
         <footer>
-          <p>ინვოისთან ან გადახდასთან დაკავშირებით დაგვიკავშირდით:</p>
+          <p>ინვოისთან ან გადახდასთან დაკავშირებით დაგვიკავშირდი:</p>
           <a href={`tel:${invoiceContact.telephone}`}>{invoiceContact.phone}</a>
           <p>JOBX · jobx.ge</p>
         </footer>

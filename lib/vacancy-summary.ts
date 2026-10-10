@@ -74,7 +74,7 @@ export function vacancySummary(job: Pick<Vacancy, 'description' | 'facts'>) {
     return result.map((item) =>
       item.label === 'გამოცდილება'
         ? {
-            label: 'გამოცდილება — დასაზუსტებელია',
+            label: 'გამოცდილება (დასაზუსტებელია)',
             value: `ველში: ${conflict.field}. აღწერაში: ${conflict.requirement}`,
           }
         : item,

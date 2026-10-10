@@ -89,9 +89,9 @@ const detailFields: FieldName[] = [
   'category',
 ];
 const interruptedMessage =
-  'გაგზავნა შეწყდა. განცხადება ჩაკეტილია — დააჭირე „ხელახლა გაგზავნას“.';
+  'გაგზავნა შეწყდა. განცხადება ჩაკეტილია. დააჭირე „ხელახლა გაგზავნას“.';
 const retryMessage =
-  'კავშირი შეწყდა. მონაცემები შენარჩუნებულია და განცხადება ჩაკეტილია — დააჭირე „ხელახლა გაგზავნას“.';
+  'კავშირი შეწყდა. მონაცემები შენარჩუნებულია და განცხადება ჩაკეტილია. დააჭირე „ხელახლა გაგზავნას“.';
 type SubmissionReceipt = {
   id: string;
   received: true;
@@ -460,7 +460,7 @@ export function PostJobForm({
   const hints: Partial<Record<FieldName, string>> = {
     salaryFrom: 'არასავალდებულო.',
     salaryTo: 'არასავალდებულო.',
-    contact: 'ელფოსტა, ტელეფონი ან განაცხადის ბმული — გამოქვეყნდება საჯაროდ',
+    contact: 'ელფოსტა, ტელეფონი ან განაცხადის ბმული (გამოქვეყნდება საჯაროდ)',
     description: `${values.description.trim().length.toLocaleString()} / 20 000 · მინიმუმ 30 სიმბოლო`,
   };
   const props = (name: FieldName) => ({
@@ -901,7 +901,7 @@ export function PostJobForm({
               </Field>
               <Field
                 name="salaryFrom"
-                label="ხელფასი (₾) — მინიმუმი"
+                label="მინიმალური ხელფასი (₾)"
                 error={errors.salaryFrom}
                 hint={hints.salaryFrom}
               >
@@ -915,7 +915,7 @@ export function PostJobForm({
               </Field>
               <Field
                 name="salaryTo"
-                label="ხელფასი (₾) — მაქსიმუმი"
+                label="მაქსიმალური ხელფასი (₾)"
                 error={errors.salaryTo}
                 hint={hints.salaryTo}
               >

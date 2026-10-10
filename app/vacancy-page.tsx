@@ -252,7 +252,7 @@ function JobReportForm({ jobId }: { jobId: string }) {
         </form>
       )}
       <output ref={success} tabIndex={-1} className="job-report-done">
-        {sent ? 'მადლობა — გადავამოწმებთ.' : ''}
+        {sent ? 'მადლობა, გადავამოწმებთ.' : ''}
       </output>
     </div>
   );
