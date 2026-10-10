@@ -249,9 +249,7 @@ const JobCard = memo(function JobCard({
               </span>
             )}
             {featured === 'vip' && (
-              <span className="featured-label featured-label-vip">
-                VIP
-              </span>
+              <span className="featured-label featured-label-vip">VIP</span>
             )}
             {isNew(j) && <span className="job-new">ახალი</span>}
           </div>
@@ -403,6 +401,7 @@ export default function JobBoard({
     key: seed?.key || '',
     page: seed?.page || 0,
     path: seed ? searchReturnPath(initialSearch, seed.page) : '',
+    search: initialSearch,
   });
   const [jobs, setJobs] = useState<Job[]>(seed?.jobs || []),
     [loading, setLoading] = useState(!seed),
@@ -453,8 +452,10 @@ export default function JobBoard({
   };
   /* A list of one category, one city or remote work is a page in its own right —
      it is what a reader searched for on Google — so it says its own name where
-     the site's tagline otherwise stands. */
-  const landing = landingOf(currentSearch);
+     the site's tagline otherwise stands. It names the list on screen, not the
+     word still being typed: a heading that changed mid-word pushed the search
+     box down under the reader's thumb. */
+  const landing = landingOf(loadedResult.search);
   const [searchMeta, setSearchMeta] = useState<SearchMeta | null>(
     seed?.search || null,
   );
@@ -531,6 +532,23 @@ export default function JobBoard({
   const savedSet = useMemo(() => new Set(saved), [saved]);
   const seenSet = useMemo(() => new Set(activity.seen), [activity.seen]);
   const savedFilter = savedOnly ? saved.join(',') : '';
+  /* A filter picked from the sidebar far down the list left the reader where
+     they were: in the middle of a different list, with the next page loading
+     under them. A changed search starts at the top of its results. Hiding a
+     vacancy or saving one is not a new search and keeps the place. */
+  const searchKey = `${searchParams(currentSearch)}|${savedOnly}`;
+  const shownSearchKey = useRef(searchKey);
+  useEffect(() => {
+    if (shownSearchKey.current === searchKey) return;
+    shownSearchKey.current = searchKey;
+    const results = document.getElementById('results');
+    if (!results || results.getBoundingClientRect().top >= 0) return;
+    results.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+    });
+  }, [searchKey]);
   const activeCount = [
     query,
     city === 'ყველა' ? '' : city,
@@ -572,7 +590,7 @@ export default function JobBoard({
         lastRequestedQuery.current = query;
         setLoading(true);
         setError('');
-        const p = searchParams({
+        const requested: SearchFilters = {
           query,
           city,
           category,
@@ -582,7 +600,8 @@ export default function JobBoard({
           remote,
           sort,
           ...advanced,
-        });
+        };
+        const p = searchParams(requested);
         p.set('page', String(page));
         p.set('summary', '1');
         p.set('preview', demo ? '1' : '0');
@@ -627,7 +646,12 @@ export default function JobBoard({
           setTotal(cached.total);
           setPages(cached.pages);
           setSearchMeta(cached.search);
-          setLoadedResult({ key: filterKey, page, path: cached.path });
+          setLoadedResult({
+            key: filterKey,
+            page,
+            path: cached.path,
+            search: requested,
+          });
           setLoadedState({ key: filterKey, through: cached.through });
           setAppendPage(null);
           setAppendError('');
@@ -656,22 +680,8 @@ export default function JobBoard({
               setLoadedResult({
                 key: filterKey,
                 page,
-                path: searchReturnPath(
-                  {
-                    query,
-                    city,
-                    category,
-                    subcategory,
-                    source,
-                    paid,
-                    remote,
-                    sort,
-                    ...advanced,
-                  },
-                  page,
-                  savedOnly,
-                  demo,
-                ),
+                path: searchReturnPath(requested, page, savedOnly, demo),
+                search: requested,
               });
               setLoadedState({ key: filterKey, through: page });
               setAppendPage(null);
