@@ -7,18 +7,21 @@ import {
   FileText,
   Search,
 } from 'lucide-react';
-import { landingCopy, type Landing } from '@/lib/seo-landing';
+import type { Landing } from '@/lib/seo-landing';
+import { LandingSummary } from './landing-summary';
 import { Brand } from './brand';
 import { TopGeCounter } from './top-ge-counter';
-import { SearchDirectoryRelated } from './search-directory-context';
 import { SearchDirectoryGroups } from './search-directory-groups';
 
 export function SiteFooter({
   landing,
+  landingTotal,
   onSaved,
   showDirectory = true,
 }: {
   landing?: Landing | null;
+  /** The list's own count, so the summary and the heading agree. */
+  landingTotal?: number;
   onSaved?: () => void;
   showDirectory?: boolean;
 }) {
@@ -34,9 +37,8 @@ export function SiteFooter({
           {/* Below the vacancies, not above them: a list with nothing to read is
             a thin page, but the reader came for the list and the sentence that
             describes it has no business standing between them. */}
-          {landing && <p className="landing-copy">{landingCopy(landing)}</p>}
-          {landing && <SearchDirectoryRelated landing={landing} />}
-          <SearchDirectoryGroups />
+          {landing && <LandingSummary landing={landing} total={landingTotal} />}
+          <SearchDirectoryGroups landing={landing} />
         </nav>
       )}
       <footer className="site-footer jobx-footer">

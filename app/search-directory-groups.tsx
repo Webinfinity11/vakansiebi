@@ -1,8 +1,12 @@
-import { landingLinks } from '@/lib/seo-landing';
+import { landingLinks, relatedLandings, type Landing } from '@/lib/seo-landing';
 import { Suspense } from 'react';
 import { DirectoryLinks, useSearchDirectory } from './search-directory-context';
 
-export function SearchDirectoryGroups() {
+export function SearchDirectoryGroups({
+  landing,
+}: {
+  landing?: Landing | null;
+}) {
   return (
     <div className="search-directory-browse">
       <h2>მოძებნე ვაკანსია</h2>
@@ -21,7 +25,7 @@ export function SearchDirectoryGroups() {
           />
         </section>
         <Suspense fallback={null}>
-          <DirectoryGroups />
+          <DirectoryGroups landing={landing} />
         </Suspense>
       </div>
     </div>
@@ -44,8 +48,11 @@ const priority = (path: string) => {
   return index < 0 ? measuredPriority.length : index;
 };
 
-function DirectoryGroups() {
-  const links = landingLinks(useSearchDirectory());
+function DirectoryGroups({ landing }: { landing?: Landing | null }) {
+  const rows = useSearchDirectory();
+  const links = landingLinks(rows);
+  // The lists next to this one, as one more column rather than a block above.
+  const related = landing ? relatedLandings(landing, rows) : [];
   const groups = [
     { title: 'სფერო', key: 'category' },
     { title: 'ქალაქი', key: 'city' },
@@ -65,6 +72,12 @@ function DirectoryGroups() {
 
   return (
     <>
+      {related.length > 0 && (
+        <section className="search-directory-group">
+          <h3>მსგავსი ძიებები</h3>
+          <DirectoryLinks links={related} limit={3} />
+        </section>
+      )}
       {groups
         .filter((group) => group.links.length > 0)
         .map(({ title, key, links: groupLinks }) => (

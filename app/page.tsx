@@ -11,7 +11,10 @@ import {
   landingDescription,
   landingFor,
   landingIndexable,
+  landingOf,
 } from '@/lib/seo-landing';
+import { landingFacts } from '@/lib/server/landing-facts';
+import { LandingFactsProvider } from './landing-summary';
 import { vacancyPath, safeReturnPath } from '@/lib/vacancy-navigation';
 import { publicJobs } from '@/lib/server/jobs';
 import type { BoardInitial } from '@/lib/board-return-cache';
@@ -43,6 +46,14 @@ async function InitialBoard({ params }: { params: URLSearchParams }) {
   const directory = readDirectory();
   const filters = readSearch(params);
   const page = readSearchPage(params);
+  const landing = landingOf(filters);
+  // Started before the list is awaited; it streams in below the vacancies.
+  const facts = landing
+    ? {
+        path: landing.path,
+        facts: landingFacts(landing).catch(() => null),
+      }
+    : null;
   let initial: BoardInitial | undefined;
   try {
     const result = await boardJobs(params);
@@ -64,7 +75,12 @@ async function InitialBoard({ params }: { params: URLSearchParams }) {
   }
   return (
     <SearchDirectoryProvider rows={directory}>
-      <JobBoard key={`${boardSearchKey(filters)}:${page}`} initial={initial} />
+      <LandingFactsProvider seed={facts}>
+        <JobBoard
+          key={`${boardSearchKey(filters)}:${page}`}
+          initial={initial}
+        />
+      </LandingFactsProvider>
     </SearchDirectoryProvider>
   );
 }

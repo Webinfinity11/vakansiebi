@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { PublicHeader } from './public-header';
 import { CompanyIdentity } from './company-identity';
-import { Description, SourceStatus, formatDate } from './vacancy-text';
+import { Description, formatDate } from './vacancy-text';
 import { QuickApply, TranslationHelp } from './quick-apply';
 import {
   vacancyContacts,
@@ -387,16 +387,56 @@ export default function VacancyPage({
     ['სამუშაო გრაფიკი', schedule.map(compactSchedule).join(' · ')],
   ].filter(([, value]) => value?.trim());
   const summary = vacancySummary(job);
-  // One extracted detail belongs with the existing facts, not in its own summary panel.
-  if (summary.length === 1) {
-    const item = summary[0];
-    const existing = facts.find(([, value]) =>
-      factAlreadyVisible(item.value, '', [value || '']),
-    );
-    if (!existing) facts.push([item.label, item.value]);
-    else if (existing[0] === 'ქალაქი' && item.label === 'მისამართი')
-      existing[0] = 'მისამართი';
+  /* What the posting itself says (experience, address, benefits) joins the
+     structured facts in one panel: to a reader they are all conditions, and
+     two lists of them looked like two different kinds of thing. A detail the
+     panel already shows is not repeated; an address takes the city's place. */
+  for (const item of summary) {
+    const city = facts.find(([label]) => label === 'ქალაქი');
+    if (item.label === 'მისამართი' && city) {
+      const place = city[1] || '';
+      // "მისამართი: თბილისი." says no more than the city does.
+      if (item.value.replace(/[\s.,;]+$/, '') === place) continue;
+      city[0] = 'მისამართი';
+      city[1] = item.value.includes(place.slice(0, -1))
+        ? item.value
+        : `${place}, ${item.value}`;
+      continue;
+    }
+    if (
+      facts.some(([, value]) =>
+        factAlreadyVisible(item.value, '', [value || '']),
+      )
+    )
+      continue;
+    facts.push([item.label, item.value]);
   }
+  /* A value says only what its label does not: "სამუშაო განაკვეთი: ორშ–პარ…"
+     under "სამუშაო გრაფიკი" loses its prefix, and a sentence's closing stop
+     goes. Short facts come first, side by side; long ones close the panel. */
+  for (const fact of facts)
+    fact[1] = (fact[1] || '')
+      .replace(
+        /^(?:სამუშაო\s+)?(?:განაკვეთი|გრაფიკი|საათები|დრო|მისამართი|ადგილი|ხელფასი|ანაზღაურება)\s*:\s*/i,
+        '',
+      )
+      .replace(/[\s.;,]+$/, '')
+      .replace(/\s+,/g, ',');
+  // "ქალაქი თბილისი, ქ. …" is an address written out as a form; the place name is enough.
+  for (const fact of facts)
+    if (fact[0] === 'მისამართი')
+      fact[1] = (fact[1] || '')
+        .replace(/^ქალაქი\s+/, '')
+        .replace(/,(?=\S)/g, ', ');
+  // "სამუშაო დღეები" as a schedule tells the reader nothing a job does not.
+  for (let i = facts.length - 1; i >= 0; i--)
+    if (/^სამუშაო დღეები$/.test(facts[i][1] || '')) facts.splice(i, 1);
+  const wide = (value?: string) => (value || '').length > 40;
+  facts.sort(
+    (a, b) =>
+      Number(a[0] !== 'ანაზღაურება') - Number(b[0] !== 'ანაზღაურება') ||
+      Number(wide(a[1])) - Number(wide(b[1])),
+  );
   const links = vacancyLinks(job);
   const marker = 'სრული ინფორმაცია დამსაქმებლისგან:';
   const split = job.fullTextUrl ? job.description.indexOf(marker) : -1;
@@ -612,48 +652,28 @@ export default function VacancyPage({
               </div>
             )}
             {facts.length > 0 && (
-              <dl
-                className={`detail-facts ${facts.filter(([label]) => label !== 'სამუშაო გრაფიკი').length < 2 ? 'single-fact-column' : ''}`}
-              >
-                {facts.map(([label, value]) => (
-                  <div
-                    key={label}
-                    className={
-                      label === 'სამუშაო გრაფიკი' || label === 'მისამართი'
-                        ? 'schedule-fact'
-                        : label === 'ანაზღაურება' && job.salary
-                          ? 'salary-fact'
-                          : undefined
-                    }
-                  >
-                    <dt>{label}</dt>
-                    <dd>{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-            {!embedded && summary.length > 1 && (
-              <section
-                className="vacancy-summary"
-                aria-labelledby="summary-title"
-              >
-                <h2 id="summary-title">პირობები მოკლედ</h2>
-                <dl>
-                  {summary.map((item, index) => (
+              <section className="detail-facts-panel" aria-label="პირობები">
+                <dl
+                  className={`detail-facts ${facts.filter(([label]) => label !== 'სამუშაო გრაფიკი').length < 2 ? 'single-fact-column' : ''}`}
+                >
+                  {facts.map(([label, value]) => (
                     <div
-                      key={`${item.label}-${index}`}
+                      key={label}
                       className={
-                        item.label.includes('დასაზუსტებელია')
-                          ? 'summary-conflict'
-                          : undefined
+                        label === 'ანაზღაურება' && job.salary
+                          ? 'salary-fact'
+                          : label?.includes('დასაზუსტებელია')
+                            ? 'wide-fact summary-conflict'
+                            : wide(value)
+                              ? 'wide-fact'
+                              : undefined
                       }
                     >
-                      <dt>{item.label}</dt>
-                      <dd>{item.value}</dd>
+                      <dt>{label}</dt>
+                      <dd>{value}</dd>
                     </div>
                   ))}
                 </dl>
-                <p>ამონარიდები განცხადებიდან — სრული პირობები აღწერაშია.</p>
               </section>
             )}
           </section>
@@ -674,7 +694,6 @@ export default function VacancyPage({
                   <Send aria-hidden="true" />
                   განაცხადის გაგზავნა
                 </a>
-                <p>გაიხსნება ორიგინალი განცხადება.</p>
                 {cvHint}
               </div>
             </aside>
@@ -808,36 +827,36 @@ export default function VacancyPage({
                       : 'არ მაინტერესებს'}
                   </button>
                 )}
+                {/* Rarely needed, so it waits here rather than under the page. */}
+                {!preview && <JobReportForm key={job.id} jobId={job.id} />}
               </details>
             </section>
           )}
+          {/* One quiet line: where the posting came from, each site once, in the
+              text's own colour. It is a credit, not a way out of the page. */}
           <footer
             className="vacancy-source compact-source"
             id="vacancy-source"
             aria-label="განცხადების წყარო"
           >
-            {job.source === 'JOBX' ? (
-              <span>განცხადება დამსაქმებელმა JOBX-ზე დაამატა.</span>
-            ) : (
+            {job.source !== 'JOBX' && (
               <>
-                <span>ორიგინალი: </span>
-                {(job.sources.length
-                  ? job.sources
-                  : [{ source: job.source, url: job.url }]
-                ).map((source, index) => (
-                  <span key={source.url}>
+                <span>წყარო: </span>
+                {[
+                  ...new Map(
+                    (job.sources.length
+                      ? job.sources
+                      : [{ source: job.source, url: job.url }]
+                    ).map((source) => [source.source, source.url]),
+                  ),
+                ].map(([name, url], index) => (
+                  <span key={name}>
                     {index > 0 && ', '}
-                    <a
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {source.source}
+                    <a href={url} target="_blank" rel="noopener noreferrer">
+                      {name}
                     </a>
                   </span>
                 ))}
-                <span> · </span>
-                <SourceStatus job={job} />
               </>
             )}
             {job.fullTextUrl && (
@@ -856,10 +875,9 @@ export default function VacancyPage({
             {job.sourceChanged && (
               <span>
                 {' '}
-                · წყაროზე პირობები შეიცვალა — გადაამოწმე განაცხადის გაგზავნამდე.
+                · წყაროზე პირობები შეიცვალა, გადაამოწმე განაცხადის გაგზავნამდე.
               </span>
             )}
-            {!preview && <JobReportForm key={job.id} jobId={job.id} />}
           </footer>
           {!preview && !embedded && (
             <SimilarVacancies id={job.id} returnTo={returnTo} />

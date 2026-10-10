@@ -1,18 +1,8 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  use,
-  Suspense,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, use, type ReactNode } from 'react';
 import Link from 'next/link';
-import {
-  relatedLandings,
-  type Landing,
-  type LandingCount,
-} from '@/lib/seo-landing';
+import type { LandingCount } from '@/lib/seo-landing';
 
 const DirectoryContext = createContext<Promise<LandingCount[] | null> | null>(
   null,
@@ -81,25 +71,5 @@ export function DirectoryLinks({
         </details>
       )}
     </>
-  );
-}
-
-export function SearchDirectoryRelated({ landing }: { landing: Landing }) {
-  return (
-    <Suspense fallback={null}>
-      <RelatedLinks landing={landing} />
-    </Suspense>
-  );
-}
-
-function RelatedLinks({ landing }: { landing: Landing }) {
-  const rows = useSearchDirectory();
-  const links = relatedLandings(landing, rows);
-  if (!links.length) return null;
-  return (
-    <div className="search-directory-related search-directory-group">
-      <h2>მსგავსი ძიებები</h2>
-      <DirectoryLinks links={links} />
-    </div>
   );
 }

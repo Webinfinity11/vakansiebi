@@ -310,22 +310,10 @@ export default async function CompanyPage(props: Props) {
                   placeholder="მაგ. მოლარე, მენეჯერი"
                 />
               </label>
-              <label>
-                <span>ქალაქი</span>
-                <select name="city" defaultValue={filters.city}>
-                  <option value="">ყველა ქალაქი</option>
-                  {[
-                    ...new Set([
-                      ...employer.cities.map((city) => city.name),
-                      ...(filters.city ? [filters.city] : []),
-                    ]),
-                  ].map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {/* The city is picked below, one tap per city; a search keeps it. */}
+              {filters.city && (
+                <input type="hidden" name="city" value={filters.city} />
+              )}
               <button type="submit" className="ds-btn ds-btn--primary">
                 ძებნა
               </button>
@@ -340,6 +328,33 @@ export default async function CompanyPage(props: Props) {
               )}
             </form>
           </search>
+          {employer.cities.length > 1 && (
+            <nav className="company-city-filter" aria-label="ქალაქის მიხედვით">
+              {[
+                { name: '', label: 'ყველა ქალაქი' },
+                ...employer.cities.map((city) => ({
+                  name: city.name,
+                  label: city.name,
+                })),
+              ].map((city) => (
+                <Link
+                  key={city.name || 'all'}
+                  href={companyResultsPath(
+                    path,
+                    { ...filters, city: city.name },
+                    1,
+                  )}
+                  prefetch={false}
+                  scroll={false}
+                  className="ds-chip"
+                  data-active={filters.city === city.name}
+                  aria-current={filters.city === city.name ? 'page' : undefined}
+                >
+                  {city.label}
+                </Link>
+              ))}
+            </nav>
+          )}
           <h2 id="company-jobs">
             {filtered ? 'ძიების შედეგები' : 'აქტიური ვაკანსიები'}{' '}
             <span className="ds-badge ds-badge--accent company-count">

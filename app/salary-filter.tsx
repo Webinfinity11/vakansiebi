@@ -21,11 +21,17 @@ export function SalaryFilter({
       ...(key === 'salaryPeriod' ? { salaryFrom: null, salaryTo: null } : {}),
     });
   return (
-    <fieldset className="salary-filter">
-      <legend>ანაზღაურება (₾)</legend>
-      <label htmlFor={`${prefix}-pay-period`}>ანაზღაურების პერიოდი</label>
+    /* A section with the same <h3> as the city and the field above and below
+       it, so every filter heading is one style, set in one place. */
+    <section
+      className="salary-filter"
+      aria-labelledby={`${prefix}-pay-heading`}
+    >
+      <h3 id={`${prefix}-pay-heading`}>ანაზღაურება (₾)</h3>
+      {/* "თვეში" / "დღეში" says what it is; the label only repeated it. */}
       <SelectField
         id={`${prefix}-pay-period`}
+        label="ანაზღაურების პერიოდი"
         value={value.salaryPeriod}
         onChange={(next) =>
           change('salaryPeriod', next as AdvancedFilters['salaryPeriod'])
@@ -65,6 +71,6 @@ export function SalaryFilter({
       </fieldset>
       {/* The buttons say what they do. A paragraph under every filter explaining
           it is a sign the control needs the explanation, and this one does not. */}
-    </fieldset>
+    </section>
   );
 }

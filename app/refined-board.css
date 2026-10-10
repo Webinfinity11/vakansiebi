@@ -295,19 +295,45 @@
 .filter-primary-category {
   margin-bottom: var(--jobx-space-16px);
 }
-.filter-extra {
-  margin-top: var(--jobx-space-20px);
-  padding-top: var(--jobx-space-16px);
-  border-top: 1px solid var(--jobx-color-e1e5ed-surface);
+.filter-chips {
+  display: grid;
+  gap: var(--jobx-space-2px);
+  margin: var(--jobx-space-14px) 0 0;
+  padding: 0;
+  border: 0;
 }
-.filter-extra summary {
-  cursor: pointer;
-  min-height: 44px;
-  font-size: var(--jobx-font-size-13px);
+.filter-chips legend {
+  margin-bottom: var(--jobx-space-6px);
+  padding: 0;
+  font-size: var(--jobx-font-size-12px);
+  color: var(--jobx-text-secondary);
+}
+/* One option per row, as the fields are listed: the chosen one is tinted. */
+.filters .filter-chips .ds-chip {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 40px;
+  padding-inline: var(--ds-space-3);
+  color: var(--ds-ink-2);
+  font-weight: 400;
+}
+.filters .filter-chips .ds-chip:not([aria-pressed='true']) {
+  border-color: transparent;
+  background: transparent;
+}
+.filters .filter-chips .ds-chip:hover {
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink);
+}
+.filters .filter-chips .ds-chip[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent-ink);
   font-weight: 600;
 }
-.filter-extra[open] summary {
-  margin-bottom: var(--jobx-space-12px);
+.filters .filter-chips .ds-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ds-focus);
 }
 .filter-employment-label {
   display: block;
@@ -1124,11 +1150,6 @@
   border-bottom: 1px solid var(--ds-line);
   min-width: 0;
 }
-.salary-filter legend {
-  font-weight: 700;
-  font-size: var(--jobx-font-size-14px);
-  margin-bottom: var(--jobx-space-12px);
-}
 .salary-filter > label {
   display: block;
   font-size: var(--jobx-font-size-12px);
@@ -1231,7 +1252,6 @@
   content: '';
   display: block;
   margin-bottom: var(--jobx-space-28px);
-  border-top: 1px solid var(--jobx-color-e6eaf0-surface);
 }
 .vacancy-page
   .vacancy-layout:has(> .vacancy-description-panel)
@@ -1375,13 +1395,30 @@
   }
 }
 
-/* The landing page's own sentence, under the list it describes. */
+/* The landing page's own sentence and figures, under the list it describes. */
 .landing-copy {
-  max-width: 76ch;
   margin: 0 0 var(--jobx-space-18px);
   font-size: var(--jobx-font-size-13px);
   line-height: 1.7;
   color: var(--jobx-color-6a7588-text);
+}
+/* The footer's directory rules make its links blocks; these stay in the sentence. */
+.search-directory .landing-copy a,
+.search-directory .landing-copy span {
+  display: inline;
+  min-height: 0;
+  height: auto;
+  padding: 0;
+}
+.landing-copy a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--ds-line-strong);
+  text-underline-offset: 3px;
+}
+.landing-copy a:hover {
+  color: var(--ds-accent);
+  text-decoration-color: currentColor;
 }
 
 /* The streamed board replaces its loading shell; keep the hero still across that swap. */
@@ -1533,10 +1570,9 @@
    element rules in globals.css and the generated dark sheet, which load around this file. */
 
 /* Disclosures: the browser's triangle is replaced by one chevron after the label, which turns
-   when the section opens. Used by "ბოლოს ნანახი", the extra filters, hidden and unavailable
+   when the section opens. Used by "ბოლოს ნანახი", hidden and unavailable
    vacancies, "მეტი მოქმედება" and the translation help. */
 .recent-summary,
-.filter-extra > summary,
 .hidden-vacancies > summary,
 .unavailable-saved > summary,
 .vacancy-more-actions > summary,
@@ -1550,7 +1586,6 @@
   transition: color var(--ds-duration-fast) var(--ds-ease);
 }
 .recent-summary::-webkit-details-marker,
-.filter-extra > summary::-webkit-details-marker,
 .hidden-vacancies > summary::-webkit-details-marker,
 .unavailable-saved > summary::-webkit-details-marker,
 .vacancy-more-actions > summary::-webkit-details-marker,
@@ -1560,7 +1595,6 @@
 /* Only where a pointer hovers: after a tap, a phone keeps :hover and the label stayed blue. */
 @media (hover: hover) {
   .recent-summary:hover,
-  .filter-extra > summary:hover,
   .hidden-vacancies > summary:hover,
   .unavailable-saved > summary:hover,
   .vacancy-more-actions > summary:hover,
@@ -1569,7 +1603,6 @@
   }
 }
 .recent-summary:focus-visible,
-.filter-extra > summary:focus-visible,
 .hidden-vacancies > summary:focus-visible,
 .unavailable-saved > summary:focus-visible,
 .vacancy-more-actions > summary:focus-visible,
@@ -1893,7 +1926,23 @@ details[open] > summary > svg.disclosure-chevron {
   margin-top: var(--ds-space-6);
 }
 .vacancy-page .vacancy-summary > p {
+  margin: var(--ds-space-3) 0 0;
   font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+/* A label column as wide as its longest word and rows with room to breathe.
+   No rules between them: the spacing already separates the rows. */
+.vacancy-page .vacancy-summary dl {
+  gap: var(--ds-space-1);
+  border-top: 0;
+}
+.vacancy-page .vacancy-summary dl > div {
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-2) 0;
+  border-bottom: 0;
+}
+.vacancy-page .vacancy-summary dt {
   color: var(--ds-ink-3);
 }
 .vacancy-page .extra-facts dt {
@@ -2186,4 +2235,93 @@ details[open] > summary > svg.disclosure-chevron {
 .mobile-filters-sheet .mobile-filters-footer .filters-apply {
   width: 100%;
   min-height: var(--ds-control-lg);
+}
+
+/* The vacancy page is separated by space, not by hairlines: headings and the
+   gaps between blocks already mark where one part ends. */
+:root .vacancy-page .vacancy-cv-hint,
+:root .vacancy-page .vacancy-more-actions,
+:root .vacancy-page .vacancy-layout > footer.vacancy-source {
+  border-top: 0;
+}
+
+/* Every condition in one soft panel: pay first, the short facts side by side
+   as many as fit, a long excerpt (benefits) across the whole width. No rules
+   inside it, and no caption: the description below is the full text. */
+:root .vacancy-page .detail-facts-panel {
+  margin-top: var(--ds-space-5);
+  padding: var(--ds-space-5);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-muted);
+}
+:root[data-theme='dark'] .vacancy-page .detail-facts-panel {
+  background: #1b2538;
+}
+:root .vacancy-page .detail-facts-panel .detail-facts {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+:root .vacancy-page .detail-facts-panel .detail-facts {
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--ds-space-4) var(--ds-space-5);
+}
+:root .vacancy-page .detail-facts .wide-fact,
+:root .vacancy-page .detail-facts .salary-fact {
+  grid-column: 1 / -1;
+}
+:root .vacancy-page .detail-facts .wide-fact dd {
+  font-weight: 400;
+}
+:root .vacancy-page .detail-facts .summary-conflict dt {
+  color: var(--ds-warning);
+}
+
+/* Every dropdown in the filter panel reads at one size, whatever component
+   draws it: the city, the field and the pay period. */
+:root .board-shell .filters .choice,
+:root .board-shell .filters .ds-select {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-ink);
+}
+/* …and at the city field's height, which the board sets with !important. */
+:root .board-shell .filters .ds-select {
+  min-height: 42px;
+}
+@media (max-width: 760px) {
+  :root .mobile-filters-sheet .filters .choice,
+  :root .mobile-filters-sheet .filters .ds-select {
+    font-size: 16px;
+  }
+  :root .mobile-filters-sheet .filters .ds-select {
+    min-height: 48px;
+  }
+}
+
+/* The source credit stays in the muted text colour, links included. */
+:root .vacancy-page .vacancy-layout > .vacancy-source.compact-source a {
+  color: inherit;
+  font-weight: 400;
+  text-decoration: underline;
+  text-decoration-color: var(--ds-line-strong);
+  text-underline-offset: 3px;
+}
+:root .vacancy-page .vacancy-layout > .vacancy-source.compact-source:empty {
+  display: none;
+}
+
+/* The filter panel is divided by space alone: no rule under pay, none above
+   the conditions. */
+:root .board-shell .filters .salary-filter,
+:root .mobile-filters-sheet .filters .salary-filter {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+:root .board-shell .filters .filter-divider,
+:root .mobile-filters-sheet .filters .filter-divider {
+  height: 0;
+  border: 0;
+  background: transparent;
 }

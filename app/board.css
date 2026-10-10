@@ -243,7 +243,7 @@
 }
 .board-shell .filters .choice {
   min-height: 42px !important;
-  font-size: var(--jobx-font-size-12px) !important;
+  font-size: var(--ds-text-sm) !important;
   color: #4b4e53;
   background: var(--jobx-surface);
 }
@@ -3971,7 +3971,9 @@
 }
 .search-directory-groups {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* Five columns, or six on a list that has similar searches of its own. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: var(--jobx-space-28px);
 }
 .search-directory-group h3 {
@@ -4009,6 +4011,7 @@
 }
 @media (max-width: 900px) {
   .search-directory-groups {
+    grid-auto-flow: row;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

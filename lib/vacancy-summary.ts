@@ -55,7 +55,8 @@ export function vacancySummary(job: Pick<Vacancy, 'description' | 'facts'>) {
             benefits.join(' · ').length + next.length > 260
           )
             break;
-          benefits.push(next);
+          // An item's own ";" or "," would sit beside the separator: "; ·".
+          benefits.push(next.replace(/[\s;,.]+$/, ''));
           if (benefits.length === 3) break;
         }
         value = benefits.join(' · ');

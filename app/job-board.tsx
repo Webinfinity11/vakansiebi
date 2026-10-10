@@ -28,11 +28,21 @@ import {
   subcategoryChoices,
 } from '@/lib/subcategories';
 import { SalaryFilter } from './salary-filter';
-import AdvancedFilterControls, {
+import {
   advancedDefaults,
   employmentLabels,
   type AdvancedFilters,
 } from './advanced-filters';
+/* The rate as one tap per option; "all" needs no word for the rate twice. */
+const employmentChoices = (
+  Object.entries(employmentLabels) as [AdvancedFilters['employment'], string][]
+).map(
+  ([key, label]) =>
+    [
+      key,
+      key === 'all' ? 'ყველა' : key === 'daily' ? 'დღიური სამუშაო' : label,
+    ] as const,
+);
 import type { SearchMeta, FilterKey } from '@/lib/server/search-plan';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -104,7 +114,7 @@ import { ShortcutMark } from './shortcut-mark';
 import { useVacancyActivity } from './use-vacancy-activity';
 import type { SearchFilters } from '@/lib/personal-space';
 import type { PublicJob as Job } from '@/lib/types';
-import { categories, listingSourceNames } from '@/lib/types';
+import { categories } from '@/lib/types';
 import { cityOptions } from '@/lib/cities';
 
 const categoryIcons = {
@@ -439,6 +449,17 @@ export default function JobBoard({
         ]),
       ) as AdvancedFilters,
   );
+  /* Descriptions are searched for the word they were asked for. Title matches
+     lead that list anyway, so there is no way back to offer; a new word starts
+     with titles again and offers the descriptions once more. */
+  const deepQuery = useRef(initialSearch.query.trim());
+  useEffect(() => {
+    if (query.trim() === deepQuery.current) return;
+    deepQuery.current = query.trim();
+    setAdvanced((current) =>
+      current.deep ? { ...current, deep: false } : current,
+    );
+  }, [query]);
   const currentSearch: SearchFilters = {
     query,
     city,
@@ -1247,14 +1268,14 @@ export default function JobBoard({
       prefix === 'mobile'
         ? setMobileDraft({ ...draft, city: value })
         : setCity(value);
-    const changeSource = (value: string) =>
-      prefix === 'mobile'
-        ? setMobileDraft({ ...draft, source: value })
-        : setSource(value);
     const changePaid = (value: boolean) =>
       prefix === 'mobile'
         ? setMobileDraft({ ...draft, paid: value })
         : setPaid(value);
+    const changeAdvanced = (next: Partial<AdvancedFilters>) =>
+      prefix === 'mobile'
+        ? setMobileDraft({ ...draft, ...next })
+        : setAdvanced({ ...advanced, ...next });
     const changeRemote = (value: boolean) =>
       prefix === 'mobile'
         ? setMobileDraft({ ...draft, remote: value })
@@ -1276,9 +1297,6 @@ export default function JobBoard({
             </button>
           </div>
         )}
-        {prefix !== 'mobile' && (
-          <SalaryFilter prefix={prefix} value={draft} onChange={setAdvanced} />
-        )}
         <div className="filter-primary-city">
           <h3>ქალაქი</h3>
           <Choice
@@ -1289,6 +1307,17 @@ export default function JobBoard({
             options={cities}
           />
         </div>
+        {/* Ordered by use (filter events): the city, then pay, which with
+            "pay stated" is used more than the field. */}
+        <SalaryFilter
+          prefix={prefix}
+          value={draft}
+          onChange={(next) =>
+            prefix === 'mobile'
+              ? setMobileDraft({ ...draft, ...next })
+              : setAdvanced(next)
+          }
+        />
         {prefix === 'mobile' ? (
           <div className="filter-primary-category">
             <h3>მიმართულება</h3>
@@ -1302,9 +1331,7 @@ export default function JobBoard({
           </div>
         ) : (
           <>
-            <h3>
-              მიმართულება <small>· არჩეული პირობებით</small>
-            </h3>
+            <h3>მიმართულება</h3>
             <div className="category-options">
               {(['ყველა', ...orderedCategories] as const)
                 .filter(
@@ -1463,62 +1490,32 @@ export default function JobBoard({
           />
           ხელფასი მითითებულია
         </label>
-        <label
-          className="filter-employment-label"
-          htmlFor={`${prefix}-employment`}
-        >
-          განაკვეთი
+        <label className="check-row" htmlFor={`${prefix}-entry-level`}>
+          <Checkbox
+            id={`${prefix}-entry-level`}
+            checked={draft.entryLevel}
+            onCheckedChange={(entryLevel) => changeAdvanced({ entryLevel })}
+          />
+          გამოცდილების გარეშე
         </label>
-        <div className="filter-employment">
-          <SelectField
-            id={`${prefix}-employment`}
-            value={draft.employment}
-            onChange={(next) => {
-              const employment = next as AdvancedFilters['employment'];
-              if (prefix === 'mobile') setMobileDraft({ ...draft, employment });
-              else setAdvanced({ ...advanced, employment });
-            }}
-            options={Object.entries(employmentLabels).map(([key, label]) => ({
-              value: key,
-              label,
-            }))}
-          />
-        </div>
-        {prefix === 'mobile' && (
-          <SalaryFilter
-            prefix={prefix}
-            value={draft}
-            onChange={(next) => setMobileDraft({ ...draft, ...next })}
-          />
-        )}
-        <details className="filter-extra">
-          <summary>
-            დამატებითი პირობები
-            {draft.entryLevel || draft.postedWithin || draft.source !== 'ყველა'
-              ? ' · არჩეულია'
-              : ''}
-            <ChevronDown className="disclosure-chevron" aria-hidden="true" />
-          </summary>
-          <AdvancedFilterControls
-            prefix={prefix}
-            showEmployment={false}
-            showSalary={false}
-            value={draft}
-            onChange={(next) =>
-              prefix === 'mobile'
-                ? setMobileDraft({ ...draft, ...next })
-                : setAdvanced(next)
-            }
-          />
-          <h3>პირველწყარო</h3>
-          <Choice
-            label="ყველა წყარო"
-            mobile={prefix === 'mobile'}
-            value={draft.source}
-            onChange={changeSource}
-            options={Object.values(listingSourceNames)}
-          />
-        </details>
+        {/* Every option in sight, one tap each, as the salary amounts are. */}
+        <fieldset className="filter-chips">
+          <legend>განაკვეთი</legend>
+          {employmentChoices.map(([employment, label]) => (
+            <button
+              key={employment}
+              type="button"
+              className="ds-chip"
+              aria-pressed={draft.employment === employment}
+              onClick={() => changeAdvanced({ employment })}
+            >
+              {label}
+            </button>
+          ))}
+        </fieldset>
+        <p className="filter-help">
+          პირობები იფილტრება განცხადებაში მითითებული ინფორმაციით.
+        </p>
         <div className="source-note">
           <ShieldCheck size={20} />
           <p>იპოვე აქ. დეტალები გადაამოწმე პირველწყაროზე.</p>
@@ -1790,22 +1787,12 @@ export default function JobBoard({
                       !!query.trim() &&
                       (searchMeta?.corrected ||
                         searchMeta?.widened ||
-                        advanced.deep ||
                         (searchMeta?.wider ?? 0) > total) && (
                         <p className="search-scope">
                           {searchMeta?.corrected ? (
                             `„${searchMeta.corrected.from}“ ვერ მოიძებნა — ნაჩვენებია „${searchMeta.corrected.to}“.`
                           ) : searchMeta?.widened ? (
                             'სათაურებში ვერ მოიძებნა — ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.'
-                          ) : advanced.deep ? (
-                            <button
-                              className="ds-btn ds-btn--ghost ds-btn--sm"
-                              onClick={() =>
-                                setAdvanced({ ...advanced, deep: false })
-                              }
-                            >
-                              აღწერებშიც ვეძებთ — მხოლოდ სათაურებზე დაბრუნება
-                            </button>
                           ) : searchMeta?.wider && searchMeta.wider > total ? (
                             <button
                               className="ds-btn ds-btn--ghost ds-btn--sm"
@@ -2297,7 +2284,11 @@ export default function JobBoard({
           </div>
         </div>
       </main>
-      <SiteFooter landing={landing} onSaved={openSaved} />
+      <SiteFooter
+        landing={landing}
+        landingTotal={resultsPending ? undefined : total}
+        onSaved={openSaved}
+      />
       {saveNotice && !feedback && !filtersOpen && (
         <div className="feedback-toast save-confirmation">
           <output>
