@@ -24,7 +24,13 @@ export const groupDigits = (value: number) =>
    thousands, all new or none new, pay stated or not. The employer names are
    left to the caller, which links them; `employers` only says how they are
    introduced. */
-export function factsText(facts: LandingFacts, total = facts.total) {
+export function factsText(
+  facts: LandingFacts,
+  total = facts.total,
+  /** The page's keyword phrase ("ავტოსამრეცხაოს ვაკანსიები"), named once more
+      in the figures so the text says what the page is about, not "these". */
+  name = '',
+) {
   if (total <= 0)
     return {
       lead: 'ამ ეტაპზე აქტიური განცხადება არ არის; ახალი ვაკანსიები სიაში გამოქვეყნებისთანავე გამოჩნდება.',
@@ -34,14 +40,16 @@ export function factsText(facts: LandingFacts, total = facts.total) {
   // The figures are held for half an hour; the count on screen is live.
   const fresh = Math.min(facts.fresh, total);
   const lead =
+    (name ? `${name}: ` : '') +
     `ახლა აქტიურია ${groupDigits(total)} განცხადება` +
     (fresh === 0
       ? '.'
       : fresh === total
         ? total === 1
-          ? ', რომელიც ბოლო 7 დღეში დაემატა.'
-          : ', ყველა მათგანი ბოლო 7 დღეში დაემატა.'
-        : `, მათ შორის ${groupDigits(fresh)} ბოლო 7 დღეში დაემატა.`);
+          ? ', რომელიც ბოლო კვირაში დაემატა.'
+          : ', ყველა ბოლო კვირაში დაემატა.'
+        : // The count last: "მათ შორის 1 ბოლო 7 დღეში" read as one run of numbers.
+          `, ბოლო კვირაში დაემატა ${groupDigits(fresh)}.`);
   const { salary } = facts;
   const per = salary?.period === 'day' ? 'დღეში' : 'თვეში';
   // "1 275 ₾" is a statistic; a reader quotes pay in round figures.

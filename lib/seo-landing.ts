@@ -20,32 +20,32 @@ export const traits = {
   remote: {
     param: ['remote', 'true'],
     before: 'დისტანციური',
-    copy: 'დისტანციური სამსახური და ონლაინ სამუშაო სახლიდან სხვადასხვა სფეროში. შეადარე ვაკანსიები და გადაამოწმე განცხადებაში, შესაძლებელია თუ არა სახლიდან გაუსვლელად მუშაობა და რა გრაფიკს გთავაზობს დამსაქმებელი.',
+    copy: 'ონლაინ სამუშაო სახლიდან, სხვადასხვა სფეროში. განცხადებაში გადაამოწმე, შესაძლებელია თუ არა სახლიდან გაუსვლელად მუშაობა და რა გრაფიკს გთავაზობს დამსაქმებელი.',
   },
   daily: {
     param: ['salaryPeriod', 'day'],
     after: 'დღიური ანაზღაურებით',
-    copy: 'იპოვე სამუშაო დღიური ანაზღაურებით. შეადარე დღიურად ან ცვლის მიხედვით მითითებული თანხა, სამუშაო საათები და მდებარეობა. თანხის გამოთვლის პერიოდი ყოველთვის არ ნიშნავს ყოველდღიურ ჩარიცხვას, ამიტომ გადახდის გრაფიკი განცხადებაში გადაამოწმე.',
+    copy: 'შეადარე დღიურად ან ცვლის მიხედვით მითითებული თანხა, სამუშაო საათები და მდებარეობა. თანხის გამოთვლის პერიოდი ყოველთვის არ ნიშნავს ყოველდღიურ ჩარიცხვას, ამიტომ გადახდის გრაფიკი განცხადებაში გადაამოწმე.',
   },
   entry: {
     param: ['entryLevel', 'true'],
     after: 'გამოცდილების გარეშე',
-    copy: 'ვაკანსიები გამოცდილების გარეშე პირველი სამსახურისთვის ან ახალი პროფესიის დასაწყებად. შეადარე დამწყებთათვის განკუთვნილი პოზიციები, სადაც გამოცდილება სავალდებულო არ არის ან სწავლება ადგილზეა გათვალისწინებული.',
+    copy: 'შესაფერისია პირველი სამსახურისთვის ან ახალი პროფესიის დასაწყებად: დამსაქმებელი გამოცდილებას არ ითხოვს ან სწავლებას ადგილზე გთავაზობს.',
   },
   paid: {
     param: ['paid', 'true'],
     after: 'მითითებული ხელფასით',
-    copy: 'მხოლოდ ის განცხადებები, რომლებშიც დამსაქმებელმა ანაზღაურება მიუთითა. შეგიძლია შეადარო შემოთავაზებული ხელფასები, სანამ განაცხადს გაგზავნი.',
+    copy: 'სიაშია მხოლოდ ის განცხადებები, რომლებშიც დამსაქმებელმა ანაზღაურება მიუთითა, ამიტომ ხელფასებს განაცხადის გაგზავნამდე შეადარებ.',
   },
   'part-time': {
     param: ['employment', 'part-time'],
     after: 'ნახევარ განაკვეთზე',
-    copy: 'სამსახური ნახევარ განაკვეთზე: შეადარე სამუშაო საათები, ანაზღაურება და მდებარეობა. განცხადებაში გადაამოწმე, რამდენად შეძლებ გრაფიკის სწავლასთან ან სხვა საქმიანობასთან შეთავსებას.',
+    copy: 'შეადარე სამუშაო საათები, ანაზღაურება და მდებარეობა. განცხადებაში გადაამოწმე, რამდენად შეძლებ გრაფიკის სწავლასთან ან სხვა საქმიანობასთან შეთავსებას.',
   },
   internship: {
     param: ['employment', 'internship'],
     before: 'სტაჟირების',
-    copy: 'სტუდენტებისა და დამწყებთათვის განკუთვნილი სტაჟირებისა და პრაქტიკის პროგრამები. გაეცანი ანაზღაურებისა და მონაწილეობის პირობებს შესაბამის განცხადებაში.',
+    copy: 'სტუდენტებისა და დამწყებთათვის განკუთვნილი სტაჟირებისა და პრაქტიკის პროგრამები. ანაზღაურებისა და მონაწილეობის პირობები თითოეულ განცხადებაშია.',
   },
 } as const satisfies Record<
   string,
@@ -406,23 +406,26 @@ export function searchHeading(filters: SearchFilters): string | null {
 /* Two sentences of the site's own, so the page answers the search rather than
    repeating its title: a list with nothing to read is the thin page Google is
    right to ignore. */
+/** The list's own name as a sentence can open with it: the heading, without
+    the country that every unnarrowed heading ends with. */
+export function landingName(landing: Choice) {
+  return landingHeading(landing).replace(' საქართველოში', '');
+}
 export function landingCopy(landing: Choice) {
   if (landing.subcategory && landing.category)
-    return `${landingHeading(landing)}: ${genitive[landing.category]} ვაკანსიებიდან მხოლოდ ამ მიმართულების აქტიური განცხადებები. სია ყოველდღიურად ახლდება. შეადარე ანაზღაურება, გრაფიკი და პირობები.`;
+    return `${landingHeading(landing)}: ${genitive[landing.category]} ვაკანსიებიდან მხოლოდ ${subcategoryGenitive[landing.subcategory]} აქტიური განცხადებები. სია ყოველდღიურად ახლდება. შეადარე ანაზღაურება, გრაფიკი და პირობები.`;
   if (landing.role) {
     const role = roleFor(landing.role);
     const where = landing.city ? cityIn(landing.city) : 'საქართველოს მასშტაბით';
-    return `${role?.genitive ?? landing.role} აქტიური ვაკანსიები ${where}. სია ყოველდღიურად ახლდება ახალი განცხადებებით. შეადარე ანაზღაურება, გრაფიკი და პირობები.`;
+    return `${role?.genitive ?? landing.role} აქტიური ვაკანსიები ${where}. სია ყოველდღიურად ივსება ახალი განცხადებებით. შეადარე ანაზღაურება, გრაფიკი და პირობები.`;
   }
+  // The heading names the list; the condition's own words follow and never restate it.
   if (landing.trait)
-    return (
-      (landing.category || landing.city ? `${landingHeading(landing)}. ` : '') +
-      traits[landing.trait].copy
-    );
+    return `${landingHeading(landing)}. ${traits[landing.trait].copy}`;
   if (landing.category && landing.city)
-    return `${genitive[landing.category]} ვაკანსიები ${cityIn(landing.city)}. სია ყოველდღიურად ახლდება ახალი აქტიური განცხადებებით.`;
+    return `${genitive[landing.category]} ვაკანსიები ${cityIn(landing.city)}. სია ყოველდღიურად ივსება ახალი განცხადებებით.`;
   if (landing.category)
-    return `${genitive[landing.category]} ვაკანსიები საქართველოში, აქტიური განცხადებები ერთ სიაში. შეადარე ანაზღაურება, სამუშაოს ადგილმდებარეობა და პირობები.`;
+    return `${genitive[landing.category]} აქტიური ვაკანსიები საქართველოში ერთ სიაში. შეადარე ანაზღაურება, სამუშაოს ადგილმდებარეობა და პირობები.`;
   return `ვაკანსიები ${cityIn(landing.city!)}: მოძებნე სამსახური პროფესიის, ანაზღაურებისა და სამუშაო გრაფიკის მიხედვით. შეადარე აქტიური განცხადებები და გაეცანი დამსაქმებლის პირობებს.`;
 }
 /* The snippet under the link: what the list is and how many it holds, within the

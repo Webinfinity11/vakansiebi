@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import Link from 'next/link';
-import { landingCopy, type Landing } from '@/lib/seo-landing';
+import { landingCopy, landingName, type Landing } from '@/lib/seo-landing';
 import { factsText, type LandingFacts } from '@/lib/landing-facts';
 
 type Seed = { path: string; facts: Promise<LandingFacts | null> };
@@ -45,7 +45,11 @@ export function LandingSummary({
       {landingCopy(landing)}
       <Suspense fallback={null}>
         {seed?.path === landing.path ? (
-          <Seeded facts={seed.facts} total={total} />
+          <Seeded
+            facts={seed.facts}
+            total={total}
+            name={landingName(landing)}
+          />
         ) : (
           <Fetched key={landing.path} landing={landing} total={total} />
         )}
@@ -60,6 +64,7 @@ function Seeded({
 }: {
   facts: Promise<LandingFacts | null>;
   total?: number;
+  name: string;
 }) {
   const value = use(facts);
   return value ? <Facts facts={value} {...props} /> : null;
@@ -75,17 +80,21 @@ function Fetched({ landing, total }: { landing: Landing; total?: number }) {
       .then(setFacts, () => {});
     return () => controller.abort();
   }, [path]);
-  return facts ? <Facts facts={facts} total={total} /> : null;
+  return facts ? (
+    <Facts facts={facts} total={total} name={landingName(landing)} />
+  ) : null;
 }
 
 function Facts({
   facts,
   total = facts.total,
+  name,
 }: {
   facts: LandingFacts;
   total?: number;
+  name: string;
 }) {
-  const text = factsText(facts, total);
+  const text = factsText(facts, total, name);
   const employers = total > 0 ? facts.employers.slice(0, 3) : [];
   return (
     <>

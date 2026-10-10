@@ -113,13 +113,13 @@ void test('a landing page names itself the way a reader would say it', () => {
   );
   assert.equal(
     landingCopy(landingFor(new URLSearchParams('category=ადმინისტრაცია'))!),
-    'ადმინისტრაციული ვაკანსიები საქართველოში, აქტიური განცხადებები ერთ სიაში. შეადარე ანაზღაურება, სამუშაოს ადგილმდებარეობა და პირობები.',
+    'ადმინისტრაციული აქტიური ვაკანსიები საქართველოში ერთ სიაში. შეადარე ანაზღაურება, სამუშაოს ადგილმდებარეობა და პირობები.',
   );
   assert.equal(
     landingCopy(
       landingFor(new URLSearchParams('category=სილამაზე&city=ბათუმი'))!,
     ),
-    'სილამაზის სფეროს ვაკანსიები ბათუმში. სია ყოველდღიურად ახლდება ახალი აქტიური განცხადებებით.',
+    'სილამაზის სფეროს ვაკანსიები ბათუმში. სია ყოველდღიურად ივსება ახალი განცხადებებით.',
   );
 });
 void test('the list on screen claims the name only when it is exactly that list', () => {

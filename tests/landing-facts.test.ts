@@ -17,7 +17,7 @@ void test('the figures read as Georgian whatever the list holds', () => {
   const full = factsText(facts());
   assert.equal(
     full.lead,
-    'ახლა აქტიურია 249 განცხადება, მათ შორის 14 ბოლო 7 დღეში დაემატა.',
+    'ახლა აქტიურია 249 განცხადება, ბოლო კვირაში დაემატა 14.',
   );
   assert.equal(
     full.salary,
@@ -36,11 +36,11 @@ void test('the figures read as Georgian whatever the list holds', () => {
   );
   assert.equal(
     factsText(facts({ fresh: 30 }), 12).lead,
-    'ახლა აქტიურია 12 განცხადება, ყველა მათგანი ბოლო 7 დღეში დაემატა.',
+    'ახლა აქტიურია 12 განცხადება, ყველა ბოლო კვირაში დაემატა.',
   );
   assert.equal(
     factsText(facts({ fresh: 1 }), 1).lead,
-    'ახლა აქტიურია 1 განცხადება, რომელიც ბოლო 7 დღეში დაემატა.',
+    'ახლა აქტიურია 1 განცხადება, რომელიც ბოლო კვირაში დაემატა.',
   );
   assert.equal(
     factsText(
@@ -78,6 +78,6 @@ void test('the figures read as Georgian whatever the list holds', () => {
   );
   assert.equal(
     factsText(facts(), 2500).lead,
-    'ახლა აქტიურია 2 500 განცხადება, მათ შორის 14 ბოლო 7 დღეში დაემატა.',
+    'ახლა აქტიურია 2 500 განცხადება, ბოლო კვირაში დაემატა 14.',
   );
 });
