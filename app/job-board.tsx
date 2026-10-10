@@ -1761,34 +1761,40 @@ export default function JobBoard({
                     </p>
                     {/* A word is looked for in what a vacancy calls itself. The
                         descriptions are one line away, with the number they add. */}
-                    {!resultsPending && !savedOnly && !!query.trim() && (
-                      <p className="search-scope">
-                        {searchMeta?.corrected ? (
-                          `„${searchMeta.corrected.from}“ ვერ მოიძებნა — ნაჩვენებია „${searchMeta.corrected.to}“.`
-                        ) : searchMeta?.widened ? (
-                          'სათაურებში ვერ მოიძებნა — ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.'
-                        ) : advanced.deep ? (
-                          <button
-                            className="ds-btn ds-btn--ghost ds-btn--sm"
-                            onClick={() =>
-                              setAdvanced({ ...advanced, deep: false })
-                            }
-                          >
-                            აღწერებშიც ვეძებთ — მხოლოდ სათაურებზე დაბრუნება
-                          </button>
-                        ) : searchMeta?.wider && searchMeta.wider > total ? (
-                          <button
-                            className="ds-btn ds-btn--ghost ds-btn--sm"
-                            onClick={() =>
-                              setAdvanced({ ...advanced, deep: true })
-                            }
-                          >
-                            აღწერებშიც მოძებნე — კიდევ{' '}
-                            {searchMeta.wider - total} ვაკანსია
-                          </button>
-                        ) : null}
-                      </p>
-                    )}
+                    {!resultsPending &&
+                      !savedOnly &&
+                      !!query.trim() &&
+                      (searchMeta?.corrected ||
+                        searchMeta?.widened ||
+                        advanced.deep ||
+                        (searchMeta?.wider ?? 0) > total) && (
+                        <p className="search-scope">
+                          {searchMeta?.corrected ? (
+                            `„${searchMeta.corrected.from}“ ვერ მოიძებნა — ნაჩვენებია „${searchMeta.corrected.to}“.`
+                          ) : searchMeta?.widened ? (
+                            'სათაურებში ვერ მოიძებნა — ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.'
+                          ) : advanced.deep ? (
+                            <button
+                              className="ds-btn ds-btn--ghost ds-btn--sm"
+                              onClick={() =>
+                                setAdvanced({ ...advanced, deep: false })
+                              }
+                            >
+                              აღწერებშიც ვეძებთ — მხოლოდ სათაურებზე დაბრუნება
+                            </button>
+                          ) : searchMeta?.wider && searchMeta.wider > total ? (
+                            <button
+                              className="ds-btn ds-btn--ghost ds-btn--sm"
+                              onClick={() =>
+                                setAdvanced({ ...advanced, deep: true })
+                              }
+                            >
+                              აღწერებშიც მოძებნე — კიდევ{' '}
+                              {searchMeta.wider - total} ვაკანსია
+                            </button>
+                          ) : null}
+                        </p>
+                      )}
                   </div>
                 </div>
                 <div className="results-tools">
