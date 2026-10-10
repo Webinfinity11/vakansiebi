@@ -141,10 +141,10 @@ export default async function BusinessPage() {
               <Building2 size={15} aria-hidden="true" /> JOBX ბიზნესისთვის
             </span>
             <h1 id="business-title">
-              კარგ გუნდს
-              <br />
-              კარგი ადამიანები
-              <br />
+              {/* The spaces keep the words apart in the heading's text, which
+                  is what search results and screen readers read. */}
+              კარგ გუნდს <br />
+              კარგი ადამიანები <br />
               <span>ქმნიან.</span>
             </h1>
             <p>

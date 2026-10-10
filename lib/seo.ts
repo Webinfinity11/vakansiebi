@@ -12,7 +12,7 @@ import { vacancySummary } from './vacancy-summary';
 export const siteUrl = 'https://jobx.ge';
 export const homeTitle = 'ვაკანსიები საქართველოში — სამსახურის ძებნა | JOBX';
 export const homeDescription =
-  'ვაკანსიები თბილისში, ბათუმში, ქუთაისსა და საქართველოს სხვა ქალაქებში. მოძებნე სამსახური პროფესიის, ხელფასისა და გრაფიკის მიხედვით — მათ შორის დღიური ანაზღაურებით და დისტანციურად.';
+  'ვაკანსიები თბილისში, ბათუმში, ქუთაისსა და სხვა ქალაქებში. მოძებნე სამსახური პროფესიის, ხელფასისა და გრაფიკის მიხედვით, დისტანციურადაც.';
 /* The picture a messenger shows for any page of the site, built by
    scripts/build-og-image.ts. Every page that writes its own openGraph block has
    to name it: a page-level block replaces the layout's, images and all, which is
@@ -104,6 +104,97 @@ const regions: Record<string, string> = {
   ბორჯომი: 'სამცხე-ჯავახეთი',
   ოზურგეთი: 'გურია',
 };
+/* Towns and resorts outside the filter list, with their region. A posting's
+   city field names them plainly ("ქობულეთი", "გურია >> ურეკი"), and before this
+   they were dropped: a vacancy in Kobuleti told Google only "Georgia". */
+const towns: Record<string, string> = {
+  მარნეული: 'ქვემო ქართლი',
+  ბოლნისი: 'ქვემო ქართლი',
+  გარდაბანი: 'ქვემო ქართლი',
+  თეთრიწყარო: 'ქვემო ქართლი',
+  დმანისი: 'ქვემო ქართლი',
+  წალკა: 'ქვემო ქართლი',
+  ყვარელი: 'კახეთი',
+  გურჯაანი: 'კახეთი',
+  საგარეჯო: 'კახეთი',
+  ახმეტა: 'კახეთი',
+  დედოფლისწყარო: 'კახეთი',
+  სიღნაღი: 'კახეთი',
+  წნორი: 'კახეთი',
+  ლაგოდეხი: 'კახეთი',
+  ხაშური: 'შიდა ქართლი',
+  ქარელი: 'შიდა ქართლი',
+  დუშეთი: 'მცხეთა-მთიანეთი',
+  გუდაური: 'მცხეთა-მთიანეთი',
+  ყაზბეგი: 'მცხეთა-მთიანეთი',
+  სტეფანწმინდა: 'მცხეთა-მთიანეთი',
+  თიანეთი: 'მცხეთა-მთიანეთი',
+  ჟინვალი: 'მცხეთა-მთიანეთი',
+  ზესტაფონი: 'იმერეთი',
+  სამტრედია: 'იმერეთი',
+  წყალტუბო: 'იმერეთი',
+  ხონი: 'იმერეთი',
+  ვანი: 'იმერეთი',
+  თერჯოლა: 'იმერეთი',
+  საჩხერე: 'იმერეთი',
+  ჭიათურა: 'იმერეთი',
+  ტყიბული: 'იმერეთი',
+  ბაღდათი: 'იმერეთი',
+  ხარაგაული: 'იმერეთი',
+  ქობულეთი: 'აჭარა',
+  ხელვაჩაური: 'აჭარა',
+  ხულო: 'აჭარა',
+  ქედა: 'აჭარა',
+  შუახევი: 'აჭარა',
+  ჩაქვი: 'აჭარა',
+  გონიო: 'აჭარა',
+  სარფი: 'აჭარა',
+  ციხისძირი: 'აჭარა',
+  მახინჯაური: 'აჭარა',
+  ლანჩხუთი: 'გურია',
+  ურეკი: 'გურია',
+  შეკვეთილი: 'გურია',
+  სენაკი: 'სამეგრელო-ზემო სვანეთი',
+  მარტვილი: 'სამეგრელო-ზემო სვანეთი',
+  ხობი: 'სამეგრელო-ზემო სვანეთი',
+  წალენჯიხა: 'სამეგრელო-ზემო სვანეთი',
+  ჩხოროწყუ: 'სამეგრელო-ზემო სვანეთი',
+  აბაშა: 'სამეგრელო-ზემო სვანეთი',
+  ანაკლია: 'სამეგრელო-ზემო სვანეთი',
+  მესტია: 'სამეგრელო-ზემო სვანეთი',
+  ბაკურიანი: 'სამცხე-ჯავახეთი',
+  ახალქალაქი: 'სამცხე-ჯავახეთი',
+  ადიგენი: 'სამცხე-ჯავახეთი',
+  ასპინძა: 'სამცხე-ჯავახეთი',
+  ნინოწმინდა: 'სამცხე-ჯავახეთი',
+  ამბროლაური: 'რაჭა-ლეჩხუმი და ქვემო სვანეთი',
+  ონი: 'რაჭა-ლეჩხუმი და ქვემო სვანეთი',
+  ცაგერი: 'რაჭა-ლეჩხუმი და ქვემო სვანეთი',
+  ლენტეხი: 'რაჭა-ლეჩხუმი და ქვემო სვანეთი',
+};
+/* A city field that names only a region still says where the work is. */
+const regionNames: Record<string, string> = {
+  იმერეთი: 'იმერეთი',
+  კახეთი: 'კახეთი',
+  გურია: 'გურია',
+  აჭარა: 'აჭარა',
+  'აჭარის ავტონომიური რესპუბლიკა': 'აჭარა',
+  'სამცხე-ჯავახეთი': 'სამცხე-ჯავახეთი',
+  'სამეგრელო-ზემო სვანეთი': 'სამეგრელო-ზემო სვანეთი',
+  სამეგრელო: 'სამეგრელო-ზემო სვანეთი',
+  'ზემო სვანეთი': 'სამეგრელო-ზემო სვანეთი',
+  'ქვემო ქართლი': 'ქვემო ქართლი',
+  'შიდა ქართლი': 'შიდა ქართლი',
+  'მცხეთა-მთიანეთი': 'მცხეთა-მთიანეთი',
+  'რაჭა-ლეჩხუმი და ქვემო სვანეთი': 'რაჭა-ლეჩხუმი და ქვემო სვანეთი',
+};
+const wordIn = (text: string, word: string) =>
+  new RegExp(`(^|[^ა-ჰ])${word}($|[^ა-ჰ])`).test(text);
+// Exactly one town in the field; two is not a place, it is a guess.
+const townsIn = (city: string) => {
+  const found = Object.keys(towns).filter((town) => wordIn(city, town));
+  return found.length === 1 ? found : [];
+};
 /* A street address is published only when the posting states one for a single workplace:
    something with a street word or a house number, never a bare city or a region. */
 const streetAddress = (value: string) =>
@@ -111,16 +202,19 @@ const streetAddress = (value: string) =>
   /(ქუჩ|გამზირ|ხეივან|შესახვევ|ჩიხ|მოედან|გზატკეცილ|დასახლებ|\d)/u.test(value)
     ? value
     : '';
-const place = (city: string, street = '') => ({
-  '@type': 'Place',
-  address: {
-    '@type': 'PostalAddress',
-    ...(street ? { streetAddress: street } : {}),
-    ...(city ? { addressLocality: city } : {}),
-    ...(regions[city] ? { addressRegion: regions[city] } : {}),
-    addressCountry: 'GE',
-  },
-});
+const place = (city: string, street = '', region = '') => {
+  const addressRegion = regions[city] || towns[city] || region;
+  return {
+    '@type': 'Place',
+    address: {
+      '@type': 'PostalAddress',
+      ...(street ? { streetAddress: street } : {}),
+      ...(city ? { addressLocality: city } : {}),
+      ...(addressRegion ? { addressRegion } : {}),
+      addressCountry: 'GE',
+    },
+  };
+};
 /* Employment type as the posting states it, in any of the spellings sources use. Nothing is
    assumed: a posting that says nothing gets no type. */
 function employmentOf(job: PublicJob): string {
@@ -166,11 +260,14 @@ export function jobPosting(
       address.normalize('NFKC').toLowerCase(),
     ),
   );
+  const town = townsIn(job.city.normalize('NFKC').trim());
   const working = located.length
     ? located
-    : addressCities.length
-      ? addressCities
-      : citiesInText(job);
+    : town.length
+      ? town
+      : addressCities.length
+        ? addressCities
+        : citiesInText(job);
   /* A remote vacancy on a Georgian board is open to people in Georgia; that is
      the one requirement the source does support, and without it Google refuses
      a telecommute posting outright. An office city, where the posting names one,
@@ -211,7 +308,13 @@ export function jobPosting(
         }
       : {
           jobLocation: (working.length ? working : ['']).map((city) =>
-            place(city, street),
+            place(
+              city,
+              street,
+              city
+                ? ''
+                : (regionNames[job.city.normalize('NFKC').trim()] ?? ''),
+            ),
           ),
         }),
     ...(employment ? { employmentType: employment } : {}),

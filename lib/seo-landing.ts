@@ -358,12 +358,23 @@ export function landingCopy(landing: Choice) {
     return `${genitive[landing.category]} ვაკანსიები საქართველოში — აქტიური განცხადებები ერთ სიაში. შეადარე ანაზღაურება, სამუშაოს ადგილმდებარეობა და პირობები, შემდეგ კი გაეცანი განცხადებას პირველწყაროზე.`;
   return `ვაკანსიები ${cityIn(landing.city!)} — მოძებნე სამსახური პროფესიის, ანაზღაურებისა და სამუშაო გრაფიკის მიხედვით. შეადარე აქტიური განცხადებები და გაეცანი დამსაქმებლის პირობებს.`;
 }
-/* Most copy already opens with the heading's own words; prefixing the heading again made
-   the description say the same sentence twice, and Google replaced it with the nav links. */
-export function landingDescription(landing: Choice) {
+/* The snippet under the link: what the list is and how many it holds, within the
+   ~160 characters a result shows. The page copy ran to 235 and repeated its own
+   heading ("ბუღალტერის ვაკანსიები საქართველოში. ბუღალტერის აქტიური ვაკანსიები…"),
+   so the cut fell mid-sentence and the count — the reason to click — was absent. */
+export const descriptionLimit = 160;
+export function landingDescription(landing: Choice, count?: number) {
   const heading = landingHeading(landing);
-  const copy = landingCopy(landing);
-  return (copy.includes(heading) ? copy : `${heading}. ${copy}`).slice(0, 300);
+  const lead = count
+    ? `${heading}: ${new Intl.NumberFormat('ka-GE').format(count)} აქტიური განცხადება.`
+    : `${heading}.`;
+  for (const tail of [
+    ' სია ყოველდღიურად ახლდება — შეადარე ანაზღაურება, გრაფიკი და პირობები.',
+    ' სია ყოველდღიურად ახლდება.',
+    '',
+  ])
+    if ((lead + tail).length <= descriptionLimit) return lead + tail;
+  return lead;
 }
 
 /** Whether the list on screen is exactly this landing page, and may name itself. */

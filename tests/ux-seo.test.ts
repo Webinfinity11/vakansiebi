@@ -169,6 +169,29 @@ void test('a vacancy without a city of its own still says where the work is', ()
     'a village outside the list keeps the posting, at country level',
   );
   assert.deepEqual(
+    address(at({ city: 'ქობულეთი', description: 'სამუშაო.' })),
+    ['ქობულეთი'],
+    'a town outside the filter list is still the town',
+  );
+  assert.deepEqual(
+    address(at({ city: 'გურია >> ურეკი', description: 'სამუშაო.' })),
+    ['ურეკი'],
+  );
+  assert.equal(
+    at({ city: 'ქობულეთი', description: 'სამუშაო.' }).jobLocation?.[0].address
+      .addressRegion,
+    'აჭარა',
+  );
+  assert.deepEqual(
+    at({ city: 'იმერეთი', description: 'სამუშაო.' }).jobLocation?.[0].address,
+    {
+      '@type': 'PostalAddress',
+      addressRegion: 'იმერეთი',
+      addressCountry: 'GE',
+    },
+    'a region alone is published as the region',
+  );
+  assert.deepEqual(
     address(
       at({
         city: '',

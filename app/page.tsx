@@ -7,7 +7,11 @@ import { canonicalSearchParams } from '@/lib/search-url';
 import JobBoard from './job-board';
 import { SearchDirectoryProvider } from './search-directory-context';
 import { landingCounts } from '@/lib/server/sitemap-data';
-import { landingFor, landingIndexable } from '@/lib/seo-landing';
+import {
+  landingDescription,
+  landingFor,
+  landingIndexable,
+} from '@/lib/seo-landing';
 import { vacancyPath, safeReturnPath } from '@/lib/vacancy-navigation';
 import { publicJobs } from '@/lib/server/jobs';
 import type { BoardInitial } from '@/lib/board-return-cache';
@@ -75,7 +79,9 @@ export async function generateMetadata({
     const first = Array.isArray(value) ? value[0] : value;
     if (first !== undefined) params.set(key, first);
   }
-  const { title, description, path, index: candidateIndex } = searchSeo(params);
+  const seo = searchSeo(params);
+  const { title, path, index: candidateIndex } = seo;
+  let description = seo.description;
   const base = new URLSearchParams(params);
   base.delete('page');
   const landing = landingFor(base);
@@ -86,6 +92,8 @@ export async function generateMetadata({
       // The same eligibility function is used by the sitemap and footer.
       const result = await boardJobs(params);
       index = landingIndexable(landing, [{ ...landing, count: result.total }]);
+      if (result.total > 0)
+        description = landingDescription(landing, result.total);
     } catch {
       // A temporary database failure must not remove existing pages from search.
     }
