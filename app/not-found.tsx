@@ -7,6 +7,7 @@ export default function NotFound() {
   return (
     <div className="board-shell not-found-shell">
       <PublicHeader />
+      <title>გვერდი ვერ მოიძებნა | JOBX</title>
       <TrackOnce code="not_found" />
       <main className="not-found-main">
         <section className="not-found-card ds-appear">

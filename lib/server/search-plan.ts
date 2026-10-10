@@ -223,13 +223,29 @@ const candidatePredicate = (
         .join(' OR ')})`;
     })
     .join(' AND ');
+/* A word with several spellings is an OR of LIKEs, and the planner prices that
+   OR of trigram scans above reading the table — then spends 0.7–0.9s matching
+   every description ("ბუღალტერი" has seven alternatives; "პროექტ", alone, used
+   the index in 76ms). Each alternative on its own is an index scan, so the
+   candidates come from their union (18ms) and the full predicate confirms them. */
 const hitsCte = (
   name: string,
   groups: MatchGroup[],
   preview: boolean,
   bind: (value: unknown) => string,
-) =>
-  `${name} AS MATERIALIZED (SELECT j.id FROM jobs j WHERE ${preview ? "j.status IN ('pending','published')" : "j.status='published'"} AND j.${preview ? 'draft' : 'published'} IS NOT NULL AND ${candidatePredicate(groups, 'j', preview, bind)})`;
+) => {
+  const visible = `${preview ? "j.status IN ('pending','published')" : "j.status='published'"} AND j.${preview ? 'draft' : 'published'} IS NOT NULL`;
+  // A word with a single spelling is already an index scan and stays in charge.
+  const indexed = groups.filter((group) => group.s === 'document');
+  const spelled =
+    preview || indexed.some((group) => group.a.length === 1)
+      ? undefined
+      : indexed[0];
+  const candidates = spelled
+    ? ` AND j.id IN (${spelled.a.map((term) => `SELECT j.id FROM jobs j WHERE ${visible} AND ${candidatePredicate([{ ...spelled, a: [term] }], 'j', preview, bind)}`).join(' UNION ')})`
+    : '';
+  return `${name} AS MATERIALIZED (SELECT j.id FROM jobs j WHERE ${visible} AND ${candidatePredicate(groups, 'j', preview, bind)}${candidates})`;
+};
 export function searchPlan(
   params: URLSearchParams,
   preview = false,
