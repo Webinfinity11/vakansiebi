@@ -261,6 +261,11 @@ export function searchPlan(
     !filters.deep && groups.some((group) => group.s !== 'document')
       ? matchGroups(filters.query, true)
       : null;
+  /* Widened to the descriptions, the list still leads with what the reader
+     asked for: 32 project managers by title were buried under 200 vacancies
+     that only mention a project somewhere in their text, newest first. */
+  const narrow = filters.deep ? matchGroups(filters.query, false) : [];
+  const titled = narrow.some((group) => group.s !== 'document') ? narrow : null;
   const queryTerms = groups.map((group) => group.a[0].t);
   const searching = groups.length > 0;
   /* What relevance needs from the reader travels as one bound value: the groups
@@ -370,6 +375,9 @@ export function searchPlan(
       searching ? `(${alias}.id IN (SELECT id FROM hits)) AS q_match` : '',
       searching && deeper
         ? `(${alias}.id IN (SELECT id FROM deeper)) AS q_deep`
+        : '',
+      searching && titled
+        ? `(${alias}.id IN (SELECT id FROM titled)) AS q_title`
         : '',
       // A posting without a city field often names the city in its own text.
       cityStemPattern
@@ -548,7 +556,7 @@ export function searchPlan(
      set. The visibility a candidate needs is its own — retired sources, deadlines
      and grouping are decided on the page, where they are decided for every row. */
   const hits = searching
-    ? `${hitsCte('hits', groups, preview, bind)}, ${deeper ? `${hitsCte('deeper', deeper, preview, bind)}, ` : ''}`
+    ? `${hitsCte('hits', groups, preview, bind)}, ${deeper ? `${hitsCte('deeper', deeper, preview, bind)}, ` : ''}${titled ? `${hitsCte('titled', titled, preview, bind)}, ` : ''}`
     : '';
   const cte = `WITH ${hits}searchable AS MATERIALIZED (SELECT j.*,${columns.join(',')}${groupRank} FROM (${extraction('j')} FROM jobs j ${scalarRecord('j')} WHERE ${base} OFFSET 0) j WHERE ${current}), members AS MATERIALIZED (${members})`;
   const kept = grouped ? 'j.group_rank=1' : 'true';
@@ -597,6 +605,8 @@ export function searchPlan(
   // without a sort is the newest list, typed search or not.
   if (searching && params.get('sort') === 'relevance')
     ordering = `j.relevance DESC,${newest}`;
+  if (searching && titled && ['', 'new'].includes(params.get('sort') || ''))
+    ordering = `j.q_title DESC,${ordering}`;
   return {
     where,
     args,
