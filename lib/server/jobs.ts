@@ -1,4 +1,5 @@
 import { confirmInvoice, cancelUnusedInvoice } from './billing';
+import { visitorUrl } from '../visitor-url';
 import {
   indexingTransition,
   publishIndexingNotifications,
@@ -316,6 +317,7 @@ async function loadPublicJobs(
         ? { company: privateListingLabel }
         : {}),
       id: r.id,
+      ...(r.published.url ? { url: visitorUrl(r.published.url) } : {}),
       ...(r.promotion_rank > 0 && r.placement_expires_at
         ? {
             placement: {
@@ -339,7 +341,7 @@ async function loadPublicJobs(
           error: string | null;
         }) => ({
           source: s.source,
-          url: s.url,
+          url: visitorUrl(s.url),
           checkedAt: s.checkedAt,
           health: sourceHealth(s.checkedAt, s.error),
         }),
