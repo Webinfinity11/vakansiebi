@@ -322,6 +322,29 @@ function distance(a: string, b: string) {
  * A tie between two equally close words is broken only by a clear majority in the
  * titles; otherwise nothing is guessed.
  */
+/* The word a correction shows and searches with: the occupation as a reader
+   writes it. A bare stem ("პროგრამისტ") or a transliterated slip ("კურიერრ")
+   finds the same vacancies — both resolve to one role — but reads as a typo of
+   our own in „ნაჩვენებია …“. */
+function wholeWord(word: string): string {
+  const role = roleFor(word);
+  if (!role || !isGeorgianWord(word)) return word;
+  // The group's own spelling this word grew from ("კურიერრ" from "კურიერ").
+  const stem = role.includes(word)
+    ? word
+    : role.find((other) => isGeorgianWord(other) && word.startsWith(other));
+  if (!stem) return word;
+  // A whole word already ends in a vowel: ბუღალტერი, not ბუღალტერია.
+  if (/[აეიოუ]$/.test(stem)) return stem;
+  /* A stem takes its nominative: the group's own one-letter longer form, or -ი
+     if that still names this role. */
+  const nominative =
+    role.find(
+      (other) => other.length === stem.length + 1 && other.startsWith(stem),
+    ) ?? stem + 'ი';
+  return roleFor(nominative) === role ? nominative : word;
+}
+
 export function suggestSearch(
   query: string,
   lexicon: ReadonlyMap<string, number> = new Map(),
@@ -392,7 +415,7 @@ export function suggestSearch(
     )
       return term;
     changed = true;
-    return best.word;
+    return wholeWord(best.word);
   });
   return changed ? corrected.join(' ') : null;
 }
@@ -463,6 +486,10 @@ export function latinGeorgianSearch(
   const terms = searchTerms(query);
   if (!terms.length || !terms.every((term) => /^[a-z]{3,}$/.test(term)))
     return null;
-  const georgian = terms.map(georgianFromLatin).join(' ');
+  const georgian = terms
+    .map(georgianFromLatin)
+    // A known word is kept as typed; a declension the titles use is a word too.
+    .map((word) => (lexicon.has(word) ? word : wholeWord(word)))
+    .join(' ');
   return suggestSearch(georgian, lexicon) ?? georgian;
 }
