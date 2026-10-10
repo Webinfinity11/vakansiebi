@@ -193,3 +193,18 @@ void test('comma-separated occupations match either role without changing ordina
   assert.equal(searchGroups('მზარეული სასტუმრო').length, 2);
   assert.equal(searchGroups('React, Angular').length, 2);
 });
+
+void test('a correction names the occupation as a whole Georgian word', () => {
+  // A bare stem or a transliterated slip finds the same role but reads as our typo.
+  assert.equal(latinGeorgianSearch('kurierr'), 'კურიერი');
+  assert.equal(latinGeorgianSearch('programisti'), 'პროგრამისტი');
+  assert.equal(latinGeorgianSearch('gayidvebii'), 'გაყიდვები');
+  // Latin t, p and k stand for two Georgian letters each.
+  assert.equal(latinGeorgianSearch('asistentii'), 'ასისტენტი');
+  assert.equal(latinGeorgianSearch('parmacevtii'), 'ფარმაცევტი');
+  // A slip on top of the Latin reading.
+  assert.equal(latinGeorgianSearch('bughateri'), 'ბუღალტერი');
+  // Georgian typed in Latin letters is answered in Georgian; English stays English.
+  assert.equal(suggestSearch('bugalterr'), 'ბუღალტერი');
+  assert.equal(suggestSearch('develoepr'), 'developer');
+});

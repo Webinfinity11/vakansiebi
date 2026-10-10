@@ -326,13 +326,33 @@ function distance(a: string, b: string) {
    writes it. A bare stem ("პროგრამისტ") or a transliterated slip ("კურიერრ")
    finds the same vacancies — both resolve to one role — but reads as a typo of
    our own in „ნაჩვენებია …“. */
+/* Latin entries that are Georgian typed in Latin letters, not English: a
+   correction to one of them is shown in Georgian ("bugalter" → ბუღალტერი), while
+   "developer" stays the English word the reader was typing. */
+const transliterated = new Set([
+  'buxgalter',
+  'bugalter',
+  'dacva',
+  'usaptxoeba',
+  'usaprtxoeba',
+]);
 function wholeWord(word: string): string {
   const role = roleFor(word);
+  if (role && transliterated.has(word)) {
+    const reading = georgianFromLatin(word);
+    const [closest] = role
+      .filter(isGeorgianWord)
+      .sort((a, b) => distance(reading, a) - distance(reading, b));
+    return closest ? wholeWord(closest) : word;
+  }
   if (!role || !isGeorgianWord(word)) return word;
-  // The group's own spelling this word grew from ("კურიერრ" from "კურიერ").
+  // The group's longest spelling this word grew from: "გაყიდვებიი" from
+  // "გაყიდვები", not from the bare "გაყიდვ".
   const stem = role.includes(word)
     ? word
-    : role.find((other) => isGeorgianWord(other) && word.startsWith(other));
+    : role
+        .filter((other) => isGeorgianWord(other) && word.startsWith(other))
+        .sort((a, b) => b.length - a.length)[0];
   if (!stem) return word;
   // A whole word already ends in a vowel: ბუღალტერი, not ბუღალტერია.
   if (/[აეიოუ]$/.test(stem)) return stem;
@@ -411,6 +431,9 @@ export function suggestSearch(
       !best ||
       best.score === 0 ||
       (next?.score === best.score &&
+        // Two spellings of one occupation are not a tie between two words.
+        (roleFor(next.word) === undefined ||
+          roleFor(next.word) !== roleFor(best.word)) &&
         (next.weight === Infinity || best.weight < next.weight * 3))
     )
       return term;
@@ -474,6 +497,52 @@ export function georgianFromLatin(word: string): string {
   }
   return out;
 }
+/* One Latin letter stands for two Georgian ones — t for თ and ტ, p for ფ and პ,
+   k for ქ and კ — and the reading picks one, so "asistenti" reads "ასისთენთი".
+   Compared with those pairs folded together, it is the role word it was meant to
+   be. Only whole-word prefixes of a reviewed role count, never a guess. */
+const folded = (word: string) =>
+  word.replace(
+    /[ტპკჭწყ]/g,
+    (letter) =>
+      ({ ტ: 'თ', პ: 'ფ', კ: 'ქ', ჭ: 'ჩ', წ: 'ც', ყ: 'ქ' })[letter] ?? letter,
+  );
+function looselyRead(reading: string): string | null {
+  const loose = folded(reading);
+  const [best] = roles
+    .flat()
+    .filter(
+      (word) =>
+        isGeorgianWord(word) &&
+        word.length >= 4 &&
+        loose.startsWith(folded(word)) &&
+        // A whole word plus at most a slip, not a different word that starts the same.
+        loose.length - word.length <= 2,
+    )
+    .sort((a, b) => b.length - a.length);
+  if (best) return wholeWord(best);
+  /* A slip on top of the reading ("asisenti", "bughateri"): the nearest reviewed
+     word, folded the same way, within the distance a typo is allowed — and only
+     when no word of another occupation is as near. */
+  const near = roles
+    .flatMap((group) =>
+      group
+        .filter((word) => isGeorgianWord(word) && /[აეიოუ]$/.test(word))
+        .map((word) => ({
+          word,
+          group,
+          score: distance(loose, folded(word)),
+        })),
+    )
+    .filter((x) => x.score <= (reading.length >= 8 ? 2 : 1))
+    .sort((a, b) => a.score - b.score);
+  if (!near.length || reading.length < 5) return null;
+  const tied = near.filter((x) => x.score === near[0].score);
+  return tied.every((x) => x.group === tied[0].group)
+    ? wholeWord(near[0].word)
+    : null;
+}
+
 /**
  * A Latin query that found nothing, read as Georgian typed on a Latin keyboard
  * ("mzareuli" → "მზარეული"), then corrected against the titles for the letters
@@ -489,7 +558,13 @@ export function latinGeorgianSearch(
   const georgian = terms
     .map(georgianFromLatin)
     // A known word is kept as typed; a declension the titles use is a word too.
-    .map((word) => (lexicon.has(word) ? word : wholeWord(word)))
+    .map((word) =>
+      lexicon.has(word)
+        ? word
+        : roleFor(word)
+          ? wholeWord(word)
+          : (looselyRead(word) ?? word),
+    )
     .join(' ');
   return suggestSearch(georgian, lexicon) ?? georgian;
 }

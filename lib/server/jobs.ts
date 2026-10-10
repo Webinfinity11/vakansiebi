@@ -71,17 +71,22 @@ export async function publicJobs(
     const corrected = new URLSearchParams(params);
     corrected.set('q', correction.query);
     const fixed = await again(corrected);
+    const named = {
+      from: readSearch(params).query.trim(),
+      to: correction.query,
+    };
     if (fixed.total > 0)
-      return {
-        ...fixed,
-        search: {
-          ...fixed.search,
-          corrected: {
-            from: readSearch(params).query.trim(),
-            to: correction.query,
-          },
-        },
-      };
+      return { ...fixed, search: { ...fixed.search, corrected: named } };
+    // The corrected word may live only in descriptions, as a misspelt word can.
+    if (fixed.search.wider) {
+      corrected.set('deep', 'true');
+      const widened = await again(corrected);
+      if (widened.total > 0)
+        return {
+          ...widened,
+          search: { ...widened.search, corrected: named, widened: true },
+        };
+    }
   }
   /* Nothing under the titles, and the descriptions hold something: the reader
      gets those rather than an empty page — a word like "wordpress" never appears
@@ -191,7 +196,8 @@ async function loadPublicJobs(
       publicJobsCacheKey(changed, preview, options.jobIds),
       () => loadPublicJobs(changed, preview, options),
     );
-    return answer.total;
+    // A correction found only in descriptions is still the word that was meant.
+    return answer.total || answer.search.wider || 0;
   };
   let correction: string | null = null;
   if (count === 0 && filters.query.trim()) {
