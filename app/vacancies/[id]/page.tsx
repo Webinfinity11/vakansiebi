@@ -39,15 +39,27 @@ async function load({ params, searchParams }: Props) {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { job, preview } = await load(props);
   const title = `${job.title} — ${job.company} | JOBX`;
-  const description = [
+  /* The snippet names the position, then its facts, then the posting's own
+     opening words up to ~160 characters. Facts alone ("company · city · pay")
+     were the same for every opening one employer had in one city. */
+  const facts = [
     job.company,
     job.city,
     compactSalary(job.salary, job.salaryPeriod),
     job.employmentType,
   ]
     .filter(Boolean)
-    .join(' · ')
-    .slice(0, 180);
+    .join(' · ');
+  const lead = `${job.title}: ${facts}.`;
+  const room = 160 - lead.length - 1;
+  const opening = job.description.replace(/\s+/g, ' ').trim();
+  const excerpt =
+    room < 40 || !opening
+      ? ''
+      : opening.length <= room
+        ? opening
+        : opening.slice(0, opening.lastIndexOf(' ', room - 1)) + '…';
+  const description = (excerpt ? `${lead} ${excerpt}` : lead).slice(0, 200);
   const canonical = vacancyUrl(job);
   return {
     title,
