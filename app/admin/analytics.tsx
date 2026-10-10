@@ -514,7 +514,7 @@ function Contacts({ totals }: { totals: AnalyticsSummary['totals'] }) {
         ['პირველწყაროზე გადასვლა', totals.outbound],
         ['დარეკვა', totals.call],
         ['CV-ის გაგზავნა', totals.cv],
-        ['განაცხადი კომპანიის საიტზე', totals.apply],
+        ['განაცხადის გაგზავნა', totals.apply],
       ])}
       <h4 className="aa-subhead">
         ჩართულობა <b>{whole.format(engaged)}</b>

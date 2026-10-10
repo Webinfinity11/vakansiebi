@@ -1800,8 +1800,8 @@ export default function JobBoard({
                                 setAdvanced({ ...advanced, deep: true })
                               }
                             >
-                              აღწერებშიც მოძებნე — კიდევ{' '}
-                              {searchMeta.wider - total} ვაკანსია
+                              კიდევ {searchMeta.wider - total} ვაკანსია
+                              აღწერებში
                             </button>
                           ) : null}
                         </p>

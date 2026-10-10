@@ -111,7 +111,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
         onClick={() => trackContact('apply', job)}
       >
         <Send aria-hidden="true" />
-        განაცხადი კომპანიის საიტზე
+        განაცხადის გაგზავნა
       </a>
     );
   if (!contacts.emails.length && contacts.phones.length === 1)

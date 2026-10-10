@@ -63,7 +63,7 @@ export function QuickApply({
           onClick={reached('apply')}
         >
           <Send aria-hidden="true" />
-          განაცხადი კომპანიის საიტზე
+          განაცხადის გაგზავნა
         </a>
       )}
       <div className="contact-options">
