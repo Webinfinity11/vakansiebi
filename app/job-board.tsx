@@ -1218,6 +1218,24 @@ export default function JobBoard({
     const draft =
       prefix === 'mobile' && mobileDraft ? mobileDraft : currentSearch;
     const facets = prefix === 'desktop' && !resultsPending ? searchMeta : null;
+    /* Directions in the order the current search fills them, so what was asked
+       for leads and a 1,968-vacancy direction is not filed below a 77-vacancy
+       one. Read from the last answer, which stays while the next one loads, so
+       the list does not jump back to the fixed order and forward again. "სხვა"
+       stays last; ties keep the fixed order. */
+    const categoryCount = (name: string) =>
+      searchMeta?.categories.find((item) => item.name === name)?.count ?? 0;
+    const orderedCategories = [...categories].sort(
+      (a, b) =>
+        Number(a === 'სხვა') - Number(b === 'სხვა') ||
+        categoryCount(b) - categoryCount(a),
+    );
+    const subcategoryCount = (id: string) =>
+      searchMeta?.subcategories?.find((item) => item.id === id)?.count ?? 0;
+    const orderedSubcategories = (category: string) =>
+      subcategoryChoices(category).sort(
+        (a, b) => subcategoryCount(b.id) - subcategoryCount(a.id),
+      );
     const changeCategory = (value: string) => {
       if (prefix === 'mobile')
         setMobileDraft({ ...draft, category: value, subcategory: undefined });
@@ -1277,7 +1295,7 @@ export default function JobBoard({
               mobile={prefix === 'mobile'}
               value={draft.category}
               onChange={changeCategory}
-              options={[...categories]}
+              options={orderedCategories}
             />
           </div>
         ) : (
@@ -1286,7 +1304,7 @@ export default function JobBoard({
               მიმართულება <small>· არჩეული პირობებით</small>
             </h3>
             <div className="category-options">
-              {(['ყველა', ...categories] as const)
+              {(['ყველა', ...orderedCategories] as const)
                 .filter(
                   (c, index) =>
                     allCategoriesVisible || index < 8 || c === draft.category,
@@ -1327,7 +1345,11 @@ export default function JobBoard({
                           </small>
                         )}
                       </label>
+                      {/* Opened once its counts have arrived, in their order,
+                          rather than in the fixed order and then reshuffled. */}
                       {c === draft.category &&
+                        (!resultsPending ||
+                          loadedResult.search.category === c) &&
                         subcategories.some((item) => item.category === c) && (
                           <fieldset
                             className="subcategory-options"
@@ -1335,7 +1357,7 @@ export default function JobBoard({
                           >
                             {[
                               { id: '', label: 'ყველა პოზიცია' },
-                              ...subcategoryChoices(c),
+                              ...orderedSubcategories(c),
                             ].map((item) => (
                               <label
                                 className="check-row"
@@ -1407,7 +1429,7 @@ export default function JobBoard({
                     value: allSubcategories,
                     label: `ყველა — ${draft.category}`,
                   },
-                  ...subcategoryChoices(draft.category).map((item) => ({
+                  ...orderedSubcategories(draft.category).map((item) => ({
                     value: item.id,
                     label: item.label,
                   })),
