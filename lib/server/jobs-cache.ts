@@ -23,11 +23,13 @@ export function publicJobsCacheKey(
   preview = false,
   jobIds?: readonly string[],
 ) {
-  // Internal employer subsets are not described by the URL alone.
+  // Internal employer subsets are not described by the URL alone. The board
+  // asks with preview=0 on every request; only preview=1 is the admin's own view,
+  // the same line the edge cache draws in cacheHeader.
   if (
     preview ||
     jobIds ||
-    params.has('preview') ||
+    params.get('preview') === '1' ||
     params.has('ids') ||
     params.has('exclude')
   )

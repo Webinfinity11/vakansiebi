@@ -180,23 +180,22 @@ async function loadPublicJobs(
       ).rows[0].n,
     );
   };
-  const titleCount = async (query: string) => {
+  /* A correction that finds something is shown at once (publicJobs searches it
+     next), so its count is read from that same search, through the shared cache,
+     rather than counted first and searched again — a misspelt word took six
+     statements, one after another. */
+  const correctedTotal = async (query: string) => {
     const changed = new URLSearchParams(params);
     changed.set('q', query);
-    const plan = searchPlan(changed, preview, { grouped: true });
-    return Number(
-      (
-        await publicRead(
-          `${plan.cte} SELECT count(*)::int count FROM searchable j WHERE ${plan.where}`,
-          plan.args,
-        )
-      ).rows[0].count,
+    const answer = await publicResponses.get(
+      publicJobsCacheKey(changed, preview, options.jobIds),
+      () => loadPublicJobs(changed, preview, options),
     );
+    return answer.total;
   };
   let correction: string | null = null;
   if (count === 0 && filters.query.trim()) {
-    const lexicon = await titleLexicon();
-    const typed = await typedCount();
+    const [lexicon, typed] = await Promise.all([titleLexicon(), typedCount()]);
     // A spelling correction only for words the catalogue does not hold at all.
     if (typed === 0) correction = suggestSearch(filters.query, lexicon);
     /* Georgian typed in Latin letters ("dacva", "gorgia") may still sit in a stray
@@ -204,19 +203,11 @@ async function loadPublicJobs(
     const latin = correction
       ? null
       : latinGeorgianSearch(filters.query, lexicon);
-    if (latin && (await titleCount(latin)) >= Math.max(1, typed * 3))
+    if (latin && (await correctedTotal(latin)) >= Math.max(1, typed * 3))
       correction = latin;
   }
   if (correction) {
-    const corrected = new URLSearchParams(params);
-    corrected.set('q', correction);
-    const plan = searchPlan(corrected, preview, { grouped: true });
-    const n = (
-      await publicRead(
-        `${plan.cte} SELECT count(*)::int count FROM searchable j WHERE ${plan.where}`,
-        plan.args,
-      )
-    ).rows[0].count;
+    const n = await correctedTotal(correction);
     if (n > 0)
       search.suggestion = { query: correction, count: n, kind: 'spelling' };
   }

@@ -34,13 +34,8 @@ void test('response cache normalizes filters and keeps response shapes and perso
     'remote=true',
   ])
     assert.notEqual(key(value), key(''), value);
-  for (const value of [
-    'preview=1',
-    'preview=0',
-    'ids=',
-    'exclude=',
-    'exclude=a,b',
-  ])
+  assert.equal(key('preview=0&q=cashier'), key('q=cashier'));
+  for (const value of ['preview=1', 'ids=', 'exclude=', 'exclude=a,b'])
     assert.equal(key(value), null, value);
   assert.equal(publicJobsCacheKey(new URLSearchParams(), true), null);
   assert.equal(publicJobsCacheKey(new URLSearchParams(), false, ['a']), null);
