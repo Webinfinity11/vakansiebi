@@ -791,7 +791,10 @@
 .refined-board .hero-heading-copy {
   display: none;
 }
-@media (min-width: 761px) {
+/* A list's name is one line on every screen, phones included: a heading of
+   several conditions wrapped to five lines there and pushed the search box off
+   the first screen. What does not fit scrolls (below). */
+@media all {
   .board-shell.editorial-board.crafted-board.refined-board
     .hero-copy:has(.hero-heading) {
     min-width: 0;
@@ -814,7 +817,7 @@
     flex-shrink: 0;
   }
 }
-@media (min-width: 761px) and (prefers-reduced-motion: no-preference) {
+@media (prefers-reduced-motion: no-preference) {
   .board-shell.editorial-board.crafted-board.refined-board
     .discovery-hero
     .hero-heading[data-overflow] {

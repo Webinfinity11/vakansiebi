@@ -9,7 +9,7 @@ import { useAutoLoad } from './use-auto-load';
 import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
 import { rememberRecentSearch } from '@/lib/recent-searches';
-import { landingHeading, landingOf } from '@/lib/seo-landing';
+import { landingOf, searchHeading } from '@/lib/seo-landing';
 import { nearestCity } from '@/lib/nearest-city';
 import {
   vacancyCardTitle,
@@ -456,6 +456,8 @@ export default function JobBoard({
      word still being typed: a heading that changed mid-word pushed the search
      box down under the reader's thumb. */
   const landing = landingOf(loadedResult.search);
+  // Any list is named in full, several conditions too; long names scroll.
+  const heading = searchHeading(loadedResult.search);
   const [searchMeta, setSearchMeta] = useState<SearchMeta | null>(
     seed?.search || null,
   );
@@ -1570,8 +1572,8 @@ export default function JobBoard({
           <div className="hero-brand-trail" aria-hidden="true" />
           <div className="hero-inner">
             <div className="hero-copy">
-              {landing ? (
-                <HeroHeading text={landingHeading(landing)} />
+              {heading ? (
+                <HeroHeading text={heading} />
               ) : (
                 <h1 id="search-heading">
                   იპოვე შენი შემდეგი <em>სამსახური.</em>

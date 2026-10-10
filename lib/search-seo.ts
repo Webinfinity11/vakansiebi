@@ -1,6 +1,11 @@
 import { homeDescription, homeTitle } from './seo';
-import { landingDescription, landingFor, landingHeading } from './seo-landing';
-import { readSearchPage } from './search-state';
+import {
+  landingDescription,
+  landingFor,
+  landingHeading,
+  searchHeading,
+} from './seo-landing';
+import { readSearch, readSearchPage } from './search-state';
 import { canonicalSearchParams } from './search-url';
 
 /** A page of a public list has different jobs, so it needs its own canonical.
@@ -19,7 +24,11 @@ export function searchSeo(params: URLSearchParams) {
     ? new URLSearchParams(landing.path.split('?')[1])
     : canonicalSearchParams(base);
   if (page > 1) canonical.set('page', String(page));
-  const title = landing ? `${landingHeading(landing)} | JOBX` : homeTitle;
+  // A list that is not a page of its own is still named in its tab and share.
+  const named = landing
+    ? landingHeading(landing)
+    : searchHeading(readSearch(base));
+  const title = named ? `${named} | JOBX` : homeTitle;
   return {
     path: '/' + (canonical.size ? '?' + canonical : ''),
     index: !base.size || !!landing,

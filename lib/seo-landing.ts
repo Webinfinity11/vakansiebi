@@ -336,6 +336,73 @@ export function landingHeading(landing: Choice) {
       : ' საქართველოში';
   return `${field}${before}ვაკანსიები${after}${where}`;
 }
+/* What any list on screen is, said in full — "დისტანციური ვაკანსიები მითითებული
+   ხელფასით, დღიური ანაზღაურებით და გამოცდილების გარეშე" — not only the pages
+   that may be indexed. A combination of conditions fell back to the site's
+   tagline, so the heading stopped saying what the reader had asked for. The
+   index stays with the one-condition pages (landingFor); this is the name. Free
+   text that is not a profession has no name of its own and keeps the tagline. */
+export function searchHeading(filters: SearchFilters): string | null {
+  const landing = landingOf(filters);
+  if (landing) return landingHeading(landing);
+  const typed = filters.query.trim();
+  const role = typed ? roleFor(typed) : null;
+  const chosen: TraitKey[] = [];
+  if (filters.remote) chosen.push('remote');
+  if (filters.employment === 'internship') chosen.push('internship');
+  if (filters.paid) chosen.push('paid');
+  if (filters.salaryPeriod === 'day') chosen.push('daily');
+  if (filters.employment === 'part-time') chosen.push('part-time');
+  if (filters.entryLevel) chosen.push('entry');
+  const befores: string[] = chosen.flatMap((key) => {
+    const trait = traits[key];
+    return 'before' in trait ? [trait.before] : [];
+  });
+  const afters: string[] = chosen.flatMap((key) => {
+    const trait = traits[key];
+    return 'after' in trait ? [trait.after] : [];
+  });
+  if (filters.employment === 'daily') befores.push('ერთჯერადი სამუშაოს');
+  if (filters.salaryFrom !== null)
+    afters.push(
+      `${String(filters.salaryFrom).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} ₾-დან`,
+    );
+  const category =
+    filters.category !== 'ყველა' && filters.category !== 'სხვა'
+      ? filters.category
+      : null;
+  const named = filters.subcategory
+    ? subcategoryFor(filters.category, filters.subcategory)
+    : null;
+  const city = (cities as readonly string[]).includes(filters.city)
+    ? filters.city
+    : null;
+  const subject = named
+    ? subcategoryGenitive[named.id]
+    : role
+      ? (role.genitive ?? role.label)
+      : category
+        ? genitive[category]
+        : '';
+  if (!subject && !typed && !city && !befores.length && !afters.length)
+    return null;
+  const conditions =
+    afters.length > 1
+      ? `${afters.slice(0, -1).join(', ')} და ${afters.at(-1)}`
+      : (afters[0] ?? '');
+  const where = city
+    ? ' ' + cityIn(city)
+    : befores.length || afters.length
+      ? ''
+      : ' საქართველოში';
+  const heading = [subject, ...befores, 'ვაკანსიები', conditions]
+    .filter(Boolean)
+    .join(' ')
+    .concat(where);
+  // Free text is the reader's own word, quoted rather than declined.
+  return typed && !role ? `„${typed}“ — ${heading}` : heading;
+}
+
 /* Two sentences of the site's own, so the page answers the search rather than
    repeating its title: a list with nothing to read is the thin page Google is
    right to ignore. */
