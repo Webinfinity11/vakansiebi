@@ -60,6 +60,17 @@ export const reconciliationJobProjection = `id,status,automation_paused,automati
   draft IS NOT DISTINCT FROM published AS draft_is_published,
   CASE WHEN draft IS NOT DISTINCT FROM published THEN NULL ELSE draft END AS draft,published`;
 
+/* A worker flags a record for review when a read fails; for a record automation
+   manages, the decision above is the review. Leaving the flag left vacancies in
+   the editor's queue that no editor action was needed for. */
+async function clearReview<T>(c: PoolClient, id: string, outcome: T) {
+  await c.query(
+    'UPDATE jobs SET needs_review=false,version=version+1 WHERE id=$1 AND needs_review AND automation_managed AND NOT automation_paused',
+    [id],
+  );
+  return outcome;
+}
+
 export async function reconcileJob(
   c: PoolClient,
   id: string,
@@ -162,14 +173,14 @@ export async function reconcileJob(
          verified public version stays up. Unpublishing on the first such read made live
          vacancies vanish for a median of 13 minutes and come back on the next run (132 times
          in three days). Removal, expiry and the 7-day unverified rule above still apply. */
-      return 'unchanged';
+      return clearReview(c, id, 'unchanged');
     } else if (fresh.length) {
       status = 'pending';
       reason = 'invalid_source_data';
       published = null;
     } else if (job.status === 'pending') {
       reason = 'awaiting_source';
-    } else return 'unchanged'; // Short network outages do not remove verified vacancies.
+    } else return clearReview(c, id, 'unchanged'); // Short network outages do not remove verified vacancies.
   }
   // jsonb key order differs from parsed objects: compare semantically in PostgreSQL.
   const changed = await c.query(

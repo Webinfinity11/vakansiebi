@@ -842,13 +842,20 @@ export default function VacancyPage({
             {job.source !== 'JOBX' && (
               <>
                 <span>წყარო: </span>
+                {/* One link per site: the vacancy's own address, else the
+                    newest. A grouped posting lists every repost, newest first;
+                    keeping the last one linked to the oldest, often removed. */}
                 {[
-                  ...new Map(
-                    (job.sources.length
-                      ? job.sources
-                      : [{ source: job.source, url: job.url }]
-                    ).map((source) => [source.source, source.url]),
-                  ),
+                  ...(job.sources.length
+                    ? job.sources
+                    : [{ source: job.source, url: job.url }]
+                  )
+                    .reduce((sites, { source, url }) => {
+                      if (!sites.has(source) || url === job.url)
+                        sites.set(source, url);
+                      return sites;
+                    }, new Map<string, string>())
+                    .entries(),
                 ].map(([name, url], index) => (
                   <span key={name}>
                     {index > 0 && ', '}

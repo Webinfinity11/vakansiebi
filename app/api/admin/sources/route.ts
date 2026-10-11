@@ -53,7 +53,8 @@ export async function GET() {
         'archived',count(*) FILTER(WHERE status='archived'),
         'manual',count(*) FILTER(WHERE NOT automation_managed AND status NOT IN ('merged','rejected')),
         'paused',count(*) FILTER(WHERE automation_paused AND status NOT IN ('merged','rejected')),
-        'blocked',count(*) FILTER(WHERE automation_reason IS NOT NULL AND status NOT IN ('merged','rejected','published')),
+        -- The same records the "blocked" list shows; the archive's expired ones are not blocked.
+        'blocked',count(*) FILTER(WHERE status='pending' AND automation_reason IS NOT NULL AND automation_reason<>'employer_submission'),
         'submissions',count(*) FILTER(WHERE status='pending' AND NOT sub.is_test),
         'submissions-published',count(*) FILTER(WHERE status='published' AND NOT sub.is_test),
         'submissions-closed',count(*) FILTER(WHERE status IN ('archived','rejected') AND NOT sub.is_test),

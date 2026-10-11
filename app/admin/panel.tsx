@@ -101,7 +101,7 @@ const automationReasons: Record<string, string> = {
 /** `Choice` prepends its own "ყველა" option, which maps back to the unfiltered `all`. */
 const statusFilters: Record<string, string> = {
   review: 'შესამოწმებელი',
-  paused: 'ავტომატიზაცია შეჩერებული',
+  // Automation is paused exactly when a record is hand-managed: one tab, not two equal ones.
   manual: 'ხელით მართული',
   blocked: 'ავტომატურად ვერ ქვეყნდება',
   pending: 'შემოტანილი',

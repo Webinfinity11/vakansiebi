@@ -738,8 +738,27 @@ export async function mutateJob(input: unknown) {
         from: job.id,
       });
     }
+    /* An editor's decision takes a record out of automation; a press of
+       "გამოქვეყნება" on an imported vacancy whose text was not touched does
+       not. Pausing on every publish left 239 untouched vacancies outside
+       automation: they never expired, never took a source's update, and
+       queued for review instead. Overriding automation's own refusal (a
+       pending record with a reason) still pauses, or it would be undone. */
+    const decided =
+      ['save', 'apply-source', 'dismiss-update', 'archive', 'reject'].includes(
+        data.action,
+      ) ||
+      (job.status === 'pending' && !!job.automation_reason);
+    const submitted = !!(
+      await c.query('SELECT 1 FROM job_submissions WHERE job_id=$1', [job.id])
+    ).rowCount;
     await c.query(
-      "UPDATE jobs SET automation_paused=true,draft=$2,published=$3,status=$4,needs_review=$5,fingerprint=$6,version=version+1,updated_at=now(),published_at=CASE WHEN $7='publish' THEN now() ELSE published_at END WHERE id=$1",
+      `UPDATE jobs SET
+        automation_paused=CASE WHEN $8 OR $9 OR draft IS DISTINCT FROM $2::jsonb THEN true ELSE automation_paused END,
+        automation_managed=CASE WHEN $8 OR $9 OR draft IS DISTINCT FROM $2::jsonb THEN automation_managed
+          WHEN $7='publish' THEN true ELSE automation_managed END,
+        draft=$2,published=$3,status=$4,needs_review=$5,fingerprint=$6,version=version+1,updated_at=now(),
+        published_at=CASE WHEN $7='publish' THEN now() ELSE published_at END WHERE id=$1`,
       [
         job.id,
         draft,
@@ -748,6 +767,8 @@ export async function mutateJob(input: unknown) {
         review,
         fingerprint(draft),
         data.action,
+        decided,
+        submitted,
       ],
     );
     await audit(
