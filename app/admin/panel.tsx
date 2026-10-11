@@ -1888,25 +1888,28 @@ export default function AdminPanel() {
           </SheetHeader>
           {selected && draft && (
             <div className="edit-body">
-              {submission && (
-                <div className="submission-test">
-                  <span>
-                    {selected.is_test
-                      ? 'მონიშნულია ტესტად: სტატისტიკასა და შემოსავალში არ ითვლება.'
-                      : 'ნამდვილი დამსაქმებლის განცხადებაა? თუ ეს შენი ცდა იყო, მონიშნე ტესტად.'}
-                  </span>
-                  <button
-                    type="button"
-                    className="ds-btn ds-btn--secondary"
-                    disabled={busy}
-                    onClick={() => void markTest(!selected.is_test)}
-                  >
-                    {selected.is_test
-                      ? 'ნამდვილად დაბრუნება'
-                      : 'ტესტად მონიშვნა'}
-                  </button>
-                </div>
-              )}
+              {/* Asked while the submission waits for a decision; once it is
+                  published the answer is given, unless it was marked a test. */}
+              {submission &&
+                (selected.status === 'pending' || selected.is_test) && (
+                  <div className="submission-test">
+                    <span>
+                      {selected.is_test
+                        ? 'მონიშნულია ტესტად: სტატისტიკასა და შემოსავალში არ ითვლება.'
+                        : 'ნამდვილი დამსაქმებლის განცხადებაა? თუ ეს შენი ცდა იყო, მონიშნე ტესტად.'}
+                    </span>
+                    <button
+                      type="button"
+                      className="ds-btn ds-btn--secondary"
+                      disabled={busy}
+                      onClick={() => void markTest(!selected.is_test)}
+                    >
+                      {selected.is_test
+                        ? 'ნამდვილად დაბრუნება'
+                        : 'ტესტად მონიშვნა'}
+                    </button>
+                  </div>
+                )}
               {submission && <SubmissionSummary job={selected} draft={draft} />}
               {submission && (
                 <section className="notice placement-choice">
@@ -2462,13 +2465,21 @@ export default function AdminPanel() {
                 </div>
               ) : (
                 <div className="editor-actions">
+                  {/* On a live vacancy the same action publishes the edits; a
+                      check mark and "გამოქვეყნება" read as if it were not live. */}
                   <button
                     className="ds-btn ds-btn--primary"
                     disabled={busy}
                     onClick={() => setConfirm({ action: 'publish' })}
                   >
-                    <Check size={16} aria-hidden="true" />
-                    გამოქვეყნება
+                    {selected.status === 'published' ? (
+                      'ცვლილებების გამოქვეყნება'
+                    ) : (
+                      <>
+                        <Check size={16} aria-hidden="true" />
+                        გამოქვეყნება
+                      </>
+                    )}
                   </button>
                   <button
                     className="ds-btn ds-btn--secondary"
