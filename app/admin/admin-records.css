@@ -683,3 +683,12 @@
   flex-wrap: wrap;
   gap: var(--ds-space-2);
 }
+
+/* The opened resume is scrolled to under the sticky admin header, and takes
+   focus without drawing a ring around the whole sheet. */
+.resumes-preview {
+  scroll-margin-top: var(--ds-space-7);
+}
+.resumes-preview:focus {
+  outline: none;
+}

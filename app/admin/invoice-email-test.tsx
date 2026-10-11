@@ -39,7 +39,7 @@ export function InvoiceEmailTest({ invoices }: { invoices: JobInvoice[] }) {
   return (
     <form className="records-form" onSubmit={send}>
       <p className="records-hint">
-        აირჩიე ინვოისი — წერილში მისი დეტალები და პირდაპირი ბმული გაიგზავნება.
+        აირჩიე ინვოისი: წერილში მისი დეტალები და პირდაპირი ბმული გაიგზავნება.
       </p>
       <div className="records-fields">
         <label htmlFor="invoice-test-token">

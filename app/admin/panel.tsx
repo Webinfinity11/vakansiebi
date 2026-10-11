@@ -91,7 +91,7 @@ const names: Record<string, string> = {
   interrupted: 'შეწყდა',
 };
 const automationReasons: Record<string, string> = {
-  employer_submission: 'დამსაქმებლის განცხადება — ელოდება განხილვას',
+  employer_submission: 'დამსაქმებლის განცხადება: ელოდება განხილვას',
   expired: 'ბოლო ვადა გასულია',
   removed: 'წყაროზე აღარ არსებობს',
   unverified: 'დიდი ხანია ვერ მოწმდება',
@@ -257,6 +257,9 @@ function SubmissionSummary({ job, draft }: { job: AdminJob; draft: Vacancy }) {
     </section>
   );
 }
+// The editor's "not given" entry; a select item cannot carry an empty value.
+const unset = '__unset__';
+
 export default function AdminPanel() {
   const [scraperMetrics, setScraperMetrics] = useState<ScraperMetrics | null>(
     null,
@@ -378,7 +381,12 @@ export default function AdminPanel() {
         version: selected.version,
         action,
         ...(['save', 'publish'].includes(action) ? { draft } : {}),
-        ...(action === 'publish' && selected.requested_placement
+        /* Chosen only while pending. Publishing edits to a live submission
+           sends none, so the server keeps the placement it already has
+           instead of reading a default (a free VIP) the admin never saw. */
+        ...(action === 'publish' &&
+        selected.requested_placement &&
+        selected.status === 'pending'
           ? { placement }
           : {}),
         ...extras,
@@ -427,12 +435,12 @@ export default function AdminPanel() {
         setMessage(`გამოქვეყნდა ${published} / ${items.length}. მიმდინარეობს…`);
       }
       setMessage(
-        `გამოქვეყნდა ${published} ვაკანსია. გამოტოვებულია ${skipped} — საჭიროებს შემოწმებას. შეტყობინებები არ გაგზავნილა.`,
+        `გამოქვეყნდა ${published} ვაკანსია. გამოტოვებულია ${skipped}, საჭიროებს შემოწმებას. შეტყობინებები არ გაგზავნილა.`,
       );
     } catch (e) {
       setMessage(`გამოქვეყნდა ${published} ვაკანსია.`);
       setError(
-        `${(e as Error).message}. შეგიძლია ხელახლა გაუშვა — უკვე გამოქვეყნებული ჩანაწერები აღარ დამუშავდება.`,
+        `${(e as Error).message}. შეგიძლია ხელახლა გაუშვა: უკვე გამოქვეყნებული ჩანაწერები აღარ დამუშავდება.`,
       );
     } finally {
       setBusy(false);
@@ -944,8 +952,7 @@ export default function AdminPanel() {
         {tab === 'control' && (
           <section className="admin-panel">
             <SectionHeading title="მიმოხილვა">
-              რა გაჩერდა და რა გასაკეთებელია — დეტალები დანარჩენ
-              განყოფილებებშია.
+              რა გაჩერდა და რა გასაკეთებელია; დეტალები დანარჩენ განყოფილებებშია.
             </SectionHeading>
             <OverviewPanel
               sources={sources}
@@ -1129,7 +1136,7 @@ export default function AdminPanel() {
         {tab === 'sources' && (
           <section className="admin-panel">
             <SectionHeading title="წყაროების მონიტორინგი">
-              თითო წყაროს მდგომარეობა; დეტალები და პარამეტრები — რიგის ღილაკით.
+              თითო წყაროს მდგომარეობა. დეტალები და პარამეტრები რიგის ღილაკითაა.
             </SectionHeading>
             <div className="ops-toolbar" aria-label="სკრაპერის მართვა">
               <p className="ops-toolbar-meta">
@@ -1215,7 +1222,7 @@ export default function AdminPanel() {
             )}
             {github && !github.dispatchConfigured && (
               <p className="ops-note">
-                პირდაპირი გაშვების კავშირი არ არის — მოთხოვნა GitHub-ის შემდეგ
+                პირდაპირი გაშვების კავშირი არ არის; მოთხოვნა GitHub-ის შემდეგ
                 ავტომატურ ციკლში შესრულდება.
               </p>
             )}
@@ -1744,7 +1751,7 @@ export default function AdminPanel() {
         {tab === 'employers' && (
           <section className="admin-panel">
             <SectionHeading title="კომპანიები">
-              ერთი კომპანიის სხვადასხვაგვარად დაწერილი სახელები — გაერთიანება ან
+              ერთი კომპანიის სხვადასხვაგვარად დაწერილი სახელები; გაერთიანება ან
               გამოყოფა.
             </SectionHeading>
             {tab === 'employers' && <EmployersPanel />}
@@ -1911,17 +1918,25 @@ export default function AdminPanel() {
                   </div>
                 )}
               {submission && <SubmissionSummary job={selected} draft={draft} />}
-              {submission && (
+              {/* Once published, the placement was decided; only a running one is worth a line. */}
+              {submission &&
+                selected.status !== 'pending' &&
+                selected.placement_expires_at && (
+                  <p className="notice editor-notice">
+                    {`${placementLabels[selected.placement_tier]} აქტიურია ${time(selected.placement_expires_at)}-მდე.`}
+                  </p>
+                )}
+              {submission && selected.status === 'pending' && (
                 <section className="notice placement-choice">
                   <h3>განთავსება</h3>
                   <p>
                     {selected.placement_expires_at
                       ? `${placementLabels[selected.placement_tier]} აქტიურია ${time(selected.placement_expires_at)}-მდე. ხელახლა დადასტურება ვადას არ გააგრძელებს.`
                       : selected.vip_available
-                        ? 'ამ კომპანიას უფასო VIP (14 დღე) ჯერ არ გამოუყენებია — VIP წინასწარ მოინიშნა. დაადასტურე, ან აირჩიე სტანდარტული.'
+                        ? 'ამ კომპანიას უფასო VIP (14 დღე) ჯერ არ გამოუყენებია, ამიტომ VIP წინასწარ მოინიშნა. დაადასტურე, ან აირჩიე სტანდარტული.'
                         : 'ამ კომპანიას უფასო VIP უკვე გამოყენებული აქვს, ასე რომ სტანდარტული მოინიშნა.'}
                     {selected.requested_placement === 'premium' &&
-                      ' დამსაქმებელმა პრემიუმი მოითხოვა — 20 ₾ / 14 დღე, აქტიურდება ჩარიცხვის დადასტურების შემდეგ.'}
+                      ' დამსაქმებელმა პრემიუმი მოითხოვა (20 ₾ / 14 დღე); აქტიურდება ჩარიცხვის დადასტურების შემდეგ.'}
                   </p>
                   <label htmlFor="admin-placement">
                     განთავსება დამტკიცებისას
@@ -1991,8 +2006,9 @@ export default function AdminPanel() {
                     <p>
                       {selected.requested_placement
                         ? 'ატვირთული ლოგო'
-                        : 'ლოგო პირველწყაროდან'}{' '}
-                      · გამოქვეყნებამდე გადაამოწმე
+                        : 'ლოგო პირველწყაროდან'}
+                      {selected.status !== 'published' &&
+                        ' · გამოქვეყნებამდე გადაამოწმე'}
                     </p>
                   </div>
                   {draft.logoUrl && (
@@ -2113,24 +2129,27 @@ export default function AdminPanel() {
                   </label>
                   <label htmlFor="edit-category">
                     მიმართულება
-                    <Choice
+                    {/* A form field, not a filter: no "ყველა" entry, which here
+                        silently meant "სხვა" or "not given". */}
+                    <SelectField
                       id="edit-category"
-                      label="მიმართულება"
                       value={draft.category}
-                      onChange={(v) =>
-                        change('category', v === 'ყველა' ? 'სხვა' : v)
-                      }
+                      onChange={(v) => change('category', v)}
                       options={[...categories]}
                     />
                   </label>
                   <label htmlFor="edit-mode">
                     სამუშაო რეჟიმი
-                    <Choice
+                    <SelectField
                       id="edit-mode"
-                      label="არ არის მითითებული"
-                      value={draft.mode || 'ყველა'}
-                      options={['ადგილზე', 'დისტანციური', 'ჰიბრიდული']}
-                      onChange={(v) => change('mode', v === 'ყველა' ? '' : v)}
+                      value={draft.mode || unset}
+                      options={[
+                        { value: unset, label: 'არ არის მითითებული' },
+                        'ადგილზე',
+                        'დისტანციური',
+                        'ჰიბრიდული',
+                      ]}
+                      onChange={(v) => change('mode', v === unset ? '' : v)}
                     />
                   </label>
                   <label>
@@ -2143,7 +2162,7 @@ export default function AdminPanel() {
                     />
                   </label>
                   <label>
-                    ხელფასი — ზუსტად როგორც წყაროში
+                    ხელფასი (როგორც წყაროშია)
                     <input
                       className="ds-input"
                       value={draft.salary}
@@ -2178,13 +2197,19 @@ export default function AdminPanel() {
                   </label>
                   <label htmlFor="edit-period">
                     ანაზღაურების სიხშირე
-                    <Choice
+                    <SelectField
                       id="edit-period"
-                      label="არ არის მითითებული"
-                      value={draft.salaryPeriod || 'ყველა'}
-                      options={['თვე', 'საათი', 'დღე', 'კვირა', 'წელი']}
+                      value={draft.salaryPeriod || unset}
+                      options={[
+                        { value: unset, label: 'არ არის მითითებული' },
+                        'თვე',
+                        'საათი',
+                        'დღე',
+                        'კვირა',
+                        'წელი',
+                      ]}
                       onChange={(v) =>
-                        change('salaryPeriod', v === 'ყველა' ? '' : v)
+                        change('salaryPeriod', v === unset ? '' : v)
                       }
                     />
                   </label>
@@ -2568,7 +2593,7 @@ export default function AdminPanel() {
                     : confirm?.action === 'bulk-selected-publish'
                       ? 'გამოქვეყნდება მხოლოდ მოლოდინში მყოფი მონიშნული ჩანაწერები; ვადაგასული და არასწორი გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
                       : confirm?.action === 'bulk-publish'
-                        ? 'გამოქვეყნდება წყაროებიდან შემოტანილი ყველა მოლოდინში მყოფი ვაკანსია, ყველა გვერდიდან და ფილტრის მიუხედავად. დამსაქმებლის განცხადებები ამაში არ შედის — ისინი ცალ-ცალკე დასტურდება. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
+                        ? 'გამოქვეყნდება წყაროებიდან შემოტანილი ყველა მოლოდინში მყოფი ვაკანსია, ყველა გვერდიდან და ფილტრის მიუხედავად. დამსაქმებლის განცხადებები ამაში არ შედის; ისინი ცალ-ცალკე დასტურდება. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
                         : confirm?.action === 'publish'
                           ? 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
                           : confirm?.action === 'apply-source'

@@ -501,7 +501,7 @@ export function SubmissionPerformance({
       <div className="reports-heading">
         <h2>ეფექტურობა</h2>
         <span className="vacancy-performance-note">
-          მხოლოდ ნამდვილი, საიტზე გამოქვეყნებული განცხადებები — ტესტები არ
+          მხოლოდ ნამდვილი, საიტზე გამოქვეყნებული განცხადებები; ტესტები არ
           ითვლება
         </span>
         <button

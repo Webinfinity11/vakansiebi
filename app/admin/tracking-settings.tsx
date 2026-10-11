@@ -58,7 +58,7 @@ export function TrackingSettings() {
       if (!response.ok) throw new Error(data.error || 'შენახვა ვერ მოხერხდა');
       setRecord(data);
       setSaved(data);
-      setMessage('შენახულია — ცვლილება საიტის შემდეგ ჩატვირთვაზე ამოქმედდება.');
+      setMessage('შენახულია. ცვლილება საიტის შემდეგ ჩატვირთვაზე ამოქმედდება.');
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -202,7 +202,7 @@ export function TrackingSettings() {
               <p>
                 ჩასვი სრული კოდი, მათ შორის &lt;script&gt; ტეგები. შესაძლებელია
                 რამდენიმე პიქსელის დამატება. Google და Yandex კოდები ზემოთ
-                იმართება — აქ მათი გამეორება საჭირო არ არის.
+                იმართება; აქ მათი გამეორება საჭირო არ არის.
               </p>
               <p>
                 კოდი სრულდება საჯარო საიტზე, დოკუმენტის ჩატვირთვისას ერთხელ.

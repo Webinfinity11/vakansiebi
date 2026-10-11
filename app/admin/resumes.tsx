@@ -2,7 +2,7 @@
 import { Download, Eye, FileText, RefreshCw, Trash2, X } from 'lucide-react';
 import { SkeletonRows } from '../skeleton';
 import { adminTime } from '@/lib/admin-format';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cvText, downloadCv, type Cv, type CvTemplate } from '@/lib/cv';
 import { CvSheet } from '../cv/cv-builder';
 import '../cv.css';
@@ -49,6 +49,31 @@ export function ResumesPanel() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [opening, setOpening] = useState<string | null>(null);
+  const preview = useRef<HTMLDivElement>(null);
+  /* The resume opens under the whole list and its pages, out of sight; the
+     page goes to it, and closing it comes back to the row it was opened from. */
+  const motion = () =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 'auto'
+      : 'smooth';
+  const shownId = selected?.id;
+  useEffect(() => {
+    if (!shownId) return;
+    preview.current?.scrollIntoView({ behavior: motion(), block: 'start' });
+    preview.current?.focus({ preventScroll: true });
+  }, [shownId]);
+  function close() {
+    const id = selected?.id;
+    setSelected(null);
+    const row = id
+      ? document.querySelector<HTMLButtonElement>(
+          `[data-resume="${CSS.escape(id)}"] .resume-open`,
+        )
+      : null;
+    row?.scrollIntoView({ behavior: motion(), block: 'center' });
+    row?.focus({ preventScroll: true });
+  }
   useEffect(() => {
     const controller = new AbortController();
     void fetch(`/api/admin/resumes?page=${page}`, {
@@ -73,6 +98,7 @@ export function ResumesPanel() {
   }, [page, version]);
   async function open(id: string) {
     setBusy(true);
+    setOpening(id);
     setSelected(null);
     setError('');
     try {
@@ -86,6 +112,7 @@ export function ResumesPanel() {
       setError(e instanceof Error ? e.message : 'ოპერაცია ვერ შესრულდა');
     } finally {
       setBusy(false);
+      setOpening(null);
     }
   }
   async function remove(id: string) {
@@ -157,7 +184,7 @@ export function ResumesPanel() {
       {!loading && !!rows.length && (
         <ul className="reports-list resumes-list ds-appear-list">
           {rows.map((row) => (
-            <li key={row.id} className="reports-item">
+            <li key={row.id} className="reports-item" data-resume={row.id}>
               <div className="reports-details">
                 <p className="resumes-who">
                   <strong>{row.fullName || 'უსახელო რეზიუმე'}</strong>
@@ -188,13 +215,20 @@ export function ResumesPanel() {
               <div className="reports-actions">
                 <button
                   type="button"
-                  className="ds-btn ds-btn--secondary ds-btn--sm"
+                  className="ds-btn ds-btn--secondary ds-btn--sm resume-open"
                   disabled={busy}
                   aria-pressed={selected?.id === row.id}
-                  onClick={() => void open(row.id)}
+                  onClick={() =>
+                    selected?.id === row.id
+                      ? preview.current?.scrollIntoView({
+                          behavior: motion(),
+                          block: 'start',
+                        })
+                      : void open(row.id)
+                  }
                 >
                   <Eye size={16} aria-hidden="true" />
-                  ნახვა
+                  {opening === row.id ? 'იტვირთება…' : 'ნახვა'}
                 </button>
                 <button
                   type="button"
@@ -237,7 +271,12 @@ export function ResumesPanel() {
         </button>
       </div>
       {selected && (
-        <div className="resumes-preview ds-appear">
+        <div
+          className="resumes-preview ds-appear"
+          ref={preview}
+          tabIndex={-1}
+          aria-label={`რეზიუმე: ${selected.cv.fullName || 'უსახელო'}`}
+        >
           <div className="resumes-preview-actions">
             <button
               type="button"
@@ -250,7 +289,7 @@ export function ResumesPanel() {
             <button
               type="button"
               className="ds-btn ds-btn--secondary ds-btn--sm"
-              onClick={() => setSelected(null)}
+              onClick={close}
             >
               <X size={16} aria-hidden="true" />
               დახურვა

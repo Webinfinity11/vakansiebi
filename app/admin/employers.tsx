@@ -61,7 +61,7 @@ export function EmployersPanel() {
     <section className="admin-analytics">
       <p className="admin-analytics-note">
         მსგავსი სახელები, რომლებიც შეიძლება ერთი დამსაქმებელი იყოს. ავტომატურად
-        არაფერი ერთიანდება — ერთი პასუხი ყველა მართლწერას ეხება.
+        არაფერი ერთიანდება; ერთი პასუხი ყველა მართლწერას ეხება.
       </p>
       {state?.error && (
         <p role="alert" className="admin-error">
