@@ -107,6 +107,32 @@ DATABASE_URL=postgresql://USER@localhost:5432/ertad_test RUN_DB_TESTS=1 npm test
 
 ## მიმდინარე ონლაინ გარემო
 
+Public reads are throttled in `proxy.ts`, before cached responses and route work.
+Per client network, API reads share 120 requests/minute and 1,500/hour; map
+reads allow 6/minute and 60/hour; listing, vacancy and company pages share
+240/minute and 3,000/hour. IPv6 addresses share a /64 allowance. These initial
+thresholds need monitoring for shared office networks and search crawlers.
+There is no User-Agent or prefetch exemption. Admin, writes, assets, robots
+and sitemaps keep their existing behavior. Refusals are uncached 429 responses
+with `Retry-After`.
+
+For quotas shared by all Vercel instances, set both server-only
+`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` to a persistent Redis
+database supporting EVAL. The implementation uses the
+[Upstash REST command API](https://upstash.com/docs/redis/features/restapi).
+Keys contain HMACs rather than raw addresses and expire within one hour.
+With neither variable configured, protection is only in process memory and
+resets on cold starts. A partial configuration, timeout or store error returns
+503 on protected reads; restore the store or remove both variables to revert
+to local limits. Environment-only changes require a Vercel redeploy.
+
+Vercel supplies the trusted client address; self-hosted reverse proxies must
+overwrite forwarded IP headers ([header documentation](https://vercel.com/docs/headers/request-headers)).
+This slows scraping but cannot prevent slow or distributed copying of public
+content. The map still returns its public dataset for client-side filtering.
+For stronger protection, configure and verify hosting firewall/bot rules as
+well; those settings are not managed by this code.
+
 საიტი: https://jobx.ge — Vercel-ის `infinity-solutions/vakansiebi` პროექტი, ანგარიში `webinfinity11-5453`.
 ადმინი: https://jobx.ge/admin.
 ძველი სატესტო მისამართი `vakansiebi-gules.vercel.app` ცალკე `kapana22s-projects/vakansiebi` პროექტს ეკუთვნის; იქ განთავსება `jobx.ge`-ს არ აახლებს.
