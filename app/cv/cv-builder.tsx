@@ -522,22 +522,6 @@ export function CvBuilder() {
   const dirty = useRef(false);
   const resumeSync = useRef<ReturnType<typeof createResumeSync> | null>(null);
 
-  useEffect(() => {
-    try {
-      resumeSync.current = createResumeSync(window.localStorage, fetch, (ok) =>
-        track('resume', ok ? 'stored' : 'store_failed'),
-      );
-    } catch {
-      return;
-    }
-    const retry = () => {
-      void resumeSync.current?.retry();
-    };
-    retry();
-    window.addEventListener('online', retry);
-    return () => window.removeEventListener('online', retry);
-  }, []);
-
   /* How far this CV gets, in step names and nothing else. The counts describe
      sections and choices, never the person filling them in. No text, photo,
      id or session is sent, so a person is never followed between steps —
@@ -550,6 +534,23 @@ export function CvBuilder() {
     sent.current.add(value);
     track('resume', value);
   }, []);
+
+  useEffect(() => {
+    try {
+      // Every print saves again; the step is counted once per visit, like the others.
+      resumeSync.current = createResumeSync(window.localStorage, fetch, (ok) =>
+        once(ok ? 'stored' : 'store_failed'),
+      );
+    } catch {
+      return;
+    }
+    const retry = () => {
+      void resumeSync.current?.retry();
+    };
+    retry();
+    window.addEventListener('online', retry);
+    return () => window.removeEventListener('online', retry);
+  }, [once]);
 
   useEffect(() => {
     once('opened');
@@ -624,7 +625,7 @@ export function CvBuilder() {
   function printCv() {
     void resumeSync.current?.save(cv);
     printed.current = true;
-    track('resume', 'printed');
+    once('printed');
     flushSync(() => setPrinting(true));
     window.requestAnimationFrame(() => {
       window.print();

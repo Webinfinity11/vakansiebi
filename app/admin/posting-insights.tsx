@@ -25,7 +25,7 @@ const statusNames = {
 const filledNames = {
   logo: 'ლოგო',
   salary: 'ხელფასი',
-  deadline: 'ბოლო ვადა',
+  deadline: 'ბოლო ვადა შეცვალეს',
   email: 'ელფოსტა',
   phone: 'ტელეფონი',
   link: 'განაცხადის ბმული',

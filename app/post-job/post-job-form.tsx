@@ -390,9 +390,14 @@ export function PostJobForm({
      theirs is sent, so a single person is never followed from one step to the
      next — only the steps are counted. */
   const stage = useRef<PostStage>('opened');
+  // The form is one page filled in any order, so each step is counted once when it is
+  // first reached, even after a later one; only the drop-off point is the furthest step.
+  const counted = useRef(new Set<string>());
   const reached = useCallback((step: PostStage) => {
-    if (stages.indexOf(step) <= stages.indexOf(stage.current)) return;
-    stage.current = step;
+    if (stages.indexOf(step) > stages.indexOf(stage.current))
+      stage.current = step;
+    if (counted.current.has(step)) return;
+    counted.current.add(step);
     track('post', step);
   }, []);
   useEffect(() => {
@@ -555,7 +560,12 @@ export function PostJobForm({
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (inFlight.current || logoWorking.current) return;
-    track('post', 'submitted');
+    // Once per form, like the steps: a press refused for an empty field is counted
+    // by that field, not as another submission.
+    if (!counted.current.has('submitted')) {
+      counted.current.add('submitted');
+      track('post', 'submitted');
+    }
     const data = sent || validate();
     if (!data) return;
     inFlight.current = true;
@@ -687,6 +697,10 @@ export function PostJobForm({
               className="post-secondary"
               onClick={() => {
                 requestId.current = crypto.randomUUID();
+                // A second vacancy from the same page is a new pass through the form.
+                stage.current = 'opened';
+                counted.current.clear();
+                track('post', 'opened');
                 setValues({
                   ...initial,
                   deadline: submissionDate(

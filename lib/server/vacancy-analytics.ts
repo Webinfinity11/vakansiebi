@@ -71,7 +71,8 @@ export async function resumeContacts(jobId: string): Promise<ResumeContact[]> {
 }
 
 /* Every real vacancy sent through JOBX's own posting form that has been on the site, newest
-   first, with its counts. Tests and never-published submissions have nothing to measure. */
+   first, with its counts. Tests, never-published and rejected submissions have nothing to
+   measure: their views would only blur the employers' numbers. */
 export async function submissionPerformance() {
   const { rows: jobs } = await db().query<{
     id: string;
@@ -88,7 +89,7 @@ export async function submissionPerformance() {
        CASE WHEN j.placement_expires_at > now() THEN j.placement_tier ELSE 'standard' END tier,
        j.placement_expires_at "placementExpiresAt", j.published_at "publishedAt", s.created_at "submittedAt"
      FROM job_submissions s JOIN jobs j ON j.id = s.job_id
-     WHERE NOT s.is_test AND j.published_at IS NOT NULL
+     WHERE NOT s.is_test AND j.published_at IS NOT NULL AND j.status <> 'rejected'
      ORDER BY s.created_at DESC LIMIT 200`,
   );
   const ids = jobs.map((j) => j.id);

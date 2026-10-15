@@ -116,7 +116,9 @@ export async function postingAnalytics(
       `SELECT count(*)::int total,
          count(*) FILTER (WHERE coalesce(j.draft->>'logoUrl','')<>'')::int logo,
          count(*) FILTER (WHERE coalesce(j.draft->>'salary','')<>'')::int salary,
-         count(*) FILTER (WHERE coalesce(j.draft->>'deadline','')<>'')::int deadline,
+         -- The form fills the deadline in itself, 30 days ahead; only a changed one says anything.
+         count(*) FILTER (WHERE j.draft->>'deadline' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+           AND abs((j.draft->>'deadline')::date - ((s.created_at AT TIME ZONE 'Asia/Tbilisi')::date + 30)) > 1)::int deadline,
          count(*) FILTER (WHERE j.draft->'facts' @> '[{"label":"ელფოსტა CV-სთვის"}]')::int email,
          count(*) FILTER (WHERE j.draft->'facts' @> '[{"label":"ტელეფონი"}]')::int phone,
          count(*) FILTER (WHERE jsonb_array_length(coalesce(j.draft->'applicationLinks','[]'))>0)::int link,

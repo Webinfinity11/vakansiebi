@@ -1,4 +1,4 @@
-import { ApiError, apiError, readBody } from '@/lib/server/auth';
+import { ApiError, apiError, isAdmin, readBody } from '@/lib/server/auth';
 import { normalizeEvent, recordEvent } from '@/lib/server/analytics';
 import { clientKey, rateLimit } from '@/lib/server/rate-limit';
 export const dynamic = 'force-dynamic';
@@ -24,6 +24,8 @@ export async function POST(request: Request) {
   try {
     if (automated.test(request.headers.get('user-agent') || ''))
       return new Response(null, { status: 204 });
+    // An editor checking the site is not a reader: while signed in, nothing is counted.
+    if (await isAdmin()) return new Response(null, { status: 204 });
     if (!sameSite(request))
       throw new ApiError('მოთხოვნის წყარო დაუშვებელია', 403);
     // A reader produces a handful of events a minute; this only stops a script.

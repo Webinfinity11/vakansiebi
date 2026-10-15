@@ -142,13 +142,21 @@ export async function sweepRemovals(source: SourceId) {
  * have no scraped source and are never touched.
  */
 export async function archiveRemovedByHand(jobId: string, itemId: string) {
+  // Logged like automation's own archiving, so the overview counts it among the removed.
   await db().query(
-    `UPDATE jobs SET status='archived',automation_reason='removed',needs_review=false,
-      version=version+1,updated_at=now()
-     WHERE id=$1 AND automation_paused AND status IN ('pending','published')
-       AND NOT EXISTS (SELECT 1 FROM job_submissions sub WHERE sub.job_id=$1)
-       AND NOT EXISTS (SELECT 1 FROM source_items o JOIN sources s ON s.id=o.source_id
-         WHERE o.job_id=$1 AND o.id<>$2 AND o.error IS NULL AND s.enabled AND NOT s.retired)`,
+    `WITH before AS (SELECT status FROM jobs WHERE id=$1),
+     archived AS (
+       UPDATE jobs SET status='archived',automation_reason='removed',needs_review=false,
+         version=version+1,updated_at=now()
+       WHERE id=$1 AND automation_paused AND status IN ('pending','published')
+         AND NOT EXISTS (SELECT 1 FROM job_submissions sub WHERE sub.job_id=$1)
+         AND NOT EXISTS (SELECT 1 FROM source_items o JOIN sources s ON s.id=o.source_id
+           WHERE o.job_id=$1 AND o.id<>$2 AND o.error IS NULL AND s.enabled AND NOT s.retired)
+       RETURNING id)
+     INSERT INTO audit_log(job_id,action,actor,before_data,after_data)
+     SELECT a.id,'automation.archived','automation',jsonb_build_object('status',b.status),
+       jsonb_build_object('status','archived','reason','removed')
+     FROM archived a, before b`,
     [jobId, itemId],
   );
 }

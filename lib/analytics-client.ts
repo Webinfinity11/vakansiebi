@@ -26,11 +26,12 @@ export type TrackedKind =
   | 'resume'
   | 'action';
 
-/* A vacancy read, and each way of reaching its employer, counts once per visit (one tab
+/* A vacancy read, a save, and each way of reaching its employer, counts once per visit (one tab
    session): a reload, a return from the mail app or a second tap is the same person doing
    the same thing. Where session storage is unavailable every press still counts. */
 const oncePerVisit = new Set<TrackedKind>([
   'view',
+  'save',
   'outbound',
   'call',
   'cv',
