@@ -1,8 +1,9 @@
 # New-only scraping
 
 The catalogue is populated. From activation onward, scheduled collection discovers
-new IDs, downloads each new detail once, and publishes valid vacancies dated today,
-yesterday or the day before in Asia/Tbilisi. Unknown, invalid, future and older
+new IDs, downloads each new detail once, and publishes valid vacancies dated today
+or up to four days before in Asia/Tbilisi (2026-10-15: widened from two days, so a few
+missed runs do not lose postings). Unknown, invalid, future and older
 publication dates are not imported. Discovery time never substitutes for a source date.
 
 Known IDs cause no snapshot writes or detail requests. Completed IDs remain remembered
@@ -24,8 +25,8 @@ window. Sources without a listing date require one detail request to establish a
 
 Existing vacancies stay visible until their stored deadline; there is no seven-day
 reverification requirement. Expiry uses stored data and sends no source request.
-No deadline is invented for undated expiry fields. Later edits and early removals on
-sources are intentionally not synchronized.
+No deadline is invented for undated expiry fields. Later edits on sources are
+intentionally not synchronized; early removals are, by a daily listing walk (below).
 
 ## Activation
 
@@ -37,3 +38,26 @@ repository's deployment workflow. Release authorization was received on Septembe
 
 Cards now show source publication date and deadline separately, using semantic time
 attributes. The release also includes crawlable pagination and search analytics improvements.
+
+## Listing order (2026-10-15)
+
+hr.ge is read with its publish-date filter (`pdf=<window start>`), so only the window is
+listed, newest first. jobs.ss.ge is read with `sortBy=OrderDate_desc`; it sorts by date inside
+each paid tier (VIP 3, VIP 1, ordinary), so discovery walks through paid tiers and stops in
+the ordinary tier at the first page dated wholly before the window or after two pages with
+nothing new. hr.ge and jobs.ss.ge cards carry their posting day as a listing hint; a card dated
+before the window is not stored and its detail is never fetched. Before this change the default
+orders spread new postings over all pages and about a fifth of hr.ge and two fifths of
+jobs.ss.ge postings were found (reports/coverage-2026-10-15.md).
+
+## Early removals (2026-10-15)
+
+Once a day per board (jobs.ge, hr.ge, jobs.ss.ge), at the end of a run, the whole listing is
+walked — list pages only, no detail requests (`worker/removal-sweep.ts`). A walk counts only if
+it saw at least 95% of the board's reported total (jobs.ge, which reports none: 90% of the
+previous walk). An imported vacancy missing from one complete walk is remembered
+(`source_items.missing_since`); missing again from a complete walk at least 20 hours later, its
+item is marked `Source vacancy unavailable` and the usual reconciliation archives the job as
+`removed`, unless another board still lists it. Reappearing clears the mark. Cost: jobs.ge
+19 pages at its 5-second crawl delay, hr.ge 35 pages, jobs.ss.ge ~176 pages, about six minutes a
+day in total.

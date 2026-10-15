@@ -21,8 +21,8 @@ const fields = [
     field: 'discovery_page_limit',
     key: 'discoveryPageLimit',
     label: 'დამატებითი სიის გვერდი',
-    values: [0, 1, 2, 3],
-    fallback: 3,
+    values: [0, 1, 2, 3, 5, 10, 20, 40, 60],
+    fallback: 60,
   },
 ] as const;
 
@@ -83,13 +83,13 @@ export function ScraperLimits({
               onSave({
                 batchLimit: 100,
                 budgetMinutes: 4,
-                discoveryPageLimit: 1,
+                discoveryPageLimit: 40,
                 repairLimit: 0,
                 processingMode: 'economical',
               })
             }
           >
-            დამზოგავი: 100 ჩანაწერი · 4 წუთი · 1 გვერდი
+            დამზოგავი: 100 ჩანაწერი · 4 წუთი · 40 გვერდი
           </button>
           <p className="admin-helper">
             დაბალი ლიმიტით ახალი ვაკანსია შეიძლება დაგვიანდეს; რიგი ინახება.

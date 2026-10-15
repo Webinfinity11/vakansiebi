@@ -25,6 +25,8 @@ import { awork } from './awork';
 import { dk } from './dk';
 import { jobsLocation } from './jobs-location';
 import { jobtl } from './jobtl';
+import { joob } from './joob';
+import { unijobs } from './unijobs';
 export type { ListedLink, ListingHints } from './module';
 /** JSON-backed boards live in their own modules; the HTML boards below share this file. */
 export const modules: Partial<Record<SourceId, SourceModule>> = {
@@ -33,6 +35,8 @@ export const modules: Partial<Record<SourceId, SourceModule>> = {
   awork,
   dk,
   jobtl,
+  joob,
+  unijobs,
 };
 
 type HrAnnouncement = {
@@ -131,6 +135,8 @@ const legacyConfigs = {
   awork: awork.config,
   dk: dk.config,
   jobtl: jobtl.config,
+  joob: joob.config,
+  unijobs: unijobs.config,
 };
 // Legacy parsing remains for existing audit records; no retired source can be fetched.
 export const configs = {
@@ -144,6 +150,8 @@ export const configs = {
   awork: legacyConfigs.awork,
   dk: legacyConfigs.dk,
   jobtl: legacyConfigs.jobtl,
+  joob: legacyConfigs.joob,
+  unijobs: legacyConfigs.unijobs,
 };
 /** The document fetched for a public vacancy URL; JSON boards read their public API instead. */
 export function detailRequestUrl(source: SourceId, url: string) {
@@ -359,7 +367,75 @@ export function listLinks(
   const listed: ListingHints | undefined =
     source === 'hrgov' ? { firstListed: tbilisiDate() } : undefined;
   $('a[href]').each((_, a) => add($(a).attr('href'), listed));
+  // hr.ge and jobs.ss.ge print each card's posting day in their page state; a renewed or
+  // moved-up advertisement is then known to be old before its detail is fetched.
+  for (const [id, day] of listedPostingDays(source, $)) {
+    const link = result.get(id);
+    if (link) link.hints = { ...link.hints, datePosted: day };
+  }
   return [...result.values()];
+}
+/**
+ * Where a newest-first listing page stands against the import window. jobs.ss.ge sorts by
+ * date inside each paid tier (VIP 3, then 1, then ordinary), so an old page inside a paid
+ * tier is not the end: the next tier starts again from today.
+ */
+export function listingPosition(
+  source: SourceId,
+  html: string,
+  links: readonly ListedLink[],
+  windowStart: string,
+) {
+  const past =
+    links.length > 0 &&
+    links.every(
+      (link) => link.hints?.datePosted && link.hints.datePosted < windowStart,
+    );
+  let paidTier = false;
+  if (source === 'ss')
+    try {
+      const items = JSON.parse(load(html)('#__NEXT_DATA__').text())?.props
+        ?.pageProps?.searchInitData?.result?.items;
+      const last = Array.isArray(items) ? items[items.length - 1] : undefined;
+      paidTier = typeof last?.vipStatus === 'number' && last.vipStatus > 0;
+    } catch {
+      paidTier = false;
+    }
+  return { past, paidTier };
+}
+function listedPostingDays(source: SourceId, $: ReturnType<typeof load>) {
+  const days = new Map<string, string>();
+  try {
+    if (source === 'hr') {
+      const state = JSON.parse($('#ng-state').text()) as Record<
+        string,
+        HrState
+      >;
+      for (const value of Object.values(state)) {
+        const items = (
+          value?.b?.data as
+            | { announcements?: { items?: HrAnnouncement[] } }
+            | undefined
+        )?.announcements?.items;
+        for (const item of Array.isArray(items) ? items : []) {
+          const day = dateOnly(item?.publishDate);
+          if (day) days.set(String(item.announcementId), day);
+        }
+      }
+    }
+    if (source === 'ss') {
+      const items = JSON.parse($('#__NEXT_DATA__').text())?.props?.pageProps
+        ?.searchInitData?.result?.items;
+      for (const item of Array.isArray(items) ? items : []) {
+        const day = dateOnly(item?.startDate);
+        if (day && Number.isSafeInteger(item?.id))
+          days.set(String(item.id), day);
+      }
+    }
+  } catch {
+    /* Without page state the detail page still decides the posting day. */
+  }
+  return days;
 }
 function dateOnly(value: unknown) {
   return typeof value === 'string' &&
@@ -1280,6 +1356,8 @@ export const sourceLockIds: Record<SourceId, number> = {
   awork: 917418,
   dk: 917419,
   jobtl: 917420,
+  joob: 917421,
+  unijobs: 917422,
 };
 
 // Georgian listings omit the year; compare against their local calendar date, including around midnight/New Year.

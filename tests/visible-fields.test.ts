@@ -63,8 +63,14 @@ void test('salary preserves currency, explicit period, bonus and tax qualificati
   assert.equal(r.salaryPeriod, 'თვე');
   assert.ok(r.salary.includes('ხელზე'));
   assert.equal(visibleFields('ხელფასი: 2000 USD').salaryPeriod, '');
-  assert.equal(visibleFields('ანაზღაურება: ფიქსირებული 4000 ლარი + ბონუსი').salaryMin, 4000);
-  assert.equal(visibleFields('ანაზღაურება: ფიქსირებული 4000 ლარი + ბონუსი').salaryPeriod, '');
+  assert.equal(
+    visibleFields('ანაზღაურება: ფიქსირებული 4000 ლარი + ბონუსი').salaryMin,
+    4000,
+  );
+  assert.equal(
+    visibleFields('ანაზღაურება: ფიქსირებული 4000 ლარი + ბონუსი').salaryPeriod,
+    '',
+  );
   assert.equal(visibleFields('ხელფასი: 2000 ლარამდე').salaryMin, null);
   assert.equal(visibleFields('ხელფასი: 2000–1000 ლარი').salary, '');
   assert.equal(visibleFields('გამოცდილება: 2000 საათი').salaryMin, null);
@@ -122,4 +128,46 @@ void test('a contradictory daily label and monthly amount is held for review', (
   assert.equal(r.salaryMin, null);
   assert.equal(r.salaryPeriod, '');
   assert.ok(r.warning);
+});
+
+void test('a day rate written without a pay label is read as daily pay', () => {
+  for (const [text, salary, min] of [
+    ['ვეძებთ დამლაგებელს. 70 ლარი დღეში. ტელ: 599123456', '70 ლარი დღეში', 70],
+    ['დღიურად 100 ლარი, ყოველდღიური გასტუმრება', 'დღიურად 100 ლარი', 100],
+  ] as const) {
+    const fields = visibleFields(text);
+    assert.equal(fields.salary, salary);
+    assert.equal(fields.salaryMin, min);
+    assert.equal(fields.salaryPeriod, 'დღე');
+  }
+  assert.equal(
+    visibleFields('ანაზღაურება 50 ლარი (დღიური)').salaryPeriod,
+    'დღე',
+  );
+  // A number of working days is not a day rate.
+  assert.equal(visibleFields('კვირაში 5 დღე, 10:00-19:00').salary, '');
+});
+
+void test('a pay sentence after other sentences is shown alone, its amount read as before', () => {
+  const daily = visibleFields(
+    'ვეძებთ ფიზიკურ მუშახელს დღიურად. ანაზღაურება 70 ლარი',
+  );
+  assert.equal(daily.salary, '70 ლარი');
+  assert.equal(daily.salaryMin, 70);
+  assert.equal(daily.salaryPeriod, 'დღე');
+  // The pay sentence names its own rate; the month in an earlier sentence does not win.
+  const shift = visibleFields(
+    'სამუშაო განაკვეთი 15-16 სამუშაო დღე თვეში. ანაზღაურება დღეში 40 ლარი',
+  );
+  assert.equal(shift.salary, 'დღეში 40 ლარი');
+  assert.equal(shift.salaryPeriod, 'დღე');
+  // Words in the same phrase qualify the pay and stay.
+  assert.equal(
+    visibleFields('თვიური ფიქსირებული ანაზღაურება: 1500 ლარი').salary,
+    'თვიური ფიქსირებული ანაზღაურება: 1500 ლარი',
+  );
+  assert.equal(
+    visibleFields('საწყისი ანაზღაურება 1500 ლარი').salary,
+    'საწყისი ანაზღაურება 1500 ლარი',
+  );
 });

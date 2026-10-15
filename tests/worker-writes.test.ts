@@ -130,7 +130,7 @@ void test(
       for (const [externalId, age, failures] of [
         ['126', 0, 2],
         ['127', 0, 3],
-        ['128', 4, 0],
+        ['128', 6, 0],
       ])
         await pool.query(
           `INSERT INTO source_items(id,source_id,external_id,url,discovered_at,failures)

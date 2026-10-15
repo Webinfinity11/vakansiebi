@@ -38,7 +38,7 @@ void test('limit validation accepts pauses and rejects unbounded or fractional s
     { batchLimit: 201 },
     { budgetMinutes: 9 },
     { budgetMinutes: 1.5 },
-    { discoveryPageLimit: 4 },
+    { discoveryPageLimit: 61 },
     { repairLimit: -1 },
     { repairLimit: 21 },
   ])

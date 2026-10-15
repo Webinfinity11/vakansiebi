@@ -11,7 +11,9 @@ export type SourceId =
   | 'myjobs'
   | 'awork'
   | 'dk'
-  | 'jobtl';
+  | 'jobtl'
+  | 'joob'
+  | 'unijobs';
 export type ActiveSourceId = Exclude<SourceId, 'samushao'>;
 export const sourceNames: Record<ActiveSourceId, string> = {
   hr: 'hr.ge',
@@ -24,11 +26,16 @@ export const sourceNames: Record<ActiveSourceId, string> = {
   awork: 'awork.ge',
   dk: 'v.dk.ge',
   jobtl: 'job.tl',
+  joob: 'joob.ge',
+  unijobs: 'unijobs.ge',
 };
 // Native submissions share the catalogue, but are never crawler targets.
 export const listingSourceNames = { ...sourceNames, jobx: 'JOBX' };
 /** Sources whose postings carry no employer entity, only a private contact. */
-export const employerlessSources: readonly string[] = ['gancxadebebi.ge'];
+export const employerlessSources: readonly string[] = [
+  'gancxadebebi.ge',
+  'joob.ge',
+];
 export const privateListingLabel = 'კერძო განცხადება';
 export type Vacancy = {
   fullTextUrl?: string;

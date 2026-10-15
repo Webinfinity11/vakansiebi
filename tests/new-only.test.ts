@@ -4,13 +4,14 @@ import { importDateReason, pendingNewItemsSql } from '../worker/new-only';
 import { randomUUID } from 'node:crypto';
 import { listLinks, tbilisiDate } from '../worker/adapters';
 
-void test('rolling three calendar days includes today and crosses month/year boundaries', () => {
-  for (const day of ['2026-09-20', '2026-09-19', '2026-09-18'])
+void test('rolling five calendar days includes today and crosses month/year boundaries', () => {
+  for (const day of ['2026-09-20', '2026-09-19', '2026-09-16'])
     assert.equal(importDateReason(day, '2026-09-20'), null);
-  assert.equal(importDateReason('2026-09-17', '2026-09-20'), 'outside_window');
+  assert.equal(importDateReason('2026-09-15', '2026-09-20'), 'outside_window');
   assert.equal(importDateReason('2026-09-21', '2026-09-20'), 'outside_window');
   assert.equal(importDateReason('2026-12-31', '2027-01-02'), null);
   assert.equal(importDateReason('2026-09-30', '2026-10-02'), null);
+  assert.equal(importDateReason('2026-12-29', '2027-01-02'), null);
 });
 void test('jobs listing publication date is retained separately from its deadline', () => {
   const today = tbilisiDate();

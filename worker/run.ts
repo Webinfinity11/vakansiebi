@@ -7,6 +7,7 @@ import {
   retireStaleNewItemsSql,
   retireUnusedReviewsSql,
   pendingNewItemsWhere,
+  importWindowStart,
 } from './new-only';
 import { effectiveScraperLimits } from '../lib/scraper-limits';
 import { assessReportedTotal, structuralFailure } from './quality';
@@ -22,12 +23,14 @@ import {
 } from './discovery';
 import { db } from '../lib/server/db';
 import { reconcileAndNotify } from './automation';
+import { archiveRemovedByHand, sweepRemovals } from './removal-sweep';
 import type { SourceId } from '../lib/types';
 import {
   getSourceConfig,
   modules,
   detailRequestUrl,
   listLinks,
+  listingPosition,
   parseDetail,
   additionalListing,
   UnavailableVacancy,
@@ -84,6 +87,7 @@ export async function runSource(
   let newAttempts = 0,
     recheckAttempts = 0,
     unchanged = 0;
+  let removalSweep: Awaited<ReturnType<typeof sweepRemovals>> = null;
   const metrics = () => ({
     new_attempts: newAttempts,
     recheck_attempts: recheckAttempts,
@@ -97,6 +101,7 @@ export async function runSource(
     budget_exhausted: budgetExhausted,
     batch_limit: limit,
     budget_minutes: budgetMs / 60_000,
+    ...(removalSweep ? { removal_sweep: removalSweep } : {}),
   });
   try {
     locked = await acquireSourceLease(source, owner, ttlMs);
@@ -115,7 +120,7 @@ export async function runSource(
       batch: limit,
       minutes: budgetMs / 60_000,
       pages: Number.isFinite(configuredPages)
-        ? Math.max(0, Math.min(50, Math.floor(configuredPages)))
+        ? Math.max(0, Math.min(80, Math.floor(configuredPages)))
         : 20,
     });
     limit = limits.batch;
@@ -160,7 +165,14 @@ export async function runSource(
       observed = pageLinks.map(({ externalId }) => ({ externalId })),
     ) => {
       // Store hints for parsing, without rewriting historical snapshots before new imports.
-      const inserted = await discoverItems(source, pageLinks, {
+      // A card the listing already dates before the window is never fetched, so it is not
+      // stored either, and a page of only such cards counts as nothing new.
+      const windowStart = importWindowStart();
+      const current = pageLinks.filter(
+        (link) =>
+          !link.hints?.datePosted || link.hints.datePosted >= windowStart,
+      );
+      const inserted = await discoverItems(source, current, {
         updateStoredHints: false,
       });
       knownPages = inserted === 0 ? knownPages + 1 : 0;
@@ -222,8 +234,18 @@ export async function runSource(
         'Listing page count is unavailable; first page retained and discovery will retry';
       discoveryStructural = true;
     }
+    let paidTier = listingPosition(
+      source,
+      html,
+      links,
+      importWindowStart(),
+    ).paidTier;
     for (const extra of extraPages) {
-      if (knownPages >= 2 || Date.now() - startedAt >= budgetMs * 0.2) break;
+      if (
+        (knownPages >= 2 && !paidTier) ||
+        Date.now() - startedAt >= budgetMs * 0.2
+      )
+        break;
       try {
         const pageHtml = await sourceFetch(source, extra);
         const pageLinks = listLinks(source, pageHtml, extra);
@@ -245,6 +267,18 @@ export async function runSource(
         }
         await rememberPage(extra, pageLinks, observed);
         links.push(...pageLinks);
+        // A newest-first listing has passed the import window once every card it prints
+        // is dated before it; deeper pages only hold older postings. Inside a paid tier
+        // the next tier starts from today again, so known or old pages do not end it.
+        const position = listingPosition(
+          source,
+          pageHtml,
+          pageLinks,
+          importWindowStart(),
+        );
+        paidTier = position.paidTier;
+        if (paidTier) knownPages = 0;
+        else if (position.past) break;
       } catch (e) {
         discoveryWarning = 'Listing page: ' + (e as Error).message;
         break;
@@ -317,19 +351,7 @@ export async function runSource(
               [item.job_id],
             );
           if (item.job_id) await reconcileAndNotify(item.job_id);
-          /* A record an editor once changed by hand leaves automation, so nothing above archives
-             it and it waited in the review queue. Gone from every source means gone: archive it
-             here. JOBX's own submissions have no scraped source and are never touched. */
-          if (item.job_id)
-            await db().query(
-              `UPDATE jobs SET status='archived',automation_reason='removed',needs_review=false,
-                version=version+1,updated_at=now()
-               WHERE id=$1 AND automation_paused AND status IN ('pending','published')
-                 AND NOT EXISTS (SELECT 1 FROM job_submissions sub WHERE sub.job_id=$1)
-                 AND NOT EXISTS (SELECT 1 FROM source_items o JOIN sources s ON s.id=o.source_id
-                   WHERE o.job_id=$1 AND o.id<>$2 AND o.error IS NULL AND s.enabled AND NOT s.retired)`,
-              [item.job_id, item.id],
-            );
+          if (item.job_id) await archiveRemovedByHand(item.job_id, item.id);
           return;
         }
         failed++;
@@ -368,9 +390,14 @@ export async function runSource(
         worker,
       ),
     );
+    // Once a day the whole listing shows which imported vacancies the board removed early.
+    removalSweep = await sweepRemovals(source);
     const warning =
       [
         discoveryWarning,
+        removalSweep && !removalSweep.complete
+          ? `Removal check incomplete (${removalSweep.seen} listed)`
+          : null,
         qualityHeld ? `${qualityHeld} invalid new snapshots skipped` : null,
         stoppedEarly
           ? 'Stopped after 3 consecutive detail failures; remaining items retained for retry'

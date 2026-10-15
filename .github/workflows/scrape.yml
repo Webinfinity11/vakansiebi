@@ -31,7 +31,7 @@ jobs:
         run: |
           command -v psql >/dev/null || sudo apt-get install -y -q postgresql-client >/dev/null
           sources=$(psql "$DATABASE_URL" -Atc "SELECT coalesce(json_agg(id ORDER BY id), '[]')
-            FROM sources WHERE id = ANY(ARRAY['hr','jobs','ss','gancxadebebi','myjobs','awork','dk'])
+            FROM sources WHERE id = ANY(ARRAY['hr','jobs','ss','gancxadebebi','myjobs','awork','dk','joob','unijobs'])
             AND enabled AND NOT retired
             AND (requested_at IS NOT NULL OR (auto_enabled AND next_run_at <= now() + interval '10 minutes'))")
           echo "Due: $sources"
@@ -72,5 +72,5 @@ jobs:
           CRAWL_BATCH_SIZE: '200'
           SCRAPE_BUDGET_MINUTES: '8'
           DETAIL_CONCURRENCY: '3'
-          DISCOVERY_PAGE_BUDGET: '3'
+          DISCOVERY_PAGE_BUDGET: '60'
 

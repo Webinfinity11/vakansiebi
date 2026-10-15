@@ -4,8 +4,15 @@ import { load } from 'cheerio';
 import { modules } from './adapters';
 import { jobsCategories } from './categories';
 import type { ListingInfo } from './adapters/module';
+import { importWindowStart } from './new-only';
 
-export type DiscoverySource = 'hr' | 'jobs' | 'ss' | 'worknet' | 'myjobs';
+export type DiscoverySource =
+  | 'hr'
+  | 'jobs'
+  | 'ss'
+  | 'worknet'
+  | 'myjobs'
+  | 'joob';
 export type DiscoveryInfo = ListingInfo;
 export const discoverySources: readonly DiscoverySource[] = [
   'hr',
@@ -13,8 +20,11 @@ export const discoverySources: readonly DiscoverySource[] = [
   'ss',
   'worknet',
   'myjobs',
+  'joob',
 ];
 const limits = { pages: 1000, total: 1000000, budget: 50 };
+// jobs.ss.ge repeats today's postings in each of its three paid tiers, ~55 pages deep.
+const listingPageBudget = 80;
 function positive(value: unknown, max: number): number | null {
   return typeof value === 'number' &&
     Number.isSafeInteger(value) &&
@@ -98,10 +108,15 @@ export function discoveryListingUrl(source: DiscoverySource, page = 1): string {
   supported(source);
   if (!positive(page, limits.pages)) throw Error('Invalid discovery page');
   if (modules[source]) return modules[source].listingUrl(page);
-  if (source === 'hr') return `https://www.hr.ge/search-posting?pg=${page}`;
+  // hr.ge's default order mixes priority placements across all 35 pages; its publish-date
+  // filter (`pdf`) leaves only the import window, newest first.
+  if (source === 'hr')
+    return `https://www.hr.ge/search-posting?pdf=${importWindowStart()}&pg=${page}`;
   // Vacancies only (`jid=1`): tenders, trainings and scholarships are not vacancies.
   if (source === 'jobs') return `https://jobs.ge/ge/ads/?page=${page}&jid=1`;
-  return `https://jobs.ss.ge/ka/l/vacancies?page=${page}`;
+  // The default order spreads new postings over every page; date order puts them first,
+  // between moved-up older ones the listing dates already mark as old.
+  return `https://jobs.ss.ge/ka/l/vacancies?sortBy=OrderDate_desc&page=${page}`;
 }
 /** A jobs.ge category listing; each category paginates on its own and names the category. */
 export function jobsCategoryListingUrl(cid: number, page = 1) {
@@ -140,7 +155,7 @@ export function planDiscoveryPages(
   supported(source);
   const last = positive(info.totalPages, limits.pages);
   const current = Number.isSafeInteger(cursor) && cursor >= 0 ? cursor : 0;
-  const count = positive(budget, limits.budget);
+  const count = positive(budget, listingPageBudget);
   if (!last || last < 2 || !count)
     return { urls: [] as string[], nextCursor: current };
   const pages = Math.min(count, last - 1);

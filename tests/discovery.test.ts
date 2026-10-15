@@ -10,6 +10,8 @@ import {
   type DiscoverySource,
 } from '../worker/discovery';
 import { jobsCategories } from '../worker/categories';
+import { listLinks } from '../worker/adapters';
+import { importDateReason, importWindowStart } from '../worker/new-only';
 void test('HR search SSR count produces35pages; homepage and malformed JSON cannot silently become a complete catalog', () => {
   const html = `<script id="ng-state">${JSON.stringify({ request: { b: { data: { announcements: { items: Array(100).fill({}), totalCount: 3443 } } } } })}</script>`;
   assert.deepEqual(readDiscoveryInfo('hr', html), {
@@ -37,8 +39,14 @@ void test('SS public state supplies191pages even when visible pager exposes only
     totalPages: 191,
   });
   const plan = planDiscoveryPages('ss', readDiscoveryInfo('ss', html), 185, 10);
-  assert.equal(plan.urls[4], 'https://jobs.ss.ge/ka/l/vacancies?page=191');
-  assert.equal(plan.urls[5], 'https://jobs.ss.ge/ka/l/vacancies?page=2');
+  assert.equal(
+    plan.urls[4],
+    'https://jobs.ss.ge/ka/l/vacancies?sortBy=OrderDate_desc&page=191',
+  );
+  assert.equal(
+    plan.urls[5],
+    'https://jobs.ss.ge/ka/l/vacancies?sortBy=OrderDate_desc&page=2',
+  );
   assert.equal(new Set(plan.urls).size, 10);
 });
 void test('Jobs scroll controller supplies20pages without inventing an exact vacancy count', () => {
@@ -60,9 +68,9 @@ void test('Jobs scroll controller supplies20pages without inventing an exact vac
   );
 });
 void test('discovery routes and budgets are bounded; retired/unknown sources cannot be planned', () => {
-  assert.equal(
+  assert.match(
     discoveryListingUrl('hr', 35),
-    'https://www.hr.ge/search-posting?pg=35',
+    /^https:\/\/www\.hr\.ge\/search-posting\?pdf=\d{4}-\d{2}-\d{2}&pg=35$/,
   );
   for (const page of [0, -1, 1.5, 1001, NaN])
     assert.throws(() => discoveryListingUrl('jobs', page));
@@ -172,4 +180,52 @@ void test('the category plan rotates its starting point by cursor and keeps the 
       `budget ${budget} planned ${planned}`,
     );
   }
+});
+void test('hr.ge and jobs.ss.ge listings date each card from their page state', () => {
+  const hr = `<a href="/announcement/498001/x">a</a><a href="/announcement/498002/y">b</a><script id="ng-state" type="application/json">${JSON.stringify(
+    {
+      k: {
+        b: {
+          data: {
+            announcements: {
+              items: [
+                {
+                  announcementId: 498001,
+                  publishDate: '2026-10-15T10:44:24.413',
+                },
+                { announcementId: 498002, publishDate: '2026-09-18T08:00:00' },
+              ],
+            },
+          },
+        },
+      },
+    },
+  )}</script>`;
+  assert.deepEqual(
+    listLinks('hr', hr, 'https://www.hr.ge/').map((l) => l.hints?.datePosted),
+    ['2026-10-15', '2026-09-18'],
+  );
+  const ss = `<a href="/ka/details/x-88251887">a</a><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(
+    {
+      props: {
+        pageProps: {
+          searchInitData: {
+            result: {
+              items: [{ id: 88251887, startDate: '2026-10-15T08:22:00Z' }],
+            },
+          },
+        },
+      },
+    },
+  )}</script>`;
+  assert.equal(
+    listLinks('ss', ss, 'https://jobs.ss.ge/ka/l/vacancies')[0].hints
+      ?.datePosted,
+    '2026-10-15',
+  );
+});
+void test('the import window is today and the four days before', () => {
+  assert.equal(importWindowStart('2026-10-15'), '2026-10-11');
+  assert.equal(importDateReason('2026-10-11', '2026-10-15'), null);
+  assert.equal(importDateReason('2026-10-10', '2026-10-15'), 'outside_window');
 });

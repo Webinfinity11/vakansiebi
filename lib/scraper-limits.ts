@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const scraperLimitFields = {
   batchLimit: z.number().int().min(1).max(200).optional(),
   budgetMinutes: z.number().int().min(1).max(8).optional(),
-  discoveryPageLimit: z.number().int().min(0).max(3).optional(),
+  discoveryPageLimit: z.number().int().min(0).max(60).optional(),
   repairLimit: z.number().int().min(0).max(20).optional(),
 };
 

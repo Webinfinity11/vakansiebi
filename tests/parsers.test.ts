@@ -980,3 +980,113 @@ void test('the legal form does not split one employer into two postings', () => 
     fingerprint({ ...v, company: 'ედი' }),
   );
 });
+
+void test('joob.ge reads a private advertisement by its post id', () => {
+  const widget = (type: string, inner: string) =>
+    `<div class="elementor-widget" data-widget_type="${type}"><div class="elementor-widget-container"><div class="jet-listing-dynamic-field__content">${inner}</div></div></div>`;
+  const page = (postId: number) =>
+    `<html><head><script type="application/ld+json">${JSON.stringify({
+      '@graph': [
+        {
+          '@type': 'BlogPosting',
+          datePublished: '2026-10-14T13:52:47+04:00',
+          articleSection: 'დასუფთავება, დალაგება',
+        },
+      ],
+    })}</script></head><body class="single postid-${postId} single-format-standard"><div class="elementor-location-single">${[
+      widget('jet-listing-dynamic-field.default', 'ვაკანსია — დიასახლისი'),
+      widget(
+        'jet-listing-dynamic-field.default',
+        '<div>სასწრაფოდ ვეძებთ დიასახლისს.</div><div>სამუშაო დღეები: პარასკევი, შაბათი და კვირა</div><div>ანაზღაურება: 65 ლარი დღეში</div>',
+      ),
+      widget('heading.default', 'ანაზღაურება:'),
+      widget('jet-listing-dynamic-field.default', '65 ₾'),
+      widget('heading.default', 'საკონტაქტო:'),
+      widget('jet-listing-dynamic-field.default', '598 465 253'),
+      widget('heading.default', 'მისამართი:'),
+      widget('jet-listing-dynamic-field.default', 'თბილისი'),
+      widget('heading.default', 'მსგავსი ვაკანსიები'),
+      widget('jet-listing-dynamic-field.default', 'ბათუმი'),
+    ].join('')}</div></body></html>`;
+  const url = 'https://joob.ge/?p=90780';
+  const v = parseDetail('joob', page(90780), url);
+  assert.equal(v.title, 'ვაკანსია — დიასახლისი');
+  assert.equal(v.company, '');
+  assert.equal(v.city, 'თბილისი');
+  assert.equal(v.datePosted, '2026-10-14');
+  assert.equal(v.salaryMin, 65);
+  assert.equal(v.salaryPeriod, 'დღე');
+  assert.ok(
+    v.facts?.some(
+      (f) => f.label === 'საკონტაქტო ტელეფონი' && f.value === '+995598465253',
+    ),
+  );
+  assert.throws(() => parseDetail('joob', page(90779), url));
+  assert.equal(externalId('joob', 'https://joob.ge/?p=90780'), '90780');
+  assert.equal(externalId('joob', 'https://joob.ge/?p=90780&x=1'), null);
+  assert.equal(externalId('joob', 'https://evil.test/?p=90780'), null);
+  assert.deepEqual(
+    listLinks(
+      'joob',
+      '<div class="jet-listing-grid__item" data-post-id="90781"></div><div class="jet-listing-grid__item" data-post-id="90781"></div>',
+    ),
+    [{ externalId: '90781', url: 'https://joob.ge/?p=90781' }],
+  );
+});
+
+void test('unijobs.ge reads a published job_listing by its post id', () => {
+  const detail = (over: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      id: 59954,
+      date: '2026-10-12T19:16:59',
+      status: 'publish',
+      type: 'job_listing',
+      title: { rendered: 'ჰოთ-დოგ მეიქერი' },
+      content: {
+        rendered:
+          '<p>ჰოთ დოგ რუმი აცხადებს ვაკანსიას პოზიციაზე &#8211; ჰოთ-დოგ მეიქერი.</p>',
+      },
+      metas: {
+        _job_filled: '',
+        _job_type: { 65: 'სრული განაკვეთი' },
+        _job_location: { 136: 'თბილისი' },
+        _job_salary: '1100$',
+        _job_application_deadline_date: '2026-11-12',
+        _job_apply_url: 'https://hel-ai.com/apply/IUJHncx',
+        _job_employer_name: 'ჰოთ-დოგ რუმი',
+      },
+      ...over,
+    });
+  const url = 'https://unijobs.ge/?p=59954';
+  const v = parseDetail('unijobs', detail(), url);
+  assert.equal(v.company, 'ჰოთ-დოგ რუმი');
+  assert.equal(v.city, 'თბილისი');
+  assert.equal(v.datePosted, '2026-10-12');
+  assert.equal(v.deadline, '2026-11-12');
+  assert.equal(v.salary, '');
+  assert.equal(
+    v.applicationLinks?.[0]?.url,
+    'https://hel-ai.com/apply/IUJHncx',
+  );
+  assert.throws(() => parseDetail('unijobs', detail({ id: 1 }), url));
+  assert.throws(
+    () => parseDetail('unijobs', detail({ status: 'draft' }), url),
+    UnavailableVacancy,
+  );
+  assert.deepEqual(
+    listLinks(
+      'unijobs',
+      JSON.stringify([
+        { id: 59954, date: '2026-10-12T19:16:59', status: 'publish' },
+        { id: 59955, date: '2026-10-12T19:16:59', status: 'draft' },
+      ]),
+    ),
+    [
+      {
+        externalId: '59954',
+        url: 'https://unijobs.ge/?p=59954',
+        hints: { datePosted: '2026-10-12' },
+      },
+    ],
+  );
+});

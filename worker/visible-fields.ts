@@ -9,6 +9,28 @@ export function labelledValue(text: string, label: RegExp): string {
   }
   return '';
 }
+const periodWords =
+  /თვეში|ყოველთვ|\/\s*თვე|საათში|\/\s*საათი|დღეში|დღიურად|\/\s*დღე|\(\s*დღიური\s*\)|monthly|hourly|daily|per (?:month|hour|day)/i;
+/* Only a label opening a later sentence ("… დღიურად. ანაზღაურება 70 ლარი") is cut out;
+   inside one phrase the words before it ("თვიური", "საწყისი", "ცვლაში") qualify the pay. */
+const payLabelMidLine =
+  /[.!?;]\s+(?:ანაზღაურება|ხელფასი)(?:\s*[:–—-]\s*|\s+)(?=[^.!?;\n]*\d)/;
+/** The pay sentence of a line that reaches pay only after other sentences. */
+export function payClause(line: string) {
+  const match = line.match(payLabelMidLine);
+  if (!match || match.index === undefined) return line;
+  const rest = line.slice(match.index + match[0].length);
+  const end = rest.search(/[.!?;](?:\s|$)/);
+  return (end < 0 ? rest : rest.slice(0, end)).trim() || line;
+}
+/** "70 ლარი დღეში", "დღიურად 100 ლარი", "50 ₾ (დღიური)" — a day rate written without a label. */
+export function unlabelledDailyRate(text: string) {
+  return (
+    text.match(
+      /(?:^|[\s(,;:])((?:დღეში|დღიურად)\s+\d{2,4}(?:\s*[-–—]\s*\d{2,4})?\s*(?:₾|ლარი|GEL)|\d{2,4}(?:\s*[-–—]\s*\d{2,4})?\s*(?:₾|ლარი|GEL)\s*(?:დღეში|დღიურად|\/\s*დღე|\(\s*დღიური\s*\)))/i,
+    )?.[1] ?? ''
+  );
+}
 export function vacancyLocation(text: string) {
   const opening = text.split(/\n\s*\n/)[0].trim();
   if (
@@ -49,10 +71,16 @@ export function visibleFields(text: string) {
       text,
       /^(?:ხელფასი|ანაზღაურება|ფიქსირებული ხელფასი|salary|compensation)\s*[:–-]\s*(.+)$/i,
     ) || dailyPay;
-  const pay =
+  const excerptPay =
     excerpts.length > 1
       ? payDisplay(excerpts)
       : labelledPay || payDisplay(excerpts);
+  // A lone excerpt whose pay label sits mid-line is shown from that label on, not as the
+  // whole sentence it was written in; the sentence still decides the rate period below.
+  const clausePay =
+    excerpts.length === 1 && !labelledPay ? payClause(excerptPay) : excerptPay;
+  // Day labour is often advertised without any label: "70 ლარი დღეში".
+  const pay = clausePay || unlabelledDailyRate(text);
   const format = labelledValue(
     text,
     /^(?:სამუშაო ფორმატი|მუშაობის ფორმატი|work format)\s*[:–-]\s*(.+)$/i,
@@ -66,7 +94,9 @@ export function visibleFields(text: string) {
         : '';
   // Keep the visible text (net/gross, bonus, period). Only an unambiguous
   // leading amount with explicit currency becomes a numeric filter value.
-  const amountText = pay
+  // Cutting a sentence out changes what is shown, not the amount read from the line.
+  const numbersFrom = clausePay !== excerptPay ? excerptPay : pay;
+  const amountText = numbersFrom
     .replace(/^(?:დღეში|დღიურად|daily|per day)\s+/i, '')
     .replace(/^(?:ფიქსირებული|fixed)\s+/i, '');
   const normalizedAmount = amountText
@@ -102,7 +132,9 @@ export function visibleFields(text: string) {
       if (!/ლარამდე/i.test(match[5])) min = amount;
     } else warning = 'ხელფასის დიაპაზონი გადასამოწმებელია.';
   }
-  const rateText = pay
+  const rateSource =
+    clausePay !== excerptPay && !periodWords.test(clausePay) ? excerptPay : pay;
+  const rateText = rateSource
     .replace(
       /(?:გადახდა|გაიცემა|დარიცხვა)\s+თვეში\s+(?:ორჯერ|ერთხელ|2-ჯერ|1-ჯერ)/g,
       '',
@@ -113,7 +145,9 @@ export function visibleFields(text: string) {
     ? 'თვე'
     : /საათში|\/\s*საათი|hourly|per hour/i.test(periodText)
       ? 'საათი'
-      : /დღეში|დღიურად|\/\s*დღე|daily|per day/i.test(periodText)
+      : /დღეში|დღიურად|\/\s*დღე|\(\s*დღიური\s*\)|daily|per day/i.test(
+            periodText,
+          )
         ? 'დღე'
         : '';
   if (
@@ -132,7 +166,7 @@ export function visibleFields(text: string) {
   // "1, 200 ლარი". The card's own label reads those; its numbers are used only
   // when that label is one plain price with a rate the board filters by.
   if (min === null && !currency && !warning && pay) {
-    const facts = salaryFacts(pay, period);
+    const facts = salaryFacts(numbersFrom, period);
     const from = facts?.value ?? facts?.min;
     const rates: Record<string, string> = {
       MONTH: '',
