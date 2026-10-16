@@ -196,7 +196,7 @@
     padding: 0 var(--jobx-space-20px);
     font-size: var(--jobx-font-size-13px);
     font-weight: 600;
-    color: var(--jobx-white-fixed);
+    color: var(--jobx-white-fixed) !important;
     opacity: 0;
     border-radius: var(--jobx-radius-11px);
   }
@@ -485,4 +485,18 @@
 }
 .job-report-done {
   display: block;
+}
+
+/* The map is a way into the vacancies that readers missed in the grey controls row;
+   it takes the accent tint on every screen so it reads as an entry, not a setting. */
+.board-shell.editorial-board.crafted-board .results-tools .results-map-link {
+  border-color: var(--ds-accent) !important;
+  background: var(--ds-accent-soft) !important;
+  color: var(--ds-accent) !important;
+}
+.board-shell.editorial-board.crafted-board
+  .results-tools
+  .results-map-link:hover {
+  background: var(--ds-accent) !important;
+  color: var(--jobx-white-fixed) !important;
 }

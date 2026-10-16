@@ -2153,6 +2153,11 @@
 :root[data-theme='dark'] .job-report-reasons {
   border: 0;
 }
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board
+  .results-tools
+  .results-map-link:hover {
+  color: var(--jobx-white-fixed) !important;
+}
 
 /* ── from app/search-features.css ── */
 :root[data-theme='dark'] .search-suggest {
