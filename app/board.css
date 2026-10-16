@@ -1900,14 +1900,15 @@
 }
 .vacancy-searches ul {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: var(--jobx-space-10px);
   padding: 0;
   margin: 0;
   list-style: none;
 }
 .vacancy-searches li {
-  max-width: 100%;
+  flex: 0 0 auto;
 }
 .vacancy-searches a {
   display: flex;
@@ -1920,7 +1921,7 @@
   color: var(--jobx-accent);
   font-size: var(--jobx-font-size-13px);
   text-decoration: none;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .vacancy-searches a:hover {
   border-color: var(--jobx-accent);

@@ -57,6 +57,7 @@ void test(
       description:
         'მომხმარებლის მომსახურება და კონსულტაცია სამუშაო დღეებში. გამოცდილება სასურველია.',
       contact: 'hr@example.com',
+      notificationEmail: 'owner@example.com',
       consent: true,
       logo: `data:image/png;base64,${bytes.toString('base64')}`,
     };

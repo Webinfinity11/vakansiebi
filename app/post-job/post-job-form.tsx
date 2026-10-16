@@ -56,6 +56,7 @@ const initial = {
   placement: 'vip',
   title: '',
   company: '',
+  notificationEmail: '',
   billingEmail: '',
   logo: '',
   category: '',
@@ -466,6 +467,8 @@ export function PostJobForm({
     salaryFrom: 'არასავალდებულო.',
     salaryTo: 'არასავალდებულო.',
     contact: 'ელფოსტა, ტელეფონი ან განაცხადის ბმული (გამოქვეყნდება საჯაროდ)',
+    notificationEmail:
+      'გამოქვეყნების შემდეგ აქ მოგივა მოკლე წერილი ვაკანსიის ბმულით. ეს ელფოსტა საჯაროდ არ გამოჩნდება.',
     description: `${values.description.trim().length.toLocaleString()} / 20 000 · მინიმუმ 30 სიმბოლო`,
   };
   const props = (name: FieldName) => ({
@@ -647,6 +650,10 @@ export function PostJobForm({
           <p>
             „{values.title}“ განსახილველად გაიგზავნა. საიტზე ადმინისტრატორის
             დამტკიცების შემდეგ გამოჩნდება.
+          </p>
+          <p>
+            გამოქვეყნების შემდეგ მითითებულ ელფოსტაზე მოგივა მოკლე წერილი
+            ვაკანსიის ბმულით.
           </p>
           {alreadyReceived && (
             <p>
@@ -836,6 +843,22 @@ export function PostJobForm({
                   autoComplete="off"
                   maxLength={2000}
                   placeholder="hr@company.ge · +995 5XX XX XX XX · https://…"
+                />
+              </Field>
+              <Field
+                name="notificationEmail"
+                label="ელფოსტა შეტყობინებისთვის *"
+                error={errors.notificationEmail}
+                hint={hints.notificationEmail}
+                wide
+              >
+                <input
+                  {...props('notificationEmail')}
+                  type="email"
+                  autoComplete="email"
+                  required
+                  maxLength={254}
+                  placeholder="you@company.ge"
                 />
               </Field>
             </div>
@@ -1049,9 +1072,9 @@ export function PostJobForm({
             {values.placement === 'premium' && (
               <Field
                 name="billingEmail"
-                label="ელფოსტა ინვოისისთვის *"
+                label="ინვოისისთვის სხვა ელფოსტა (არასავალდებულო)"
                 error={errors.billingEmail}
-                hint="ინვოისს ამ მისამართზე გამოგიგზავნით. ელფოსტა ვაკანსიაში საჯაროდ არ გამოჩნდება."
+                hint="ინვოისი შეტყობინებისთვის მითითებულ ელფოსტაზე მოგივა. სხვა მისამართზე მისაღებად შეავსე ეს ველი."
                 wide
               >
                 <input
@@ -1059,7 +1082,6 @@ export function PostJobForm({
                   type="email"
                   autoComplete="email"
                   maxLength={254}
-                  required
                 />
               </Field>
             )}

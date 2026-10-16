@@ -10,13 +10,14 @@ import {
   publicJobs,
   mutateJob,
   bulkPublishCandidates,
+  clearPublicJobsCache,
 } from '../lib/server/jobs';
 import { submissionDate } from '../lib/job-submission';
 import { classify } from '../worker/categories';
 const enabled = process.env.RUN_DB_TESTS === '1';
 
 void test(
-  'direct submission is idempotent, moderated, published with 14 day benefit, filtered, expired and limited',
+  'direct submission is idempotent, moderated, published with 15 day benefit, filtered, expired and limited',
   { skip: !enabled },
   async () => {
     assert.equal(new URL(process.env.DATABASE_URL!).pathname, '/ertad_test');
@@ -39,6 +40,7 @@ void test(
       description:
         'მოვალეობები: მომხმარებელთან ურთიერთობა და პროდუქციის წარდგენა. სამუშაო გრაფიკი: ორშაბათიდან პარასკევის ჩათვლით, 10:00–18:00. გამოცდილება სასურველია.',
       contact: 'hr@example.com',
+      notificationEmail: 'owner@example.com',
       consent: true,
       fax: '',
     };
@@ -136,7 +138,7 @@ void test(
         Math.abs(
           new Date(row.placement_expires_at).getTime() -
             new Date(row.published_at).getTime() -
-            14 * 86400000,
+            15 * 86400000,
         ) < 1000,
       );
       const expires = row.placement_expires_at.toISOString();
@@ -234,6 +236,16 @@ void test(
         ids[0],
         'vacancy remains available after promotion ends',
       );
+      clearPublicJobsCache();
+      const afterVip = await publicJobs(
+        new URLSearchParams({ q: key, sort: 'new' }),
+      );
+      assert.deepEqual(
+        afterVip.jobs.map((j) => j.id),
+        [second.id, ids[0]],
+        'expired VIP returns to the standard publication-date order',
+      );
+      assert.ok(afterVip.jobs.every((j) => !j.placement));
       for (let n = 0; n < 3; n++)
         ids.push(
           (

@@ -103,8 +103,15 @@ export async function submitJob(
       [randomUUID(), id, draft.url, draft],
     );
     await c.query(
-      'INSERT INTO job_submissions(request_id,job_id,client_hash,payload_hash,requested_placement) VALUES($1,$2,$3,$4,$5)',
-      [data.requestId, id, clientHash, payloadHash, data.placement],
+      'INSERT INTO job_submissions(request_id,job_id,client_hash,payload_hash,requested_placement,notification_email) VALUES($1,$2,$3,$4,$5,$6)',
+      [
+        data.requestId,
+        id,
+        clientHash,
+        payloadHash,
+        data.placement,
+        data.notificationEmail,
+      ],
     );
     await c.query(
       "INSERT INTO audit_log(job_id,action,actor,after_data) VALUES($1,'submission.received','employer',$2)",
@@ -116,7 +123,7 @@ export async function submitJob(
             id,
             company: draft.company,
             title: draft.title,
-            billingEmail: data.billingEmail,
+            billingEmail: data.billingEmail || data.notificationEmail,
           })
         : undefined;
     return { id, received: true, ...(invoiceUrl ? { invoiceUrl } : {}) };

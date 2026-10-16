@@ -54,6 +54,7 @@ void test(
       description:
         'This is an isolated test vacancy for verifying bank transfer invoices and moderation. No actual job, customer or payment is involved.',
       contact: 'hr@example.com',
+      notificationEmail: 'owner@example.com',
       billingEmail: 'billing@example.com',
       consent: true,
       fax: '',
@@ -86,7 +87,7 @@ void test(
       const token = received.invoiceUrl!.split('/').pop()!;
       let inv = await getInvoice(token);
       assert.equal(inv.amount_gel, 20);
-      assert.equal(inv.service_days, 14);
+      assert.equal(inv.service_days, 30);
       assert.equal(inv.status, 'pending');
       const queued = (
         await db().query(
@@ -218,6 +219,11 @@ void test(
       ).jobs[0];
       assert.equal(published.placement.tier, 'premium');
       const end = published.placement.expiresAt;
+      assert.equal(
+        Date.parse(end) - new Date(inv.activated_at).getTime(),
+        30 * 86400000,
+        'premium lasts 30 days from activation, not from invoice creation',
+      );
       await mutateJob({
         id: received.id,
         version: 3,
@@ -254,6 +260,22 @@ void test(
       assert.equal(
         (await getInvoice(paid.invoiceUrl!.split('/').pop()!)).status,
         'refunded',
+      );
+      const fallback = await submitJob(
+        { ...payload, requestId: randomUUID(), billingEmail: '' },
+        key,
+      );
+      ids.push(fallback.id);
+      const fallbackMail = (
+        await db().query(
+          'SELECT e.payload FROM invoice_email_delivery e JOIN job_invoices i ON i.id=e.invoice_id WHERE i.job_id=$1',
+          [fallback.id],
+        )
+      ).rows[0];
+      assert.deepEqual(
+        fallbackMail.payload.to,
+        [payload.notificationEmail],
+        'Invoice uses the mandatory notification address unless another billing email was supplied',
       );
     } finally {
       await db().query(

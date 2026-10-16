@@ -35,6 +35,7 @@ const base = () => ({
   description:
     'მომხმარებლის მომსახურება და კონსულტაცია სამუშაო დღეებში. გამოცდილება სასურველია.',
   contact: 'hr@example.com',
+  notificationEmail: 'owner@example.com',
   consent: true,
 });
 

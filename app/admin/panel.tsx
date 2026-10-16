@@ -1,10 +1,16 @@
 'use client';
 import { TrackingSettings } from './tracking-settings';
 import { BillingSettings } from './billing-settings';
-import { invoiceNumber, invoiceStatuses } from '@/lib/billing';
+import {
+  invoiceNumber,
+  invoiceStatuses,
+  premiumDays,
+  premiumPriceGEL,
+} from '@/lib/billing';
 import {
   placementLabels,
   placementTiers,
+  introductoryDays,
   type PlacementTier,
 } from '@/lib/placement';
 import Link from 'next/link';
@@ -60,6 +66,7 @@ import type { AdminJob, Source, Vacancy, SourceRun } from '@/lib/types';
 import { categories, listingSourceNames } from '@/lib/types';
 import { sourceHealth } from '@/lib/scraper-status';
 import { EmployersPanel } from './employers';
+import { EmployerContacts } from './employer-contacts';
 import { AnalyticsPanel } from './analytics';
 import {
   useVacancyAnalytics,
@@ -376,11 +383,18 @@ export default function AdminPanel() {
     setBusy(true);
     setError('');
     try {
-      await request('/api/admin/jobs', {
+      const result = await request('/api/admin/jobs', {
         id: selected.id,
         version: selected.version,
         action,
-        ...(['save', 'publish'].includes(action) ? { draft } : {}),
+        ...(['save', 'publish'].includes(action)
+          ? {
+              draft,
+              ...(selected.submitted_at
+                ? { notificationEmail: selected.notification_email }
+                : {}),
+            }
+          : {}),
         /* Chosen only while pending. Publishing edits to a live submission
            sends none, so the server keeps the placement it already has
            instead of reading a default (a free VIP) the admin never saw. */
@@ -396,7 +410,9 @@ export default function AdminPanel() {
       setConfirm(null);
       setMessage(
         action === 'publish'
-          ? 'ვაკანსია გამოქვეყნდა. შეტყობინება არ გაგზავნილა.'
+          ? result.publicationEmailQueued
+            ? 'ვაკანსია გამოქვეყნდა. წერილი დაემატა გაგზავნის რიგს.'
+            : 'ვაკანსია გამოქვეყნდა.'
           : action === 'reject'
             ? 'განცხადება უარყოფილია. შეტყობინება არ გაგზავნილა.'
             : 'ცვლილება შენახულია.',
@@ -843,6 +859,7 @@ export default function AdminPanel() {
       title: 'ბიზნესი',
       items: [
         { id: 'billing', label: 'ინვოისები', icon: ReceiptText },
+        { id: 'customers', label: 'ჩვენი დამსაქმებლები', icon: Building2 },
         {
           id: 'tracking',
           label: 'პიქსელები და კოდები',
@@ -1118,6 +1135,18 @@ export default function AdminPanel() {
               ანალიტიკისა და მარკეტინგის მართვა
             </SectionHeading>
             <TrackingSettings />
+          </section>
+        )}
+        {tab === 'customers' && (
+          <section className="admin-panel">
+            <SectionHeading title="ჩვენი დამსაქმებლები">
+              JOBX-ზე განცხადების განმთავსებლები, კონტაქტები და ვაკანსიების
+              ისტორია.
+            </SectionHeading>
+            <EmployerContacts
+              key={billingVersion}
+              onReview={(id) => void openJobById(id)}
+            />
           </section>
         )}
         {tab === 'billing' && (
@@ -1923,9 +1952,33 @@ export default function AdminPanel() {
                 selected.status !== 'pending' &&
                 selected.placement_expires_at && (
                   <p className="notice editor-notice">
-                    {`${placementLabels[selected.placement_tier]} აქტიურია ${time(selected.placement_expires_at)}-მდე.`}
+                    {selected.placement_active
+                      ? `${placementLabels[selected.placement_tier]} აქტიურია ${time(selected.placement_expires_at)}-მდე.`
+                      : `${placementLabels[selected.placement_tier]}-ის ვადა დასრულებულია. განთავსება სტანდარტულია.`}
                   </p>
                 )}
+              {submission && (
+                <section className="notice editor-notice">
+                  <label htmlFor="admin-notification-email">
+                    ელფოსტა შეტყობინებისთვის *
+                  </label>
+                  <input
+                    id="admin-notification-email"
+                    type="email"
+                    maxLength={254}
+                    required
+                    disabled={busy}
+                    value={selected.notification_email || ''}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        notification_email: e.target.value,
+                      })
+                    }
+                  />
+                  <p>პირადი საკონტაქტო მისამართი. საჯარო ვაკანსიაში არ ჩანს.</p>
+                </section>
+              )}
               {submission && selected.status === 'pending' && (
                 <section className="notice placement-choice">
                   <h3>განთავსება</h3>
@@ -1933,10 +1986,10 @@ export default function AdminPanel() {
                     {selected.placement_expires_at
                       ? `${placementLabels[selected.placement_tier]} აქტიურია ${time(selected.placement_expires_at)}-მდე. ხელახლა დადასტურება ვადას არ გააგრძელებს.`
                       : selected.vip_available
-                        ? 'ამ კომპანიას უფასო VIP (14 დღე) ჯერ არ გამოუყენებია, ამიტომ VIP წინასწარ მოინიშნა. დაადასტურე, ან აირჩიე სტანდარტული.'
+                        ? `ამ კომპანიას უფასო VIP (${introductoryDays} დღე) ჯერ არ გამოუყენებია, ამიტომ VIP წინასწარ მოინიშნა. დაადასტურე, ან აირჩიე სტანდარტული.`
                         : 'ამ კომპანიას უფასო VIP უკვე გამოყენებული აქვს, ასე რომ სტანდარტული მოინიშნა.'}
                     {selected.requested_placement === 'premium' &&
-                      ' დამსაქმებელმა პრემიუმი მოითხოვა (20 ₾ / 14 დღე); აქტიურდება ჩარიცხვის დადასტურების შემდეგ.'}
+                      ` დამსაქმებელმა პრემიუმი მოითხოვა (${premiumPriceGEL} ₾ / ${premiumDays} დღე); აქტიურდება ჩარიცხვის დადასტურების შემდეგ.`}
                   </p>
                   <label htmlFor="admin-placement">
                     განთავსება დამტკიცებისას
@@ -1959,7 +2012,7 @@ export default function AdminPanel() {
                         label:
                           placementLabels[t] +
                           (t === 'vip' && !selected.placement_expires_at
-                            ? ' · უფასოდ 14 დღე'
+                            ? ` · უფასოდ ${introductoryDays} დღე`
                             : ''),
                       }))}
                   />
@@ -2549,7 +2602,7 @@ export default function AdminPanel() {
               )}
               <p className="admin-helper">
                 {submission
-                  ? 'დამსაქმებლის განცხადება ავტომატურად არასდროს ქვეყნდება. დამსაქმებელს შეტყობინება არ იგზავნება.'
+                  ? 'განცხადება ქვეყნდება ადმინისტრატორის დადასტურების შემდეგ. პირველი გამოქვეყნებისას დამსაქმებელს ავტომატურად ეგზავნება წერილი ვაკანსიის ბმულით.'
                   : 'ხელით შენახვა ამ ჩანაწერის ავტომატურ განახლებას აჩერებს. საჯარო ვერსიის შესაცვლელად გამოიყენე გამოქვეყნება. შეტყობინებები არ იგზავნება.'}
               </p>
             </div>

@@ -42,7 +42,9 @@ export async function approvePlacement(
       !invoice ||
       invoice.status !== 'paid' ||
       invoice.amount_gel !== premiumPriceGEL ||
-      invoice.service_days !== premiumDays
+      // Previously issued invoices remain usable while the duration correction
+      // migrates their stored terms. New invoices always use premiumDays.
+      ![14, premiumDays].includes(invoice.service_days)
     )
       throw new ApiError(
         'პრემიუმის გამოქვეყნებამდე დაადასტურე 20 ₾-ის ჩარიცხვა',
@@ -100,7 +102,7 @@ export async function approvePlacement(
     ).rowCount
   )
     throw new ApiError(
-      'ამ კომპანიას 14-დღიანი საჩუქარი უკვე გამოყენებული აქვს. აირჩიე სტანდარტული განთავსება.',
+      `ამ კომპანიას ${introductoryDays}-დღიანი საჩუქარი უკვე გამოყენებული აქვს. აირჩიე სტანდარტული განთავსება.`,
     );
   await c.query(
     'UPDATE job_submissions SET bonus_company_key=$2 WHERE job_id=$1',

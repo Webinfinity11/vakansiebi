@@ -1,0 +1,95 @@
+.customer-list {
+  display: grid;
+  gap: 16px;
+}
+.customer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.customer-toolbar input {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.customer-toolbar :is(input, select),
+.customer-content textarea {
+  border: 1px solid var(--ds-line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--ds-surface);
+  color: inherit;
+  font: inherit;
+}
+.customer-toolbar select {
+  max-width: 100%;
+}
+.customer-card {
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  min-width: 0;
+}
+.customer-card summary {
+  padding: 18px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.customer-card summary span {
+  margin-left: 14px;
+  color: var(--ds-ink-2);
+  font-size: 13px;
+}
+.customer-content {
+  display: grid;
+  gap: 14px;
+  padding: 0 18px 18px;
+}
+.customer-content p,
+.customer-content h3 {
+  margin: 0;
+}
+.customer-content label {
+  display: grid;
+  gap: 8px;
+}
+.customer-content textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+.customer-contacts,
+.customer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.customer-contacts a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.customer-jobs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.customer-jobs li {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--ds-line);
+  padding-top: 12px;
+  overflow-wrap: anywhere;
+}
+.customer-jobs button {
+  justify-self: start;
+  white-space: normal;
+  text-align: left;
+}
+.customer-jobs small {
+  color: var(--ds-ink-2);
+}
+.customer-jobs [data-failed='true'] {
+  color: var(--ds-danger);
+}

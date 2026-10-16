@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { after } from 'next/server';
+import { deliverPublicationEmails } from '@/lib/server/publication-email';
 import { adminJobs, mutateJob } from '@/lib/server/jobs';
 import { listingSourceNames } from '@/lib/types';
 import {
@@ -8,6 +10,7 @@ import {
   readBody,
 } from '@/lib/server/auth';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 export async function GET(req: Request) {
   try {
     await requireAdmin();
@@ -31,7 +34,16 @@ export async function POST(req: Request) {
   try {
     await requireAdmin();
     checkOrigin(req);
-    return Response.json(await mutateJob(await readBody(req)));
+    const result = await mutateJob(await readBody(req));
+    if (result.publicationEmailQueued)
+      after(() =>
+        deliverPublicationEmails(result.jobId)
+          .then(() => {})
+          .catch(() => {
+            console.error('Publication email delivery deferred');
+          }),
+      );
+    return Response.json(result);
   } catch (e) {
     return apiError(e);
   }

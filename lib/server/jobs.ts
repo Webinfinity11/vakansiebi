@@ -6,6 +6,8 @@ import {
   type IndexingNotification,
 } from './google-indexing';
 import { enqueueIndexingNotifications } from './indexing-queue';
+import { queuePublicationEmail } from './publication-email';
+import { safeEmail } from '../application-contact';
 import { placementTiers } from '../placement';
 import { bonusCompanyKey } from './job-placement';
 import { approvePlacement } from './job-placement';
@@ -445,7 +447,7 @@ export async function adminJobs(
     AND (${sourceParam}='' OR EXISTS (SELECT 1 FROM source_items f WHERE f.job_id=j.id AND f.source_id=${sourceParam}))`;
   const rows = (
     await db().query(
-      `SELECT j.*,(SELECT requested_placement FROM job_submissions sub WHERE sub.job_id=j.id) AS requested_placement,(SELECT created_at FROM job_submissions sub WHERE sub.job_id=j.id) AS submitted_at,(SELECT is_test FROM job_submissions sub WHERE sub.job_id=j.id) AS is_test,(SELECT jsonb_build_object('status',inv.status,'number',inv.number,'created_at',inv.created_at,'token',inv.token,'amount_gel',inv.amount_gel) FROM job_invoices inv WHERE inv.job_id=j.id) AS invoice,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where('$4', '$5')} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
+      `SELECT j.*,(SELECT notification_email FROM job_submissions sub WHERE sub.job_id=j.id) AS notification_email,(SELECT requested_placement FROM job_submissions sub WHERE sub.job_id=j.id) AS requested_placement,(SELECT created_at FROM job_submissions sub WHERE sub.job_id=j.id) AS submitted_at,(SELECT is_test FROM job_submissions sub WHERE sub.job_id=j.id) AS is_test,(SELECT jsonb_build_object('status',inv.status,'number',inv.number,'created_at',inv.created_at,'token',inv.token,'amount_gel',inv.amount_gel) FROM job_invoices inv WHERE inv.job_id=j.id) AS invoice,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where('$4', '$5')} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
       [status, q, (page - 1) * 30, source, jobId],
     )
   ).rows;
@@ -485,6 +487,9 @@ export async function adminJobs(
   );
   for (const r of rows)
     if (r.submitted_at) {
+      r.placement_active =
+        !!r.placement_expires_at &&
+        new Date(r.placement_expires_at).getTime() > Date.now();
       const key = bonusCompanyKey(r.draft.company || '');
       r.vip_available =
         key.length >= 2 &&
@@ -552,6 +557,12 @@ export async function mutateJob(input: unknown) {
       ]),
       draft: vacancySchema.optional(),
       placement: z.enum(placementTiers).optional(),
+      notificationEmail: z
+        .string()
+        .trim()
+        .max(254)
+        .refine((v) => !!safeEmail(v), 'მიუთითე სწორი ელფოსტა შეტყობინებისთვის')
+        .optional(),
       itemId: z.uuid().optional(),
       targetId: z.uuid().optional(),
     })
@@ -574,6 +585,11 @@ export async function mutateJob(input: unknown) {
       throw new ApiError(
         'ჩანაწერი შეიცვალა. განაახლე სია და სცადე ხელახლა.',
         409,
+      );
+    if (data.notificationEmail && ['save', 'publish'].includes(data.action))
+      await c.query(
+        'UPDATE job_submissions SET notification_email=$2 WHERE job_id=$1',
+        [job.id, data.notificationEmail],
       );
     if (data.action === 'confirm-payment' || data.action === 'confirm-refund') {
       if (
@@ -656,10 +672,18 @@ export async function mutateJob(input: unknown) {
       if (!draft.company) throw new ApiError('მიუთითე კომპანია');
       const submission = (
         await c.query(
-          'SELECT requested_placement FROM job_submissions WHERE job_id=$1',
+          'SELECT requested_placement,notification_email,is_test FROM job_submissions WHERE job_id=$1',
           [job.id],
         )
       ).rows[0];
+      if (
+        submission &&
+        !submission.is_test &&
+        !safeEmail(submission.notification_email || '')
+      )
+        throw new ApiError(
+          'გამოქვეყნებამდე მიუთითე დამსაქმებლის ელფოსტა შეტყობინებისთვის',
+        );
       const placement =
         data.placement ||
         (submission
@@ -782,7 +806,15 @@ export async function mutateJob(input: unknown) {
     const events = indexingTransition(job.id, job, { status, published });
     await enqueueIndexingNotifications(events, c);
     notifications.push(...events);
-    return { ok: true };
+    const publicationEmailQueued =
+      data.action === 'publish' && !job.published_at && submitted
+        ? await queuePublicationEmail(c, {
+            id: job.id,
+            title: draft.title,
+            company: draft.company,
+          })
+        : false;
+    return { ok: true, publicationEmailQueued, jobId: job.id as string };
   });
   clearPublicJobsCache();
   await publishIndexingNotifications(notifications);

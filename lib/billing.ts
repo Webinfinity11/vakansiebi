@@ -1,6 +1,6 @@
 import { z } from 'zod';
 export const premiumPriceGEL = 20;
-export const premiumDays = 14;
+export const premiumDays = 30;
 export const invoiceContact = {
   email: 'invoice@jobx.ge',
   phone: '579 53 53 20',

@@ -77,6 +77,11 @@ export const submissionSchema = z
       .default('standard'),
     title: text(3, 120),
     company: text(2, 160),
+    notificationEmail: z
+      .string({ error: 'მიუთითე ელფოსტა შეტყობინებისთვის' })
+      .trim()
+      .max(254)
+      .refine((v) => !!safeEmail(v), 'მიუთითე სწორი ელფოსტა შეტყობინებისთვის'),
     billingEmail: z.string().trim().max(254).default(''),
     logo: submissionLogoSchema,
     category: z.enum(categories).or(z.literal('')).default(''),
@@ -109,7 +114,11 @@ export const submissionSchema = z
     fax: z.string().max(200).default(''),
   })
   .superRefine((v, ctx) => {
-    if (v.placement === 'premium' && !safeEmail(v.billingEmail))
+    if (
+      v.placement === 'premium' &&
+      v.billingEmail &&
+      !safeEmail(v.billingEmail)
+    )
       ctx.addIssue({
         code: 'custom',
         path: ['billingEmail'],

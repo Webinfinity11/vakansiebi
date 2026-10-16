@@ -9,7 +9,7 @@ const invoice: JobInvoice = {
   token: 'a'.repeat(64),
   number: '7',
   amount_gel: 20,
-  service_days: 14,
+  service_days: 30,
   payer_name: '<img src=x onerror=alert(1)>',
   vacancy_title: 'Designer & Developer',
   payee_name: 'TEST recipient',
@@ -33,6 +33,8 @@ void test('invoice mail escapes user content, links the private invoice and has 
   assert.ok(email.html.includes(`tel:${invoiceContact.telephone}`));
   assert.ok(email.text.includes(invoiceContact.phone));
   assert.equal(email.subject, 'JOBX — ინვოისი 000007');
+  assert.match(email.html, /პრემიუმ განთავსება · 30 დღე/);
+  assert.match(email.text, /პრემიუმ განთავსება · 30 დღე/);
   assert.doesNotMatch(email.html + email.text, /JOBX-2026-/);
 });
 void test('mail does not duplicate the owner address and rejects malformed destinations and links', () => {
