@@ -4,7 +4,27 @@ import {
   analyticsPage,
   analyticsReferrer,
   analyticsEvent,
+  analyticsTitle,
 } from '../lib/google-analytics';
+
+void test('GA page titles preserve SEO identity without exposing a typed search', () => {
+  const page = analyticsPage('https://jobx.ge/?q=private@example.com')!;
+  assert.equal(
+    analyticsTitle(page, '„private@example.com“ — ვაკანსიები | JOBX'),
+    'ვაკანსიები საქართველოში — სამსახურის ძებნა | JOBX',
+  );
+  assert.equal(
+    analyticsTitle('https://jobx.ge/?salaryPeriod=day', 'old browser title'),
+    'ვაკანსიები დღიური ანაზღაურებით | JOBX',
+  );
+  assert.equal(
+    analyticsTitle(
+      'https://jobx.ge/companies/tibisi',
+      'თიბისის ვაკანსიები | JOBX',
+    ),
+    'თიბისის ვაკანსიები | JOBX',
+  );
+});
 
 void test('SEO landing identity joins GA visits to Search Console without leaking arbitrary query values', () => {
   for (const query of [

@@ -3,7 +3,11 @@
 import Script from 'next/script';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { analyticsPage, analyticsReferrer } from '@/lib/google-analytics';
+import {
+  analyticsPage,
+  analyticsReferrer,
+  analyticsTitle,
+} from '@/lib/google-analytics';
 
 type AnalyticsWindow = Window & {
   dataLayer?: IArguments[];
@@ -74,7 +78,7 @@ export function GoogleAnalytics({ measurementId }: { measurementId: string }) {
       page_location: page,
       page_referrer:
         previousPage.current || analyticsReferrer(document.referrer),
-      page_title: document.title,
+      page_title: analyticsTitle(page, document.title),
     };
     // Set these globally so engagement events use the same sanitized URL.
     gtag('set', pageDetails);

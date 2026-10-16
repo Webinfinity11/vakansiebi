@@ -1,4 +1,5 @@
-import { landingFor } from './seo-landing';
+import { landingFor, landingHeading } from './seo-landing';
+import { homeTitle } from './seo';
 
 /** GA only measures public pages on the canonical production site. */
 export function analyticsPage(url: string, { includeCv = false } = {}) {
@@ -43,6 +44,14 @@ export function analyticsPage(url: string, { includeCv = false } = {}) {
   } catch {
     return null;
   }
+}
+
+/** A typed search can appear in document.title even when its URL was sanitized. */
+export function analyticsTitle(page: string, documentTitle: string) {
+  const url = new URL(page);
+  if (url.pathname !== '/') return documentTitle;
+  const landing = landingFor(url.searchParams);
+  return landing ? `${landingHeading(landing)} | JOBX` : homeTitle;
 }
 
 /** Explicit outcomes, without search text, CV fields, contact details or job IDs. */
