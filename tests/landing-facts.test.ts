@@ -21,7 +21,7 @@ void test('the figures read as Georgian whatever the list holds', () => {
   );
   assert.equal(
     full.salary,
-    'მითითებული ხელფასი უმეტესად 60-დან 90 ₾-მდეა დღეში.',
+    '200 განცხადებაში მითითებული ხელფასების შუა 50% 60-დან 90 ₾-მდეა დღეში.',
   );
   assert.equal(full.employers, 'ყველაზე აქტიური დამსაქმებლები:');
 
@@ -36,10 +36,10 @@ void test('the figures read as Georgian whatever the list holds', () => {
   );
   assert.equal(
     factsText(facts({ fresh: 30 }), 12).lead,
-    'ახლა აქტიურია 12 განცხადება, ყველა ბოლო კვირაში დაემატა.',
+    'ახლა აქტიურია 12 განცხადება.',
   );
   assert.equal(
-    factsText(facts({ fresh: 1 }), 1).lead,
+    factsText(facts({ total: 1, fresh: 1, salary: null }), 1).lead,
     'ახლა აქტიურია 1 განცხადება, რომელიც ბოლო კვირაში დაემატა.',
   );
   assert.equal(
@@ -55,7 +55,7 @@ void test('the figures read as Georgian whatever the list holds', () => {
         employers: [{ slug: 'a', name: 'A', count: 2 }],
       }),
     ).salary,
-    'მითითებული ხელფასი უმეტესად 1 500 ₾-ია თვეში.',
+    '9 განცხადებაში მითითებული ხელფასების შუა 50% დაახლოებით 1 500 ₾-ია თვეში.',
   );
   assert.equal(
     factsText(facts({ employers: [{ slug: 'a', name: 'A', count: 2 }] }))
@@ -74,10 +74,11 @@ void test('the figures read as Georgian whatever the list holds', () => {
         },
       }),
     ).salary,
-    'მითითებული ხელფასი უმეტესად 900-დან 1\u00a0300 ₾-მდეა თვეში.',
+    '14 განცხადებაში მითითებული ხელფასების შუა 50% 900-დან 1\u00a0300 ₾-მდეა თვეში.',
   );
   assert.equal(
     factsText(facts(), 2500).lead,
-    'ახლა აქტიურია 2 500 განცხადება, ბოლო კვირაში დაემატა 14.',
+    'ახლა აქტიურია 2 500 განცხადება.',
   );
+  assert.equal(factsText(facts(), 12).salary, '');
 });

@@ -12,6 +12,8 @@ import {
   vacancySegment,
 } from '@/lib/vacancy-navigation';
 import VacancyPage from '../../vacancy-page';
+import { Suspense } from 'react';
+import { VacancySearches } from '../../vacancy-searches';
 type Props = {
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -112,6 +114,13 @@ export default async function Page(props: Props) {
         preview={preview}
         returnTo={from}
         companyPath={companyPath}
+        relatedSearches={
+          !preview && (
+            <Suspense key="related-searches" fallback={null}>
+              <VacancySearches job={job} />
+            </Suspense>
+          )
+        }
         footer={<ServerSiteFooter />}
       />
     </>

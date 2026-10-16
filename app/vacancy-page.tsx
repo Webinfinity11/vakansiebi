@@ -262,6 +262,7 @@ export default function VacancyPage({
   preview,
   returnTo: initialReturnTo,
   companyPath = null,
+  relatedSearches,
   footer,
   embedded = false,
 }: {
@@ -270,6 +271,7 @@ export default function VacancyPage({
   returnTo: string;
   /** The employer's own page, when it has one. */
   companyPath?: string | null;
+  relatedSearches?: ReactNode;
   footer?: ReactNode;
   /** Reuse the full vacancy inside the map's scrollable detail panel. */
   embedded?: boolean;
@@ -877,7 +879,10 @@ export default function VacancyPage({
             )}
           </footer>
           {!preview && !embedded && (
-            <SimilarVacancies id={job.id} returnTo={returnTo} />
+            <>
+              {relatedSearches}
+              <SimilarVacancies id={job.id} returnTo={returnTo} />
+            </>
           )}
         </article>
       </Content>

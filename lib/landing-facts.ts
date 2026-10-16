@@ -38,7 +38,9 @@ export function factsText(
       employers: '',
     };
   // The figures are held for half an hour; the count on screen is live.
-  const fresh = Math.min(facts.fresh, total);
+  // If the live list changed since this snapshot, its age distribution is
+  // unknown. Clamping could falsely claim every remaining job was newly added.
+  const fresh = total === facts.total ? facts.fresh : 0;
   const lead =
     (name ? `${name}: ` : '') +
     `ახლა აქტიურია ${groupDigits(total)} განცხადება` +
@@ -50,7 +52,8 @@ export function factsText(
           : ', ყველა ბოლო კვირაში დაემატა.'
         : // The count last: "მათ შორის 1 ბოლო 7 დღეში" read as one run of numbers.
           `, ბოლო კვირაში დაემატა ${groupDigits(fresh)}.`);
-  const { salary } = facts;
+  const salary =
+    facts.salary && facts.salary.count <= total ? facts.salary : null;
   const per = salary?.period === 'day' ? 'დღეში' : 'თვეში';
   // "1 275 ₾" is a statistic; a reader quotes pay in round figures.
   const step = salary?.period === 'day' ? 5 : 50;
@@ -58,8 +61,8 @@ export function factsText(
   const pay = !salary
     ? ''
     : round(salary.low) === round(salary.high)
-      ? `მითითებული ხელფასი უმეტესად ${groupDigits(round(salary.low))} ₾-ია ${per}.`
-      : `მითითებული ხელფასი უმეტესად ${groupDigits(round(salary.low))}-დან ${groupDigits(round(salary.high))} ₾-მდეა ${per}.`;
+      ? `${groupDigits(salary.count)} განცხადებაში მითითებული ხელფასების შუა 50% დაახლოებით ${groupDigits(round(salary.low))} ₾-ია ${per}.`
+      : `${groupDigits(salary.count)} განცხადებაში მითითებული ხელფასების შუა 50% ${groupDigits(round(salary.low))}-დან ${groupDigits(round(salary.high))} ₾-მდეა ${per}.`;
   // A name list after a colon reads the same for one employer or three.
   const employers =
     facts.employers.length === 0
