@@ -37,6 +37,24 @@ export function searchUrlValue(key: string, value: string) {
   return values[key]?.includes(label) ? latinUrl(label) : value;
 }
 
+/* Spelling every vocabulary label in Latin on each lookup cost close to a second per
+   keystroke on a phone: the board reads its address on every render. The spellings
+   are fixed, so they are worked out once per key; the first label wins, as before. */
+const latinLabels = new Map<string, Map<string, string>>();
+function labelForLatin(key: string, latin: string) {
+  let labels = latinLabels.get(key);
+  if (!labels) {
+    labels = new Map();
+    for (const spell of [latinUrl, legacyLatinUrl])
+      for (const label of values[key] || []) {
+        const spelled = spell(label);
+        if (!labels.has(spelled)) labels.set(spelled, label);
+      }
+    latinLabels.set(key, labels);
+  }
+  return labels.get(latin);
+}
+
 export function searchValueFromUrl(key: string, value: string) {
   // "Tbilisi" and "tbilisi" are one address.
   const lower = value.toLowerCase();
@@ -44,11 +62,7 @@ export function searchValueFromUrl(key: string, value: string) {
     return cityAliases[lower];
   if (key === 'q' && Object.hasOwn(roleAliases, lower))
     return roleAliases[lower];
-  return (
-    values[key]?.find((label) => latinUrl(label) === lower) ??
-    values[key]?.find((label) => legacyLatinUrl(label) === lower) ??
-    value
-  );
+  return labelForLatin(key, lower) ?? value;
 }
 
 export function canonicalSearchParams(params: URLSearchParams) {
