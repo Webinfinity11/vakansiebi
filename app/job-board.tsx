@@ -9,6 +9,12 @@ import { useAutoLoad } from './use-auto-load';
 import { RecentVacancies } from './recent-vacancies';
 import { SearchSuggest } from './search-suggest';
 import { rememberRecentSearch } from '@/lib/recent-searches';
+import {
+  changeSavedVacancy,
+  readSavedVacancies,
+  savedLimitMessage,
+  subscribeSavedVacancies,
+} from '@/lib/saved-vacancies';
 import { landingOf, searchHeading } from '@/lib/seo-landing';
 import { nearestCity } from '@/lib/nearest-city';
 import {
@@ -588,19 +594,18 @@ export default function JobBoard({
     advanced.postedWithin,
   ].filter(Boolean).length;
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const read = () => {
       try {
-        const value = JSON.parse(localStorage.getItem('ertad-saved') || '[]');
-        if (Array.isArray(value))
-          setSaved(
-            value
-              .filter((v) => typeof v === 'string' && /^[a-f0-9-]{36}$/.test(v))
-              .slice(0, 100),
-          );
+        setSaved(readSavedVacancies(localStorage));
       } catch {}
       setStorageReady(true);
-    }, 0);
-    return () => clearTimeout(timer);
+    };
+    const timer = setTimeout(read, 0);
+    const unsubscribe = subscribeSavedVacancies(read);
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
   useEffect(() => {
     if (pendingInitial || !activity.ready || (savedOnly && !storageReady))
@@ -971,42 +976,41 @@ export default function JobBoard({
   const [saveNotice, setSaveNotice] = useState<{
     id: string;
     wasSaved: boolean;
-    evicted?: string;
   } | null>(null);
   const toggleSave = useCallback(
-    (id: string) => {
-      const wasSaved = saved.includes(id);
-      const next = wasSaved
-        ? saved.filter((v) => v !== id)
-        : [...saved, id].slice(-100);
+    async (id: string) => {
       try {
-        localStorage.setItem('ertad-saved', JSON.stringify(next));
-        setSaved(next);
+        const { ids, wasSaved, limited } = await changeSavedVacancy(id);
+        setSaved(ids);
+        if (limited) {
+          setSaveNotice(null);
+          setFeedback(savedLimitMessage);
+          return;
+        }
         if (!wasSaved) track('save', id);
         else act('unsave');
         setFeedback('');
         setSaveNotice({
           id,
           wasSaved,
-          evicted: !wasSaved && saved.length >= 100 ? saved[0] : undefined,
         });
       } catch {
         setSaveNotice(null);
         setFeedback('ბრაუზერმა შენახვა ვერ შეძლო.');
       }
     },
-    [saved, act],
+    [act],
   );
-  const undoSave = () => {
+  const undoSave = async () => {
     if (!saveNotice) return;
-    const { id, wasSaved, evicted } = saveNotice;
-    const next = saved.filter((value) => value !== id);
-    if (wasSaved) next.push(id);
-    if (evicted && !next.includes(evicted) && next.length < 100)
-      next.unshift(evicted);
+    const { id, wasSaved } = saveNotice;
     try {
-      localStorage.setItem('ertad-saved', JSON.stringify(next.slice(-100)));
-      setSaved(next.slice(-100));
+      const { ids, limited } = await changeSavedVacancy(id, wasSaved);
+      setSaved(ids);
+      if (limited) {
+        setFeedback(savedLimitMessage);
+        return;
+      }
       setSaveNotice(null);
       act('undo_save');
       setFeedback('ცვლილება გაუქმებულია');

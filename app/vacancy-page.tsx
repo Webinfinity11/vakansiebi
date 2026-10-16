@@ -38,6 +38,12 @@ import {
 import { shareLink } from '@/lib/share';
 import { track, trackAction, trackContact } from '@/lib/analytics-client';
 import { vacancyContactEvent } from '@/lib/vacancy-contact-event';
+import {
+  changeSavedVacancy,
+  readSavedVacancies,
+  savedLimitMessage,
+  subscribeSavedVacancies,
+} from '@/lib/saved-vacancies';
 import type { PublicJob } from '@/lib/types';
 import { vacancySummary } from '@/lib/vacancy-summary';
 import {
@@ -309,35 +315,25 @@ export default function VacancyPage({
   useEffect(() => {
     const read = () => {
       try {
-        const value = JSON.parse(localStorage.getItem('ertad-saved') || '[]');
-        setSaved(
-          Array.isArray(value)
-            ? value
-                .filter(
-                  (id: unknown) =>
-                    typeof id === 'string' && /^[a-f0-9-]{36}$/.test(id),
-                )
-                .slice(0, 100)
-            : [],
-        );
+        setSaved(readSavedVacancies(localStorage));
       } catch {}
       setReady(true);
     };
     const timer = setTimeout(read, 0);
-    window.addEventListener('storage', read);
+    const unsubscribe = subscribeSavedVacancies(read);
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('storage', read);
+      unsubscribe();
     };
   }, []);
-  function toggleSave() {
-    const wasSaved = saved.includes(job.id);
-    const next = wasSaved
-      ? saved.filter((id) => id !== job.id)
-      : [...saved, job.id].slice(-100);
+  async function toggleSave() {
     try {
-      localStorage.setItem('ertad-saved', JSON.stringify(next));
-      setSaved(next);
+      const { ids, wasSaved, limited } = await changeSavedVacancy(job.id);
+      setSaved(ids);
+      if (limited) {
+        setFeedback(savedLimitMessage);
+        return;
+      }
       // The board counts a save the same way; a vacancy page used to save it uncounted.
       if (preview) return;
       if (wasSaved) trackAction('unsave');

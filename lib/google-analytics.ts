@@ -49,9 +49,24 @@ export function analyticsPage(url: string, { includeCv = false } = {}) {
 /** A typed search can appear in document.title even when its URL was sanitized. */
 export function analyticsTitle(page: string, documentTitle: string) {
   const url = new URL(page);
-  if (url.pathname !== '/') return documentTitle;
+  if (url.pathname !== '/') return documentTitle.trim();
   const landing = landingFor(url.searchParams);
   return landing ? `${landingHeading(landing)} | JOBX` : homeTitle;
+}
+
+/** Only used if a visit ends or metadata fails to arrive within five seconds. */
+export function analyticsFallbackTitle(page: string) {
+  const path = new URL(page).pathname;
+  if (path.startsWith('/vacancies/')) return 'ვაკანსია | JOBX';
+  if (path.startsWith('/companies/')) return 'კომპანიის ვაკანსიები | JOBX';
+  const titles: Record<string, string> = {
+    '/companies': 'კომპანიები და მათი აქტიური ვაკანსიები | JOBX',
+    '/post-job': 'განცხადების დამატება — JOBX',
+    '/business': 'უფასო ვაკანსიის განთავსება — ბიზნესისთვის | JOBX',
+    '/map': 'ვაკანსიები რუკაზე — JOBX',
+    '/cv': 'CV-ის შექმნა | JOBX',
+  };
+  return titles[path] ?? analyticsTitle(page, 'JOBX');
 }
 
 /** Contact clicks are intent, not confirmed calls or delivered applications. */

@@ -6,6 +6,10 @@ import { Bookmark, Search, Building2, FilePlus2 } from 'lucide-react';
 import { Brand } from './brand';
 import { ThemeToggle } from './theme-toggle';
 import { enterTab } from '@/lib/vacancy-navigation';
+import {
+  readSavedVacancies,
+  subscribeSavedVacancies,
+} from '@/lib/saved-vacancies';
 
 function localAction(
   event: MouseEvent<HTMLAnchorElement>,
@@ -50,21 +54,16 @@ export function PublicHeader({
     if (savedCount !== undefined) return;
     const read = () => {
       try {
-        const saved = JSON.parse(localStorage.getItem('ertad-saved') || '[]');
-        setStoredCount(
-          Array.isArray(saved)
-            ? saved.filter((id) => typeof id === 'string').length
-            : 0,
-        );
+        setStoredCount(readSavedVacancies(localStorage).length);
       } catch {
         setStoredCount(0);
       }
     };
     const timer = setTimeout(read, 0);
-    window.addEventListener('storage', read);
+    const unsubscribe = subscribeSavedVacancies(read);
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('storage', read);
+      unsubscribe();
     };
   }, [savedCount]);
   const pathname = usePathname();

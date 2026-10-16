@@ -5,6 +5,7 @@ import {
   analyticsReferrer,
   analyticsEvent,
   analyticsTitle,
+  analyticsFallbackTitle,
 } from '../lib/google-analytics';
 
 void test('GA page titles preserve SEO identity without exposing a typed search', () => {
@@ -23,6 +24,24 @@ void test('GA page titles preserve SEO identity without exposing a typed search'
       'თიბისის ვაკანსიები | JOBX',
     ),
     'თიბისის ვაკანსიები | JOBX',
+  );
+});
+
+void test('unfinished route metadata stays pending and timeout titles contain no private data', () => {
+  const page = 'https://jobx.ge/vacancies/example-123';
+  assert.equal(analyticsTitle(page, '  '), '');
+  assert.equal(analyticsFallbackTitle(page), 'ვაკანსია | JOBX');
+  assert.equal(
+    analyticsFallbackTitle('https://jobx.ge/companies/tibisi'),
+    'კომპანიის ვაკანსიები | JOBX',
+  );
+  assert.equal(
+    analyticsFallbackTitle('https://jobx.ge/cv'),
+    'CV-ის შექმნა | JOBX',
+  );
+  assert.equal(
+    analyticsFallbackTitle('https://jobx.ge/?q=private@example.com'),
+    'ვაკანსიები საქართველოში — სამსახურის ძებნა | JOBX',
   );
 });
 

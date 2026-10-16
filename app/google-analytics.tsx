@@ -7,6 +7,7 @@ import {
   analyticsPage,
   analyticsReferrer,
   analyticsTitle,
+  analyticsFallbackTitle,
 } from '@/lib/google-analytics';
 
 type AnalyticsWindow = Window & {
@@ -74,27 +75,69 @@ export function GoogleAnalytics({ measurementId }: { measurementId: string }) {
       analyticsWindow.dataLayer!.push(arguments);
     };
     const gtag = analyticsWindow.gtag;
-    const pageDetails = {
-      page_location: page,
-      page_referrer:
-        previousPage.current || analyticsReferrer(document.referrer),
-      page_title: analyticsTitle(page, document.title),
+    let sent = false;
+    const send = (title: string) => {
+      if (
+        sent ||
+        analyticsPage(window.location.href, { includeCv: true }) !== page
+      )
+        return;
+      sent = true;
+      const pageDetails = {
+        page_location: page,
+        page_referrer:
+          previousPage.current || analyticsReferrer(document.referrer),
+        page_title: title,
+      };
+      // Set these globally so engagement events use the same sanitized URL.
+      gtag('set', pageDetails);
+      if (!initialized.current) {
+        gtag('js', new Date());
+        gtag('config', measurementId, {
+          send_page_view: false,
+          allow_google_signals: false,
+          allow_ad_personalization_signals: false,
+        });
+        initialized.current = true;
+      }
+      if (previousPage.current !== page) {
+        gtag('event', 'page_view', { ...pageDetails, send_to: measurementId });
+        previousPage.current = page;
+      }
     };
-    // Set these globally so engagement events use the same sanitized URL.
-    gtag('set', pageDetails);
-    if (!initialized.current) {
-      gtag('js', new Date());
-      gtag('config', measurementId, {
-        send_page_view: false,
-        allow_google_signals: false,
-        allow_ad_personalization_signals: false,
-      });
-      initialized.current = true;
+    const title = analyticsTitle(page, document.title);
+    if (title) {
+      send(title);
+      return;
     }
-    if (previousPage.current !== page) {
-      gtag('event', 'page_view', { ...pageDetails, send_to: measurementId });
-      previousPage.current = page;
-    }
+    // Next streams route metadata after soft navigation. Sending immediately
+    // records an empty title permanently as "(not set)" in GA's page report.
+    const observer = new MutationObserver(() => {
+      const readyTitle = analyticsTitle(page, document.title);
+      if (readyTitle) {
+        send(readyTitle);
+        cleanup();
+      }
+    });
+    const finish = () => {
+      send(
+        analyticsTitle(page, document.title) || analyticsFallbackTitle(page),
+      );
+      cleanup();
+    };
+    const timer = window.setTimeout(finish, 5000);
+    const cleanup = () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+      window.removeEventListener('pagehide', finish);
+    };
+    observer.observe(document.head, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    window.addEventListener('pagehide', finish);
+    return cleanup;
   }, [pathname, searchParams, measurementId]);
 
   if (!enabled) return null;
