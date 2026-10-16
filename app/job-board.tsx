@@ -432,7 +432,10 @@ export default function JobBoard({
     return excluded ? jobs.filter((job) => !hidden.has(job.id)) : jobs;
   }, [jobs, excluded]);
   const lastRequestedQuery = useRef(initialSearch.query);
+  /* The field shows every keystroke; the results, the address and the search history
+     follow the word once the reader pauses, so a half-typed word never runs a search. */
   const [query, setQuery] = useState(initialSearch.query),
+    [settledQuery, setSettledQuery] = useState(initialSearch.query),
     [city, setCity] = useState(initialSearch.city),
     [category, setCategoryValue] = useState(initialSearch.category),
     [source, setSource] = useState(initialSearch.source),
@@ -467,7 +470,7 @@ export default function JobBoard({
     );
   }, [query]);
   const currentSearch: SearchFilters = {
-    query,
+    query: settledQuery,
     city,
     category,
     subcategory,
@@ -897,9 +900,18 @@ export default function JobBoard({
       loadMore();
     }, [act, loadMore]),
   );
+  const commitQuery = (value: string) => {
+    setQuery(value);
+    setSettledQuery(value);
+  };
+  useEffect(() => {
+    if (query === settledQuery) return;
+    const timer = setTimeout(() => setSettledQuery(query), 450);
+    return () => clearTimeout(timer);
+  }, [query, settledQuery]);
   const applySearch = (filters: SearchFilters) => {
     setPageState({ key: '', page: 1 });
-    setQuery(filters.query);
+    commitQuery(filters.query);
     setCity(filters.city);
     setCategory(filters.category);
     setSubcategory(filters.subcategory || '');
@@ -920,7 +932,7 @@ export default function JobBoard({
     document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
   };
   const reset = () => {
-    setQuery('');
+    commitQuery('');
     setCity('ყველა');
     setCategory('ყველა');
     setSource('ყველა');
@@ -955,7 +967,7 @@ export default function JobBoard({
     reset();
   };
   const relaxFilter = (key: FilterKey) => {
-    if (key === 'query') setQuery('');
+    if (key === 'query') commitQuery('');
     if (key === 'city') setCity('ყველა');
     if (key === 'category') setCategory('ყველა');
     if (key === 'subcategory') setSubcategory('');
@@ -1595,6 +1607,7 @@ export default function JobBoard({
                   className="searchbar"
                   onSubmit={(e) => {
                     e.preventDefault();
+                    commitQuery(query);
                     (document.activeElement as HTMLElement | null)?.blur();
                     document.getElementById('results')?.scrollIntoView({
                       behavior: window.matchMedia(
@@ -1630,7 +1643,7 @@ export default function JobBoard({
                         aria-label="საძიებო ტექსტის გასუფთავება"
                         onPointerDown={(event) => event.preventDefault()}
                         onClick={() => {
-                          setQuery('');
+                          commitQuery('');
                           searchInputRef.current?.focus();
                         }}
                       >
@@ -1643,7 +1656,7 @@ export default function JobBoard({
                       listId="search-suggest"
                       onPick={(value) => {
                         act('suggest_pick');
-                        setQuery(value);
+                        commitQuery(value);
                         searchInputRef.current?.blur();
                         document.getElementById('results')?.scrollIntoView({
                           behavior: window.matchMedia(
@@ -1888,7 +1901,7 @@ export default function JobBoard({
                     <button
                       className="ds-chip"
                       data-active="true"
-                      onClick={() => setQuery('')}
+                      onClick={() => commitQuery('')}
                     >
                       {query}
                       <X aria-hidden="true" />
@@ -2168,7 +2181,7 @@ export default function JobBoard({
                       className="secondary-button"
                       onClick={() => {
                         act('did_you_mean');
-                        setQuery(searchMeta.suggestion!.query);
+                        commitQuery(searchMeta.suggestion!.query);
                       }}
                     >
                       {searchMeta.suggestion.kind === 'fewer-words'
