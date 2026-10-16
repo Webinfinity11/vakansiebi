@@ -520,6 +520,22 @@
 }
 
 /* Retain the site's 3D illustrations in the compact layout. */
+.shortcut-3d[data-kind='part-time'] {
+  background-image: url('/images/shortcut-part-time.svg');
+  background-size: contain;
+  background-position: center;
+}
+.shortcut-3d[data-kind='internship'] {
+  background-image: url('/images/shortcut-internship.svg');
+  background-size: contain;
+  background-position: center;
+}
+@media (min-width: 761px) {
+  .board-shell.editorial-board.crafted-board.refined-board
+    .discovery-shortcut-employment {
+    grid-column: span 2;
+  }
+}
 .board-shell.editorial-board.crafted-board.refined-board
   .discovery-shortcut
   > .shortcut-3d {

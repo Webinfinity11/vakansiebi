@@ -1719,6 +1719,34 @@ export default function JobBoard({
             <ShortcutMark kind="salary" />
             <strong>ხელფასი მითითებულია</strong>
           </button>
+          <button
+            className="discovery-shortcut discovery-shortcut-employment"
+            aria-pressed={advanced.employment === 'part-time'}
+            onClick={() =>
+              setAdvanced({
+                ...advanced,
+                employment:
+                  advanced.employment === 'part-time' ? 'all' : 'part-time',
+              })
+            }
+          >
+            <ShortcutMark kind="part-time" />
+            <strong>ნახევარი განაკვეთი</strong>
+          </button>
+          <button
+            className="discovery-shortcut discovery-shortcut-employment"
+            aria-pressed={advanced.employment === 'internship'}
+            onClick={() =>
+              setAdvanced({
+                ...advanced,
+                employment:
+                  advanced.employment === 'internship' ? 'all' : 'internship',
+              })
+            }
+          >
+            <ShortcutMark kind="internship" />
+            <strong>სტაჟირება</strong>
+          </button>
         </section>
         <div className="page board-page">
           <div className="workspace">
