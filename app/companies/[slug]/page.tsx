@@ -23,7 +23,12 @@ import { resolveCompanyLogos } from '@/lib/server/company-logos';
 import { companyKey } from '@/lib/company-key';
 import { companyVacancyTitle } from '@/lib/company-vacancy-title';
 import { companyOverview } from '@/lib/company-overview';
-import { companyFilters, companyResultsPath } from '@/lib/company-filters';
+import {
+  companyFilters,
+  companyResultsPath,
+  companyFilterKeys,
+} from '@/lib/company-filters';
+import { categories } from '@/lib/types';
 import { logoCompanyKey } from '@/lib/company-logo-identity';
 import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import { vacancyPath } from '@/lib/vacancy-navigation';
@@ -46,7 +51,13 @@ import {
 const load = cache(async (rawSlug: string, rawQuery: string) => {
   const filters = companyFilters(new URLSearchParams(rawQuery));
   const { page } = filters;
-  const filtered = !!(filters.query || filters.city);
+  const filtered = !!(
+    filters.query ||
+    filters.city ||
+    filters.category ||
+    filters.paid ||
+    filters.sort !== 'new'
+  );
   let slug = rawSlug;
   try {
     slug = decodeURIComponent(rawSlug);
@@ -70,6 +81,9 @@ const load = cache(async (rawSlug: string, rawQuery: string) => {
         page: String(page),
         q: filters.query,
         city: filters.city,
+        category: filters.category,
+        sort: filters.sort,
+        paid: String(filters.paid),
       }),
       false,
       {
@@ -146,7 +160,7 @@ async function read(props: Props) {
     props.searchParams,
   ]);
   const params = new URLSearchParams();
-  for (const key of ['q', 'city', 'page']) {
+  for (const key of companyFilterKeys) {
     const value = query[key];
     if (typeof value === 'string') params.set(key, value);
   }
@@ -299,8 +313,13 @@ export default async function CompanyPage(props: Props) {
         </section>
         <section className="similar-vacancies" aria-labelledby="company-jobs">
           <search aria-label="კომპანიის ვაკანსიების ძიება">
-            <form action={path} method="get" className="company-filters">
-              <label>
+            <form
+              action={path + '#company-jobs'}
+              method="get"
+              className="company-filters"
+              key={here}
+            >
+              <label className="company-filter-query">
                 <span>ვაკანსიის ძიება</span>
                 <input
                   type="search"
@@ -310,51 +329,78 @@ export default async function CompanyPage(props: Props) {
                   placeholder="მაგ. მოლარე, მენეჯერი"
                 />
               </label>
-              {/* The city is picked below, one tap per city; a search keeps it. */}
-              {filters.city && (
-                <input type="hidden" name="city" value={filters.city} />
-              )}
-              <button type="submit" className="ds-btn ds-btn--primary">
-                ძებნა
-              </button>
-              {filtered && (
-                <Link
-                  href={path}
-                  prefetch={false}
-                  className="ds-btn ds-btn--secondary"
+              <label>
+                <span id="company-city-label">ქალაქი</span>
+                <select
+                  name="city"
+                  aria-labelledby="company-city-label"
+                  defaultValue={filters.city}
                 >
-                  გასუფთავება
-                </Link>
-              )}
+                  <option value="">ყველა ქალაქი</option>
+                  {filters.city &&
+                    !employer.cities.some((c) => c.name === filters.city) && (
+                      <option value={filters.city}>{filters.city}</option>
+                    )}
+                  {employer.cities.map((city) => (
+                    <option key={city.name} value={city.name}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span id="company-category-label">მიმართულება</span>
+                <select
+                  name="category"
+                  aria-labelledby="company-category-label"
+                  defaultValue={filters.category}
+                >
+                  <option value="">ყველა მიმართულება</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span id="company-sort-label">დალაგება</span>
+                <select
+                  name="sort"
+                  aria-labelledby="company-sort-label"
+                  defaultValue={filters.sort}
+                >
+                  <option value="new">უახლესი</option>
+                  <option value="salary">მაღალი ხელფასი</option>
+                  <option value="deadline">ვადა იწურება</option>
+                  <option value="relevance">შესაბამისობა</option>
+                </select>
+              </label>
+              <div className="company-filter-actions">
+                <label className="company-filter-paid">
+                  <input
+                    type="checkbox"
+                    name="paid"
+                    value="true"
+                    defaultChecked={filters.paid}
+                  />
+                  ხელფასი მითითებულია
+                </label>
+                <button type="submit" className="ds-btn ds-btn--primary">
+                  ძებნა
+                </button>
+                {filtered && (
+                  <Link
+                    href={path}
+                    prefetch={false}
+                    className="ds-btn ds-btn--secondary"
+                  >
+                    გასუფთავება
+                  </Link>
+                )}
+              </div>
             </form>
           </search>
-          {employer.cities.length > 1 && (
-            <nav className="company-city-filter" aria-label="ქალაქის მიხედვით">
-              {[
-                { name: '', label: 'ყველა ქალაქი' },
-                ...employer.cities.map((city) => ({
-                  name: city.name,
-                  label: city.name,
-                })),
-              ].map((city) => (
-                <Link
-                  key={city.name || 'all'}
-                  href={companyResultsPath(
-                    path,
-                    { ...filters, city: city.name },
-                    1,
-                  )}
-                  prefetch={false}
-                  scroll={false}
-                  className="ds-chip"
-                  data-active={filters.city === city.name}
-                  aria-current={filters.city === city.name ? 'page' : undefined}
-                >
-                  {city.label}
-                </Link>
-              ))}
-            </nav>
-          )}
           <h2 id="company-jobs">
             {filtered ? 'ძიების შედეგები' : 'აქტიური ვაკანსიები'}{' '}
             <span className="ds-badge ds-badge--accent company-count">

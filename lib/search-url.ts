@@ -17,13 +17,24 @@ const cityAliases: Record<string, string> = {
   tbilsi: 'თბილისი',
   batumshi: 'ბათუმი',
   qutaisshi: 'ქუთაისი',
+  qutaisi: 'ქუთაისი',
   kutaisi: 'ქუთაისი',
   kutaisshi: 'ქუთაისი',
   rustavshi: 'რუსთავი',
 };
 
+// Old bookmarks and stored landing counts must keep resolving after a spelling fix.
+const roleAliases: Record<string, string> = {
+  dispecheri: 'დისპეტჩერი',
+  დისპეჩერი: 'დისპეტჩერი',
+};
+
 export function searchUrlValue(key: string, value: string) {
-  return values[key]?.includes(value) ? latinUrl(value) : value;
+  const label =
+    key === 'q' && Object.hasOwn(roleAliases, value.toLowerCase())
+      ? roleAliases[value.toLowerCase()]
+      : value;
+  return values[key]?.includes(label) ? latinUrl(label) : value;
 }
 
 export function searchValueFromUrl(key: string, value: string) {
@@ -31,6 +42,8 @@ export function searchValueFromUrl(key: string, value: string) {
   const lower = value.toLowerCase();
   if (key === 'city' && Object.hasOwn(cityAliases, lower))
     return cityAliases[lower];
+  if (key === 'q' && Object.hasOwn(roleAliases, lower))
+    return roleAliases[lower];
   return (
     values[key]?.find((label) => latinUrl(label) === lower) ??
     values[key]?.find((label) => legacyLatinUrl(label) === lower) ??

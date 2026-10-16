@@ -442,7 +442,7 @@ export const cvText: Record<CvLanguage, CvText> = {
     language: 'რეზიუმეს ენა',
     template: 'შაბლონი',
     preview: 'გადახედვა',
-    heading: 'სივის შექმნა უფასოდ',
+    heading: 'CV-ის შექმნა უფასოდ — რეზიუმე ონლაინ',
     intro:
       'შეადგინე რეზიუმე ონლაინ: შეავსე ინფორმაცია, აირჩიე შაბლონი და შეინახე PDF-ად ქართულად ან ინგლისურად.',
     placeholders: {

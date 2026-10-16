@@ -14,7 +14,7 @@ import {
   describedPartTimePattern,
   unavailablePartTimePattern,
 } from '../employment';
-import { cities, cityStem, otherCity } from '../cities';
+import { cities, cityNamePattern, otherCity } from '../cities';
 import { tbilisiDistricts } from '../street-address';
 import { legalFormSql } from '../employer-identity';
 import { db } from './db';
@@ -115,13 +115,9 @@ const today = "to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')";
 // გორგასალი do not name გორი, just as სამგორი does not.
 const cityPattern = (name: string) => {
   const normalizedName = name.normalize('NFKC').trim().toLowerCase();
-  const stem = cityStem(normalizedName);
   return (
     '(^|[^[:alnum:]ა-ჰ])' +
-    escapeRegex(stem) +
-    (stem !== normalizedName
-      ? '(ი|ისა?|ში|სა?|იდან|ით|ამდე)'
-      : '(|ში|სა?|დან|მდე)') +
+    cityNamePattern(normalizedName) +
     '($|[^[:alnum:]ა-ჰ])' +
     // "რუსთავის გზატკეცილი" and "ბათუმის ქუჩა" are Tbilisi addresses, not other cities.
     '(?!(გზატკეცილ|ქუჩ|გამზირ|ხეივან|შესახვევ|ჩიხ|მოედან|ტრასა|დასახლებ|მთიანეთ))'
@@ -485,7 +481,11 @@ export function searchPlan(
   const districtPattern =
     '(^|[^[:alnum:]ა-ჰ])(' +
     tbilisiDistricts
-      .map((d) => escapeRegex(d.endsWith('ი') ? d.slice(0, -1) : d))
+      .map((d) =>
+        d === 'ისანი'
+          ? 'ის(ან|ნ)'
+          : escapeRegex(d.endsWith('ი') ? d.slice(0, -1) : d),
+      )
       .join('|') +
     ')';
   // A bare "საქართველო" is a classified with no town given, read from its text instead.

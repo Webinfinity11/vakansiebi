@@ -289,6 +289,42 @@ void test('the footer expands to eligible cities and roles and ranks by availabl
   assert.match(links[1].label, /ფოთში/);
 });
 
+void test('JobPosting reads an explicit labelled employment type but never infers one from experience or hours', () => {
+  const type = (patch: Partial<PublicJob>) =>
+    jobPosting({ ...job, ...patch }, '2026-09-14')?.employmentType;
+  assert.equal(
+    type({ description: 'დასაქმების ტიპი: სრული განაკვეთი' }),
+    'FULL_TIME',
+  );
+  assert.equal(
+    type({ description: 'განაკვეთი: ნახევარ განაკვეთზე' }),
+    'PART_TIME',
+  );
+  assert.equal(
+    type({ facts: [{ label: 'Employment type', value: 'Full-time' }] }),
+    'FULL_TIME',
+  );
+  assert.equal(
+    type({ description: 'გამოცდილება: სრული განაკვეთი\nგრაფიკი: 09:00–18:00' }),
+    undefined,
+  );
+  assert.equal(
+    type({ description: 'დასაქმების ტიპი: არა სრული განაკვეთი' }),
+    undefined,
+  );
+  assert.equal(
+    type({ description: 'Employment type: full-time or part-time' }),
+    undefined,
+  );
+  assert.equal(
+    type({
+      description: 'განაკვეთი: სრული განაკვეთი',
+      facts: [{ label: 'განაკვეთი', value: 'ნახევარი განაკვეთი' }],
+    }),
+    undefined,
+  );
+});
+
 // Search Console on 2026-09-27 flagged missing region, street and employment type.
 void test('job locations carry the region, a stated street, and the employment type as written', () => {
   type Loc = { address: Record<string, string> };

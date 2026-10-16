@@ -1572,9 +1572,15 @@ export default function JobBoard({
               {heading ? (
                 <HeroHeading text={heading} />
               ) : (
-                <h1 id="search-heading">
-                  იპოვე შენი შემდეგი <em>სამსახური.</em>
-                </h1>
+                <>
+                  <h1 id="search-heading">
+                    ვაკანსიები <em>საქართველოში</em>
+                  </h1>
+                  <p className="home-hero-intro">
+                    იპოვე შენი შემდეგი სამსახური — შეადარე ვაკანსიები ქალაქის,
+                    ხელფასისა და გრაფიკის მიხედვით.
+                  </p>
+                </>
               )}
             </div>
           </div>

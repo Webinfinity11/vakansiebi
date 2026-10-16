@@ -811,6 +811,16 @@
 .board-shell.editorial-board.crafted-board.refined-board .discovery-hero h1 em {
   color: #90efff;
 }
+.board-shell.editorial-board.crafted-board.refined-board
+  .hero-copy
+  > .home-hero-intro {
+  display: block;
+  max-width: 660px;
+  margin: 10px 0 0;
+  color: var(--jobx-white-fixed);
+  font-size: var(--jobx-font-size-14px);
+  line-height: 1.6;
+}
 .refined-board .hero-heading > .hero-heading-track {
   color: inherit;
 }

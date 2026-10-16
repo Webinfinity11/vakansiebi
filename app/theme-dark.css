@@ -2340,6 +2340,11 @@
 :root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board {
   background-image: none;
 }
+:root[data-theme='dark'] .board-shell.editorial-board.crafted-board.refined-board
+  .hero-copy
+  > .home-hero-intro {
+  color: var(--jobx-white-fixed);
+}
 :root[data-theme='dark'] .refined-board .hero-heading > .hero-heading-track {
   color: inherit;
 }

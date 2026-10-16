@@ -108,7 +108,9 @@ export function landingIndexable(
 }
 const roleFor = (value: string) =>
   roleVocabulary.find(
-    (role) => role.label === value.normalize('NFKC').trim().toLowerCase(),
+    (role) =>
+      role.label ===
+      searchValueFromUrl('q', value.normalize('NFKC').trim().toLowerCase()),
   ) ?? null;
 
 /* Category modifiers, written out rather than derived: headings need genitive
@@ -411,17 +413,38 @@ export function searchHeading(filters: SearchFilters): string | null {
 export function landingName(landing: Choice) {
   return landingHeading(landing).replace(' საქართველოში', '');
 }
+
+const roleGuidance: Record<string, { copy: string; snippet: string }> = {
+  კონდიტერი: {
+    copy: 'განასხვავე კონდიტერისა და დამხმარის პოზიციები. შეადარე სამუშაო საათები, გამოცდილების მოთხოვნა და საკონდიტრო ნაწარმის მიმართულება.',
+    snippet: 'შეადარე კონდიტერისა და დამხმარის პოზიციები, გრაფიკი და ხელფასი.',
+  },
+  შემდუღებელი: {
+    copy: 'გადაამოწმე შედუღების მეთოდი, საჭირო გამოცდილება, სამუშაო ადგილი და დამცავი აღჭურვილობის პირობები. შეადარე ანაზღაურება და გრაფიკი.',
+    snippet: 'შეადარე შედუღების მეთოდი, გამოცდილების მოთხოვნა და ანაზღაურება.',
+  },
+  მოლარე: {
+    copy: 'გადაამოწმე ცვლის საათები, სალაროსთან მუშაობის გამოცდილების მოთხოვნა და თანხასთან დაკავშირებული პასუხისმგებლობა. განასხვავე ფიქსირებული ხელფასი და ბონუსი.',
+    snippet: 'შეადარე ცვლები, ფიქსირებული ხელფასი და ბონუსი.',
+  },
+};
+
 export function landingCopy(landing: Choice) {
   if (landing.subcategory && landing.category)
     return `${landingHeading(landing)}: ${genitive[landing.category]} ვაკანსიებიდან მხოლოდ ${subcategoryGenitive[landing.subcategory]} აქტიური განცხადებები. სია ყოველდღიურად ახლდება. შეადარე ანაზღაურება, გრაფიკი და პირობები.`;
   if (landing.role) {
     const role = roleFor(landing.role);
     const where = landing.city ? cityIn(landing.city) : 'საქართველოს მასშტაბით';
+    const guidance = roleGuidance[role?.label ?? landing.role];
+    if (guidance)
+      return `${role?.genitive ?? landing.role} აქტიური ვაკანსიები ${where}. ${guidance.copy}`;
     return `${role?.genitive ?? landing.role} აქტიური ვაკანსიები ${where}. სია ყოველდღიურად ივსება ახალი განცხადებებით. შეადარე ანაზღაურება, გრაფიკი და პირობები.`;
   }
   // The heading names the list; the condition's own words follow and never restate it.
   if (landing.trait)
     return `${landingHeading(landing)}. ${traits[landing.trait].copy}`;
+  if (landing.category === 'იურიდიული')
+    return `${landingHeading(landing)}. შეადარე სამართლის მიმართულება, გამოცდილების მოთხოვნა და სამუშაო გრაფიკი. გადაამოწმე, პოზიცია იურისტისთვისაა თუ თანაშემწისთვის.`;
   if (landing.category && landing.city)
     return `${genitive[landing.category]} ვაკანსიები ${cityIn(landing.city)}. სია ყოველდღიურად ივსება ახალი განცხადებებით.`;
   if (landing.category)
@@ -438,7 +461,19 @@ export function landingDescription(landing: Choice, count?: number) {
   const lead = count
     ? `${heading}: ${new Intl.NumberFormat('ka-GE').format(count)} აქტიური განცხადება.`
     : `${heading}.`;
+  const focused = !landing.subcategory
+    ? landing.role
+      ? roleGuidance[roleFor(landing.role)?.label ?? landing.role]?.snippet
+      : landing.trait === 'daily'
+        ? 'შეადარე დღიური თანხა და ცვლის საათები; გადახდის გრაფიკი გადაამოწმე.'
+        : landing.trait === 'part-time'
+          ? 'შეადარე სამუშაო საათები, დღეები და ანაზღაურება.'
+          : landing.category === 'იურიდიული'
+            ? 'შეადარე სამართლის მიმართულება და გამოცდილების მოთხოვნა.'
+            : null
+    : null;
   for (const tail of [
+    ...(focused ? [` ${focused}`] : []),
     ' სია ყოველდღიურად ახლდება. შეადარე ანაზღაურება, გრაფიკი და პირობები.',
     ' სია ყოველდღიურად ახლდება.',
     '',
@@ -518,7 +553,7 @@ const fieldRoles: Record<string, readonly string[]> = {
   მარკეტინგი: ['მარკეტინგი', 'კოპირაიტერი', 'დიზაინერი', 'ჟურნალისტი'],
   ადმინისტრაცია: ['ადმინისტრატორი', 'ასისტენტი', 'ოპერატორი', 'რეკრუტერი'],
   ფინანსები: ['ბუღალტერი', 'ანალიტიკოსი', 'კონსულტანტი', 'მენეჯერი'],
-  ლოჯისტიკა: ['მძღოლი', 'კურიერი', 'მტვირთავი', 'დისპეჩერი'],
+  ლოჯისტიკა: ['მძღოლი', 'კურიერი', 'მტვირთავი', 'დისპეტჩერი'],
   მომსახურება: ['მიმტანი', 'ბარისტა', 'მზარეული', 'ბარმენი', 'დამლაგებელი'],
   სამედიცინო: ['ექიმი', 'ექთანი', 'ფარმაცევტი', 'მასაჟისტი'],
   განათლება: ['მასწავლებელი', 'მთარგმნელი'],

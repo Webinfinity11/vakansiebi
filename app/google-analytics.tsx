@@ -28,7 +28,23 @@ export function GoogleAnalytics({ measurementId }: { measurementId: string }) {
     hydrated &&
     process.env.NODE_ENV === 'production' &&
     /^G-[A-Z0-9]+$/.test(measurementId) &&
-    Boolean(analyticsPage(window.location.href));
+    Boolean(analyticsPage(window.location.href, { includeCv: true }));
+
+  useEffect(() => {
+    if (!enabled) return;
+    const send = (event: Event) => {
+      if (!analyticsPage(window.location.href, { includeCv: true })) return;
+      const { name, params } = (
+        event as CustomEvent<{ name: string; params?: Record<string, string> }>
+      ).detail;
+      (window as AnalyticsWindow).gtag?.('event', name, {
+        ...params,
+        send_to: measurementId,
+      });
+    };
+    window.addEventListener('jobx:analytics', send);
+    return () => window.removeEventListener('jobx:analytics', send);
+  }, [enabled, measurementId]);
 
   useEffect(() => {
     if (
@@ -36,7 +52,7 @@ export function GoogleAnalytics({ measurementId }: { measurementId: string }) {
       !/^G-[A-Z0-9]+$/.test(measurementId)
     )
       return;
-    const page = analyticsPage(window.location.href);
+    const page = analyticsPage(window.location.href, { includeCv: true });
     const analyticsWindow = window as AnalyticsWindow;
     // Also stop an already loaded tag after navigation to an admin or invoice page.
     (window as unknown as Record<string, unknown>)[

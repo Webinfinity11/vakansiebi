@@ -5,7 +5,12 @@ import { cities } from '../lib/cities';
 import { roleVocabulary } from '../lib/search-language';
 import { canonicalSearchParams, searchUrlValue } from '../lib/search-url';
 import { readSearch } from '../lib/search-state';
-import { landingFor } from '../lib/seo-landing';
+import {
+  eligibleLandings,
+  landingFor,
+  landingHeading,
+  landingPath,
+} from '../lib/seo-landing';
 import { employerSlug, legacyEmployerSlug } from '../lib/employer-identity';
 import { legacyLatinUrl } from '../lib/latin-url';
 
@@ -76,7 +81,7 @@ void test('Latin city variants resolve to one canonical landing without losing t
   for (const [variants, canonical, city] of [
     [['Tbilisi', 'tbilisshi', 'tbilishi', 'tbilsi'], 'tbilisi', 'თბილისი'],
     [['batumshi'], 'batumi', 'ბათუმი'],
-    [['kutaisi', 'qutaisshi', 'kutaisshi'], 'kutaisi', 'ქუთაისი'],
+    [['kutaisi', 'qutaisi', 'qutaisshi', 'kutaisshi'], 'kutaisi', 'ქუთაისი'],
     [['rustavshi'], 'rustavi', 'რუსთავი'],
   ] as const) {
     for (const variant of variants) {
@@ -101,5 +106,45 @@ void test('Latin city variants resolve to one canonical landing without losing t
   assert.equal(
     canonicalSearchParams(new URLSearchParams({ q: 'tbilisshi' })).get('q'),
     'tbilisshi',
+  );
+});
+
+void test('dispatcher bookmarks and old census rows migrate without losing filters', () => {
+  for (const q of ['dispecheri', 'დისპეჩერი', 'დისპეტჩერი', 'dispetcheri']) {
+    const old = new URLSearchParams({
+      q,
+      city: 'tbilisi',
+      page: '2',
+      utm_source: 'saved',
+    });
+    const canonical = canonicalSearchParams(old);
+    assert.equal(canonical.get('q'), 'dispetcheri');
+    assert.equal(canonical.get('city'), 'tbilisi');
+    assert.equal(canonical.get('page'), '2');
+    assert.equal(canonical.get('utm_source'), 'saved');
+    assert.deepEqual(readSearch(old), readSearch(canonical));
+    assert.equal(
+      canonicalSearchParams(canonical).toString(),
+      canonical.toString(),
+    );
+    const landing = landingFor(new URLSearchParams({ q }))!;
+    assert.equal(landing.path, '/?q=dispetcheri');
+    assert.equal(
+      landingHeading(landing),
+      'დისპეტჩერის ვაკანსიები საქართველოში',
+    );
+  }
+  const rows = eligibleLandings([
+    { category: null, city: null, trait: null, role: 'დისპეჩერი', count: 12 },
+  ]);
+  assert.equal(rows.length, 1, 'old database snapshots remain discoverable');
+  assert.equal(landingPath(rows[0]), '/?q=dispetcheri');
+  assert.equal(landingHeading(rows[0]), 'დისპეტჩერის ვაკანსიები საქართველოში');
+  assert.equal(
+    canonicalSearchParams(new URLSearchParams({ q: 'dispecheri senior' })).get(
+      'q',
+    ),
+    'dispecheri senior',
+    'migration does not silently rewrite free-text phrases',
   );
 });

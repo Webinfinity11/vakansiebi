@@ -69,6 +69,30 @@ void test('Russian role names reach the same reviewed group, including inflected
   );
   assert.ok(searchGroups('менеджер по продажам')[1].includes('გაყიდვ'));
 });
+
+void test('both dispatcher spellings still find Georgian, Latin and English job titles', () => {
+  for (const query of [
+    'დისპეტჩერი',
+    'დისპეჩერი',
+    'დისპეტჩერის',
+    'დისპეჩერის',
+    'dispetcheri',
+    'dispecheri',
+    'dispatcher',
+  ]) {
+    const terms = searchGroups(query).flat();
+    for (const title of [
+      'დისპეტჩერის ვაკანსია',
+      'დისპეჩერის ვაკანსია',
+      'Dispatcher',
+    ]) {
+      assert.ok(
+        terms.some((term) => title.toLowerCase().includes(term)),
+        `${query}: ${title}`,
+      );
+    }
+  }
+});
 void test('typo suggestions are bounded, explicit and never rewrite short skills or arbitrary names', () => {
   assert.equal(suggestSearch('develoepr'), 'developer');
   assert.equal(suggestSearch('ბუღალტეირ'), 'ბუღალტერი');

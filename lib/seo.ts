@@ -233,7 +233,39 @@ function employmentOf(job: PublicJob): string {
   )
     return 'TEMPORARY';
   if (/სრული\s+განაკვეთ|full[ -]?time/u.test(text)) return 'FULL_TIME';
-  return '';
+  // Some sources publish the type only as a labelled fact or description line.
+  // Exact values avoid treating past experience or working hours as a contract type.
+  const label =
+    /^(?:(?:დასაქმების|სამუშაოს?)\s+ტიპი|განაკვეთი|employment(?:\s+type)?|job\s+type)$/i;
+  const stated = (job.facts ?? [])
+    .filter((fact) => label.test(fact.label.trim()))
+    .map((fact) => fact.value);
+  for (const line of job.description.split('\n')) {
+    const match = line
+      .trim()
+      .replace(/^[•*–—-]+\s*/, '')
+      .match(/^([^:]+):\s*(.+)$/);
+    if (match && label.test(match[1].trim())) stated.push(match[2]);
+  }
+  const types = new Set<string>();
+  for (const value of stated) {
+    const normalized = value
+      .normalize('NFKC')
+      .toLowerCase()
+      .trim()
+      .replace(/[.;]+$/, '');
+    if (/^(?:სრულ(?:ი)?\s+განაკვეთ(?:ი|ზე)|full[ -]time)$/u.test(normalized))
+      types.add('FULL_TIME');
+    if (
+      /^(?:(?:ნახევარი?|არასრული?|ნაწილობრივი?)\s+განაკვეთ(?:ი|ზე)|part[ -]time)$/u.test(
+        normalized,
+      )
+    )
+      types.add('PART_TIME');
+    if (/^(?:სტაჟირება|internship)$/u.test(normalized)) types.add('INTERN');
+    if (/^(?:დროებითი|temporary)$/u.test(normalized)) types.add('TEMPORARY');
+  }
+  return types.size === 1 ? [...types][0] : '';
 }
 export function jobPosting(
   job: PublicJob,

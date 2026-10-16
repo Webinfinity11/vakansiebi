@@ -1,6 +1,74 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { analyticsPage, analyticsReferrer } from '../lib/google-analytics';
+import {
+  analyticsPage,
+  analyticsReferrer,
+  analyticsEvent,
+} from '../lib/google-analytics';
+
+void test('SEO landing identity joins GA visits to Search Console without leaking arbitrary query values', () => {
+  for (const query of [
+    'city=tbilisi',
+    'salaryPeriod=day',
+    'category=iuridiuli',
+    'q=konditeri',
+    'employment=internship',
+    'category=gayidvebi&city=tbilisi',
+  ])
+    assert.equal(
+      analyticsPage(
+        'https://jobx.ge/?' +
+          query +
+          '&utm_source=test&email=private@example.com',
+      ),
+      'https://jobx.ge/?' + query,
+    );
+  assert.equal(
+    analyticsPage('https://jobx.ge/?q=dispecheri'),
+    'https://jobx.ge/?q=dispetcheri',
+  );
+  assert.equal(
+    analyticsPage('https://jobx.ge/?city=private@example.com'),
+    'https://jobx.ge/',
+  );
+  assert.equal(
+    analyticsPage('https://jobx.ge/?city=tbilisi&city=private@example.com'),
+    'https://jobx.ge/',
+  );
+  assert.equal(
+    analyticsPage('https://jobx.ge/cv?email=private@example.com', {
+      includeCv: true,
+    }),
+    'https://jobx.ge/cv',
+  );
+  assert.equal(
+    analyticsPage('https://jobx.ge/cv'),
+    null,
+    'CV analytics must not enable session recording or custom third-party code',
+  );
+  assert.equal(
+    analyticsReferrer('https://jobx.ge/?q=konditeri&token=private'),
+    'https://jobx.ge/?q=konditeri',
+  );
+});
+
+void test('GA outcomes contain only reviewed event names and methods', () => {
+  assert.deepEqual(analyticsEvent('cv', 'private-job-id'), {
+    name: 'contact_employer',
+    params: { contact_method: 'email' },
+  });
+  assert.deepEqual(analyticsEvent('apply', 'private-job-id'), {
+    name: 'contact_employer',
+    params: { contact_method: 'apply' },
+  });
+  assert.deepEqual(analyticsEvent('post', 'submitted'), {
+    name: 'job_submitted',
+  });
+  assert.deepEqual(analyticsEvent('resume', 'printed'), { name: 'cv_print' });
+  assert.equal(analyticsEvent('search', 'private@example.com'), null);
+  assert.equal(analyticsEvent('resume', 'private@example.com'), null);
+  assert.equal(analyticsEvent('post', 'failed'), null);
+});
 
 void test('Google Analytics measures production public pages without query strings', () => {
   assert.equal(

@@ -248,32 +248,88 @@
 }
 
 :root .board-shell.company-page .company-filters {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(0, 1fr));
   align-items: end;
-  gap: var(--ds-space-3);
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-5);
   margin-bottom: var(--ds-space-5);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
 }
 :root .board-shell.company-page .company-filters label {
   display: grid;
   gap: var(--ds-space-2);
-  flex: 1 1 220px;
   min-width: 0;
   color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
 }
-:root .board-shell.company-page .company-filters input {
+:root .board-shell.company-page .company-filters input[type='search'],
+:root .board-shell.company-page .company-filters select {
   width: 100%;
+  min-width: 0;
   min-height: 44px;
   padding: 10px 12px;
-  border: 1px solid var(--ds-accent-border);
+  border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-sm);
   background: var(--ds-surface);
   color: var(--ds-ink);
   font: inherit;
+  font-size: 16px;
 }
-:root .board-shell.company-page .company-filters input:focus-visible {
+:root
+  .board-shell.company-page
+  .company-filters
+  :is(input, select):focus-visible {
   outline: 2px solid var(--ds-accent);
   outline-offset: 2px;
+}
+:root .board-shell.company-page .company-filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+:root .board-shell.company-page .company-filters .company-filter-paid {
+  display: flex;
+  align-items: center;
+  margin-right: auto;
+  min-height: 44px;
+  cursor: pointer;
+}
+:root .board-shell.company-page .company-filter-paid input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ds-accent);
+}
+:root .board-shell.company-page #company-jobs {
+  scroll-margin-top: 100px;
+}
+@media (max-width: 1000px) {
+  :root .board-shell.company-page .company-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 540px) {
+  :root .board-shell.company-page .company-filters {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--ds-space-3);
+    gap: var(--ds-space-3);
+  }
+  :root .board-shell.company-page .company-filter-query {
+    grid-column: 1 / -1;
+  }
+  :root
+    .board-shell.company-page
+    .company-filter-actions
+    > .company-filter-paid {
+    flex-basis: 100%;
+  }
+  :root .board-shell.company-page .company-filter-actions > :is(button, a) {
+    flex: 1;
+  }
 }
 
 :root .board-shell.company-page .company-overview {
@@ -289,16 +345,4 @@
   margin: 0 0 var(--ds-space-2);
   line-height: 1.7;
   color: var(--ds-ink-2);
-}
-
-/* One tap per city. No counts: the employer's own tally is not the list's,
-   which folds repeated postings together. */
-:root .board-shell.company-page .company-city-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ds-space-2);
-  margin: calc(-1 * var(--ds-space-2)) 0 var(--ds-space-5);
-}
-:root .board-shell.company-page .company-city-filter .ds-chip {
-  text-decoration: none;
 }

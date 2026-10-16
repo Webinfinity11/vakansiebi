@@ -13,6 +13,7 @@ import { companyKey } from '../company-key';
 import { logoCompanyKey } from '../company-logo-identity';
 import { safeLogoUrl } from '../vacancy-media';
 import { resolveCompanyLogos } from './company-logos';
+import { companyLocationNames } from '../company-locations';
 
 export type EmployerName = { name: string; count: number };
 export type EmployerCandidate = {
@@ -166,9 +167,8 @@ async function buildEmployerPages() {
     };
     g.ids.push(...r.ids);
     g.names.set(r.name, (g.names.get(r.name) || 0) + r.ids.length);
-    // Sources put a street address after the town ("რუსთავი, შარტავას #3"); the town is what counts.
-    const city = String(r.city).split(',')[0].trim();
-    if (city) g.cities.set(city, (g.cities.get(city) || 0) + r.ids.length);
+    for (const city of companyLocationNames(String(r.city)))
+      g.cities.set(city, (g.cities.get(city) || 0) + r.ids.length);
     g.logo ||= r.logo;
     groups.set(key, g);
   }

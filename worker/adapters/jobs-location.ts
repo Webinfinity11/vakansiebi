@@ -1,4 +1,4 @@
-import { cities } from '../../lib/cities';
+import { cities, cityNamePattern } from '../../lib/cities';
 import { workTowns } from '../../lib/work-location';
 import {
   mapCities,
@@ -24,12 +24,12 @@ const boundary = (pattern: string) =>
   new RegExp(`(?<![\\p{L}\\p{N}-])(?:${pattern})(?![\\p{L}\\p{N}-])`, 'iu');
 const townPatterns = towns.map((town) => ({
   town,
-  re: boundary(
-    town.endsWith('ი') ? town.slice(0, -1) + '(?:ი|ში|ის)' : town + '(?:ში|ს)?',
-  ),
+  re: boundary(cityNamePattern(town)),
 }));
 const districtPatterns = tbilisiDistricts.map((d) =>
-  boundary(d.endsWith('ი') ? d.slice(0, -1) + '(?:ი|ში|ზე)' : d + '(?:ში|ზე)?'),
+  boundary(
+    d === 'ისანი' ? 'ის(?:ანი|ანში|ნის|ანზე)' : cityNamePattern(d) + '(?:ზე)?',
+  ),
 );
 const stationPatterns = [
   ...new Set(metroStations.map((s) => s.name.replace(/-\d$/, ''))),

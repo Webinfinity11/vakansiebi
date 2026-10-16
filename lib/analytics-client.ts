@@ -1,5 +1,6 @@
 import type { ActionCode } from './analytics-actions';
 import { sendResumeContact } from './resume-client';
+import { analyticsEvent, analyticsPage } from './google-analytics';
 
 /* Sends an event without adding a tracking id or setting a cookie; the body is only the kind
    and the value. sendBeacon survives the page being left, which is exactly
@@ -50,6 +51,15 @@ function seenThisVisit(kind: TrackedKind, value: string) {
 export function track(kind: TrackedKind, value: string) {
   if (process.env.NODE_ENV !== 'production') return;
   if (seenThisVisit(kind, value)) return;
+  const googleEvent = analyticsEvent(kind, value);
+  if (
+    googleEvent &&
+    typeof window !== 'undefined' &&
+    analyticsPage(window.location.href, { includeCv: true })
+  )
+    window.dispatchEvent(
+      new CustomEvent('jobx:analytics', { detail: googleEvent }),
+    );
   try {
     const body = JSON.stringify({ kind, value });
     const sent =

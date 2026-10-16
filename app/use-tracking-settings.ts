@@ -12,7 +12,7 @@ export function useTrackingSettings() {
   useEffect(() => {
     if (
       process.env.NODE_ENV !== 'production' ||
-      !analyticsPage(window.location.href)
+      !analyticsPage(window.location.href, { includeCv: true })
     )
       return;
     let active = true;
