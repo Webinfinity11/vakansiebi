@@ -129,6 +129,61 @@ void test('only an unambiguous application link becomes the main action', () => 
   );
 });
 
+void test('a form or hiring-system link labelled with its bare URL opens directly', () => {
+  const direct = (...urls: string[]) =>
+    applicationDestination({
+      applicationLinks: urls.map((url) => ({ label: url, url })),
+    })?.url ?? null;
+  for (const url of [
+    'https://jsc-bank-of-georgia.hirehive.com/molare-ambrolauri-mLCqVO',
+    'https://forms.gle/abc123',
+    'https://docs.google.com/forms/d/e/1FAIpQ/viewform',
+    'https://careertourinvestgroup.bitrix24.site/crm_form_wsk4c/',
+    'https://bdo.peopleforce.io/careers/v/245624-intern',
+    'https://crocosquad.com/careers/106?career=Manager',
+  ])
+    assert.equal(direct(url), url);
+  // Social profiles, front pages, shared documents and the source board itself are not forms.
+  assert.equal(direct('https://career.ardi.ge/'), null);
+  assert.equal(direct('https://www.facebook.com/silknet'), null);
+  assert.equal(direct('https://docs.google.com/document/d/1Wj/edit'), null);
+  assert.equal(direct('https://jobs.ge/en/ads/?view=jobs&id=756007'), null);
+  assert.equal(direct('https://www.hr.ge/announcement/494770/x'), null);
+  // The employer's front page does not compete with its vacancy page.
+  assert.equal(
+    direct(
+      'https://jobs.silknet.com/',
+      'https://jobs.silknet.com/jobs-war/welcome.do?page=vacancyDetail&id=16726',
+      'https://www.facebook.com/silknet',
+    ),
+    'https://jobs.silknet.com/jobs-war/welcome.do?page=vacancyDetail&id=16726',
+  );
+  // Tracked and untracked copies of one form are one destination.
+  assert.equal(
+    direct(
+      'https://acme.hirehive.com/cashier-x1',
+      'https://acme.hirehive.com/cashier-x1?source=jobs.ge',
+    ),
+    'https://acme.hirehive.com/cashier-x1',
+  );
+  // A vacancy page and its WhatsApp shortcut lead to the vacancy page.
+  assert.equal(
+    direct(
+      'https://careers.wegroup.ge/k5kn/jg/wa',
+      'https://careers.wegroup.ge/k5kn/jg',
+    ),
+    'https://careers.wegroup.ge/k5kn/jg',
+  );
+  // Two different vacancies remain a choice for the candidate.
+  assert.equal(
+    direct(
+      'https://careers.wolt.com/en/jobs/4/7925981',
+      'https://careers.wolt.com/en/jobs/4/7984874',
+    ),
+    null,
+  );
+});
+
 void test('privacy and no-reply addresses are not presented as vacancy contacts', () => {
   const contacts = vacancyContacts({
     description: 'Application privacy: dpo@example.com. CV: jobs@example.com',

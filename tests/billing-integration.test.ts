@@ -97,6 +97,12 @@ void test(
       ).rows[0];
       assert.deepEqual(queued.payload.to, ['billing@example.com']);
       assert.deepEqual(queued.payload.bcc, ['invoice@jobx.ge']);
+      for (const body of [queued.payload.html, queued.payload.text])
+        assert.match(
+          body,
+          /20 ₾[\s\S]*· 30 დღე|· 30 დღე[\s\S]*20 ₾/,
+          'invoice mail states the same price and term that activation applies',
+        );
       assert.equal(queued.status, 'pending');
       const oldFetch = globalThis.fetch;
       const oldToken = process.env.RESEND_API_KEY;

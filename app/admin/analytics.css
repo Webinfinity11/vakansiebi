@@ -344,3 +344,13 @@
     padding-block: var(--ds-space-1);
   }
 }
+
+/* The contact mix leads the card: how readers reached employers, before each row's share of views. */
+.aa-contact-mix {
+  margin: 4px 0 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ds-line-soft);
+}
+.aa-contact-mix .aa-subhead {
+  margin-top: 0;
+}

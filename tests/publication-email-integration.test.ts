@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db } from '../lib/server/db';
 import { submitJob } from '../lib/server/job-submissions';
-import { mutateJob } from '../lib/server/jobs';
+import { mutateJob, publicJobs } from '../lib/server/jobs';
 import { deliverPublicationEmails } from '../lib/server/publication-email';
 import {
   employerContacts,
@@ -121,6 +121,24 @@ void test(
       assert.equal((await action(id, 'publish')).publicationEmailQueued, false);
       await action(id, 'save');
       assert.deepEqual((await delivery(id)).payload, original.payload);
+      const publicCopy = JSON.stringify([
+        (await db().query('SELECT published FROM jobs WHERE id=$1', [id]))
+          .rows[0].published,
+        await publicJobs(new URLSearchParams({ ids: id })),
+      ]);
+      assert.ok(publicCopy.includes(base.title), 'The vacancy is public');
+      assert.equal(
+        publicCopy.includes(base.notificationEmail),
+        false,
+        'The private notification address never reaches public data',
+      );
+      await action(id, 'restore');
+      assert.equal((await action(id, 'publish')).publicationEmailQueued, false);
+      assert.deepEqual(
+        (await delivery(id)).payload,
+        original.payload,
+        'Unpublishing and publishing again does not queue a second mail',
+      );
       assert.equal(
         calls.length,
         0,

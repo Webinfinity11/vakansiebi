@@ -1451,6 +1451,24 @@
 :root[data-theme='dark'] .vacancy-source-links a:hover {
   border-color: var(--jobx-accent);
 }
+:root[data-theme='dark'] .vacancy-searches {
+  background: var(--jobx-surface);
+  border: 1px solid var(--jobx-border-soft);
+}
+:root[data-theme='dark'] .vacancy-searches h2 {
+  color: var(--jobx-text);
+}
+:root[data-theme='dark'] .vacancy-searches a {
+  border: 1px solid var(--jobx-border-soft);
+  color: var(--jobx-accent);
+}
+:root[data-theme='dark'] .vacancy-searches a:hover {
+  border-color: var(--jobx-accent);
+  background: var(--jobx-accent-tint-soft);
+}
+:root[data-theme='dark'] .vacancy-searches a:focus-visible {
+  outline: 2px solid var(--jobx-accent);
+}
 :root[data-theme='dark'] .similar-vacancies > h2 {
   color: var(--jobx-color-263a58-text);
 }

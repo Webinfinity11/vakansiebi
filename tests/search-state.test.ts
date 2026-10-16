@@ -8,7 +8,11 @@ import {
 } from '../lib/search-state';
 import { categories } from '../lib/types';
 import { searchValueFromUrl } from '../lib/search-url';
-import { cityOptions, cityStem, otherCity } from '../lib/cities';
+import { cities, cityOptions, cityStem, otherCity } from '../lib/cities';
+import { landingPath, traitKeys } from '../lib/seo-landing';
+import { roleVocabulary } from '../lib/search-language';
+import { subcategories } from '../lib/subcategories';
+import { searchReturnPath } from '../lib/vacancy-navigation';
 void test('a shared search restores all supported filters without private or preview data', () => {
   const filters = {
     ...readSearch(new URLSearchParams()),
@@ -125,4 +129,26 @@ void test('SSR and client identify the same normalized URL without sharing priva
 void test('a city in the address bar is read whatever its letter case', () => {
   assert.equal(searchValueFromUrl('city', 'Tbilisi'), 'თბილისი');
   assert.equal(searchValueFromUrl('city', 'tbilisi'), 'თბილისი');
+});
+
+void test('the board writes every landing page, and its next page, at the landing page’s own address', () => {
+  const choices: Parameters<typeof landingPath>[0][] = [];
+  for (const category of [null, ...categories.filter((x) => x !== 'სხვა')])
+    for (const city of [null, ...cities])
+      for (const trait of [null, ...traitKeys])
+        if (category || city || trait) choices.push({ category, city, trait });
+  for (const { label: role } of roleVocabulary)
+    for (const city of [null, ...cities])
+      choices.push({ category: null, city, trait: null, role });
+  for (const { id: subcategory, category } of subcategories)
+    for (const city of [null, ...cities])
+      choices.push({ category, city, trait: null, subcategory });
+  for (const choice of choices) {
+    const path = landingPath(choice);
+    const filters = readSearch(new URLSearchParams(path.slice(2)));
+    // The live address bar and a shared link.
+    assert.equal('/?' + searchParams(filters), path);
+    // The crawlable "next page" link is the canonical of page 2, not an alternate.
+    assert.equal(searchReturnPath(filters, 2), `${path}&page=2`);
+  }
 });

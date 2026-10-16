@@ -10,6 +10,8 @@ import {
 } from 'react';
 import { ChevronDown } from 'lucide-react';
 import './analytics.css';
+import { ContactMix } from './vacancy-analytics';
+import { contacts } from '@/lib/vacancy-analytics';
 import {
   buildFunnel,
   postExtraLabels,
@@ -510,6 +512,14 @@ function Contacts({ totals }: { totals: AnalyticsSummary['totals'] }) {
       title="დაკავშირება და ჩართულობა"
       hint="ღილაკზე დაჭერები, თითო ვაკანსიასა და მოქმედებაზე ერთხელ ბრაუზერის ჩანართის სესიაში. ზარის დასრულებას ან წერილის გაგზავნას არ ადასტურებს. წილი ნახვებთან."
     >
+      {contacts(totals) > 0 && (
+        <div className="aa-contact-mix">
+          <h4 className="aa-subhead">
+            კონტაქტი <b>{whole.format(contacts(totals))}</b>
+          </h4>
+          <ContactMix counts={totals} legend />
+        </div>
+      )}
       {group([
         ['პირველწყაროზე გადასვლა', totals.outbound],
         ['დარეკვის ღილაკი', totals.call],

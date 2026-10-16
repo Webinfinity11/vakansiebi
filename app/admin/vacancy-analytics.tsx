@@ -1,5 +1,13 @@
 'use client';
-import { Download, FileText, Mail, Phone, X } from 'lucide-react';
+import {
+  ChevronDown,
+  Download,
+  FileText,
+  Mail,
+  Phone,
+  RefreshCw,
+  X,
+} from 'lucide-react';
 import { SkeletonRows } from '../skeleton';
 import { useEffect, useState } from 'react';
 import { adminTime } from '@/lib/admin-format';
@@ -65,6 +73,87 @@ const labels: Record<VacancyEventKind, string> = {
   save: 'შენახვა',
 };
 const whole = new Intl.NumberFormat('ka-GE');
+/* Each way of reaching the employer keeps one colour everywhere: in the overall mix, in a
+   row's mini bar and in a vacancy's funnel. The order is fixed, never by size. */
+const contactColumns = [
+  ['call', 'დარეკვა'],
+  ['cv', 'CV'],
+  ['email', 'წერილი'],
+  ['apply', 'განაცხადი'],
+  ['outbound', 'გარე ბმული'],
+] as const satisfies readonly [(typeof contactKinds)[number], string][];
+const percent = (part: number, whole: number) =>
+  whole
+    ? `${((part / whole) * 100).toFixed(part / whole < 0.1 ? 1 : 0)}%`
+    : '0%';
+
+/* One bar split by contact kind. The numbers always sit beside it (legend or title):
+   three of the five colours are too light to carry a value on their own. */
+export function ContactMix({
+  counts,
+  legend = false,
+}: {
+  counts: Record<VacancyEventKind, number>;
+  legend?: boolean;
+}) {
+  const total = contacts(counts);
+  const parts = contactColumns.filter(([kind]) => counts[kind] > 0);
+  const summary = parts
+    .map(([kind, name]) => `${name}: ${whole.format(counts[kind])}`)
+    .join(', ');
+  return (
+    <div className={`contact-mix${legend ? ' contact-mix-legend' : ''}`}>
+      <span className="sr-only">
+        {total ? summary : 'კონტაქტი ჯერ არ ყოფილა'}
+      </span>
+      <div
+        className="contact-mix-bar"
+        aria-hidden="true"
+        title={total ? summary : undefined}
+      >
+        {parts.map(([kind, name]) => (
+          <i
+            key={kind}
+            className={`viz-${kind}`}
+            style={{ flexGrow: counts[kind] }}
+            title={`${name}: ${whole.format(counts[kind])} (${percent(counts[kind], total)})`}
+          />
+        ))}
+      </div>
+      {legend && (
+        <ul>
+          {contactColumns.map(([kind, name]) => (
+            <li key={kind} className={counts[kind] ? undefined : 'is-zero'}>
+              <span
+                className={`contact-swatch viz-${kind}`}
+                aria-hidden="true"
+              />
+              <span title={labels[kind]}>{name}</span>
+              <b>{whole.format(counts[kind])}</b>
+              <small>{counts[kind] ? percent(counts[kind], total) : '—'}</small>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* A week against the week before it, written out with its sign so it never rests on colour. */
+function WeekChange({ now, before }: { now: number; before: number }) {
+  const diff = now - before;
+  return (
+    <small className="week-change">
+      7 დღე: {whole.format(now)}
+      {diff !== 0 && (
+        <span className={diff > 0 ? 'is-up' : 'is-down'}>
+          {diff > 0 ? '+' : '−'}
+          {whole.format(Math.abs(diff))}
+        </span>
+      )}
+    </small>
+  );
+}
 const pressNames: Record<ResumeContact['kinds'][number]['kind'], string> = {
   cv: 'CV-ის ღილაკი',
   call: 'დარეკვა',
@@ -375,8 +464,16 @@ export function VacancyAnalyticsBlock({
             </div>
           </div>
           {data.series && <DailyBars days={data.series} metric={metric} />}
+          {reached > 0 && (
+            <section className="contact-mix-panel" aria-label="კონტაქტის გზები">
+              <h4>როგორ დაუკავშირდნენ</h4>
+              <ContactMix counts={data.total} legend />
+            </section>
+          )}
           <dl className="vacancy-funnel">
-            {(['view', ...contactKinds, 'save'] as const).map((kind) => {
+            {(
+              ['view', ...contactColumns.map(([kind]) => kind), 'save'] as const
+            ).map((kind) => {
               const count = data.total[kind];
               const share = data.total.view
                 ? Math.min(100, (count / data.total.view) * 100)
@@ -386,6 +483,11 @@ export function VacancyAnalyticsBlock({
                   <dt>{labels[kind]}</dt>
                   <dd>
                     <i
+                      className={
+                        kind === 'view' || kind === 'save'
+                          ? undefined
+                          : `viz-${kind}`
+                      }
                       style={{ width: `${Math.max(share, count ? 1 : 0)}%` }}
                     />
                     <b>{whole.format(count)}</b>
@@ -458,6 +560,48 @@ function Sparkline({ days }: { days: VacancyDay[] }) {
   );
 }
 
+const week = (days: VacancyDay[], pick: (d: VacancyDay) => number) => ({
+  now: sum(days.slice(-7), pick),
+  before: sum(days.slice(-14, -7), pick),
+});
+type SortKey = 'view' | 'contact' | 'rate';
+const sortNames: Record<SortKey, string> = {
+  view: 'ნახვები',
+  contact: 'კონტაქტი',
+  rate: 'კონვერსია',
+};
+const rateOf = (r: Performance) =>
+  r.total.view >= enoughViews ? contacts(r.total) / r.total.view : -1;
+
+function SortHeader({
+  by,
+  sortBy,
+  onSort,
+  className = 'num',
+}: {
+  by: SortKey;
+  sortBy: SortKey;
+  onSort: (by: SortKey) => void;
+  className?: string;
+}) {
+  return (
+    <th
+      scope="col"
+      className={className}
+      aria-sort={sortBy === by ? 'descending' : undefined}
+    >
+      <button
+        type="button"
+        className={`sort-button${sortBy === by ? ' is-active' : ''}`}
+        onClick={() => onSort(by)}
+      >
+        {sortNames[by]}
+        {sortBy === by && <ChevronDown aria-hidden="true" />}
+      </button>
+    </th>
+  );
+}
+
 /* Every vacancy sent through our own posting form, with how it is doing. Imported vacancies
    are left out on purpose: their employers are elsewhere and do not see these numbers. */
 export function SubmissionPerformance({
@@ -468,6 +612,7 @@ export function SubmissionPerformance({
   const [rows, setRows] = useState<Performance[] | null>(null);
   const [error, setError] = useState('');
   const [version, setVersion] = useState(0);
+  const [sortBy, setSortBy] = useState<SortKey>('view');
   useEffect(() => {
     const controller = new AbortController();
     void fetch('/api/admin/analytics/submissions', {
@@ -485,15 +630,37 @@ export function SubmissionPerformance({
       });
     return () => controller.abort();
   }, [version]);
+  const pick = {
+    view: (r: Performance) => r.total.view,
+    contact: (r: Performance) => contacts(r.total),
+    rate: rateOf,
+  }[sortBy];
   const sorted = [...(rows ?? [])].sort(
     (a, b) =>
       Number(b.status === 'published') - Number(a.status === 'published') ||
+      pick(b) - pick(a) ||
       b.total.view - a.total.view,
   );
-  const views = sorted.reduce((total, r) => total + r.total.view, 0);
-  const reached = sorted.reduce((total, r) => total + contacts(r.total), 0);
+  /* The headline numbers are sums of the rows below, so the two always agree. */
+  const totals = Object.fromEntries(
+    (['view', 'save', ...contactKinds] as const).map((kind) => [
+      kind,
+      sorted.reduce((total, r) => total + r.total[kind], 0),
+    ]),
+  ) as Record<VacancyEventKind, number>;
+  const reached = contacts(totals);
   const active = sorted.filter((r) => r.status === 'published').length;
-  const week = sorted.reduce((total, r) => total + r.last7.view, 0);
+  const weekOf = (fn: (d: VacancyDay) => number) =>
+    sorted.reduce(
+      (acc, r) => {
+        const w = week(r.series, fn);
+        return { now: acc.now + w.now, before: acc.before + w.before };
+      },
+      { now: 0, before: 0 },
+    );
+  const viewWeek = weekOf((d) => d.view);
+  const contactWeek = weekOf((d) => contacts(d));
+  const people = sorted.reduce((total, r) => total + r.people, 0);
   return (
     <section
       className="reports-section vacancy-performance"
@@ -510,6 +677,7 @@ export function SubmissionPerformance({
           className="ds-btn ds-btn--secondary"
           onClick={() => setVersion((n) => n + 1)}
         >
+          <RefreshCw aria-hidden="true" />
           განახლება
         </button>
       </div>
@@ -524,42 +692,50 @@ export function SubmissionPerformance({
             <div>
               <dt>აქტიური ახლა</dt>
               <dd>{whole.format(active)}</dd>
+              <small>სულ {whole.format(sorted.length)} ვაკანსია</small>
             </div>
             <div>
               <dt>ნახვები</dt>
-              <dd>{whole.format(views)}</dd>
-              <small>7 დღე: {whole.format(week)}</small>
+              <dd>{whole.format(totals.view)}</dd>
+              <WeekChange {...viewWeek} />
             </div>
             <div>
               <dt>კონტაქტის მცდელობა</dt>
               <dd>{whole.format(reached)}</dd>
+              <WeekChange {...contactWeek} />
             </div>
             <div>
               <dt>კონვერსია</dt>
-              <dd>{conversion(views, reached) ?? '—'}</dd>
-              {!conversion(views, reached) && (
-                <small>{enoughViews} ნახვამდე არ ითვლება</small>
-              )}
+              <dd>{conversion(totals.view, reached) ?? '—'}</dd>
+              <small>
+                {conversion(totals.view, reached)
+                  ? `შენახვა: ${whole.format(totals.save)} · JOBX CV: ${whole.format(people)}`
+                  : `${enoughViews} ნახვამდე არ ითვლება`}
+              </small>
             </div>
           </dl>
+          {reached > 0 && (
+            <section className="contact-mix-panel" aria-label="კონტაქტის გზები">
+              <h3>როგორ დაუკავშირდნენ</h3>
+              <ContactMix counts={totals} legend />
+            </section>
+          )}
           <div className="vacancy-performance-scroll">
             <table>
               <thead>
                 <tr>
                   <th scope="col">ვაკანსია</th>
-                  <th scope="col">სტატუსი</th>
-                  <th scope="col" className="num">
-                    ნახვები
-                  </th>
+                  <SortHeader by="view" sortBy={sortBy} onSort={setSortBy} />
                   <th scope="col" className="spark-col">
                     30 დღე
                   </th>
-                  <th scope="col" className="num">
-                    კონტაქტი
-                  </th>
-                  <th scope="col" className="num">
-                    კონვერსია
-                  </th>
+                  <SortHeader
+                    by="contact"
+                    sortBy={sortBy}
+                    onSort={setSortBy}
+                    className="mix-col"
+                  />
+                  <SortHeader by="rate" sortBy={sortBy} onSort={setSortBy} />
                   <th scope="col" className="num">
                     შენახვა
                   </th>
@@ -568,7 +744,7 @@ export function SubmissionPerformance({
                     className="num"
                     title="JOBX-ზე შექმნილი CV-ით დაკავშირებული ადამიანები"
                   >
-                    CV
+                    JOBX CV
                   </th>
                 </tr>
               </thead>
@@ -576,6 +752,7 @@ export function SubmissionPerformance({
                 {sorted.map((r) => {
                   const reach = contacts(r.total);
                   const rate = conversion(r.total.view, reach);
+                  const views = week(r.series, (d) => d.view);
                   return (
                     <tr key={r.id}>
                       <th scope="row">
@@ -586,32 +763,52 @@ export function SubmissionPerformance({
                         >
                           {r.title || 'ვაკანსია'}
                         </button>
-                        <small>{r.company}</small>
-                      </th>
-                      <td data-label="სტატუსი">
-                        <span className={`status status-${r.status}`}>
-                          {statusNames[r.status] ?? r.status}
-                        </span>
-                        {r.status === 'published' && r.tier !== 'standard' && (
-                          <span className="ds-badge ds-badge--violet">
-                            {placementLabels[r.tier]}
+                        <span className="vacancy-row-meta">
+                          {r.company && <small>{r.company}</small>}
+                          <span className={`status status-${r.status}`}>
+                            {statusNames[r.status] ?? r.status}
                           </span>
-                        )}
-                      </td>
+                          {r.status === 'published' &&
+                            r.tier !== 'standard' && (
+                              <span className="ds-badge ds-badge--violet">
+                                {placementLabels[r.tier]}
+                              </span>
+                            )}
+                        </span>
+                      </th>
                       <td data-label="ნახვები" className="num">
-                        {whole.format(r.total.view)}
+                        <strong>{whole.format(r.total.view)}</strong>
+                        <WeekChange {...views} />
                       </td>
                       <td data-label="30 დღე" className="spark-col">
                         <Sparkline days={r.series} />
                       </td>
-                      <td
-                        data-label="კონტაქტი"
-                        className="num"
-                        title={contactKinds
-                          .map((k) => `${labels[k]}: ${r.total[k]}`)
-                          .join('\n')}
-                      >
-                        {whole.format(reach)}
+                      <td data-label="კონტაქტი" className="mix-col">
+                        {reach ? (
+                          <>
+                            <span className="mix-head">
+                              <strong>{whole.format(reach)}</strong>
+                              <ContactMix counts={r.total} />
+                            </span>
+                            <span className="mix-counts">
+                              {contactColumns
+                                .filter(([kind]) => r.total[kind] > 0)
+                                .map(([kind, name]) => (
+                                  <span key={kind}>
+                                    <i
+                                      className={`contact-swatch viz-${kind}`}
+                                      aria-hidden="true"
+                                    />
+                                    {name} {whole.format(r.total[kind])}
+                                  </span>
+                                ))}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="mix-head">
+                            <strong className="muted">0</strong>
+                          </span>
+                        )}
                       </td>
                       <td
                         data-label="კონვერსია"
@@ -627,15 +824,41 @@ export function SubmissionPerformance({
                       <td data-label="შენახვა" className="num">
                         {whole.format(r.total.save)}
                       </td>
-                      <td data-label="CV" className="num">
+                      <td data-label="JOBX CV" className="num">
                         {whole.format(r.people)}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">სულ</th>
+                  <td data-label="ნახვები" className="num">
+                    {whole.format(totals.view)}
+                  </td>
+                  <td className="spark-col" aria-hidden="true" />
+                  <td data-label="კონტაქტი" className="mix-col">
+                    {whole.format(reached)}
+                  </td>
+                  <td data-label="კონვერსია" className="num">
+                    {conversion(totals.view, reached) ?? '—'}
+                  </td>
+                  <td data-label="შენახვა" className="num">
+                    {whole.format(totals.save)}
+                  </td>
+                  <td data-label="JOBX CV" className="num">
+                    {whole.format(people)}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
+          <p className="admin-analytics-note">
+            ღილაკზე დაჭერა ითვლება, გაგზავნა ან ზარი — არა: ფოსტა და ტელეფონი
+            მომხმარებლის მოწყობილობაზე იხსნება. „JOBX CV“ არის ის, ვისაც CV
+            JOBX-ზე აქვს შექმნილი და დაკავშირების ღილაკს დააჭირა.
+          </p>
         </>
       )}
     </section>

@@ -33,6 +33,12 @@
   --ds-violet: #6b46c1;
   --ds-violet-soft: #f2edfc;
   --ds-focus: rgba(36, 87, 230, 0.28);
+  /* data colours — categorical, fixed order; checked for colour-blind separation */
+  --ds-viz-1: #2a78d6;
+  --ds-viz-2: #eb6834;
+  --ds-viz-3: #1baf7a;
+  --ds-viz-4: #eda100;
+  --ds-viz-5: #e87ba4;
 
   /* shape */
   --ds-radius-sm: 8px;
@@ -92,6 +98,11 @@
   --ds-success-soft: #13322a;
   --ds-warning-soft: #3a2a12;
   --ds-danger-soft: #3b1d1d;
+  --ds-viz-1: #3987e5;
+  --ds-viz-2: #d95926;
+  --ds-viz-3: #199e70;
+  --ds-viz-4: #c98500;
+  --ds-viz-5: #d55181;
 }
 
 /* ── Buttons: three levels, two sizes ─────────────────────────────────────────────────────

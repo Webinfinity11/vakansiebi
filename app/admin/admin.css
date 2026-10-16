@@ -1622,7 +1622,7 @@
     border-top: 1px solid var(--ds-line);
   }
   .vacancy-performance tbody th,
-  .vacancy-performance tbody td[data-label='სტატუსი'] {
+  .vacancy-performance tbody td.mix-col {
     grid-column: 1 / -1;
     min-width: 0;
     padding: 0;
@@ -1631,6 +1631,7 @@
   .vacancy-performance tbody td {
     display: grid;
     gap: 2px;
+    align-content: start;
     padding: 0;
     border: 0;
     text-align: start;
@@ -1640,13 +1641,37 @@
     color: var(--ds-ink-3);
     font-size: var(--ds-text-xs);
   }
-  .vacancy-performance tbody td[data-label='სტატუსი']::before {
-    content: none;
+  .vacancy-performance tbody td.spark-col {
+    display: none;
   }
-  .vacancy-performance tbody td[data-label='სტატუსი'] {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+  .vacancy-performance tfoot,
+  .vacancy-performance tfoot tr {
+    display: block;
+  }
+  .vacancy-performance tfoot tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 12px;
+    padding: 12px 0 0;
+  }
+  .vacancy-performance tfoot :is(th, td) {
+    display: grid;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    text-align: start;
+  }
+  .vacancy-performance tfoot th {
+    grid-column: 1 / -1;
+  }
+  .vacancy-performance tfoot td::before {
+    content: attr(data-label);
+    color: var(--ds-ink-3);
+    font-size: var(--ds-text-xs);
+    font-weight: 400;
+  }
+  .vacancy-performance tfoot td:empty {
+    display: none;
   }
   .vacancy-performance .num {
     text-align: start;
@@ -3660,4 +3685,222 @@ body:has(.admin-shell) .job-choice-options {
   .admin-shell .admin-bulk-bar {
     width: 100%;
   }
+}
+
+/* Contact mix: one bar per set of numbers, split by kind in the fixed data colours, with a
+   2px surface gap between parts and the exact counts always beside it. */
+.viz-call {
+  --viz: var(--ds-viz-1);
+}
+.viz-cv {
+  --viz: var(--ds-viz-2);
+}
+.viz-email {
+  --viz: var(--ds-viz-3);
+}
+.viz-apply {
+  --viz: var(--ds-viz-4);
+}
+.viz-outbound {
+  --viz: var(--ds-viz-5);
+}
+.contact-mix-bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--ds-line-soft);
+}
+.contact-mix-bar i {
+  min-width: 3px;
+  background: var(--viz);
+}
+.contact-mix-legend .contact-mix-bar {
+  height: 12px;
+}
+.contact-swatch {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--viz);
+}
+.contact-mix-legend ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px 20px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.contact-mix-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+}
+.contact-mix-legend li > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contact-mix-legend li b {
+  margin-inline-start: auto;
+  color: var(--ds-ink);
+  font-variant-numeric: tabular-nums;
+}
+.contact-mix-legend li small {
+  min-width: 3.2em;
+  color: var(--ds-ink-3);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.contact-mix-legend li.is-zero {
+  color: var(--ds-ink-3);
+}
+.contact-mix-legend li.is-zero .contact-swatch {
+  opacity: 0.35;
+}
+.contact-mix-panel {
+  margin: var(--ds-space-3) 0 var(--ds-space-2);
+  padding: var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+}
+.contact-mix-panel :is(h3, h4) {
+  margin: 0 0 10px;
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+}
+.vacancy-funnel > div i[class^='viz-'] {
+  background: var(--viz);
+}
+
+/* A week against the one before: the sign is written, the colour only repeats it. */
+.week-change {
+  display: inline-flex;
+  gap: 6px;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.week-change span {
+  margin-inline-start: 6px;
+}
+.week-change .is-up {
+  color: var(--ds-success);
+}
+.week-change .is-down {
+  color: var(--ds-danger);
+}
+
+/* The performance table: the vacancy and its state in one cell, contact kinds as one compact
+   column, sortable totals, and a footer that adds up to the cards above. */
+.vacancy-performance td.num {
+  vertical-align: top;
+}
+.vacancy-performance td.num strong {
+  display: block;
+  font-weight: 600;
+}
+.vacancy-performance td.num .week-change {
+  justify-content: flex-end;
+}
+.vacancy-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+.vacancy-performance td .ds-badge,
+.vacancy-row-meta .ds-badge {
+  margin-inline-start: 0;
+}
+.vacancy-performance .mix-col {
+  width: 190px;
+  min-width: 170px;
+}
+.vacancy-performance td.mix-col {
+  vertical-align: top;
+}
+.mix-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mix-head strong {
+  min-width: 1.6em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.mix-head .contact-mix {
+  flex: 1 1 auto;
+}
+.vacancy-performance tbody th {
+  min-width: 0;
+}
+.vacancy-performance td.num .week-change {
+  display: block;
+}
+.mix-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 6px;
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+.mix-counts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.mix-counts .contact-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.vacancy-performance .sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 28px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--ds-radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.vacancy-performance .sort-button:hover {
+  color: var(--ds-ink);
+}
+.vacancy-performance .sort-button:focus-visible {
+  outline: 2px solid var(--ds-focus);
+}
+.vacancy-performance .sort-button.is-active {
+  color: var(--ds-ink);
+  font-weight: 600;
+}
+.vacancy-performance .sort-button svg {
+  width: var(--ds-icon-sm);
+  height: var(--ds-icon-sm);
+}
+.vacancy-performance tfoot :is(th, td) {
+  border-top: 1px solid var(--ds-line-strong);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.vacancy-performance .admin-analytics-note {
+  margin-top: var(--ds-space-3);
 }

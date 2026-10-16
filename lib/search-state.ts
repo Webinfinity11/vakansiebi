@@ -75,15 +75,24 @@ export function readSearch(params: URLSearchParams): SearchFilters {
       ) || 'უახლესი',
   };
 }
+/* Keys are written in the landing pages' order (landingPath: category,
+   subcategory, city, q, then the condition). The board's address, its
+   "next page" link and every return path come from here; written in another
+   order, they named a second URL for each landing page — one that only
+   canonicalised back to it, and the one through which crawlers reached every
+   page after the first. */
 export function searchParams(filters: SearchFilters) {
   const result = new URLSearchParams();
-  if (filters.query.trim())
-    result.set('q', searchUrlValue('q', filters.query.trim()));
-  for (const field of ['city', 'category', 'source'] as const)
-    if (filters[field] !== 'ყველა')
-      result.set(field, searchUrlValue(field, filters[field]));
+  if (filters.category !== 'ყველა')
+    result.set('category', searchUrlValue('category', filters.category));
   const subcategory = subcategoryFor(filters.category, filters.subcategory);
   if (subcategory) result.set('subcategory', subcategory.id);
+  if (filters.city !== 'ყველა')
+    result.set('city', searchUrlValue('city', filters.city));
+  if (filters.query.trim())
+    result.set('q', searchUrlValue('q', filters.query.trim()));
+  if (filters.source !== 'ყველა')
+    result.set('source', searchUrlValue('source', filters.source));
   if (filters.paid) result.set('paid', 'true');
   if (filters.remote) result.set('remote', 'true');
   if (filters.salaryPeriod === 'day') result.set('salaryPeriod', 'day');

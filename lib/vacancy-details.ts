@@ -135,22 +135,40 @@ export function workSchedule(job: DetailSource): string[] {
   return [...new Set(values.filter(Boolean))].slice(0, 4);
 }
 
+/* Forms and hiring systems that receive the application themselves. Sources often
+   label these links with the bare URL, so the address alone has to identify them. */
+const applicationForm =
+  /^https:\/\/(?:smrtr\.io\/[A-Za-z0-9]+|wrk\.ge\/[A-Za-z0-9]+|(?:www\.)?app\.helio-ai\.com\/apply\/|hel-ai\.com\/apply\/|[a-z0-9-]+\.selfrecruit\.ge\/(?:s\/|[a-f0-9]{8}-)|jobs\.smartrecruiters\.com\/|docs\.google\.com\/forms\/|forms\.gle\/|forms\.office\.com\/|(?:[a-z0-9-]+\.)?typeform\.com\/to\/|(?:form\.)?jotform\.com\/|tally\.so\/r\/|[a-z0-9-]+\.hirehive\.com\/[^/?#]+|(?:www\.)?cleverstaff\.net\/[^?#]*vacanc|[a-z0-9-]+\.bamboohr\.com\/careers\/\d|talent\.sage\.hr\/jobs\/|apply\.workable\.com\/[^/]+\/j\/|[a-z0-9-]+\.teamtailor\.com\/jobs\/|jobs\.lever\.co\/[^/]+\/|(?:job-)?boards\.greenhouse\.io\/|[a-z0-9-]+\.recruitee\.com\/o\/|[a-z0-9-]+\.peopleforce\.io\/careers\/v\/|[a-z0-9-]+\.bitrix24\.site\/crm_form|crm\.[a-z0-9.-]+\/crm\/deal\/web_form\/|vacancy\.hr\.gov\.ge\/JobProvider\/UserOrgVaks\/Details\/)/i;
+/* An employer's own careers site counts only on a page deeper than its front page,
+   and never on a job board that republishes the vacancy. */
+const careersPage =
+  /^https:\/\/(?:(?:careers?|jobs|vacancy|vacancies)\.(?!ge\/)[a-z0-9.-]+\/[^?#\s]+|(?!(?:www\.)?(?:jobs|hr|myjobs|ss|jobs24|unijobs)\.ge\/)[a-z0-9.-]+\/(?:[a-z]{2}\/)?(?:careers?|jobs?|vacanc(?:y|ies))\/[^?#\s]+)/i;
 export function applicationDestination(job: Pick<Vacancy, 'applicationLinks'>) {
   const links = (job.applicationLinks || []).filter(
     (link) =>
       (/განაცხად|რეზიუმ|\bapply\b|\bapplication\b/i.test(link.label) ||
-        /^https:\/\/(?:smrtr\.io\/[A-Za-z0-9]+|wrk\.ge\/[A-Za-z0-9]+|(?:www\.)?app\.helio-ai\.com\/apply\/|hel-ai\.com\/apply\/|[a-z0-9-]+\.selfrecruit\.ge\/(?:s\/|[a-f0-9]{8}-)|jobs\.smartrecruiters\.com\/)/i.test(
-          link.url,
-        )) &&
+        applicationForm.test(link.url) ||
+        careersPage.test(link.url)) &&
       !/privacy|policy|კონფიდენციალურ/i.test(link.label + ' ' + link.url),
   );
-  if (links.length !== 1) return null;
-  try {
-    const url = new URL(links[0].url);
-    return url.protocol === 'https:' && !url.username && !url.password
-      ? links[0]
-      : null;
-  } catch {
-    return null;
+  // One form reached through tracked and untracked links is still one destination.
+  const destinations = new Map<string, (typeof links)[number]>();
+  for (const link of links) {
+    try {
+      const url = new URL(link.url);
+      if (url.protocol !== 'https:' || url.username || url.password)
+        return null;
+      const key = url.host + url.pathname.replace(/\/$/, '');
+      if (!destinations.has(key)) destinations.set(key, link);
+    } catch {
+      return null;
+    }
   }
+  /* A careers page can also list its own shortcuts (…/vacancy and …/vacancy/whatsapp);
+     the page they all sit under is the application. */
+  const keys = [...destinations.keys()];
+  const parent = keys.find((key) =>
+    keys.every((other) => other === key || other.startsWith(key + '/')),
+  );
+  return parent ? destinations.get(parent)! : null;
 }

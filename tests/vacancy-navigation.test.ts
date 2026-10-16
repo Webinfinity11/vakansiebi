@@ -250,7 +250,7 @@ void test('an unclaimed mark goes stale instead of turning a later visit into a 
 
 void test('clean links recover list, company and recent context on their own history entry', () => {
   for (const from of [
-    '/?city=kutaisi&category=lojistika&page=3',
+    '/?category=lojistika&city=kutaisi&page=3',
     '/companies/acme?page=2',
     '/?saved=1',
   ]) {
