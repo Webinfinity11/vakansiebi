@@ -22,6 +22,7 @@ export type TrackedKind =
   | 'application'
   | 'call'
   | 'cv'
+  | 'email'
   | 'apply'
   | 'post'
   | 'resume'
@@ -36,6 +37,7 @@ const oncePerVisit = new Set<TrackedKind>([
   'outbound',
   'call',
   'cv',
+  'email',
   'apply',
 ]);
 function seenThisVisit(kind: TrackedKind, value: string) {
@@ -48,9 +50,9 @@ function seenThisVisit(kind: TrackedKind, value: string) {
   return false;
 }
 
-export function track(kind: TrackedKind, value: string) {
-  if (process.env.NODE_ENV !== 'production') return;
-  if (seenThisVisit(kind, value)) return;
+function record(kind: TrackedKind, value: string) {
+  if (process.env.NODE_ENV !== 'production') return false;
+  if (seenThisVisit(kind, value)) return false;
   const googleEvent = analyticsEvent(kind, value);
   if (
     googleEvent &&
@@ -78,6 +80,11 @@ export function track(kind: TrackedKind, value: string) {
         credentials: 'omit',
       }).catch(() => {});
   } catch {}
+  return true;
+}
+
+export function track(kind: TrackedKind, value: string) {
+  record(kind, value);
 }
 
 /* A control or an error on a public page, by its code name alone. */
@@ -86,11 +93,15 @@ export const trackAction = (code: ActionCode) => track('action', code);
 /* A press that reaches the employer. It is counted like any other; on a vacancy posted
    through JOBX it also names the CV this browser saved on JOBX, if there is one. */
 export function trackContact(
-  kind: 'call' | 'cv' | 'apply',
+  kind: 'call' | 'cv' | 'email' | 'apply',
   job: { id: string; source: string },
 ) {
-  track(kind, job.id);
-  if (job.source === 'JOBX' && typeof window !== 'undefined')
+  if (!record(kind, job.id)) return;
+  if (
+    kind !== 'email' &&
+    job.source === 'JOBX' &&
+    typeof window !== 'undefined'
+  )
     try {
       sendResumeContact(window.localStorage, job.id, kind);
     } catch {}

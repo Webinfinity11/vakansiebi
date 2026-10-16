@@ -16,7 +16,7 @@ import {
   vacancyContacts,
 } from '@/lib/vacancy-details';
 import type { PublicJob } from '@/lib/types';
-import { trackAction, trackContact } from '@/lib/analytics-client';
+import { trackAction } from '@/lib/analytics-client';
 import { savedResumeIdentity } from '@/lib/resume-client';
 
 const noChanges = () => () => {};
@@ -38,11 +38,7 @@ export function QuickApply({
   children?: ReactNode;
 }) {
   const { emails, phones } = vacancyContacts(job);
-  /* Pressing call, opening a letter with a CV or leaving for the employer's own
-     form is where reading turns into applying, and until now none of the three
-     was counted. Only the vacancy is recorded, once per press. */
-  const reached = (kind: 'call' | 'cv' | 'apply') => () =>
-    trackContact(kind, job);
+  // The vacancy page captures contact clicks here and in its other contact links.
   const application = applicationDestination(job);
   const [message, setMessage] = useState('');
   // Read after hydration: the server cannot know what this browser saved.
@@ -60,7 +56,6 @@ export function QuickApply({
           href={application.url}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={reached('apply')}
         >
           <Send aria-hidden="true" />
           განაცხადის გაგზავნა
@@ -72,7 +67,6 @@ export function QuickApply({
             className="contact-phone"
             key={phone.number}
             href={`tel:${phone.number}`}
-            onClick={reached('call')}
           >
             <Phone size={16} />
             <span>
@@ -98,7 +92,6 @@ export function QuickApply({
                     ? defaultApplicationBody
                     : 'გამარჯობა,\n\nთქვენს განცხადებასთან დაკავშირებით მაქვს კითხვა.\n\n[შენი სახელი]',
                 )}
-                onClick={reached('cv')}
               >
                 <Mail size={16} />
                 {contact.application ? 'CV-ის გაგზავნა' : 'წერილის გახსნა'}

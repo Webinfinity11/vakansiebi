@@ -54,18 +54,22 @@ export function analyticsTitle(page: string, documentTitle: string) {
   return landing ? `${landingHeading(landing)} | JOBX` : homeTitle;
 }
 
-/** Explicit outcomes, without search text, CV fields, contact details or job IDs. */
+/** Contact clicks are intent, not confirmed calls or delivered applications. */
 export function analyticsEvent(
   kind: string,
   value: string,
 ): { name: string; params?: Record<string, string> } | null {
-  if (['call', 'cv', 'apply'].includes(kind))
-    return {
-      name: 'contact_employer',
-      params: { contact_method: kind === 'cv' ? 'email' : kind },
-    };
-  if (kind === 'post' && value === 'submitted')
-    return { name: 'job_submitted' };
+  const contactEvents: Record<string, [string, string]> = {
+    call: ['call_click', 'phone'],
+    cv: ['cv_email_click', 'cv_email'],
+    email: ['contact_email_click', 'email'],
+    apply: ['application_click', 'external_form'],
+  };
+  if (Object.hasOwn(contactEvents, kind)) {
+    const [name, method] = contactEvents[kind];
+    return { name, params: { contact_method: method } };
+  }
+  if (kind === 'post' && value === 'done') return { name: 'job_submitted' };
   if (kind === 'resume' && value === 'printed') return { name: 'cv_print' };
   if (kind === 'save') return { name: 'save_job' };
   return null;

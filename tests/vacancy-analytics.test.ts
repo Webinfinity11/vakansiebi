@@ -33,8 +33,14 @@ void test('empty vacancies have independent zero counts and empty requests stay 
   assert.deepEqual(aggregateVacancyAnalytics([], []), {});
   const result = aggregateVacancyAnalytics(['new', 'other'], []);
   for (const counts of Object.values(result)) {
-    assert.deepEqual(Object.values(counts.total), [0, 0, 0, 0, 0, 0]);
-    assert.deepEqual(Object.values(counts.last7), [0, 0, 0, 0, 0, 0]);
+    assert.deepEqual(
+      Object.values(counts.total),
+      vacancyEventKinds.map(() => 0),
+    );
+    assert.deepEqual(
+      Object.values(counts.last7),
+      vacancyEventKinds.map(() => 0),
+    );
   }
   result.new.total.view = 1;
   assert.equal(result.other.total.view, 0);

@@ -532,8 +532,8 @@
 }
 @media (min-width: 761px) {
   .board-shell.editorial-board.crafted-board.refined-board
-    .discovery-shortcut-employment {
-    grid-column: span 2;
+    .discovery-shortcuts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 .board-shell.editorial-board.crafted-board.refined-board

@@ -12,6 +12,7 @@ import {
 import { negatedRequirement, requiredExperiencePattern } from '../experience';
 import {
   describedPartTimePattern,
+  describedInternshipPattern,
   unavailablePartTimePattern,
 } from '../employment';
 import { cities, cityNamePattern, otherCity } from '../cities';
@@ -373,6 +374,10 @@ export function searchPlan(
   const unavailablePartTime = describedPartTime
     ? bind(unavailablePartTimePattern)
     : null;
+  const describedInternship =
+    filters.employment === 'internship'
+      ? bind(describedInternshipPattern)
+      : null;
   /* "Beginner" and "graduate" say entry level only in the experience field itself; in a
      description they as often address graduates of a programme that still wants years. */
   const entryLevelFacts = '(^|[^ა-ჰ])(დამწყებ|კურსდამთავრებულ)';
@@ -399,7 +404,7 @@ export function searchPlan(
         ? `((${experienceText(alias)} ~ ${entryLevelPattern} OR ${factsText(alias)} ~ ${bind(entryLevelFacts)}) AND NOT (regexp_replace(${experienceText(alias)}, ${bind(negatedRequirement)}, '', 'g') ~ ${requiredExperience})) AS entry_level`
         : '',
       employmentPattern
-        ? `(${filters.employment === 'daily' ? `(${employmentText(alias)} || ' ' || ${document(alias)})` : employmentText(alias)} ~ ${employmentPattern}${describedPartTime ? ` OR (${document(alias)} ~ ${describedPartTime} AND ${document(alias)} !~ ${unavailablePartTime})` : ''}) AS employment_match`
+        ? `(${filters.employment === 'daily' ? `(${employmentText(alias)} || ' ' || ${document(alias)})` : employmentText(alias)} ~ ${employmentPattern}${describedPartTime ? ` OR (${document(alias)} ~ ${describedPartTime} AND ${document(alias)} !~ ${unavailablePartTime})` : ''}${describedInternship ? ` OR ${document(alias)} ~ ${describedInternship}` : ''}) AS employment_match`
         : '',
     ]
       .filter(Boolean)
@@ -538,10 +543,10 @@ export function searchPlan(
   };
   // The predicate every public surface shares: published snapshot with at
   // least one active source (checked on the row), then a live deadline and no
-  // procurement tenders (checked on the extracted scalars).
+  // procurement tenders and explicit job-seeker ads (checked on the extracted scalars).
   let base = `${preview ? "j.status IN ('pending','published')" : "j.status='published'"} AND ${snapshot} IS NOT NULL AND EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired)`;
   const visible = base;
-  const current = `(COALESCE(${p('deadline')},'')='' OR ${p('deadline')}>=${today}) AND NOT (lower(${p('title')}) ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]])')`;
+  const current = `(COALESCE(${p('deadline')},'')='' OR ${p('deadline')}>=${today}) AND NOT (lower(${p('title')}) ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]]|(?:სამსახურის[[:space:]]+მაძიებელი|ვეძებ[[:space:]]+სამსახურს)(?:[[:space:]!.,]|$))')`;
   if (params.has('ids'))
     base += ` AND j.id::text=ANY(${bind(
       (params.get('ids') || '')

@@ -508,13 +508,14 @@ function Contacts({ totals }: { totals: AnalyticsSummary['totals'] }) {
   return (
     <Card
       title="დაკავშირება და ჩართულობა"
-      hint="რამდენჯერ დააჭირეს, არა ვინ. წილი ნახვებთან."
+      hint="ღილაკზე დაჭერები, თითო ვაკანსიასა და მოქმედებაზე ერთხელ ბრაუზერის ჩანართის სესიაში. ზარის დასრულებას ან წერილის გაგზავნას არ ადასტურებს. წილი ნახვებთან."
     >
       {group([
         ['პირველწყაროზე გადასვლა', totals.outbound],
-        ['დარეკვა', totals.call],
-        ['CV-ის გაგზავნა', totals.cv],
-        ['განაცხადის გაგზავნა', totals.apply],
+        ['დარეკვის ღილაკი', totals.call],
+        ['CV-ის წერილის გახსნა', totals.cv],
+        ['საკონტაქტო წერილის გახსნა', totals.email],
+        ['განაცხადის გვერდზე გადასვლა', totals.apply],
       ])}
       <h4 className="aa-subhead">
         ჩართულობა <b>{whole.format(engaged)}</b>

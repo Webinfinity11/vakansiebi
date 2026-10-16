@@ -23,7 +23,7 @@ void test('a search is stored folded, and noise is refused rather than trimmed',
 });
 
 void test('the process events keep their two shapes: a vacancy, or a step name', () => {
-  for (const kind of ['call', 'cv', 'apply'] as const) {
+  for (const kind of ['call', 'cv', 'email', 'apply'] as const) {
     assert.deepEqual(normalizeEvent(kind, id), { kind, value: id });
     assert.equal(
       normalizeEvent(kind, 'დარეკვა'),

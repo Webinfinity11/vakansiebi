@@ -74,20 +74,33 @@ void test('SEO landing identity joins GA visits to Search Console without leakin
 
 void test('GA outcomes contain only reviewed event names and methods', () => {
   assert.deepEqual(analyticsEvent('cv', 'private-job-id'), {
-    name: 'contact_employer',
+    name: 'cv_email_click',
+    params: { contact_method: 'cv_email' },
+  });
+  assert.deepEqual(analyticsEvent('call', 'private-job-id'), {
+    name: 'call_click',
+    params: { contact_method: 'phone' },
+  });
+  assert.deepEqual(analyticsEvent('email', 'private-job-id'), {
+    name: 'contact_email_click',
     params: { contact_method: 'email' },
   });
   assert.deepEqual(analyticsEvent('apply', 'private-job-id'), {
-    name: 'contact_employer',
-    params: { contact_method: 'apply' },
+    name: 'application_click',
+    params: { contact_method: 'external_form' },
   });
-  assert.deepEqual(analyticsEvent('post', 'submitted'), {
+  assert.deepEqual(analyticsEvent('post', 'done'), {
     name: 'job_submitted',
   });
   assert.deepEqual(analyticsEvent('resume', 'printed'), { name: 'cv_print' });
   assert.equal(analyticsEvent('search', 'private@example.com'), null);
   assert.equal(analyticsEvent('resume', 'private@example.com'), null);
   assert.equal(analyticsEvent('post', 'failed'), null);
+  assert.equal(
+    analyticsEvent('post', 'submitted'),
+    null,
+    'a press before validation is not a successful submission',
+  );
 });
 
 void test('Google Analytics measures production public pages without query strings', () => {

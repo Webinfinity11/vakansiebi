@@ -3,6 +3,7 @@ export const vacancyEventKinds = [
   'outbound',
   'call',
   'cv',
+  'email',
   'apply',
   'save',
 ] as const;
@@ -41,7 +42,13 @@ export function aggregateVacancyAnalytics(
 }
 
 /* Anything that means a visitor tried to reach the employer. A save is interest, not contact. */
-export const contactKinds = ['apply', 'call', 'cv', 'outbound'] as const;
+export const contactKinds = [
+  'apply',
+  'call',
+  'cv',
+  'email',
+  'outbound',
+] as const;
 export const seriesDays = 30;
 export type VacancyDay = { day: string } & Record<VacancyEventKind, number>;
 export type VacancySeriesRow = {

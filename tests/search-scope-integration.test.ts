@@ -94,6 +94,59 @@ void test(
         description:
           'მინიმუმ 2 წელი ნახევარ განაკვეთზე მუშაობის გამოცდილება. სამუშაო გრაფიკი: სრული განაკვეთი.',
       },
+      {
+        title: 'ბუღალტერი',
+        description: 'სამუშაო დატვირთვა: ნახევარი განაკვეთი (50%)',
+      },
+      {
+        title: 'ექიმი',
+        description: 'მოგესალმებით.\nგრაფიკი: ნახევარი განაკვეთი',
+      },
+      {
+        title: 'ბიბლიოთეკარი',
+        description: 'პირობები:\n** ნახევარი განაკვეთი;',
+      },
+      {
+        title: 'დიჯითალ კონსულტანტი',
+        description: 'სრული და ნახევარი განაკვეთი',
+      },
+      {
+        title: 'პრესის ოპერატორი',
+        description:
+          'სამუშაო გრაფიკი: ორშაბათიდან პარასკევის ჩათვლით 10:00-18:00; შაბათს ნახევარი განაკვეთი',
+      },
+      {
+        title: 'საწყობის მენეჯერი',
+        description: 'ახალი თანამშრომლების სტაჟირებაზე ზრუნვა.',
+      },
+      {
+        title: 'კონტენტის მენეჯერი',
+        description: 'კომპანია ეძებს სტაჟიორებს კონტენტის მენეჯერის პოზიციაზე.',
+      },
+      {
+        title: 'ამწის მემანქანე',
+        description: 'კომპანია აცხადებს ვაკანსიას ამწის სტაჟიორის პოზიციაზე.',
+      },
+      {
+        title: 'ზედამხედველი',
+        description: 'კომპანია აცხადებს ანაზღაურებად სტაჟირებას ქარხანაში.',
+      },
+      {
+        title: 'ბარისტა',
+        description:
+          'გთავაზობთ ანაზღაურებად სტაჟირებას, რომლის განმავლობაში სრულად შეგასწავლით სამუშაო პროცესს.',
+      },
+      {
+        title: 'ადმინისტრატორი',
+        description: 'მინიმუმ 2 წელი სტაჟიორად მუშაობის გამოცდილება.',
+      },
+      {
+        title: 'კარიერული მრჩეველი',
+        description:
+          'სტუდენტებისთვის ვაკანსიების, სტაჟირებებისა და კარიერული შესაძლებლობების მოძიება.',
+      },
+      { title: 'სამსახურის მაძიებელი', employmentType: 'ნახევარი განაკვეთი' },
+      { title: 'ვეძებ სამსახურს', employmentType: 'ნახევარი განაკვეთი' },
     ];
     const ids = fixtures.map(() => randomUUID());
     try {
@@ -170,10 +223,23 @@ void test(
         partTime.jobs
           .map((job) => job.title)
           .sort((a, b) => a.localeCompare(b)),
-        ['კონტენტკრეატორი', 'გუნდის წევრი', 'იურისტი'].sort((a, b) =>
+        [
+          'კონტენტკრეატორი',
+          'გუნდის წევრი',
+          'იურისტი',
+          'ბუღალტერი',
+          'ექიმი',
+          'ბიბლიოთეკარი',
+          'დიჯითალ კონსულტანტი',
+        ].sort((a, b) => a.localeCompare(b)),
+        'offered schedules in descriptions qualify, duty splits, unavailable schedules and past experience do not',
+      );
+      assert.deepEqual(
+        await titles({ employment: 'internship' }),
+        ['კონტენტის მენეჯერი', 'ამწის მემანქანე', 'ზედამხედველი'].sort((a, b) =>
           a.localeCompare(b),
         ),
-        'offered schedules in descriptions qualify, duty splits, unavailable schedules and past experience do not',
+        'explicit intern recruitment is included; onboarding, supervision and past experience are not',
       );
     } finally {
       clearPublicJobsCache();

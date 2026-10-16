@@ -16,6 +16,7 @@ export const eventKinds = [
   /* What a reader does with a vacancy beyond reading it, by vacancy id. */
   'call',
   'cv',
+  'email',
   'apply',
   /* How far an employer got in the posting form, by step name. */
   'post',
@@ -51,6 +52,7 @@ export function normalizeEvent(
     kind === 'save' ||
     kind === 'call' ||
     kind === 'cv' ||
+    kind === 'email' ||
     kind === 'apply'
   )
     return uuid.test(value) ? { kind, value: value.toLowerCase() } : null;

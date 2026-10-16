@@ -37,6 +37,7 @@ import {
 } from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
 import { track, trackAction, trackContact } from '@/lib/analytics-client';
+import { vacancyContactEvent } from '@/lib/vacancy-contact-event';
 import type { PublicJob } from '@/lib/types';
 import { vacancySummary } from '@/lib/vacancy-summary';
 import {
@@ -69,14 +70,12 @@ function ApplyAction({ job }: { job: PublicJob }) {
         <a
           className="secondary-button"
           href={`tel:${contacts.phones[0].number}`}
-          onClick={() => trackContact('call', job)}
         >
           <Phone aria-hidden="true" />
           დარეკვა
         </a>
         <a
           className="primary"
-          onClick={() => trackContact('cv', job)}
           href={emailDraft(
             contacts.emails[0].email,
             job.title,
@@ -95,7 +94,6 @@ function ApplyAction({ job }: { job: PublicJob }) {
       <a
         className="primary"
         href={emailDraft(emails[0].email, job.title, defaultApplicationBody)}
-        onClick={() => trackContact('cv', job)}
       >
         <Mail aria-hidden="true" />
         CV-ის გაგზავნა მეილით
@@ -108,7 +106,6 @@ function ApplyAction({ job }: { job: PublicJob }) {
         href={external.url}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={() => trackContact('apply', job)}
       >
         <Send aria-hidden="true" />
         განაცხადის გაგზავნა
@@ -116,11 +113,7 @@ function ApplyAction({ job }: { job: PublicJob }) {
     );
   if (!contacts.emails.length && contacts.phones.length === 1)
     return (
-      <a
-        className="primary"
-        href={`tel:${contacts.phones[0].number}`}
-        onClick={() => trackContact('call', job)}
-      >
+      <a className="primary" href={`tel:${contacts.phones[0].number}`}>
         <Phone aria-hidden="true" />
         დარეკვა
       </a>
@@ -310,7 +303,6 @@ export default function VacancyPage({
     const frame = requestAnimationFrame(() => setReturnTo(path));
     return () => cancelAnimationFrame(frame);
   }, [job.id, initialReturnTo, embedded]);
-  const leftFor = useRef(false);
   const [saved, setSaved] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -509,16 +501,18 @@ export default function VacancyPage({
     )
       trackAction('company_open');
     else if (href === '/cv') trackAction('cv_hint');
-    /* Leaving for the employer — a mail, a call, the application form or the original posting —
-       is the nearest sign of an application the site can see. Counted once per page load. */
+    // Capture all contact links, including description links and middle clicks.
+    // A contact is one action; it must not also inflate generic outbound counts.
+    const contact = href ? vacancyContactEvent(href, job) : null;
+    if (contact) {
+      trackContact(contact, job);
+      return;
+    }
     if (
       href &&
-      !leftFor.current &&
-      (/^(?:mailto:|tel:)/i.test(href) ||
-        (/^https?:/i.test(href) &&
-          new URL(href).origin !== window.location.origin))
+      /^https?:/i.test(href) &&
+      new URL(href).origin !== window.location.origin
     ) {
-      leftFor.current = true;
       track('outbound', job.id);
     }
   }

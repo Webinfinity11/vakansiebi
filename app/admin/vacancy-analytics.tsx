@@ -60,6 +60,7 @@ const labels: Record<VacancyEventKind, string> = {
   outbound: 'პირველწყაროზე გადასვლა',
   call: 'ტელეფონის ღილაკი',
   cv: 'CV-ის ღილაკი',
+  email: 'საკონტაქტო წერილის გახსნა',
   apply: 'განაცხადის ღილაკი',
   save: 'შენახვა',
 };
