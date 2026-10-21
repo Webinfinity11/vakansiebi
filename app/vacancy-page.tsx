@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { salaryDetails } from '@/lib/salary-summary';
+import { readSearch, searchParams } from '@/lib/search-state';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -11,6 +12,7 @@ import {
   Send,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   CalendarDays,
   Share2,
   Clock3,
@@ -31,8 +33,10 @@ import {
 import { emailDraft } from '@/lib/application-contact';
 import {
   canStepBack,
+  listNeighbours,
   planListReturn,
   resolveReturnPath,
+  stepWithinList,
   vacancyPath,
 } from '@/lib/vacancy-navigation';
 import { shareLink } from '@/lib/share';
@@ -304,13 +308,40 @@ export default function VacancyPage({
   const router = useRouter();
   const [returnTo, setReturnTo] = useState(initialReturnTo);
   const steppedFromList = useRef(false);
+  /* The list this vacancy was opened from, for stepping to the one before
+     or after it without going back to the list. */
+  const [neighbours, setNeighbours] =
+    useState<ReturnType<typeof listNeighbours>>(null);
   useEffect(() => {
     if (embedded) return;
     const path = resolveReturnPath(initialReturnTo);
     steppedFromList.current = planListReturn(path);
-    const frame = requestAnimationFrame(() => setReturnTo(path));
+    const frame = requestAnimationFrame(() => {
+      setReturnTo(path);
+      setNeighbours(listNeighbours(job.id, path));
+    });
     return () => cancelAnimationFrame(frame);
   }, [job.id, initialReturnTo, embedded]);
+  const step = (target: { id: string; title: string } | null) =>
+    target && (
+      <Link
+        href={vacancyPath(target)}
+        prefetch={false}
+        className="vacancy-step"
+        aria-label={`${target === neighbours?.next ? 'შემდეგი' : 'წინა'} ვაკანსია: ${target.title}`}
+        onClick={(event) => {
+          event.preventDefault();
+          stepWithinList(returnTo, target.id);
+          router.replace(vacancyPath(target), { scroll: true });
+        }}
+      >
+        {target === neighbours?.next ? (
+          <ChevronRight size={18} aria-hidden="true" />
+        ) : (
+          <ChevronLeft size={18} aria-hidden="true" />
+        )}
+      </Link>
+    );
   const [saved, setSaved] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -471,6 +502,19 @@ export default function VacancyPage({
       extraFacts.splice(i, 1);
   const hasContact = Boolean(contacts.emails.length || contacts.phones.length);
   const hasAction = hasContact || Boolean(applicationDestination(job));
+  /* A vacancy with an application inbox opens the quick-choice deck on itself,
+     followed by others of its kind (same field, same town). */
+  const similarDeck = contacts.emails.length
+    ? (() => {
+        const p = searchParams({
+          ...readSearch(new URLSearchParams()),
+          category: job.category || 'ყველა',
+          city: job.city && !job.city.includes(',') ? job.city : 'ყველა',
+        });
+        p.set('from', job.id);
+        return '/swipe?' + p;
+      })()
+    : '';
   /* Where applying happens is where a missing resume is noticed. */
   const cvHint = (
     <p className="vacancy-cv-hint">
@@ -480,6 +524,14 @@ export default function VacancyPage({
       </Link>
     </p>
   );
+  const deckHint = similarDeck ? (
+    <p className="vacancy-cv-hint">
+      ასეთი ვაკანსიები ბევრია?{' '}
+      <Link href={similarDeck} prefetch={false}>
+        გაიარე სათითაოდ და გააგზავნე CV ერთი შეხებით
+      </Link>
+    </p>
+  ) : null;
   const hasDescriptionContent = Boolean(
     description.trim() ||
     sourceExcerpt ||
@@ -558,6 +610,19 @@ export default function VacancyPage({
                 <span aria-hidden="true">/</span>
                 <span>{job.category}</span>
               </>
+            )}
+            {neighbours && neighbours.total > 1 && (
+              <span className="vacancy-steps">
+                {step(neighbours.previous) ?? (
+                  <span className="vacancy-step" aria-hidden="true" />
+                )}
+                <span className="vacancy-step-count">
+                  {neighbours.index + 1} / {neighbours.total}
+                </span>
+                {step(neighbours.next) ?? (
+                  <span className="vacancy-step" aria-hidden="true" />
+                )}
+              </span>
             )}
           </nav>
         )}
@@ -695,7 +760,10 @@ export default function VacancyPage({
               className="vacancy-contact"
               aria-label="დამსაქმებელთან დაკავშირება"
             >
-              <QuickApply job={job}>{cvHint}</QuickApply>
+              <QuickApply job={job}>
+                {cvHint}
+                {deckHint}
+              </QuickApply>
             </aside>
           )}
           {hasDescriptionContent && (

@@ -1,0 +1,1065 @@
+/* Quick choice (/swipe): one vacancy card at a time. Values come from design-system.css. */
+/* A sideways trackpad scroll throws a card here; it must not page the browser back. */
+html:has(.swipe-page),
+body:has(.swipe-page) {
+  overscroll-behavior-x: none;
+}
+.swipe-hint {
+  display: block;
+  padding: var(--ds-space-6);
+  text-align: center;
+  color: var(--ds-ink-3);
+}
+.swipe-icon-btn {
+  width: var(--ds-control-touch);
+  height: var(--ds-control-touch);
+  border-radius: var(--ds-radius-pill);
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  color: var(--ds-ink);
+}
+
+/* intro */
+.swipe-intro {
+  gap: var(--ds-space-3);
+}
+.swipe-k {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--ds-radius-pill);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.swipe-cv {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  color: var(--ds-accent);
+  text-decoration: none;
+}
+.swipe-cv-chosen {
+  border: 1.5px solid var(--ds-accent);
+}
+.swipe-cv b {
+  display: block;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-md);
+}
+.swipe-cv span {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+.swipe-upload {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3);
+  border: 1.5px dashed var(--ds-line-strong);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  font-size: var(--ds-text-md);
+  color: var(--ds-ink-2);
+  cursor: pointer;
+}
+.swipe-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.swipe-upload:focus-within {
+  outline: 2px solid var(--ds-focus, var(--ds-accent));
+  outline-offset: 2px;
+}
+.swipe-fields {
+  display: grid;
+  gap: var(--ds-space-2);
+}
+.swipe-fields label {
+  display: grid;
+  gap: 4px;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+.swipe-fields input {
+  height: var(--ds-control-touch);
+  padding: 0 var(--ds-space-3);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  font: inherit;
+  font-size: var(--ds-text-md);
+}
+.swipe-fields input:focus-visible {
+  outline: 2px solid var(--ds-focus, var(--ds-accent));
+  outline-offset: 1px;
+  border-color: var(--ds-accent);
+}
+.swipe-field-error {
+  margin: -4px 0 0;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-danger);
+}
+.swipe-sent {
+  margin-top: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-success-soft);
+  border: 1px solid var(--ds-line-soft);
+}
+.swipe-sent h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--ds-space-2);
+  font-size: var(--ds-text-md);
+  color: var(--ds-success);
+}
+.swipe-sent ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--ds-space-2);
+}
+.swipe-sent li {
+  display: grid;
+  font-size: var(--ds-text-sm);
+}
+.swipe-sent a {
+  color: var(--ds-ink);
+  font-weight: var(--ds-weight-strong, 700);
+  text-decoration: none;
+}
+.swipe-sent span {
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+.swipe-consent {
+  display: flex;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-ink-2);
+  line-height: 1.45;
+}
+.swipe-consent input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: none;
+  accent-color: var(--ds-accent);
+}
+.swipe-start {
+  margin-top: var(--ds-space-2);
+  height: var(--ds-control-lg);
+  border: 0;
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-accent);
+  color: var(--ds-on-accent, #fff);
+  font: inherit;
+  font-weight: var(--ds-weight-strong, 700);
+  font-size: var(--ds-text-section);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  padding: 0 var(--ds-space-5);
+  text-decoration: none;
+  cursor: pointer;
+}
+.swipe-start:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* deck */
+.swipe-top {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+.swipe-top h1 {
+  font-size: var(--ds-text-lg);
+  margin: 0;
+  line-height: 1.25;
+}
+.swipe-top small {
+  display: block;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+.swipe-deck {
+  margin-top: var(--ds-space-4);
+  position: relative;
+  height: min(62dvh, 540px);
+  min-height: 420px;
+}
+.quick-card {
+  position: absolute;
+  inset: 0 0 34px;
+  z-index: 3;
+  color: var(--ds-ink);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-5) var(--ds-space-4) var(--ds-space-4);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: 20px;
+  box-shadow: var(--ds-shadow-md);
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+  transform: translateX(var(--dx, 0)) rotate(var(--tilt, 0deg));
+  transition:
+    transform 420ms cubic-bezier(0.22, 1.28, 0.36, 1),
+    opacity 240ms ease;
+}
+.quick-card[data-dragging] {
+  transition: none;
+  box-shadow: var(--ds-shadow-lg);
+}
+.quick-card[data-leaving='right'] {
+  transform: translateX(130%) rotate(16deg);
+  opacity: 0;
+  transition:
+    transform 240ms cubic-bezier(0.4, 0, 1, 1),
+    opacity 240ms ease-in;
+}
+.quick-card[data-leaving='left'] {
+  transform: translateX(-130%) rotate(-16deg);
+  opacity: 0;
+  transition:
+    transform 240ms cubic-bezier(0.4, 0, 1, 1),
+    opacity 240ms ease-in;
+}
+.quick-card-behind {
+  box-shadow: var(--ds-shadow-sm);
+}
+.swipe-stamp {
+  position: absolute;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--ds-radius-lg);
+  border: 2.5px solid;
+  font-weight: var(--ds-weight-strong, 700);
+  font-size: var(--ds-text-md);
+  pointer-events: none;
+  opacity: 0;
+}
+.swipe-stamp-right {
+  left: 0;
+  transform: rotate(-4deg);
+  color: var(--ds-success);
+  background:
+    linear-gradient(var(--ds-success-soft), var(--ds-success-soft)),
+    var(--ds-surface);
+}
+.swipe-stamp-left {
+  right: 0;
+  transform: rotate(4deg);
+  color: var(--ds-danger);
+  background:
+    linear-gradient(var(--ds-danger-soft), var(--ds-danger-soft)),
+    var(--ds-surface);
+}
+.swipe-company {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+.swipe-company b {
+  display: block;
+  font-size: var(--ds-text-section);
+}
+.swipe-company span {
+  font-size: var(--ds-text-sm);
+  color: var(--ds-ink-3);
+}
+.quick-card h2 {
+  font-size: var(--ds-text-page);
+  line-height: 1.25;
+}
+.swipe-pay {
+  font-size: var(--ds-text-xl);
+  font-weight: var(--ds-weight-strong, 700);
+  color: var(--ds-success);
+}
+.swipe-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+.swipe-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-muted);
+  border: 1px solid var(--ds-line-soft);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-ink-2);
+}
+.swipe-chips span[data-urgent] {
+  background: var(--ds-warning-soft);
+  color: var(--ds-warning);
+}
+.quick-card footer {
+  width: 100%;
+  max-width: none;
+  margin: auto 0 0 !important;
+  padding: 0;
+  border: 0;
+  background: none;
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--ds-text-sm);
+}
+.quick-card footer a {
+  color: var(--ds-accent);
+  font-weight: var(--ds-weight-strong, 700);
+}
+.quick-card footer span {
+  color: var(--ds-ink-3);
+}
+.swipe-empty {
+  height: 100%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--ds-space-3);
+  text-align: center;
+  color: var(--ds-ink-2);
+}
+
+/* actions */
+.swipe-actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--ds-space-4);
+  padding-top: var(--ds-space-3);
+}
+.swipe-actions button {
+  display: grid;
+  grid-template-rows: 64px;
+  justify-items: center;
+  align-items: center;
+  row-gap: 4px;
+  min-width: 56px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.swipe-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.swipe-act {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--ds-radius-pill);
+  display: grid;
+  place-items: center;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  box-shadow: var(--ds-shadow-sm);
+  color: var(--ds-ink-2);
+  transition: transform var(--ds-duration-fast) var(--ds-ease);
+}
+.swipe-actions button:not(:disabled):active .swipe-act {
+  transform: scale(0.92);
+}
+.swipe-act-sm {
+  width: 46px;
+  height: 46px;
+}
+.swipe-act-skip {
+  color: var(--ds-danger);
+  border-color: var(--ds-danger-soft);
+}
+.swipe-act-send {
+  background: var(--ds-accent);
+  border-color: var(--ds-accent);
+  color: var(--ds-on-accent, #fff);
+  box-shadow: 0 8px 20px rgba(36, 87, 230, 0.32);
+}
+.swipe-from {
+  margin-top: var(--ds-space-2);
+  text-align: center;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+.swipe-toast {
+  position: fixed;
+  left: 50%;
+  top: 76px;
+  z-index: 20;
+  width: min(408px, calc(100% - 32px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  border-radius: 14px;
+  background: var(--ds-ink);
+  color: #fff;
+  box-shadow: var(--ds-shadow-lg);
+  font-size: var(--ds-text-sm);
+}
+.swipe-toast b {
+  display: block;
+  font-size: var(--ds-text-md);
+}
+.swipe-toast span {
+  color: #b8c3d9;
+  font-size: var(--ds-text-xs);
+}
+.swipe-toast button {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: #9db8ff;
+  font: inherit;
+  font-weight: var(--ds-weight-strong, 700);
+  cursor: pointer;
+  min-height: var(--ds-control-touch);
+}
+.swipe-ring {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #7ea2ff;
+  display: grid;
+  place-items: center;
+  font-size: var(--ds-text-xs);
+  font-weight: var(--ds-weight-strong, 700);
+  color: #fff !important;
+}
+.swipe-ring-spin {
+  animation: swipe-spin 0.9s linear infinite;
+}
+@keyframes swipe-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quick-card,
+  .swipe-act {
+    transition: none;
+  }
+  .swipe-ring-spin {
+    animation: none;
+  }
+}
+.quick-card footer {
+  align-items: center;
+  gap: var(--ds-space-3);
+}
+
+/* The card is the whole posting: it scrolls inside, the deck stays put. */
+.quick-card-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 calc(-1 * var(--ds-space-2));
+  padding: 0 var(--ds-space-2) var(--ds-space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+}
+.swipe-card-text {
+  padding-top: var(--ds-space-3);
+  border-top: 1px solid var(--ds-line-soft);
+  font-size: var(--ds-text-md);
+  line-height: 1.55;
+  color: var(--ds-ink-2);
+  user-select: text;
+}
+.quick-card footer {
+  padding-top: var(--ds-space-2);
+}
+
+.swipe-keys {
+  display: none;
+}
+
+/* A desktop has room and a keyboard: the form sits beside its explanation,
+   and the two choices sit on the card's own sides, where a mouse expects them. */
+@media (min-width: 900px) {
+  /* One centred column: the header spans the card and its two buttons. */
+  .swipe-page .swipe-main {
+    max-width: 920px;
+    margin-inline: auto;
+    padding-inline: 28px;
+  }
+  .swipe-stage {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 720px) 1fr;
+    grid-template-areas:
+      'skip deck send'
+      '. undo .';
+    column-gap: var(--ds-space-4);
+    align-items: center;
+  }
+  .swipe-stage .quick-card:not(.quick-card-behind) {
+    cursor: grab;
+  }
+  .swipe-stage .quick-card[data-dragging] {
+    cursor: grabbing;
+  }
+  .swipe-stage .swipe-deck {
+    grid-area: deck;
+    /* Header and the undo row stay on screen. */
+    height: calc(100dvh - 240px);
+    min-height: 440px;
+  }
+  .swipe-stage .swipe-actions {
+    display: contents;
+  }
+  .swipe-stage .swipe-actions button:nth-child(1) {
+    grid-area: skip;
+    justify-self: end;
+  }
+  .swipe-stage .swipe-actions button:nth-child(2) {
+    grid-area: undo;
+    justify-self: center;
+    margin-top: var(--ds-space-3);
+  }
+  .swipe-stage .swipe-actions button:nth-child(3) {
+    grid-area: send;
+    justify-self: start;
+  }
+  /* A passing legend, not a row: it floats over the deck's foot for a few
+     seconds on the first visits and takes no room in the layout. */
+  .swipe-keys {
+    position: absolute;
+    left: 50%;
+    bottom: 76px;
+    z-index: 5;
+    display: block;
+    margin: 0;
+    padding: 8px 14px;
+    border: 1px solid var(--ds-line);
+    border-radius: 999px;
+    background: var(--ds-surface);
+    box-shadow: 0 8px 24px rgb(16 24 40 / 0.12);
+    white-space: nowrap;
+    font-size: var(--ds-text-xs);
+    color: var(--ds-ink-3);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 8px);
+    transition:
+      opacity 0.35s ease,
+      transform 0.35s ease;
+  }
+  .swipe-keys[data-show] {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  .swipe-keys kbd {
+    display: inline-block;
+    min-width: 22px;
+    padding: 1px 6px;
+    border: 1px solid var(--ds-line-strong);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    background: var(--ds-surface);
+    font: inherit;
+    color: var(--ds-ink-2);
+    text-align: center;
+  }
+}
+
+/* The CV sheet: asked for once, at the first send, over the deck. */
+.swipe-attach {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 50;
+  width: auto;
+  max-width: none;
+  max-height: 92dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  box-shadow: 0 0 0 100vmax rgba(22, 33, 58, 0.38);
+  animation: swipe-attach-up var(--ds-duration) var(--ds-ease);
+}
+@keyframes swipe-attach-up {
+  from {
+    translate: 0 32px;
+    opacity: 0;
+  }
+}
+.swipe-attach-top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4) var(--ds-space-4) var(--ds-space-2);
+}
+.swipe-attach-top h2 {
+  margin: 0 0 4px;
+  font-size: var(--ds-text-xl);
+}
+.swipe-attach-top p {
+  margin: 0;
+  font-size: var(--ds-text-sm);
+  line-height: 1.45;
+  color: var(--ds-ink-2);
+}
+.swipe-attach-top .swipe-icon-btn {
+  margin-left: auto;
+}
+.swipe-attach-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2) var(--ds-space-4)
+    calc(var(--ds-space-4) + env(safe-area-inset-bottom));
+}
+@media (min-width: 761px) {
+  .swipe-attach {
+    inset: 50% auto auto 50%;
+    width: 460px;
+    transform: translate(-50%, -50%);
+    border-radius: 20px;
+  }
+}
+.swipe-top {
+  gap: var(--ds-space-3);
+}
+.swipe-cv-chip {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  min-height: var(--ds-control-touch);
+  padding: 0 var(--ds-space-2);
+  /* The same face as the filter button beside it. */
+  border: 1px solid var(--ds-line-strong);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  font: inherit;
+  font-size: var(--ds-text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.swipe-cv-chip:hover,
+.swipe-page .swipe-top .swipe-filter-toggle:hover {
+  background: var(--ds-surface-2, var(--ds-line-soft));
+}
+/* Attached: the tick says so; the button keeps its face. */
+.swipe-cv-chip[data-ready] > svg {
+  color: var(--ds-success);
+}
+/* The decision stamps float over the card's top edge while it moves; they
+   only show mid-drag, so they reserve no row of their own. */
+.swipe-stamp-slot {
+  position: absolute;
+  inset: 14px 16px auto;
+  z-index: 3;
+  height: 34px;
+  pointer-events: none;
+}
+.quick-card[data-hint] {
+  animation: swipe-card-nudge 1.6s ease-in-out 0.6s;
+}
+.quick-card[data-hint] .swipe-stamp-right {
+  animation: swipe-nudge-right 1.6s ease-in-out 0.6s;
+}
+.quick-card[data-hint] .swipe-stamp-left {
+  animation: swipe-nudge-left 1.6s ease-in-out 0.6s;
+}
+@keyframes swipe-card-nudge {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+  28% {
+    transform: translateX(40px) rotate(2.2deg);
+  }
+  68% {
+    transform: translateX(-40px) rotate(-2.2deg);
+  }
+}
+@keyframes swipe-nudge-right {
+  0%,
+  48%,
+  100% {
+    opacity: 0;
+  }
+  28% {
+    opacity: 0.5;
+  }
+}
+@keyframes swipe-nudge-left {
+  0%,
+  48%,
+  100% {
+    opacity: 0;
+  }
+  68% {
+    opacity: 0.5;
+  }
+}
+.quick-card[data-entering='next'] {
+  animation: swipe-card-rise 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.quick-card[data-entering='left'] {
+  --return-x: -130%;
+  --return-tilt: -16deg;
+  animation: swipe-card-return 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.quick-card[data-entering='right'] {
+  --return-x: 130%;
+  --return-tilt: 16deg;
+  animation: swipe-card-return 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes swipe-card-rise {
+  from {
+    transform: translateY(18px) scale(0.95);
+    opacity: 0.75;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes swipe-card-return {
+  from {
+    transform: translateX(var(--return-x)) rotate(var(--return-tilt));
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) rotate(0);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .swipe-page .quick-card,
+  .swipe-page .swipe-stamp,
+  .swipe-attach {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Page frame (restored after pruning: these are used outside the deck file). */
+.swipe-page {
+  min-height: 100dvh;
+  background: var(--ds-page);
+}
+.swipe-main {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: var(--ds-space-3) var(--ds-space-4) var(--ds-space-5);
+  display: flex;
+  flex-direction: column;
+}
+.swipe-depth-1 {
+  transform: translateY(18px) scale(0.95);
+  z-index: 2;
+  opacity: 0.75;
+}
+.swipe-depth-2 {
+  transform: translateY(34px) scale(0.9);
+  z-index: 1;
+  opacity: 0.45;
+}
+.swipe-page .quick-card footer .swipe-to {
+  display: block;
+  max-width: 62%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ds-text-xs);
+  color: var(--ds-ink-3);
+}
+
+/* Measured contrast (WCAG AA): small grey labels moved one step darker; the
+   toast keeps a fixed dark face in both themes; greens lighten on dark. */
+.swipe-page .swipe-top small,
+.swipe-page .swipe-company span,
+.swipe-page .quick-card footer .swipe-to,
+.swipe-page .swipe-actions button,
+.swipe-page .swipe-from,
+.swipe-page .swipe-keys,
+.swipe-attach .swipe-fields span,
+.swipe-attach .swipe-cv span {
+  color: var(--ds-ink-2);
+}
+.swipe-toast {
+  background: #16213a;
+  color: #fff;
+}
+:root[data-theme='dark'] .swipe-toast {
+  border: 1px solid var(--ds-line-strong);
+}
+:root[data-theme='dark'] .swipe-page .swipe-pay,
+:root[data-theme='dark'] .swipe-page .swipe-stamp-right,
+:root[data-theme='dark'] .swipe-page .swipe-cv-chip[data-ready] > svg {
+  color: #6fd6a3;
+}
+/* A short phone must not squeeze the sheet's button below a thumb's size. */
+.swipe-attach-body > * {
+  flex-shrink: 0;
+}
+
+/* The fade above the card's footer is drawn over the text, not as a mask on
+   the scrolling box: a mask repaints the whole box on every scrolled pixel. */
+.quick-card footer {
+  position: relative;
+}
+.quick-card footer::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 28px;
+  background: linear-gradient(transparent, var(--ds-surface));
+  pointer-events: none;
+}
+.quick-card-scroll {
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+}
+
+/* Phones: the card takes the height the labels and sender line used to. */
+@media (max-width: 899px) {
+  .swipe-page .swipe-deck {
+    min-height: 300px;
+    height: max(320px, calc(100dvh - 255px));
+  }
+  .swipe-page .swipe-actions {
+    padding-top: var(--ds-space-2);
+  }
+}
+
+@media (min-width: 900px) and (prefers-reduced-motion: reduce) {
+  .swipe-keys {
+    transform: translate(-50%, 0);
+    transition: opacity 0.2s linear;
+  }
+}
+
+/* The board's filter entry stays available beside the CV on every screen. */
+.swipe-page .swipe-top .swipe-filter-toggle {
+  display: inline-flex;
+  width: auto;
+  position: relative;
+  margin: 0;
+  border: 1px solid var(--ds-line-strong);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-1);
+  min-height: var(--ds-control-touch);
+  padding-inline: var(--ds-space-2);
+  flex: none;
+  white-space: nowrap;
+  font-size: var(--ds-text-sm);
+}
+.swipe-heading {
+  min-width: 0;
+  flex: 1;
+}
+.swipe-heading h1,
+.swipe-heading small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.swipe-top .swipe-cv-chip {
+  margin-left: 0;
+  flex: none;
+}
+.swipe-active-filters {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--ds-space-2);
+  overflow-x: auto;
+  padding-block: var(--ds-space-2);
+  max-width: 100%;
+}
+.swipe-active-filters > button {
+  flex: none;
+  min-height: var(--ds-control-touch);
+  white-space: nowrap;
+}
+.swipe-filter-search {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin-bottom: var(--ds-space-4);
+  color: var(--ds-ink);
+}
+.swipe-filter-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ds-control-touch);
+  padding-inline: var(--ds-space-3);
+  border: 1px solid var(--ds-line-strong);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  font: inherit;
+  font-size: var(--ds-text-md);
+}
+.swipe-filter-search input::placeholder {
+  color: var(--ds-ink-2);
+}
+.swipe-filter-search input:focus-visible,
+.swipe-top button:focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
+}
+@media (max-width: 899px) {
+  .swipe-top {
+    gap: var(--ds-space-1);
+  }
+  .swipe-top .swipe-cv-label > span {
+    display: none;
+  }
+  .swipe-top .swipe-cv-chip {
+    padding-inline: var(--ds-space-2);
+    gap: var(--ds-space-1);
+  }
+  .swipe-top h1 {
+    font-size: var(--ds-text-sm);
+  }
+  .swipe-top small {
+    font-size: var(--ds-text-xs);
+  }
+  .swipe-top .swipe-filter-toggle b {
+    position: absolute;
+    top: calc(-1 * var(--ds-space-1));
+    right: calc(-1 * var(--ds-space-1));
+  }
+}
+/* Board sheets normally open only on phones; the deck uses one on desktop too. */
+@media (min-width: 761px) {
+  .swipe-filters-sheet[data-slot='sheet-content'] {
+    width: min(100%, 540px);
+    margin-inline: auto;
+    max-height: 90dvh;
+    overflow: hidden;
+    gap: 0;
+    border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
+    background: var(--ds-surface);
+    color: var(--ds-ink);
+  }
+  .swipe-filters-sheet [data-slot='sheet-header'] {
+    position: relative;
+    flex-shrink: 0;
+    padding-right: var(--ds-space-6);
+  }
+  .swipe-filters-sheet .mobile-filters-clear {
+    align-self: flex-start;
+  }
+  .swipe-filters-sheet .filters {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--ds-space-4);
+  }
+  .swipe-filters-sheet .filters :is(.choice, .ds-select) {
+    width: 100%;
+    min-height: var(--ds-control-touch);
+  }
+  .swipe-filters-sheet .check-row {
+    min-height: var(--ds-control-touch);
+  }
+}
+
+/* Chosen filters take a row of their own; the card gives that row back so
+   skip, undo and send stay on screen. On phones the filter button is an icon
+   with its count, which keeps the title readable. */
+.swipe-page .swipe-main:has(.swipe-active-filters) .swipe-active-filters {
+  padding-block: var(--ds-space-1) 0;
+}
+@media (min-width: 900px) {
+  .swipe-page .swipe-main:has(.swipe-active-filters) .swipe-deck {
+    height: calc(100dvh - 290px);
+  }
+}
+@media (max-width: 899px) {
+  .swipe-page .swipe-top .swipe-filter-toggle {
+    width: var(--ds-control-touch);
+    padding: 0;
+  }
+  .swipe-page .swipe-top .swipe-filter-toggle .results-tool-label {
+    display: none;
+  }
+  .swipe-page .swipe-main:has(.swipe-active-filters) .swipe-deck {
+    margin-top: var(--ds-space-2);
+    height: max(300px, calc(100dvh - 300px));
+  }
+}
+
+/* The header and the chosen filters share the card's column, so their edges
+   line up with the card's; skip and send sit outside it. */
+@media (min-width: 900px) {
+  .swipe-page .swipe-top,
+  .swipe-page .swipe-active-filters {
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
+  }
+}
+
+/* Fit every screen: a tablet gets a wider card, no screen gets a card taller
+   than a comfortable read, and short laptops keep undo in view. */
+@media (min-width: 600px) and (max-width: 899px) {
+  .swipe-page .swipe-main {
+    max-width: 640px;
+  }
+}
+@media (max-width: 899px) {
+  .swipe-page .swipe-deck,
+  .swipe-page .swipe-main:has(.swipe-active-filters) .swipe-deck {
+    max-height: 760px;
+  }
+}
+@media (min-width: 900px) {
+  .swipe-stage .swipe-deck,
+  .swipe-page .swipe-main:has(.swipe-active-filters) .swipe-deck {
+    min-height: 320px;
+    max-height: 780px;
+  }
+}

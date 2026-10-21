@@ -28,27 +28,13 @@ import {
   takeBoard,
   type BoardInitial,
 } from '@/lib/board-return-cache';
-import {
-  subcategories,
-  subcategoryFor,
-  subcategoryChoices,
-} from '@/lib/subcategories';
-import { SalaryFilter } from './salary-filter';
+import { subcategoryFor } from '@/lib/subcategories';
+import { SearchFilterFields } from './search-filter-fields';
 import {
   advancedDefaults,
   employmentLabels,
   type AdvancedFilters,
 } from './advanced-filters';
-/* The rate as one tap per option; "all" needs no word for the rate twice. */
-const employmentChoices = (
-  Object.entries(employmentLabels) as [AdvancedFilters['employment'], string][]
-).map(
-  ([key, label]) =>
-    [
-      key,
-      key === 'all' ? 'ყველა' : key === 'daily' ? 'დღიური სამუშაო' : label,
-    ] as const,
-);
 import type { SearchMeta, FilterKey } from '@/lib/server/search-plan';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -68,6 +54,7 @@ import {
   vacancyPath,
   searchReturnPath,
   rememberSearch,
+  rememberListOrder,
   restoreSearch,
 } from '@/lib/vacancy-navigation';
 import {
@@ -84,68 +71,26 @@ import {
   Search,
   SlidersHorizontal,
   MapPin,
+  Layers,
   BriefcaseBusiness,
-  ClipboardList,
+  Laptop,
   Bookmark,
   Check,
   X,
   Globe2,
-  Laptop,
   ShieldCheck,
-  Calculator,
-  GraduationCap,
-  EyeOff,
-  LayoutGrid,
-  Handshake,
-  Megaphone,
-  Truck,
-  HandPlatter,
-  Stethoscope,
-  HardHat,
-  Factory,
-  Scale,
-  Scissors,
-  Ellipsis,
 } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
+import { FiltersSheet } from './filters-sheet';
 import { CompanyIdentity } from './company-identity';
 import { ShortcutMark } from './shortcut-mark';
 import { useVacancyActivity } from './use-vacancy-activity';
+import { takeSwipeFilters } from '@/lib/swipe-history';
 import type { SearchFilters } from '@/lib/personal-space';
 import type { PublicJob as Job } from '@/lib/types';
-import { categories } from '@/lib/types';
 import { cityOptions } from '@/lib/cities';
-
-const categoryIcons = {
-  ყველა: LayoutGrid,
-  ტექნოლოგიები: Laptop,
-  გაყიდვები: Handshake,
-  მარკეტინგი: Megaphone,
-  ადმინისტრაცია: ClipboardList,
-  ფინანსები: Calculator,
-  ლოჯისტიკა: Truck,
-  მომსახურება: HandPlatter,
-  სამედიცინო: Stethoscope,
-  განათლება: GraduationCap,
-  მშენებლობა: HardHat,
-  დაცვა: ShieldCheck,
-  წარმოება: Factory,
-  იურიდიული: Scale,
-  სილამაზე: Scissors,
-  სხვა: Ellipsis,
-};
 
 import { Choice } from './choice';
 import { SelectField } from './select-field';
-/* A sentinel for the subcategory menu's "all" row: a menu item cannot carry an empty value. */
-const allSubcategories = '__all__';
 export { Choice };
 // Shared with the search plan, so "სხვა" means a city outside this very list.
 const cities: string[] = [...cityOptions];
@@ -169,8 +114,33 @@ function isNew(job: { datePosted?: string; createdAt?: string }) {
   return within(job.datePosted, 2) && within(job.createdAt, 2);
 }
 
-/* One vacancy in the list. On a touch screen the card slides: right saves, left hides; the
-   reveal layers behind it name the action before the finger lifts. */
+/* Secondary: the same list, one vacancy at a time, with the CV sent in one tap. */
+function DeckInvite({ href, onClose }: { href: string; onClose: () => void }) {
+  return (
+    <aside className="deck-invite" aria-label="სწრაფი არჩევა">
+      <span className="deck-invite-mark" aria-hidden="true">
+        <Layers size={20} />
+      </span>
+      <div>
+        <strong>გააგრძელე სათითაოდ</strong>
+        <p>ვაკანსია ერთ ეკრანზე — გადაწიე და CV ერთი შეხებით გაეგზავნება.</p>
+      </div>
+      <Link className="ds-btn ds-btn--primary" href={href} prefetch={false}>
+        დაწყება
+      </Link>
+      <button
+        type="button"
+        className="deck-invite-close"
+        aria-label="დახურვა"
+        onClick={onClose}
+      >
+        <X size={16} aria-hidden="true" />
+      </button>
+    </aside>
+  );
+}
+/* One vacancy in the list. On a touch screen the card slides right to save; the reveal
+   layer behind it names the action before the finger lifts. */
 const JobCard = memo(function JobCard({
   job: j,
   index,
@@ -180,7 +150,6 @@ const JobCard = memo(function JobCard({
   returnPath,
   onToggleSave,
   onOpen,
-  onHide,
 }: {
   job: Job;
   index: number;
@@ -190,11 +159,9 @@ const JobCard = memo(function JobCard({
   returnPath: string;
   onToggleSave: (id: string) => void;
   onOpen: (job: Job) => void;
-  onHide: (job: Job) => void;
 }) {
   const swipe = useSwipe({
     onRight: () => onToggleSave(j.id),
-    onLeft: demo ? undefined : () => onHide(j),
   });
   const salary = vacancyCardSalary(j.salary, j.salaryPeriod, j.source);
   const cardTitle = vacancyCardTitle(j.title, j.source);
@@ -219,11 +186,6 @@ const JobCard = memo(function JobCard({
       <div className="swipe-reveal swipe-reveal-right" aria-hidden="true">
         <Bookmark size={16} /> {saved ? 'მოხსნა' : 'შენახვა'}
       </div>
-      {!demo && (
-        <div className="swipe-reveal swipe-reveal-left" aria-hidden="true">
-          <EyeOff size={16} /> დამალვა
-        </div>
-      )}
       <article
         className={`job-card swipe-card${j.placement ? ` placement-${j.placement.tier}` : ''}`}
         data-featured={featured}
@@ -388,7 +350,6 @@ export default function JobBoard({
   initial?: BoardInitial;
   pendingInitial?: boolean;
 } = {}) {
-  const [allCategoriesVisible, setAllCategoriesVisible] = useState(false);
   const params = useSearchParams();
   const demo = params.get('preview') === '1';
   // The admin's preview of the board is not a reader using it.
@@ -411,7 +372,6 @@ export default function JobBoard({
       : null,
   );
   const activity = useVacancyActivity();
-  const excluded = demo ? '' : activity.hidden.map((item) => item.id).join(',');
   const searchBeforeSaved = useRef<SearchFilters | null>(null);
   const [loadedResult, setLoadedResult] = useState({
     key: seed?.key || '',
@@ -427,10 +387,24 @@ export default function JobBoard({
   );
   const [restoreReady, setRestoreReady] = useState(false);
   const [restoredSnapshot, setRestoredSnapshot] = useState(false);
-  const visibleJobs = useMemo(() => {
-    const hidden = new Set(excluded.split(','));
-    return excluded ? jobs.filter((job) => !hidden.has(job.id)) : jobs;
-  }, [jobs, excluded]);
+  const visibleJobs = jobs;
+  /* One invitation into the quick-choice deck, after the fourth vacancy,
+     until the reader closes it. */
+  const [deckInviteClosed, setDeckInviteClosed] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        setDeckInviteClosed(!!localStorage.getItem('jobx-deck-invite-closed'));
+      } catch {}
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+  const closeDeckInvite = useCallback(() => {
+    setDeckInviteClosed(true);
+    try {
+      localStorage.setItem('jobx-deck-invite-closed', '1');
+    } catch {}
+  }, []);
   const lastRequestedQuery = useRef(initialSearch.query);
   /* The field shows every keystroke; the results, the address and the search history
      follow the word once the reader pauses, so a half-typed word never runs a search. */
@@ -504,34 +478,6 @@ export default function JobBoard({
     { id: string; title: string; company: string; expired: boolean }[]
   >([]);
   const [mobileDraft, setMobileDraft] = useState<SearchFilters | null>(null);
-  const mobileKey = mobileDraft ? searchParams(mobileDraft).toString() : '';
-  /* How many vacancies the filters being set would show, so the button can say it before it is
-     pressed. Asked once the choices settle, from the light summary listing. */
-  const [draftTotal, setDraftTotal] = useState<{
-    key: string;
-    total: number;
-  } | null>(null);
-  useEffect(() => {
-    if (!filtersOpen || !mobileKey) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      void fetch(`/api/jobs?${mobileKey}&summary=1&page=1`, {
-        signal: controller.signal,
-      })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((body) => {
-          if (body && typeof body.total === 'number')
-            setDraftTotal({ key: mobileKey, total: body.total });
-        })
-        .catch(() => {});
-    }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [filtersOpen, mobileKey]);
-  const previewTotal =
-    draftTotal && draftTotal.key === mobileKey ? draftTotal.total : null;
   const [pageState, setPageState] = useState(() => ({
       key: boardSearchKey(initialSearch, { savedOnly, preview: demo }),
       page: readSearchPage(params),
@@ -551,7 +497,6 @@ export default function JobBoard({
   const filterKey = `${boardSearchKey(currentSearch, {
     savedOnly,
     saved,
-    excluded,
     preview: demo,
   })}`;
   const page = pageState.key === filterKey ? pageState.page : 1;
@@ -561,6 +506,7 @@ export default function JobBoard({
   const resultsPending =
     !error &&
     (loading || loadedResult.key !== filterKey || loadedResult.page !== page);
+  const showDeckInvite = !demo && !savedOnly && !deckInviteClosed;
   const savedSet = useMemo(() => new Set(saved), [saved]);
   const seenSet = useMemo(() => new Set(activity.seen), [activity.seen]);
   const savedFilter = savedOnly ? saved.join(',') : '';
@@ -637,7 +583,6 @@ export default function JobBoard({
         p.set('summary', '1');
         p.set('preview', demo ? '1' : '0');
         if (savedOnly) p.set('ids', savedFilter);
-        if (excluded) p.set('exclude', excluded);
         const address = searchParams({
           query,
           city,
@@ -759,7 +704,6 @@ export default function JobBoard({
     storageReady,
     filterKey,
     retry,
-    excluded,
     activity.ready,
     pendingInitial,
     act,
@@ -782,7 +726,6 @@ export default function JobBoard({
     p.set('summary', '1');
     p.set('preview', demo ? '1' : '0');
     if (savedOnly) p.set('ids', savedFilter);
-    if (excluded) p.set('exclude', excluded);
     void fetch('/api/jobs?' + p, { signal: controller.signal })
       .then(async (r) => {
         const d = await r.json();
@@ -833,7 +776,6 @@ export default function JobBoard({
     demo,
     savedOnly,
     savedFilter,
-    excluded,
     act,
   ]);
   useEffect(() => {
@@ -883,7 +825,15 @@ export default function JobBoard({
     }
     setAppendError('');
     setAppendPage({ key: filterKey, page: loadedThrough + 1 });
-  }, [appending, resultsPending, loadedThrough, pages, filterKey, page]);
+  }, [
+    appending,
+    resultsPending,
+    loadedThrough,
+    pages,
+    filterKey,
+    page,
+    setAppendPage,
+  ]);
   const nextPageTarget = useRef<HTMLDivElement>(null);
   const resumeAutoLoad = useAutoLoad(
     nextPageTarget,
@@ -931,6 +881,18 @@ export default function JobBoard({
     setSavedOnly(false);
     document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' });
   };
+  // Back from /swipe lands on the old address; take the deck's newer filters.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const current = searchParams(
+        readSearch(new URLSearchParams(window.location.search)),
+      ).toString();
+      const next = takeSwipeFilters(window.sessionStorage, current);
+      if (next !== null) applySearch(readSearch(new URLSearchParams(next)));
+    }, 0);
+    return () => clearTimeout(t);
+    // Once per visit to the list.
+  }, []);
   const reset = () => {
     commitQuery('');
     setCity('ყველა');
@@ -1011,7 +973,7 @@ export default function JobBoard({
         setFeedback('ბრაუზერმა შენახვა ვერ შეძლო.');
       }
     },
-    [act],
+    [act, setSaveNotice, setFeedback],
   );
   const undoSave = async () => {
     if (!saveNotice) return;
@@ -1092,7 +1054,6 @@ export default function JobBoard({
     return () => clearTimeout(timer);
   }, [storageReady, activity.ready, filterKey, params, seed]);
   const returnPath = searchReturnPath(currentSearch, page, savedOnly, demo);
-  const hideVacancy = activity.hide;
   const openContext = useRef({
     loadedResult,
     loadedState,
@@ -1138,6 +1099,7 @@ export default function JobBoard({
         search: context.searchMeta,
         companyLinksPending: context.companyLinksPending,
       });
+      rememberListOrder(context.loadedResult.path, context.jobs);
       rememberSearch(
         context.loadedResult.path,
         job.id,
@@ -1151,18 +1113,6 @@ export default function JobBoard({
          come back and never flickers on the way out. */
     },
     [act],
-  );
-  const hideJob = useCallback(
-    (job: Job) => {
-      const hidden = hideVacancy(job.id, job.title);
-      if (hidden) act('hide');
-      setFeedback(
-        hidden
-          ? 'ვაკანსია დამალულია · აღდგენა სიის თავში'
-          : 'ბრაუზერმა დამალვა ვერ შეძლო.',
-      );
-    },
-    [hideVacancy, act],
   );
   useEffect(() => {
     if (
@@ -1253,292 +1203,40 @@ export default function JobBoard({
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
     );
   };
-  const renderFilters = (prefix: string) => {
-    const draft =
-      prefix === 'mobile' && mobileDraft ? mobileDraft : currentSearch;
-    const facets = prefix === 'desktop' && !resultsPending ? searchMeta : null;
-    /* Directions in the order the current search fills them, so what was asked
-       for leads and a 1,968-vacancy direction is not filed below a 77-vacancy
-       one. Read from the last answer, which stays while the next one loads, so
-       the list does not jump back to the fixed order and forward again. "სხვა"
-       stays last; ties keep the fixed order. */
-    const categoryCount = (name: string) =>
-      searchMeta?.categories.find((item) => item.name === name)?.count ?? 0;
-    const orderedCategories = [...categories].sort(
-      (a, b) =>
-        Number(a === 'სხვა') - Number(b === 'სხვა') ||
-        categoryCount(b) - categoryCount(a),
-    );
-    const subcategoryCount = (id: string) =>
-      searchMeta?.subcategories?.find((item) => item.id === id)?.count ?? 0;
-    const orderedSubcategories = (category: string) =>
-      subcategoryChoices(category).sort(
-        (a, b) => subcategoryCount(b.id) - subcategoryCount(a.id),
-      );
-    const changeCategory = (value: string) => {
-      if (prefix === 'mobile')
-        setMobileDraft({ ...draft, category: value, subcategory: undefined });
-      else setCategory(value);
-    };
-    const changeCity = (value: string) =>
-      prefix === 'mobile'
-        ? setMobileDraft({ ...draft, city: value })
-        : setCity(value);
-    const changePaid = (value: boolean) =>
-      prefix === 'mobile'
-        ? setMobileDraft({ ...draft, paid: value })
-        : setPaid(value);
-    const changeAdvanced = (next: Partial<AdvancedFilters>) =>
-      prefix === 'mobile'
-        ? setMobileDraft({ ...draft, ...next })
-        : setAdvanced({ ...advanced, ...next });
-    const changeRemote = (value: boolean) =>
-      prefix === 'mobile'
-        ? setMobileDraft({ ...draft, remote: value })
-        : setRemote(value);
-    return (
-      <>
-        {prefix !== 'mobile' && (
-          <div className="filter-head">
-            <h2>
-              <SlidersHorizontal size={16} /> ფილტრები
-            </h2>
-            <button
-              type="button"
-              className="ds-btn ds-btn--ghost ds-btn--sm"
-              onClick={resetFilters}
-              disabled={!activeCount}
-            >
-              გასუფთავება
-            </button>
-          </div>
-        )}
-        <div className="filter-primary-city">
-          <h3>ქალაქი</h3>
-          <Choice
-            label="ყველა ქალაქი"
-            mobile={prefix === 'mobile'}
-            value={draft.city}
-            onChange={changeCity}
-            options={cities}
-          />
-        </div>
-        {/* Ordered by use (filter events): the city, then pay, which with
-            "pay stated" is used more than the field. */}
-        <SalaryFilter
-          prefix={prefix}
-          value={draft}
-          onChange={(next) =>
-            prefix === 'mobile'
-              ? setMobileDraft({ ...draft, ...next })
-              : setAdvanced(next)
-          }
-        />
-        {prefix === 'mobile' ? (
-          <div className="filter-primary-category">
-            <h3>მიმართულება</h3>
-            <Choice
-              label="ყველა მიმართულება"
-              mobile={prefix === 'mobile'}
-              value={draft.category}
-              onChange={changeCategory}
-              options={orderedCategories}
-            />
-          </div>
-        ) : (
-          <>
-            <h3>მიმართულება</h3>
-            <div className="category-options">
-              {(['ყველა', ...orderedCategories] as const)
-                .filter(
-                  (c, index) =>
-                    allCategoriesVisible || index < 8 || c === draft.category,
-                )
-                .map((c) => {
-                  const CategoryIcon = categoryIcons[c];
-                  return (
-                    <Fragment key={c}>
-                      <label
-                        className={`check-row${draft.category === c && draft.subcategory ? ' category-parent-context' : ''}`}
-                        htmlFor={`${prefix}-${c}`}
-                      >
-                        <input
-                          type="radio"
-                          name={`${prefix}-category`}
-                          value={c}
-                          id={`${prefix}-${c}`}
-                          checked={draft.category === c}
-                          onChange={() => changeCategory(c)}
-                          onClick={() => {
-                            if (draft.category === c && draft.subcategory)
-                              setSubcategory('');
-                          }}
-                        />
-                        <CategoryIcon
-                          className="category-icon"
-                          size={16}
-                          aria-hidden="true"
-                        />
-                        <span>{c === 'ყველა' ? 'ყველა მიმართულება' : c}</span>
-                        {facets && (
-                          <small className="facet-count">
-                            {c === 'ყველა'
-                              ? facets.categoryTotal
-                              : facets.categories.find(
-                                  (item) => item.name === c,
-                                )?.count || 0}
-                          </small>
-                        )}
-                      </label>
-                      {/* Opened once its counts have arrived, in their order,
-                          rather than in the fixed order and then reshuffled. */}
-                      {c === draft.category &&
-                        (!resultsPending ||
-                          loadedResult.search.category === c) &&
-                        subcategories.some((item) => item.category === c) && (
-                          <fieldset
-                            className="subcategory-options"
-                            aria-label={`${c} — ქვემიმართულება`}
-                          >
-                            {[
-                              { id: '', label: 'ყველა პოზიცია' },
-                              ...orderedSubcategories(c),
-                            ].map((item) => (
-                              <label
-                                className="check-row"
-                                key={item.id}
-                                htmlFor={`${prefix}-subcategory-${item.id || 'all'}`}
-                                title={
-                                  item.id
-                                    ? undefined
-                                    : 'ამ მიმართულების ყველა ვაკანსია, დაუზუსტებელი პოზიციების ჩათვლით'
-                                }
-                              >
-                                <input
-                                  type="radio"
-                                  name={`${prefix}-subcategory`}
-                                  id={`${prefix}-subcategory-${item.id || 'all'}`}
-                                  value={item.id}
-                                  checked={
-                                    (draft.subcategory || '') === item.id
-                                  }
-                                  onChange={() => setSubcategory(item.id)}
-                                />
-                                <span>{item.label}</span>
-                                {facets && (
-                                  <small className="facet-count">
-                                    {item.id
-                                      ? (facets.subcategories?.find(
-                                          (child) => child.id === item.id,
-                                        )?.count ?? 0)
-                                      : (facets.categories.find(
-                                          (parent) => parent.name === c,
-                                        )?.count ?? 0)}
-                                  </small>
-                                )}
-                              </label>
-                            ))}
-                          </fieldset>
-                        )}
-                    </Fragment>
-                  );
-                })}
-            </div>
-            <button
-              className="ds-btn ds-btn--ghost category-expand"
-              type="button"
-              aria-expanded={allCategoriesVisible}
-              onClick={() => setAllCategoriesVisible((value) => !value)}
-            >
-              {allCategoriesVisible ? 'ნაკლების ჩვენება' : 'ყველა მიმართულება'}
-              <span aria-hidden="true">{allCategoriesVisible ? '−' : '+'}</span>
-            </button>
-          </>
-        )}
-        {prefix === 'mobile' &&
-          subcategories.some((item) => item.category === draft.category) && (
-            <div className="filter-subcategory">
-              <label htmlFor={`${prefix}-subcategory`}>ქვემიმართულება</label>
-              <SelectField
-                id={`${prefix}-subcategory`}
-                value={draft.subcategory || allSubcategories}
-                onChange={(next) => {
-                  const subcategory =
-                    next === allSubcategories ? undefined : next;
-                  if (prefix === 'mobile')
-                    setMobileDraft({ ...draft, subcategory });
-                  else setSubcategory(subcategory ?? '');
-                }}
-                options={[
-                  {
-                    value: allSubcategories,
-                    label: `ყველა — ${draft.category}`,
-                  },
-                  ...orderedSubcategories(draft.category).map((item) => ({
-                    value: item.id,
-                    label: item.label,
-                  })),
-                ]}
-              />
-              <p
-                className="filter-subcategory-help"
-                id={`${prefix}-subcategory-help`}
-              >
-                დაუზუსტებელი ვაკანსიებიც ჩანს „ყველა“-ში.
-              </p>
-            </div>
-          )}
-        <div className="filter-divider" />
-        <h3>სამუშაო პირობები</h3>
-        <label className="check-row" htmlFor={`${prefix}-remote`}>
-          <Checkbox
-            id={`${prefix}-remote`}
-            checked={draft.remote}
-            onCheckedChange={changeRemote}
-          />
-          დისტანციური
-        </label>
-        <label className="check-row" htmlFor={`${prefix}-paid`}>
-          <Checkbox
-            id={`${prefix}-paid`}
-            checked={draft.paid}
-            onCheckedChange={changePaid}
-          />
-          ხელფასი მითითებულია
-        </label>
-        <label className="check-row" htmlFor={`${prefix}-entry-level`}>
-          <Checkbox
-            id={`${prefix}-entry-level`}
-            checked={draft.entryLevel}
-            onCheckedChange={(entryLevel) => changeAdvanced({ entryLevel })}
-          />
-          გამოცდილების გარეშე
-        </label>
-        {/* Every option in sight, one tap each, as the salary amounts are. */}
-        <fieldset className="filter-chips">
-          <legend>განაკვეთი</legend>
-          {employmentChoices.map(([employment, label]) => (
-            <button
-              key={employment}
-              type="button"
-              className="ds-chip"
-              aria-pressed={draft.employment === employment}
-              onClick={() => changeAdvanced({ employment })}
-            >
-              {label}
-            </button>
-          ))}
-        </fieldset>
-        <p className="filter-help">
-          პირობები იფილტრება განცხადებაში მითითებული ინფორმაციით.
-        </p>
-        <div className="source-note">
-          <ShieldCheck size={20} />
-          <p>იპოვე აქ. დეტალები გადაამოწმე პირველწყაროზე.</p>
-        </div>
-      </>
-    );
-  };
+  const renderFilters = (prefix: string) => (
+    <SearchFilterFields
+      value={prefix === 'mobile' && mobileDraft ? mobileDraft : currentSearch}
+      onChange={
+        prefix === 'mobile'
+          ? setMobileDraft
+          : (next) => {
+              setCity(next.city);
+              setCategoryValue(next.category);
+              setSubcategory(next.subcategory || '');
+              setPaid(next.paid);
+              setRemote(next.remote);
+              setAdvanced({
+                salaryPeriod: next.salaryPeriod,
+                salaryFrom: next.salaryFrom,
+                salaryTo: next.salaryTo,
+                employment: next.employment,
+                entryLevel: next.entryLevel,
+                postedWithin: next.postedWithin,
+                deep: next.deep,
+              });
+            }
+      }
+      prefix={prefix}
+      facets={prefix === 'desktop' && !resultsPending ? searchMeta : null}
+      orderingFacets={searchMeta}
+      showSubcategories={
+        !resultsPending ||
+        loadedResult.search.category === currentSearch.category
+      }
+      onReset={resetFilters}
+      activeCount={activeCount}
+    />
+  );
   return (
     <div className="board-shell editorial-board crafted-board refined-board">
       <a className="skip-link" href="#results">
@@ -1775,17 +1473,6 @@ export default function JobBoard({
               className="results"
               aria-busy={resultsPending}
             >
-              {!demo && activity.recent.length > 0 && (
-                <RecentVacancies
-                  items={activity.recent}
-                  returnPath={returnPath}
-                  onClear={() => {
-                    if (!activity.clearRecent())
-                      setFeedback('ბრაუზერმა გასუფთავება ვერ შეძლო.');
-                    else act('recent_clear');
-                  }}
-                />
-              )}
               <div className="results-toolbar">
                 <div className="results-head">
                   <div>
@@ -1803,6 +1490,18 @@ export default function JobBoard({
                           )}
                         </span>
                       </h2>
+                      {/* Beside the count: where the list is, not a row above it. */}
+                      {!demo && activity.recent.length > 0 && (
+                        <RecentVacancies
+                          items={activity.recent}
+                          returnPath={returnPath}
+                          onClear={() => {
+                            if (!activity.clearRecent())
+                              setFeedback('ბრაუზერმა გასუფთავება ვერ შეძლო.');
+                            else act('recent_clear');
+                          }}
+                        />
+                      )}
                       <output
                         className="results-updating"
                         data-active={resultsPending || undefined}
@@ -1869,15 +1568,29 @@ export default function JobBoard({
                     <MapPin size={16} aria-hidden="true" />
                     <span className="results-map-label">რუკაზე</span>
                   </Link>
+                  {/* Secondary: the same list, one vacancy at a time. */}
+                  <Link
+                    href={`/swipe${searchParams(currentSearch).size ? '?' + searchParams(currentSearch) : ''}`}
+                    prefetch={false}
+                    className="secondary-button results-map-link results-swipe-link"
+                    aria-label="სწრაფი არჩევა — ვაკანსიები სათითაოდ"
+                  >
+                    <Layers size={16} aria-hidden="true" />
+                    <span className="results-map-label">სათითაოდ</span>
+                  </Link>
                   <button
                     className="mobile-filter-toggle secondary-button"
+                    aria-label={`ფილტრები${activeCount > 0 ? ` — ${activeCount} აქტიური` : ''}`}
                     onClick={() => {
                       setMobileDraft(currentSearch);
                       setFiltersOpen(true);
                     }}
                   >
-                    <SlidersHorizontal size={16} />
-                    ფილტრები {activeCount > 0 && <b>{activeCount}</b>}
+                    <SlidersHorizontal size={20} aria-hidden="true" />
+                    <span className="results-tool-label" aria-hidden="true">
+                      ფილტრები
+                    </span>
+                    {activeCount > 0 && <b aria-hidden="true">{activeCount}</b>}
                   </button>
                   <div className="results-sort">
                     {/* A sort always has a value, so the list has no "ყველა" row. */}
@@ -2067,49 +1780,6 @@ export default function JobBoard({
                     </ul>
                   </details>
                 )}
-              {!demo && activity.hidden.length > 0 && (
-                <details className="hidden-vacancies">
-                  <summary>
-                    დამალული ვაკანსიები ({activity.hidden.length})
-                    <ChevronDown
-                      className="disclosure-chevron"
-                      aria-hidden="true"
-                    />
-                  </summary>
-                  <p>
-                    შენახულია ამ ბრაუზერში. სურვილისამებრ დააბრუნე ძებნის
-                    შედეგებში.
-                  </p>
-                  <button
-                    className="secondary-button"
-                    onClick={() => {
-                      if (!activity.restore())
-                        setFeedback('ბრაუზერმა აღდგენა ვერ შეძლო.');
-                      else act('restore');
-                    }}
-                  >
-                    ყველას აღდგენა
-                  </button>
-                  <ul>
-                    {activity.hidden.map((item) => (
-                      <li key={item.id}>
-                        <span>{item.title}</span>
-                        <button
-                          className="secondary-button"
-                          aria-label={`${item.title} — აღდგენა`}
-                          onClick={() => {
-                            if (!activity.restore(item.id))
-                              setFeedback('ბრაუზერმა აღდგენა ვერ შეძლო.');
-                            else act('restore');
-                          }}
-                        >
-                          აღდგენა
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
               {error ? (
                 <div className="empty" role="alert">
                   <Globe2 size={20} />
@@ -2136,18 +1806,32 @@ export default function JobBoard({
                     <VacancySections
                       jobs={visibleJobs}
                       renderCard={(j, index) => (
-                        <JobCard
+                        <Fragment
                           key={`${loadedResult.key}:${loadedResult.page}:${j.id}`}
-                          index={index}
-                          job={j}
-                          demo={demo}
-                          saved={savedSet.has(j.id)}
-                          seen={seenSet.has(j.id)}
-                          returnPath={loadedResult.path}
-                          onToggleSave={toggleSave}
-                          onOpen={openJob}
-                          onHide={hideJob}
-                        />
+                        >
+                          <JobCard
+                            key={`${loadedResult.key}:${loadedResult.page}:${j.id}`}
+                            index={index}
+                            job={j}
+                            demo={demo}
+                            saved={savedSet.has(j.id)}
+                            seen={seenSet.has(j.id)}
+                            returnPath={loadedResult.path}
+                            onToggleSave={toggleSave}
+                            onOpen={openJob}
+                          />
+                          {index === 3 && showDeckInvite && (
+                            <DeckInvite
+                              href={`/swipe?${(() => {
+                                const p = searchParams(currentSearch);
+                                const next = visibleJobs[index + 1];
+                                if (next) p.set('from', next.id);
+                                return p;
+                              })()}`}
+                              onClose={closeDeckInvite}
+                            />
+                          )}
+                        </Fragment>
                       )}
                     />
                   )}
@@ -2376,52 +2060,22 @@ export default function JobBoard({
           </button>
         </output>
       )}
-      <Sheet
+      <FiltersSheet
         open={filtersOpen}
         onOpenChange={(open) => {
           setFiltersOpen(open);
           if (!open) setMobileDraft(null);
         }}
+        value={mobileDraft ?? currentSearch}
+        onChange={setMobileDraft}
+        onApply={() => {
+          if (mobileDraft) applySearch(mobileDraft);
+          setFiltersOpen(false);
+          setMobileDraft(null);
+        }}
       >
-        <SheetContent side="bottom" className="mobile-filters-sheet">
-          <SheetHeader>
-            <SheetTitle>ფილტრები</SheetTitle>
-            <button
-              className="ds-btn ds-btn--ghost ds-btn--sm mobile-filters-clear"
-              disabled={!mobileKey}
-              onClick={() => setMobileDraft(readSearch(new URLSearchParams()))}
-            >
-              გასუფთავება
-            </button>
-            <SheetDescription>
-              მონიშნე პირობები. სია განახლდება „შედეგების ჩვენებაზე“ დაჭერისას.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="filters">{renderFilters('mobile')}</div>
-          <div className="mobile-filters-footer">
-            <button
-              className="primary filters-apply"
-              disabled={
-                !!mobileDraft &&
-                mobileDraft.salaryFrom !== null &&
-                mobileDraft.salaryTo !== null &&
-                mobileDraft.salaryFrom > mobileDraft.salaryTo
-              }
-              onClick={() => {
-                if (mobileDraft) applySearch(mobileDraft);
-                setFiltersOpen(false);
-                setMobileDraft(null);
-              }}
-            >
-              {previewTotal === null
-                ? 'შედეგების ჩვენება'
-                : previewTotal === 0
-                  ? 'ვაკანსია ვერ მოიძებნა'
-                  : `ნახე ${new Intl.NumberFormat('ka-GE').format(previewTotal)} ვაკანსია`}
-            </button>
-          </div>
-        </SheetContent>
-      </Sheet>
+        {renderFilters('mobile')}
+      </FiltersSheet>
     </div>
   );
 }

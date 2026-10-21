@@ -36,6 +36,7 @@ export function emailLayout(
   preview: string,
   body: string,
   contactLabel = 'ინვოისთან ან გადახდასთან დაკავშირებით დაგვირეკეთ:',
+  contactEmail: string = invoiceContact.email,
 ) {
   const origin = emailOrigin(appUrl);
   return `<!doctype html>
@@ -48,7 +49,7 @@ export function emailLayout(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff" style="max-width:600px;border:1px solid #e2e7ef;border-radius:10px;background-color:#ffffff">
 <tr><td class="mail-pad" style="padding:28px 32px 24px;border-bottom:1px solid #e9edf3"><a href="${escapeEmailHtml(origin)}" style="display:inline-block;text-decoration:none"><img src="${escapeEmailHtml(origin)}/brand/jobx.png" alt="JOBX" width="150" height="50" style="display:block;width:150px;height:50px;border:0;color:#202b3d;font-size:28px;font-weight:bold"></a><p style="margin:8px 0 0;font-size:12px;line-height:20px;color:#667287">ვაკანსიები ერთ სივრცეში</p></td></tr>
 <tr><td class="mail-pad" style="padding:28px 32px 30px"><h1 class="mail-heading" style="margin:0 0 20px;font-size:25px;line-height:1.5;font-weight:700;color:#202b3d">${escapeEmailHtml(title)}</h1>${body}</td></tr>
-<tr><td class="mail-pad" bgcolor="#fafbfd" style="padding:24px 32px;border-top:1px solid #e9edf3;border-radius:0 0 10px 10px"><p style="margin:0 0 10px;font-size:13px;line-height:22px;color:#536078">${escapeEmailHtml(contactLabel)}</p><a href="tel:${invoiceContact.telephone}" style="font-size:19px;line-height:28px;font-weight:bold;color:#2457e6;text-decoration:none">${invoiceContact.phone}</a><p style="margin:10px 0 0;font-size:13px;line-height:22px"><a href="mailto:${invoiceContact.email}" style="color:#536078;text-decoration:underline">${invoiceContact.email}</a></p></td></tr>
+<tr><td class="mail-pad" bgcolor="#fafbfd" style="padding:24px 32px;border-top:1px solid #e9edf3;border-radius:0 0 10px 10px"><p style="margin:0 0 10px;font-size:13px;line-height:22px;color:#536078">${escapeEmailHtml(contactLabel)}</p><a href="tel:${invoiceContact.telephone}" style="font-size:19px;line-height:28px;font-weight:bold;color:#2457e6;text-decoration:none">${invoiceContact.phone}</a><p style="margin:10px 0 0;font-size:13px;line-height:22px"><a href="mailto:${escapeEmailHtml(contactEmail)}" style="color:#536078;text-decoration:underline">${escapeEmailHtml(contactEmail)}</a></p></td></tr>
 </table>
 <!--[if mso]></td></tr></table><![endif]-->
 <p style="margin:18px 0 0;font-size:12px;line-height:20px;color:#738095">JOBX · <a href="${escapeEmailHtml(origin)}" style="color:#536078;text-decoration:none">jobx.ge</a></p>

@@ -1272,14 +1272,6 @@
     display: none;
   }
 }
-@media (max-width: 760px) {
-  /* The map entry sits under filters and sort, across both columns. */
-  .board-shell.editorial-board.crafted-board .results-tools .results-map-link {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-content: center;
-  }
-}
 
 /* ── Detail pass (phone) ────────────────────────────────────────────────────────────────
    These follow refined-board.css's detail block, which loads after this file, so each rule
@@ -1305,13 +1297,13 @@
   .search-directory.search-directory {
     padding-inline: var(--jobx-space-16px);
   }
-  /* Filters and sort share the row; the map is a square button at its end, labelled for
-     screen readers, instead of a full-width row of its own. */
+  /* Three independent touch targets: filters, map and the secondary swipe view. */
   .board-shell.editorial-board.crafted-board .results-tools {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--ds-control-touch);
+    grid-template-columns: repeat(3, var(--ds-control-touch));
+    justify-content: end;
   }
   .board-shell.editorial-board.crafted-board .results-tools .results-map-link {
-    grid-column: 3;
+    grid-column: 2;
     grid-row: 1;
     width: var(--ds-control-touch);
     padding: 0 !important;
@@ -1368,5 +1360,235 @@
   /* The report form's reasons at the finger's height. */
   .vacancy-page .job-report-reason {
     min-height: var(--ds-control-touch);
+  }
+}
+
+@media (max-width: 760px) {
+  .board-shell.editorial-board.crafted-board
+    .results-tools
+    .results-swipe-link {
+    grid-column: 3;
+  }
+  .board-shell .results-tools .results-sort {
+    display: none;
+  }
+  .board-shell .results-tools .mobile-filter-toggle {
+    position: relative;
+    grid-column: 1;
+    grid-row: 1;
+    width: var(--ds-control-touch);
+    padding: 0 !important;
+  }
+  .board-shell .results-tools .mobile-filter-toggle b {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: grid;
+    place-items: center;
+    min-width: var(--ds-space-4);
+    height: var(--ds-space-4);
+    border-radius: var(--ds-radius-pill);
+    background: var(--ds-accent);
+    color: var(--ds-on-accent);
+    font-size: var(--ds-text-xs);
+  }
+  /* The absolute loading mark must be contained by its logo, not by the entire card.
+     Featured cards switch the desktop logo positioning to static on phones. */
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results
+    .job-card[data-featured]
+    .job-company
+    .company-avatar {
+    position: relative;
+    inset: auto;
+  }
+}
+@media (max-width: 760px) {
+  /* Filters on the left, the two other views together on the right. */
+  .board-shell.editorial-board.crafted-board.refined-board .results-tools {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-tools
+    .results-map-link:not(.results-swipe-link) {
+    margin-left: auto;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-tools
+    .mobile-filter-toggle {
+    order: -1;
+  }
+  /* Three equal buttons, each naming what it opens beside its icon. */
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-tools
+    > :is(.mobile-filter-toggle, .results-map-link) {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    margin-left: 0;
+    gap: 4px;
+    padding: 0 6px !important;
+    justify-content: center;
+    font-size: var(--ds-text-sm);
+    font-weight: var(--ds-weight-strong, 700);
+    white-space: nowrap;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-tools
+    .results-map-link
+    .results-map-label,
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-tools
+    .results-tool-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-tools
+    .mobile-filter-toggle
+    b {
+    /* The count sits on the corner, so the label keeps its room. */
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-tools
+    > :is(.mobile-filter-toggle, .results-map-link)
+    svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board .results-tools {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Recently viewed beside the count: the chip shrinks to its icon and number,
+     and the panel opens across the list's width instead of off the edge. */
+  .board-shell.editorial-board.crafted-board.refined-board .results-title-row {
+    position: relative;
+    flex-wrap: nowrap;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-title-row
+    h2 {
+    display: inline-flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ds-space-2);
+    white-space: nowrap;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-title-row
+    h2
+    .result-count {
+    display: inline-flex;
+    margin: 0;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-title-row
+    .recent-strip.recent-strip {
+    margin-left: auto;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board .results-title-row {
+    width: 100%;
+    min-width: 0;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-head
+    > div:has(> .results-title-row) {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+  }
+  /* The "updating" note is announced, not laid out beside the chip. */
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-title-row
+    > .results-updating {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    width: auto;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-title-row
+    .recent-strip.recent-strip {
+    position: static;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-title-row
+    .recent-summary
+    .recent-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-title-row
+    .recent-strip
+    > .recent-head,
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-title-row
+    .recent-strip
+    > .recent-track,
+  .board-shell.editorial-board.crafted-board.refined-board
+    .results-title-row
+    .recent-strip[open]
+    > .recent-track {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Chosen filters stay on one line and scroll sideways, so the list starts
+     right below them however many there are. */
+  .board-shell.editorial-board.crafted-board.refined-board .active-filters {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ds-space-2);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * var(--ds-space-4));
+    padding: 2px var(--ds-space-4);
+    scroll-padding-inline: var(--ds-space-4);
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .active-filters::-webkit-scrollbar {
+    display: none;
+  }
+  .board-shell.editorial-board.crafted-board.refined-board .active-filters > * {
+    flex: none;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .board-shell.editorial-board.crafted-board.refined-board .deck-invite {
+    flex-wrap: wrap;
+    padding-right: var(--ds-space-6);
+  }
+  .board-shell.editorial-board.crafted-board.refined-board
+    .deck-invite
+    .ds-btn {
+    flex: 1 0 100%;
   }
 }

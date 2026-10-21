@@ -2583,6 +2583,22 @@
   border: 0;
   background: transparent;
 }
+:root[data-theme='dark'] .board-shell .results-title-row .recent-strip.recent-strip {
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+:root[data-theme='dark'] .board-shell .results-title-row .recent-strip > .recent-head {
+  border-bottom: 0;
+}
+:root[data-theme='dark'] .board-shell .results-title-row .recent-strip > .recent-track,
+:root[data-theme='dark'] .board-shell .results-title-row .recent-strip[open] > .recent-track {
+  border-top: 0;
+}
+:root[data-theme='dark'] .board-shell .deck-invite-close {
+  border: 0;
+  background: none;
+}
 
 /* ── from app/public-header.css ── */
 :root[data-theme='dark'] .board-shell .topbar.public-header {

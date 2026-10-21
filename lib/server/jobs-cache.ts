@@ -41,6 +41,7 @@ export function publicJobsCacheKey(
   );
   if (params.get('summary') === '1') normalized.set('summary', '1');
   if (params.get('countsOnly') === '1') normalized.set('countsOnly', '1');
+  if (params.get('withEmail') === '1') normalized.set('withEmail', '1');
   normalized.sort();
   return normalized.toString();
 }

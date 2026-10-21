@@ -337,3 +337,68 @@ export function clearSearchPosition() {
     sessionStorage.removeItem(key);
   } catch {}
 }
+
+/* The list a vacancy was opened from, in its order, so the vacancy page can
+   step to the previous and next one without going back. Only the ids and
+   titles of what the list had loaded, one list per tab, replaced each time. */
+const order = 'jobx-list-order';
+type ListItem = { id: string; title: string };
+export function rememberListOrder(url: string, jobs: readonly ListItem[]) {
+  try {
+    sessionStorage.setItem(
+      order,
+      JSON.stringify({
+        url: safeReturnPath(url),
+        items: jobs
+          .slice(0, 1000)
+          .map(({ id, title }) => ({ id, title: title.slice(0, 120) })),
+      }),
+    );
+  } catch {}
+}
+export function listNeighbours(id: string, url: string) {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(order) || 'null') as {
+      url?: string;
+      items?: ListItem[];
+    } | null;
+    if (!saved?.items || saved.url !== safeReturnPath(url)) return null;
+    const items = saved.items.filter((item) => uuid.test(item.id));
+    const index = items.findIndex((item) => item.id === id);
+    if (index < 0) return null;
+    return {
+      index,
+      total: items.length,
+      previous: items[index - 1] ?? null,
+      next: items[index + 1] ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+/* Stepping to a neighbour replaces this vacancy's entry, so the list stays
+   directly below and "back to the list" still steps back to it — now landing
+   on the vacancy the reader reached, at the same height on the screen. */
+export function stepWithinList(returnTo: string, id: string) {
+  sameDocument = true;
+  try {
+    const state = window.history.state as EntryState | null;
+    const at = typeof state?.jobxAt === 'number' ? state.jobxAt : stampEntry();
+    sessionStorage.setItem(cursor, String(at - 1));
+    sessionStorage.setItem(
+      hop,
+      JSON.stringify({
+        from: safeReturnPath(returnTo),
+        fromList: state?.jobxFromList !== false,
+        index: at - 1,
+        at: Date.now(),
+      }),
+    );
+    const position = JSON.parse(sessionStorage.getItem(key) || 'null');
+    if (position && typeof position === 'object')
+      sessionStorage.setItem(
+        key,
+        JSON.stringify({ ...position, id, at: Date.now() }),
+      );
+  } catch {}
+}

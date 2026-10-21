@@ -563,6 +563,10 @@ export function searchPlan(
         .filter((id) => z.uuid().safeParse(id).success)
         .slice(0, 100),
     )}::text[]))`;
+  // Quick choice only shows vacancies a CV can be mailed to; the deck still
+  // reads the address itself and skips one that is not an application inbox.
+  if (params.get('withEmail') === '1')
+    base += ` AND ${snapshot}::text ~* '[a-z0-9._%+-]+@[a-z0-9-]+(\\.[a-z0-9-]+)*\\.[a-z]{2,}'`;
   const groupRank = grouped
     ? `,${groupPosition} AS group_rank`
     : ',1::bigint AS group_rank';

@@ -17,7 +17,7 @@ export function RecentVacancies({
     <details className="recent-strip">
       <summary className="recent-summary">
         <History size={16} aria-hidden="true" />
-        ბოლოს ნანახი
+        <span className="recent-label">ბოლოს ნანახი</span>
         <span className="recent-count">{items.length}</span>
         <ChevronDown className="disclosure-chevron" aria-hidden="true" />
       </summary>
