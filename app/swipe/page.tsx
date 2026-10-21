@@ -6,7 +6,7 @@ import './swipe.css';
 
 // A personal way through the same list; the list itself is what search engines index.
 export const metadata: Metadata = {
-  title: 'სწრაფი არჩევა — JOBX',
+  title: 'Swipe — JOBX',
   robots: { index: false, follow: true },
 };
 

@@ -117,12 +117,12 @@ function isNew(job: { datePosted?: string; createdAt?: string }) {
 /* Secondary: the same list, one vacancy at a time, with the CV sent in one tap. */
 function DeckInvite({ href, onClose }: { href: string; onClose: () => void }) {
   return (
-    <aside className="deck-invite" aria-label="სწრაფი არჩევა">
+    <aside className="deck-invite" aria-label="Swipe">
       <span className="deck-invite-mark" aria-hidden="true">
         <Layers size={20} />
       </span>
       <div>
-        <strong>გააგრძელე სათითაოდ</strong>
+        <strong>გააგრძელე Swipe-ით</strong>
         <p>ვაკანსია ერთ ეკრანზე — გადაწიე და CV ერთი შეხებით გაეგზავნება.</p>
       </div>
       <Link className="ds-btn ds-btn--primary" href={href} prefetch={false}>
@@ -1573,10 +1573,10 @@ export default function JobBoard({
                     href={`/swipe${searchParams(currentSearch).size ? '?' + searchParams(currentSearch) : ''}`}
                     prefetch={false}
                     className="secondary-button results-map-link results-swipe-link"
-                    aria-label="სწრაფი არჩევა — ვაკანსიები სათითაოდ"
+                    aria-label="Swipe — ვაკანსიები სათითაოდ"
                   >
                     <Layers size={16} aria-hidden="true" />
-                    <span className="results-map-label">სათითაოდ</span>
+                    <span className="results-map-label">Swipe</span>
                   </Link>
                   <button
                     className="mobile-filter-toggle secondary-button"

@@ -318,25 +318,6 @@ body:has(.swipe-page) {
   background: var(--ds-warning-soft);
   color: var(--ds-warning);
 }
-.quick-card footer {
-  width: 100%;
-  max-width: none;
-  margin: auto 0 0 !important;
-  padding: 0;
-  border: 0;
-  background: none;
-  margin-top: auto;
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--ds-text-sm);
-}
-.quick-card footer a {
-  color: var(--ds-accent);
-  font-weight: var(--ds-weight-strong, 700);
-}
-.quick-card footer span {
-  color: var(--ds-ink-3);
-}
 .swipe-empty {
   height: 100%;
   display: grid;
@@ -474,10 +455,6 @@ body:has(.swipe-page) {
     animation: none;
   }
 }
-.quick-card footer {
-  align-items: center;
-  gap: var(--ds-space-3);
-}
 
 /* The card is the whole posting: it scrolls inside, the deck stays put. */
 .quick-card-scroll {
@@ -498,9 +475,6 @@ body:has(.swipe-page) {
   line-height: 1.55;
   color: var(--ds-ink-2);
   user-select: text;
-}
-.quick-card footer {
-  padding-top: var(--ds-space-2);
 }
 
 .swipe-keys {
@@ -648,6 +622,48 @@ body:has(.swipe-page) {
   gap: var(--ds-space-3);
   padding: var(--ds-space-2) var(--ds-space-4)
     calc(var(--ds-space-4) + env(safe-area-inset-bottom));
+}
+/* Explicit sizing avoids Safari dialog/intrinsic-content widths on phones. */
+@media (max-width: 760px) {
+  .swipe-attach,
+  .swipe-attach * {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .swipe-attach {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100svh - env(safe-area-inset-top) - var(--ds-space-3));
+    max-height: min(
+      92dvh,
+      calc(100dvh - env(safe-area-inset-top) - var(--ds-space-3))
+    );
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+  .swipe-attach-top {
+    flex: none;
+    padding-left: max(var(--ds-space-4), env(safe-area-inset-left));
+    padding-right: max(var(--ds-space-4), env(safe-area-inset-right));
+  }
+  .swipe-attach-body {
+    min-height: 0;
+    padding-left: max(var(--ds-space-4), env(safe-area-inset-left));
+    padding-right: max(var(--ds-space-4), env(safe-area-inset-right));
+  }
+  .swipe-attach .swipe-fields input {
+    width: 100%;
+    font-size: 16px;
+  }
+  .swipe-attach :is(.swipe-cv, .swipe-upload, .swipe-start) > svg {
+    flex: none;
+  }
+  .swipe-attach .swipe-start {
+    height: auto;
+    min-height: var(--ds-control-lg);
+    padding-block: var(--ds-space-2);
+    white-space: normal;
+  }
 }
 @media (min-width: 761px) {
   .swipe-attach {
@@ -799,21 +815,11 @@ body:has(.swipe-page) {
   z-index: 1;
   opacity: 0.45;
 }
-.swipe-page .quick-card footer .swipe-to {
-  display: block;
-  max-width: 62%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--ds-text-xs);
-  color: var(--ds-ink-3);
-}
 
 /* Measured contrast (WCAG AA): small grey labels moved one step darker; the
    toast keeps a fixed dark face in both themes; greens lighten on dark. */
 .swipe-page .swipe-top small,
 .swipe-page .swipe-company span,
-.swipe-page .quick-card footer .swipe-to,
 .swipe-page .swipe-actions button,
 .swipe-page .swipe-from,
 .swipe-page .swipe-keys,
@@ -838,21 +844,6 @@ body:has(.swipe-page) {
   flex-shrink: 0;
 }
 
-/* The fade above the card's footer is drawn over the text, not as a mask on
-   the scrolling box: a mask repaints the whole box on every scrolled pixel. */
-.quick-card footer {
-  position: relative;
-}
-.quick-card footer::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
-  height: 28px;
-  background: linear-gradient(transparent, var(--ds-surface));
-  pointer-events: none;
-}
 .quick-card-scroll {
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;

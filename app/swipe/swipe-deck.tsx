@@ -361,8 +361,10 @@ export function SwipeDeck() {
     }
   }, [loading, page, pages, listQuery, params, loadedKey, requestKey]);
 
+  // The next page is asked for while half of this one is still ahead, so a
+  // quick reader never reaches an empty deck between pages.
   useEffect(() => {
-    if (!started || queue.length >= 4 || error) return;
+    if (!started || queue.length >= 15 || error) return;
     const t = setTimeout(() => void loadMore(), 0);
     return () => clearTimeout(t);
   }, [started, queue.length, error, loadMore]);
@@ -896,7 +898,7 @@ export function SwipeDeck() {
           <ArrowLeft size={20} aria-hidden="true" />
         </Link>
         <div className="swipe-heading">
-          <h1>სწრაფი არჩევა</h1>
+          <h1>Swipe</h1>
           <small>
             {total === null
               ? 'იტვირთება…'
@@ -1100,11 +1102,6 @@ export function SwipeDeck() {
                   />
                 </div>
               </div>
-              <footer>
-                <span className="swipe-to" title={applicationEmail(current)}>
-                  CV → {applicationEmail(current)}
-                </span>
-              </footer>
             </article>
           ) : (
             <div className="swipe-empty">

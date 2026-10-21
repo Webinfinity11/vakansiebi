@@ -528,7 +528,7 @@ export default function VacancyPage({
     <p className="vacancy-cv-hint">
       ასეთი ვაკანსიები ბევრია?{' '}
       <Link href={similarDeck} prefetch={false}>
-        გაიარე სათითაოდ და გააგზავნე CV ერთი შეხებით
+        გაიარე Swipe-ით და გააგზავნე CV ერთი შეხებით
       </Link>
     </p>
   ) : null;
