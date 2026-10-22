@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { trackAction } from '@/lib/analytics-client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   useCallback,
@@ -61,7 +62,7 @@ type Decision = 'send' | 'skip' | 'sent';
 type Done = { job: PublicJob; decision: Decision };
 const noApplicant: SwipeApplicant = { name: '', email: '', phone: '' };
 const holdSeconds = 8;
-const consentKey = 'jobx-swipe-consent-v1';
+const consentKey = 'jobx-swipe-consent-v2';
 const hintKey = 'jobx-swipe-hint-v1';
 const keysKey = 'jobx-swipe-keys-v1';
 const keysVisits = 3;
@@ -105,6 +106,12 @@ const deadlineLabel = (deadline: string) => {
 };
 
 export function SwipeDeck() {
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    trackAction('swipe_open');
+  }, []);
   const router = useRouter();
   const params = useSearchParams();
   const filters = useMemo(
@@ -119,6 +126,7 @@ export function SwipeDeck() {
   // The list's filters when the deck opened: Back returns to that address.
   const [entryQuery] = useState(listQuery);
   const updateFilters = (patch: Partial<SearchFilters>) => {
+    trackAction('swipe_filter');
     const next = new URLSearchParams(params.toString());
     const changed = searchParams({ ...filters, ...patch });
     rememberSwipeFilters(window.sessionStorage, entryQuery, changed.toString());
@@ -398,6 +406,7 @@ export function SwipeDeck() {
         };
         if (!response.ok && response.status !== 409)
           throw Error(data.error || '');
+        if (response.ok) trackAction('swipe_send');
         const to = data.to || applicationEmail(job);
         sentIds.current.add(job.id);
         setSent(
@@ -425,6 +434,7 @@ export function SwipeDeck() {
                   : ''),
         );
       } catch (e) {
+        trackAction('swipe_failed');
         setNotice(
           (e instanceof Error && e.message) ||
             'წერილი ვერ გაიგზავნა — სცადე ხელახლა.',
@@ -515,6 +525,7 @@ export function SwipeDeck() {
         setAskCv(true);
         return;
       }
+      if (decision === 'skip') trackAction('swipe_skip');
       if (decision === 'send') {
         // A second throw while one is still held sends the first one now.
         if (pending) void submit(pending.job);
@@ -540,6 +551,7 @@ export function SwipeDeck() {
       );
       return;
     }
+    trackAction('swipe_undo');
     if (last.decision === 'send' && pending?.job.id === last.job.id)
       setPending(null);
     setEntering(
@@ -629,6 +641,15 @@ export function SwipeDeck() {
     }
     setDx(mx);
   };
+  // Once a finger is throwing the card sideways, iOS must not also scroll
+  // the text up and down under it.
+  useEffect(() => {
+    const hold = (e: TouchEvent) => {
+      if (drag.current?.locked && e.cancelable) e.preventDefault();
+    };
+    document.addEventListener('touchmove', hold, { passive: false });
+    return () => document.removeEventListener('touchmove', hold);
+  }, []);
   /* A trackpad's sideways two-finger scroll moves the card the way a finger
      does on a phone; an up-down scroll still reads the text. The card snaps
      back when the gesture stops short of the throw. */
@@ -831,7 +852,8 @@ export function SwipeDeck() {
           <span>
             ვეთანხმები, რომ JOBX ჩემი სახელით, hr@jobx.ge-დან, გაუგზავნის ჩემს
             CV-ს და ზემოთ მითითებულ კონტაქტს იმ კომპანიებს, რომლებზეც მარჯვნივ
-            გადავწევ. კომპანიის პასუხი ჩემს ელფოსტაზე მოვა.
+            გადავწევ. კომპანიის პასუხი ჩემს ელფოსტაზე მოვა. CV ინახება JOBX-ზე,
+            რომ გაგზავნის ისტორია შენარჩუნდეს.
             {cv && !upload
               ? ' JOBX-ზე შექმნილი CV-ის ასლი JOBX-ზე 12 თვემდე ინახება.'
               : ''}
@@ -841,6 +863,7 @@ export function SwipeDeck() {
           className="swipe-start"
           disabled={!ready}
           onClick={() => {
+            trackAction(upload ? 'swipe_cv_upload' : 'swipe_cv_jobx');
             try {
               localStorage.setItem(consentKey, new Date().toISOString());
               writeSwipeApplicant(window.localStorage, {

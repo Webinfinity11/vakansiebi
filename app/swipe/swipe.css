@@ -1054,3 +1054,11 @@ body:has(.swipe-page) {
     max-height: 780px;
   }
 }
+
+/* The card's whole body is its own scroller, and touch-action stops at a
+   scroller: without this the browser keeps sideways moves for itself and the
+   card never hears the swipe on a phone. */
+.quick-card .quick-card-scroll {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}

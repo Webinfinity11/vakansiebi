@@ -89,6 +89,19 @@ export const actionGroups = [
       theme_light: 'ღია თემაზე გადართო',
     },
   },
+  {
+    title: 'Swipe',
+    codes: {
+      swipe_open: 'Swipe გახსნა',
+      swipe_skip: 'ვაკანსია გამოტოვა',
+      swipe_send: 'CV გაიგზავნა',
+      swipe_failed: 'CV ვერ გაიგზავნა',
+      swipe_undo: 'გადაწევა გააუქმა',
+      swipe_filter: 'ფილტრი გამოიყენა',
+      swipe_cv_upload: 'PDF მიამაგრა',
+      swipe_cv_jobx: 'JOBX CV მიამაგრა',
+    },
+  },
 ] as const;
 
 type Codes<G> = G extends { codes: infer C } ? keyof C : never;

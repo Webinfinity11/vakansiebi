@@ -1,4 +1,6 @@
 'use client';
+import { adminTime } from '@/lib/admin-format';
+import { vacancyPath } from '@/lib/vacancy-navigation';
 import { SkeletonRows } from '../skeleton';
 import {
   useEffect,
@@ -237,6 +239,57 @@ function Report({ data }: { data: AnalyticsSummary }) {
       value === 'cleared',
   );
   const sections: Section[] = [
+    {
+      title: 'Swipe',
+      node: data.swipe && (
+        <Card
+          title="Swipe"
+          hint="გახსნა და გამოტოვება ანონიმური მოქმედებებია. გაგზავნები და CV-ის ტიპები — წარმატებული წერილები; კანდიდატები — მათში განსხვავებული ელფოსტების რაოდენობა."
+        >
+          <Rows
+            unit=""
+            limit={7}
+            rows={[
+              ['გახსნა', data.swipe.opens],
+              ['გამოტოვება', data.swipe.skips],
+              ['გაგზავნა', data.swipe.sends],
+              ['კანდიდატი', data.swipe.candidates],
+              ['წარუმატებელი გაგზავნა', data.swipe.failed],
+              ['ატვირთული PDF', data.swipe.upload],
+              ['JOBX CV', data.swipe.jobx],
+            ].map(([label, count]) => ({
+              key: String(label),
+              label: String(label),
+              value: whole.format(Number(count)),
+              bar: 0,
+            }))}
+          />
+          <h4 className="aa-subhead">ბოლო გაგზავნები</h4>
+          {data.swipe.latest.length ? (
+            <Rows
+              unit=""
+              rows={data.swipe.latest.map((row) => ({
+                key: row.id,
+                label: (
+                  <a
+                    href={vacancyPath({ id: row.jobId, title: row.title })}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {row.title}
+                  </a>
+                ),
+                value: adminTime(row.sentAt),
+                note: row.recipient,
+                bar: 0,
+              }))}
+            />
+          ) : (
+            <p className="aa-hint">ამ პერიოდში გაგზავნები არ ყოფილა.</p>
+          )}
+        </Card>
+      ),
+    },
     {
       title: 'დაკავშირება და ჩართულობა',
       node: <Contacts totals={totals} />,

@@ -1,3 +1,4 @@
+import { put } from '@vercel/blob';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { db } from './db';
@@ -170,6 +171,23 @@ export async function sendSwipeApplication(
   } catch {
     await fail('pdf_failed');
     throw new ApiError('CV-ის PDF ვერ აიწყო — სცადე მზა PDF-ის ატვირთვა', 500);
+  }
+  // Storage is best effort: a missing store must never prevent delivery.
+  if (form.cv.kind === 'upload' && process.env.BLOB_READ_WRITE_TOKEN) {
+    try {
+      const blob = await put(`swipe-cv/${row.id}.pdf`, Buffer.from(pdf), {
+        access: 'private',
+        addRandomSuffix: false,
+        contentType: 'application/pdf',
+        abortSignal: AbortSignal.timeout(5000),
+      });
+      await db().query('UPDATE swipe_applications SET cv_file=$2 WHERE id=$1', [
+        row.id,
+        blob.pathname,
+      ]);
+    } catch {
+      console.warn('Swipe CV storage unavailable');
+    }
   }
   const payload = swipeApplicationEmail(
     job,

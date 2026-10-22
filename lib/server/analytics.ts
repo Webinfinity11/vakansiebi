@@ -98,6 +98,7 @@ export type ActivityPoint = {
   outbound: number;
 };
 export type AnalyticsSummary = {
+  swipe?: SwipeSummary;
   days: number;
   period?: 'today' | 'yesterday';
   /** How wide one point of the curve is; a day of activity is read by the hour. */
@@ -261,6 +262,7 @@ export async function analyticsSummary(
     steps: ranked('post'),
     resume: ranked('resume'),
     resumeStorage,
+    swipe: await swipeSummary(params, ranked('action')),
     actions: ranked('action'),
     searches: ranked('search'),
     emptySearches: ranked('search_empty'),
@@ -281,4 +283,58 @@ export async function rollupAnalytics(client: {
      ON CONFLICT (day, kind, value) DO UPDATE SET count = analytics_daily.count + excluded.count`,
   );
   return folded.rowCount ?? 0;
+}
+
+export type SwipeSummary = {
+  opens: number;
+  skips: number;
+  sends: number;
+  candidates: number;
+  failed: number;
+  upload: number;
+  jobx: number;
+  latest: {
+    id: string;
+    jobId: string;
+    title: string;
+    recipient: string;
+    sentAt: string;
+  }[];
+};
+// Events stay anonymous; candidate counts use only the existing application records.
+// Successful deliveries use sent_at; failed attempts use created_at.
+export async function swipeSummary(
+  params: string[],
+  actions: Ranked[],
+): Promise<SwipeSummary> {
+  const counts = (
+    await db().query(
+      `SELECT
+    count(*) FILTER (WHERE status='sent')::int sends,
+    count(DISTINCT candidate_key) FILTER (WHERE status='sent')::int candidates,
+    count(*) FILTER (WHERE status='failed')::int failed,
+    count(*) FILTER (WHERE status='sent' AND cv_kind='upload')::int upload,
+    count(*) FILTER (WHERE status='sent' AND cv_kind='jobx')::int jobx
+    FROM swipe_applications
+    WHERE (CASE WHEN status='sent' THEN sent_at ELSE created_at END) >= $1::timestamptz
+      AND (CASE WHEN status='sent' THEN sent_at ELSE created_at END) < $2::timestamptz`,
+      params,
+    )
+  ).rows[0];
+  const latest = (
+    await db().query(
+      `SELECT a.id, a.job_id "jobId", a.sent_at "sentAt", a.recipient,
+    COALESCE(j.published->>'title',j.draft->>'title','ვაკანსია') title
+    FROM swipe_applications a JOIN jobs j ON j.id=a.job_id
+    WHERE a.status='sent' AND a.sent_at >= $1::timestamptz AND a.sent_at < $2::timestamptz
+    ORDER BY a.sent_at DESC,a.id DESC LIMIT 5`,
+      params,
+    )
+  ).rows;
+  return {
+    ...counts,
+    opens: actions.find((a) => a.value === 'swipe_open')?.count ?? 0,
+    skips: actions.find((a) => a.value === 'swipe_skip')?.count ?? 0,
+    latest,
+  };
 }

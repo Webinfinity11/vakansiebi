@@ -1,5 +1,6 @@
 'use client';
 import { Download, Eye, FileText, RefreshCw, Trash2, X } from 'lucide-react';
+import { SwipeApplications } from './swipe-applications';
 import { SkeletonRows } from '../skeleton';
 import { adminTime } from '@/lib/admin-format';
 import { useEffect, useRef, useState } from 'react';
@@ -270,6 +271,7 @@ export function ResumesPanel() {
           შემდეგი
         </button>
       </div>
+      <SwipeApplications openResume={(id) => void open(id)} />
       {selected && (
         <div
           className="resumes-preview ds-appear"
