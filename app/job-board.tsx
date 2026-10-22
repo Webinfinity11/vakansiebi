@@ -1290,12 +1290,6 @@ export default function JobBoard({
                   ვაკანსიები <em>საქართველოში</em>
                 </h1>
               )}
-              {/* The intro stays when a search names the list: removing it shrank the hero
-                  under the reader's cursor and moved the search box while they typed. */}
-              <p className="home-hero-intro">
-                იპოვე შენი შემდეგი სამსახური — შეადარე ვაკანსიები ქალაქის,
-                ხელფასისა და გრაფიკის მიხედვით.
-              </p>
             </div>
           </div>
           <div className="hero-search-wrap">
