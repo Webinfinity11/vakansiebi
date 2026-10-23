@@ -3054,6 +3054,7 @@
 }
 .board-shell .jobx-footer .footer-copyright {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--jobx-space-10px);
 }

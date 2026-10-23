@@ -98,6 +98,13 @@ export function SiteFooter({
           <span>ვაკანსიები სხვადასხვა წყაროდან</span>
           <div className="footer-copyright">
             © {new Date().getFullYear()} JOBX
+            <a
+              href="https://infinity.ge"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              საიტი დამზადებულია infinity.ge-ის მიერ
+            </a>
             <TopGeCounter />
           </div>
         </div>

@@ -271,7 +271,7 @@ export function ResumesPanel() {
           შემდეგი
         </button>
       </div>
-      <SwipeApplications openResume={(id) => void open(id)} />
+      <SwipeApplications />
       {selected && (
         <div
           className="resumes-preview ds-appear"

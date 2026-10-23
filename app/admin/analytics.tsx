@@ -1,6 +1,4 @@
 'use client';
-import { adminTime } from '@/lib/admin-format';
-import { vacancyPath } from '@/lib/vacancy-navigation';
 import { SkeletonRows } from '../skeleton';
 import {
   useEffect,
@@ -13,6 +11,7 @@ import {
 import { ChevronDown } from 'lucide-react';
 import './analytics.css';
 import { ContactMix } from './vacancy-analytics';
+import { SwipeAnalytics } from './swipe-analytics';
 import { contacts } from '@/lib/vacancy-analytics';
 import {
   buildFunnel,
@@ -178,7 +177,12 @@ export function AnalyticsPanel() {
   );
 }
 
-type Section = { title: string; empty?: string; node?: ReactNode };
+type Section = {
+  title: string;
+  empty?: string;
+  node?: ReactNode;
+  wide?: boolean;
+};
 
 function Report({ data }: { data: AnalyticsSummary }) {
   const totals = data.totals;
@@ -240,55 +244,9 @@ function Report({ data }: { data: AnalyticsSummary }) {
   );
   const sections: Section[] = [
     {
-      title: 'Swipe',
-      node: data.swipe && (
-        <Card
-          title="Swipe"
-          hint="გახსნა და გამოტოვება ანონიმური მოქმედებებია. გაგზავნები და CV-ის ტიპები — წარმატებული წერილები; კანდიდატები — მათში განსხვავებული ელფოსტების რაოდენობა."
-        >
-          <Rows
-            unit=""
-            limit={7}
-            rows={[
-              ['გახსნა', data.swipe.opens],
-              ['გამოტოვება', data.swipe.skips],
-              ['გაგზავნა', data.swipe.sends],
-              ['კანდიდატი', data.swipe.candidates],
-              ['წარუმატებელი გაგზავნა', data.swipe.failed],
-              ['ატვირთული PDF', data.swipe.upload],
-              ['JOBX CV', data.swipe.jobx],
-            ].map(([label, count]) => ({
-              key: String(label),
-              label: String(label),
-              value: whole.format(Number(count)),
-              bar: 0,
-            }))}
-          />
-          <h4 className="aa-subhead">ბოლო გაგზავნები</h4>
-          {data.swipe.latest.length ? (
-            <Rows
-              unit=""
-              rows={data.swipe.latest.map((row) => ({
-                key: row.id,
-                label: (
-                  <a
-                    href={vacancyPath({ id: row.jobId, title: row.title })}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {row.title}
-                  </a>
-                ),
-                value: adminTime(row.sentAt),
-                note: row.recipient,
-                bar: 0,
-              }))}
-            />
-          ) : (
-            <p className="aa-hint">ამ პერიოდში გაგზავნები არ ყოფილა.</p>
-          )}
-        </Card>
-      ),
+      title: 'CV-ის გაგზავნები',
+      wide: true,
+      node: data.swipe && <SwipeAnalytics summary={data.swipe} />,
     },
     {
       title: 'დაკავშირება და ჩართულობა',
@@ -418,7 +376,10 @@ function Report({ data }: { data: AnalyticsSummary }) {
         {sections.map(
           (section) =>
             section.node && (
-              <div key={section.title} className="aa-cell">
+              <div
+                key={section.title}
+                className={`aa-cell${section.wide ? ' aa-cell--wide' : ''}`}
+              >
                 {section.node}
               </div>
             ),

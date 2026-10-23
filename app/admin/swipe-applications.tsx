@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Download, Eye, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { ApplicationCvLinks } from './application-cv-links';
 import { adminTime } from '@/lib/admin-format';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import { SkeletonRows } from '../skeleton';
@@ -24,11 +25,7 @@ const statusNames = {
   sent: 'გაგზავნილია',
   failed: 'ვერ გაიგზავნა',
 };
-export function SwipeApplications({
-  openResume,
-}: {
-  openResume: (id: string) => void;
-}) {
+export function SwipeApplications() {
   const [rows, setRows] = useState<Application[]>([]);
   const [page, setPage] = useState(0);
   const [more, setMore] = useState(false);
@@ -59,7 +56,10 @@ export function SwipeApplications({
     return () => controller.abort();
   }, [page, version]);
   return (
-    <section className="reports-section" aria-label="Swipe განაცხადები">
+    <section
+      className="reports-section swipe-applications"
+      aria-label="Swipe განაცხადები"
+    >
       <div className="reports-heading">
         <h2>Swipe განაცხადები</h2>
         <button
@@ -87,7 +87,11 @@ export function SwipeApplications({
         !error && (
           <ul className="reports-list resumes-list ds-appear-list">
             {rows.map((row) => (
-              <li key={row.id} className="reports-item">
+              <li
+                key={row.id}
+                className="reports-item"
+                data-status={row.status}
+              >
                 <div className="reports-details">
                   <p className="resumes-who">
                     <strong>{row.name}</strong>
@@ -108,32 +112,19 @@ export function SwipeApplications({
                       {adminTime(row.createdAt)}
                     </time>
                     <span>მიმღები: {row.recipient}</span>
-                    <span className="ds-badge">{statusNames[row.status]}</span>
+                    <span
+                      className="application-status"
+                      data-status={row.status}
+                    >
+                      {statusNames[row.status]}
+                    </span>
                     <span>
                       {row.cvKind === 'upload' ? 'ატვირთული PDF' : 'JOBX CV'}
                     </span>
                   </div>
                 </div>
                 <div className="reports-actions">
-                  {row.cvKind === 'upload' && row.hasFile ? (
-                    <a
-                      className="ds-btn ds-btn--secondary ds-btn--sm"
-                      href={`/api/admin/swipe/download?id=${row.id}`}
-                    >
-                      <Download size={16} aria-hidden="true" />
-                      PDF-ის ჩამოტვირთვა
-                    </a>
-                  ) : row.cvKind === 'jobx' && row.resumeId ? (
-                    <button
-                      className="ds-btn ds-btn--secondary ds-btn--sm"
-                      onClick={() => openResume(row.resumeId!)}
-                    >
-                      <Eye size={16} aria-hidden="true" />
-                      CV-ის ნახვა
-                    </button>
-                  ) : (
-                    <span>CV-ის ასლი მიუწვდომელია</span>
-                  )}
+                  <ApplicationCvLinks application={row} />
                 </div>
               </li>
             ))}

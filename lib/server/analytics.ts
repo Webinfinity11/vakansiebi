@@ -299,6 +299,12 @@ export type SwipeSummary = {
     title: string;
     recipient: string;
     sentAt: string;
+    name: string;
+    email: string;
+    phone: string;
+    cvKind: 'upload' | 'jobx';
+    hasFile: boolean;
+    resumeId: string | null;
   }[];
 };
 // Events stay anonymous; candidate counts use only the existing application records.
@@ -324,10 +330,13 @@ export async function swipeSummary(
   const latest = (
     await db().query(
       `SELECT a.id, a.job_id "jobId", a.sent_at "sentAt", a.recipient,
+    a.candidate_name name, a.candidate_email email, a.candidate_phone phone,
+    a.cv_kind "cvKind", a.cv_file IS NOT NULL "hasFile", r.id "resumeId",
     COALESCE(j.published->>'title',j.draft->>'title','ვაკანსია') title
     FROM swipe_applications a JOIN jobs j ON j.id=a.job_id
+    LEFT JOIN resumes r ON r.id=a.resume_id AND r.expires_at>now()
     WHERE a.status='sent' AND a.sent_at >= $1::timestamptz AND a.sent_at < $2::timestamptz
-    ORDER BY a.sent_at DESC,a.id DESC LIMIT 5`,
+    ORDER BY a.sent_at DESC,a.id DESC LIMIT 20`,
       params,
     )
   ).rows;

@@ -5,6 +5,7 @@ const config: NextConfig = {
   // The swipe letter draws a JOBX-built CV as PDF on the server in FiraGO.
   outputFileTracingIncludes: {
     '/api/swipe/apply': ['./lib/server/fonts/FiraGO-*-subset.ttf'],
+    '/api/admin/swipe/download': ['./lib/server/fonts/FiraGO-*-subset.ttf'],
   },
   /* Next streams metadata for anything it believes executes JavaScript, and a
      streamed response has already sent 200 by the time notFound() is reached: a
