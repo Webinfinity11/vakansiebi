@@ -148,6 +148,7 @@ void test('admin, invoices, previews and development never enter Google Analytic
     'https://jobx.ge/admin',
     'https://jobx.ge/admin/login',
     'https://jobx.ge/invoices/private-token',
+    'https://jobx.ge/employer-removal?token=private-removal-token',
     'https://jobx.ge/api/jobs',
     'https://jobx.ge/?preview=1',
     'https://jobx.ge/vacancies/11111111-1111-4111-8111-111111111111?preview=1',

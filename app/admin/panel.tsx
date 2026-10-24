@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
   Activity,
+  Ban,
   Building2,
   ChartColumn,
   Check,
@@ -75,6 +76,7 @@ import {
 } from './vacancy-analytics';
 import { ReportsSection } from './reports';
 import { ResumesPanel } from './resumes';
+import { RemovalsPanel } from './removals';
 import { HistoryPanel, JobHistory } from './history';
 import type { githubScraperStatus } from '@/lib/server/scraper-github';
 import { runMessage } from '@/lib/run-messages';
@@ -867,6 +869,7 @@ export default function AdminPanel() {
         },
         { id: 'analytics', label: 'ანალიტიკა', icon: ChartColumn },
         { id: 'resumes', label: 'CV-ები', icon: FileText },
+        { id: 'removals', label: 'ამოღებული ვაკანსიები', icon: Ban },
       ],
     },
   ];
@@ -1757,6 +1760,14 @@ export default function AdminPanel() {
               PDF-ის ღილაკით შენახული რეზიუმეები.
             </SectionHeading>
             {tab === 'resumes' && <ResumesPanel />}
+          </section>
+        )}
+        {tab === 'removals' && (
+          <section>
+            <SectionHeading title="ამოღებული ვაკანსიები">
+              <p>დამსაქმებლების მოთხოვნები და განთავსების ბლოკირება.</p>
+            </SectionHeading>
+            <RemovalsPanel />
           </section>
         )}
         {tab === 'analytics' && (

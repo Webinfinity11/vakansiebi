@@ -1,0 +1,24 @@
+.employer-removal {
+  max-width: 640px;
+  margin: 64px auto;
+  padding: 24px;
+  color: var(--ds-ink);
+}
+.employer-removal h1 {
+  margin-top: 36px;
+  font-size: 26px;
+  line-height: 1.4;
+}
+.employer-removal p {
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.employer-removal form {
+  margin: 28px 0;
+}
+.employer-removal button {
+  height: auto;
+  white-space: normal;
+  padding: 14px 18px;
+  line-height: 1.6;
+}

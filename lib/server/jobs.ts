@@ -581,6 +581,16 @@ export async function mutateJob(input: unknown) {
     ).rows;
     const job = rows.find((r) => r.id === data.id);
     if (!job) throw new ApiError('ვაკანსია ვერ მოიძებნა', 404);
+    if (
+      job.employer_suppression_id &&
+      ['publish', 'restore', 'resume-automation', 'apply-source'].includes(
+        data.action,
+      )
+    )
+      throw new ApiError(
+        'კომპანიის მოთხოვნით ამოღებულია — ჯერ მოხსენი ბლოკირება „ამოღებულ ვაკანსიებში“',
+        409,
+      );
     if (job.version !== data.version)
       throw new ApiError(
         'ჩანაწერი შეიცვალა. განაახლე სია და სცადე ხელახლა.',

@@ -7,6 +7,7 @@ import {
   escapeEmailHtml,
 } from './email-layout';
 import { vacancyPath } from './vacancy-navigation';
+import { removalLink, removalHeaders } from './employer-opt-out';
 
 /* The letter a company receives when a reader throws a vacancy right on /swipe.
    JOBX sends it from its own address, so the reader needs no mailbox of their
@@ -23,6 +24,7 @@ export type SwipeApplicationEmail = {
   text: string;
   html: string;
   attachments: { filename: string; content: string }[];
+  headers?: Record<string, string>;
 };
 
 const clean = (value: string) => value.replace(/\p{Cc}+/gu, ' ').trim();
@@ -50,6 +52,7 @@ export function swipeApplicationEmail(
     throw new Error('Invalid application email');
   const origin = emailOrigin(appUrl);
   const url = new URL(vacancyPath(job), origin).href;
+  const remove = removalLink(job.id, to, origin);
   const name = clean(candidate.name).slice(0, 120) || 'კანდიდატი';
   const phone = clean(candidate.phone).slice(0, 32);
   const title = clean(job.title).slice(0, 200) || 'ვაკანსია';
@@ -68,11 +71,17 @@ export function swipeApplicationEmail(
     to: [to],
     reply_to: replyTo,
     subject: `განაცხადი: ${title} — ${name}`,
+    ...(remove ? { headers: removalHeaders(remove) } : {}),
     text: [
       'გამარჯობა!',
       `${name} განაცხადს აკეთებს თქვენს ვაკანსიაზე „${title}“${company ? ` (${company})` : ''}, რომელიც JOBX-ზეა განთავსებული.`,
       ...rows.map(([label, value]) => `${label}: ${value}`),
       `ვაკანსია JOBX-ზე: ${url}`,
+      ...(remove
+        ? [
+            `თქვენი კომპანიის ვაკანსიების ამოღება და მომავალი განთავსების შეჩერება: ${remove}`,
+          ]
+        : []),
       note,
       'წერილი გაგზავნილია JOBX-ის (jobx.ge) მეშვეობით კანდიდატის თანხმობით.',
     ].join('\n\n'),
@@ -87,7 +96,7 @@ export function swipeApplicationEmail(
             `<tr><td style="padding:10px 16px;font-size:12px;line-height:20px;color:#536078;white-space:nowrap;vertical-align:top">${escapeEmailHtml(label)}</td><td style="padding:10px 16px;font-size:14px;line-height:20px;color:#202b3d;word-break:break-word">${escapeEmailHtml(value)}</td></tr>`,
         )
         .join('')}</table>
-<p style="margin:0;font-size:14px;line-height:24px;color:#202b3d">${escapeEmailHtml(note)}</p>${emailButton(url, 'ვაკანსიის ნახვა JOBX-ზე')}<p style="margin:0;font-size:12px;line-height:20px;color:#738095">წერილი გაგზავნილია JOBX-ის მეშვეობით კანდიდატის თანხმობით. თუ ეს ვაკანსია თქვენი არ არის, უბრალოდ უგულებელყავით.</p>`,
+<p style="margin:0;font-size:14px;line-height:24px;color:#202b3d">${escapeEmailHtml(note)}</p>${emailButton(url, 'ვაკანსიის ნახვა JOBX-ზე')}<p style="margin:0;font-size:12px;line-height:20px;color:#738095">წერილი გაგზავნილია JOBX-ის მეშვეობით კანდიდატის თანხმობით.</p>${remove ? `<p style="font-size:12px;line-height:20px"><a href="${escapeEmailHtml(remove)}">თქვენი კომპანიის ვაკანსიების ამოღება და მომავალი განთავსების შეჩერება</a></p>` : ''}`,
       'JOBX-თან დაკავშირებით დაგვიკავშირდით:',
       swipeSender,
     ),

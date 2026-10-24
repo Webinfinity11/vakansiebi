@@ -1,0 +1,66 @@
+.admin-removals {
+  display: grid;
+  gap: var(--ds-space-5);
+}
+.removal-intro {
+  padding: 16px;
+  background: var(--ds-danger-soft);
+  border-radius: var(--ds-radius-md);
+  line-height: 1.7;
+}
+.removal-form {
+  padding: 16px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-md);
+}
+.removal-form summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.removal-form form {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  max-width: 640px;
+}
+.removal-form label {
+  display: grid;
+  gap: 6px;
+}
+.removal-form input,
+.removal-form textarea {
+  width: 100%;
+  border: 1px solid var(--ds-line-strong);
+  border-radius: var(--ds-radius-md);
+  padding: 10px;
+  color: var(--ds-ink);
+  background: var(--ds-surface);
+  font: inherit;
+}
+.admin-removals .reports-details {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.admin-removals .reports-item[data-review] {
+  border-inline-start: 3px solid var(--ds-warning);
+}
+.admin-shell .admin-removals .removed-vacancy {
+  border-inline-start: 3px solid var(--ds-danger);
+  padding-inline-start: 12px;
+}
+.removal-excerpt {
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow: auto;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-ink-2);
+}
+@media (max-width: 760px) {
+  .admin-removals .reports-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-removals .reports-details {
+    flex: 0 1 auto;
+  }
+}

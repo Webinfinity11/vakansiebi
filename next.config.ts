@@ -71,6 +71,14 @@ const config: NextConfig = {
           { key: 'Cache-Control', value: 'private, no-store' },
         ],
       },
+      {
+        source: '/employer-removal',
+        headers: [
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+          { key: 'Referrer-Policy', value: 'same-origin' },
+          { key: 'Cache-Control', value: 'private, no-store' },
+        ],
+      },
     ];
   },
 };

@@ -197,6 +197,14 @@ export async function sendSwipeApplication(
     process.env.APP_URL || 'https://jobx.ge',
   );
   let providerId: string | undefined;
+  const visible = await db().query(
+    "SELECT 1 FROM jobs WHERE id=$1 AND status='published' AND employer_suppression_id IS NULL",
+    [job.id],
+  );
+  if (!visible.rowCount) {
+    await fail('vacancy_removed');
+    throw new ApiError('ვაკანსია ამოღებულია და განაცხადს ვეღარ გაგზავნი', 410);
+  }
   let error = 'network_error';
   try {
     const response = await fetch('https://api.resend.com/emails', {

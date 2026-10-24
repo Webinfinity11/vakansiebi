@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { deliverInvoiceEmails } from '@/lib/server/invoice-email';
 import { deliverPublicationEmails } from '@/lib/server/publication-email';
+import { deliverRemovalConfirmations } from '@/lib/server/removal-requests';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -17,12 +18,13 @@ export async function GET(request: Request) {
   )
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    const [invoices, publications] = await Promise.all([
+    const [invoices, publications, removals] = await Promise.all([
       deliverInvoiceEmails(undefined, 5),
       deliverPublicationEmails(undefined, 5),
+      deliverRemovalConfirmations(undefined, 5),
     ]);
     return Response.json(
-      { ...invoices, publications },
+      { ...invoices, publications, removals },
       {
         headers: { 'Cache-Control': 'no-store' },
       },
