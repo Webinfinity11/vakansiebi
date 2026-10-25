@@ -230,15 +230,6 @@
 .blog-card:only-child .blog-card-copy p {
   font-size: 16px;
 }
-.blog-byline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  margin: 0 0 24px;
-  color: var(--ds-ink-3);
-  font-size: 12px;
-  line-height: 1.8;
-}
 .blog-takeaway {
   margin: 0;
   padding: 20px 24px;
@@ -256,8 +247,7 @@
   padding: 0 0 24px;
   border-bottom: 1px solid var(--ds-line);
 }
-.blog-contents h2,
-.blog-sources h2 {
+.blog-contents h2 {
   margin: 0 0 12px;
   color: var(--ds-ink);
   font-size: 16px;
@@ -286,15 +276,6 @@
   outline: 2px solid var(--ds-accent-ink);
   outline-offset: 4px;
   border-radius: 2px;
-}
-.blog-citation,
-.blog-sources a {
-  color: var(--ds-accent-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.blog-citation {
-  font-size: 13px;
 }
 .blog-comparison {
   margin: 24px 0;
@@ -351,25 +332,6 @@
 .blog-checklist li::marker {
   color: var(--ds-accent-ink);
   font-weight: 600;
-}
-.blog-sources {
-  margin-top: 40px;
-  padding-top: 24px;
-  border-top: 1px solid var(--ds-line);
-  color: var(--ds-ink-3);
-  font-size: 13px;
-  line-height: 1.8;
-}
-.blog-sources ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.blog-sources li + li {
-  margin-top: 16px;
-}
-.blog-sources p {
-  margin: 4px 0 0;
 }
 @media (max-width: 600px) {
   .blog-takeaway {

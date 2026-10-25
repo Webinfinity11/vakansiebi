@@ -2,12 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowUpRight } from 'lucide-react';
-import {
-  blogPost,
-  blogPosts,
-  blogReadingMinutes,
-  blogReviewDate,
-} from '@/lib/blog';
+import { blogPost, blogPosts, blogReadingMinutes } from '@/lib/blog';
 import { breadcrumbs, jsonLd, siteUrl } from '@/lib/seo';
 import { UiText } from '@/app/ui-language';
 import { BlogCover } from '../blog-cover';
@@ -83,7 +78,6 @@ export default async function BlogArticle({
             mainEntityOfPage: `${siteUrl}/blog/${post.slug}`,
             author: { '@type': 'Organization', name: 'JOBX', url: siteUrl },
             image: `${siteUrl}${post.cover.src}`,
-            citation: post.sources.map((source) => source.url),
           }),
         }}
       />
@@ -101,13 +95,6 @@ export default async function BlogArticle({
           </span>
           <h1>{post.title}</h1>
           <p className="blog-deck">{post.description}</p>
-          <p className="blog-byline">
-            <span>JOBX</span>
-            <span>
-              წყაროები გადამოწმებულია:{' '}
-              <time dateTime={post.reviewedAt}>{blogReviewDate(post)}</time>
-            </span>
-          </p>
         </header>
         <p className="blog-takeaway">{post.takeaway}</p>
         <nav className="blog-contents" aria-label="სტატიის სარჩევი">
@@ -124,29 +111,9 @@ export default async function BlogArticle({
           {post.sections.map((section) => (
             <section key={section.id} id={section.id}>
               <h2>{section.title}</h2>
-              {section.paragraphs.map(({ text, citation }) => {
-                const source =
-                  citation &&
-                  post.sources.find((item) => item.id === citation.sourceId);
-                return (
-                  <p key={text}>
-                    {text}
-                    {source && citation && (
-                      <>
-                        {' '}
-                        <a
-                          className="blog-citation"
-                          href={source.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {citation.label}
-                        </a>
-                      </>
-                    )}
-                  </p>
-                );
-              })}
+              {section.paragraphs.map(({ text }) => (
+                <p key={text}>{text}</p>
+              ))}
               {section.table && (
                 <div className="blog-comparison">
                   <table>
@@ -184,19 +151,6 @@ export default async function BlogArticle({
             </section>
           ))}
         </div>
-        <section className="blog-sources" aria-labelledby="blog-sources-title">
-          <h2 id="blog-sources-title">წყაროები</h2>
-          <ul>
-            {post.sources.map((source) => (
-              <li key={source.id}>
-                <a href={source.url} target="_blank" rel="noopener noreferrer">
-                  {source.title}
-                </a>
-                <p>{source.detail}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
       </article>
       <nav className="blog-next" aria-label="სასარგებლო ბმულები">
         {post.links.map((link) => (

@@ -21,7 +21,7 @@
   "competingPages": [
     {
       "url": "https://jobs.ss.ge/ka/details/dghiuri-musha-88239079",
-      "observation": "Archived listing distinguishes 70 GEL per day from twice-monthly bank payments. Used as a cited example, never as a currently available job or typical wage."
+      "observation": "Archived listing distinguished a daily rate from twice-monthly payments during research. It is not mentioned, linked or used as a real example in the current public article."
     },
     {
       "url": "https://mushebi.ge/ka/vacancies",
@@ -40,7 +40,7 @@
     },
     {
       "url": "https://jobs.ss.ge/ka/details/dghiuri-musha-88239079",
-      "use": "Published employer conditions. Displayed period July 6–August 5; article explicitly labels the example as old. No contact information reproduced."
+      "use": "Historical research only. Removed from the public article at the user's request."
     },
     {
       "url": "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
@@ -51,9 +51,9 @@
     "primaryIntent": "Understand and compare daily pay before accepting work",
     "listingIntent": "Find currently available jobs at /?salaryPeriod=day",
     "originalValue": "Explicitly illustrative hourly comparison, monthly-day arithmetic and five practical employer questions",
-    "sources": "Links beside factual claims and full source list with a manually maintained review date",
+    "sources": "Research records remain in this document. At the user's request, public articles no longer display source lists, inline citation links, review labels or source URLs in structured data.",
     "seo": "Unique title, description, self-canonical, visible headings, BlogPosting and breadcrumbs, static HTML, sitemap, contextual links in both directions",
-    "publication": "One article in the local public catalogue. Three unlaunched generic drafts removed; future articles added only after research.",
+    "publication": "Published on JOBX. The competitor listing example was subsequently removed and replaced by an explicitly hypothetical payment-schedule example; no actual job or market rate is claimed.",
     "measurementAfterRelease": "Compare non-brand blog and daily-pay landing impressions/clicks in equivalent GSC periods. Assess queries and landing-page overlap. No ranking or traffic gain is promised."
   },
   "futureResearchCandidates": [

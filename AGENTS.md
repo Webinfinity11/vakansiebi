@@ -55,3 +55,11 @@ unnatural phrases to fill a heading or add SEO keywords.
   another site's article. Prefer a short established label when in doubt.
 - Read new titles, descriptions and calls to action as Georgian sentences:
   check meaning, grammar, register and whether they describe the actual content.
+
+## Blog sources and presentation
+
+The user explicitly does not want source sections, inline citation links or
+source-review labels on public blog pages. Do not add competitor mentions or
+links to those pages. Keep research evidence and review dates in the editorial
+documents under `docs/`; factual claims still require verification. Label
+hypothetical examples clearly rather than presenting them as real vacancies.

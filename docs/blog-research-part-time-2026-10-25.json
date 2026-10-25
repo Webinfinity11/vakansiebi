@@ -43,12 +43,12 @@
     "Use direct Georgian and concrete scheduling questions; avoid generic motivational introductions and forced keyword repetition.",
     "Keep the article focused on one decision; do not reproduce the daily-pay article's table/checklist structure automatically.",
     "Label illustrative availability wording as an example; never invent firsthand experiences, interviewees, wages or research statistics.",
-    "Separate archived evidence from active vacancy links and keep source links beside the claims they support."
+    "Separate archived evidence from active vacancy links. Research evidence stays in this document; the user does not want source blocks, inline citation links or review labels in public articles."
   ],
   "seo": {
     "listing": "/?employment=part-time",
     "connections": "Contextual links between the part-time listing and the guide; existing CV editor linked for the application step.",
     "metadata": "Self-canonical, distinct title/description, matching cover in Open Graph/Twitter/BlogPosting, static HTML and sitemap inclusion.",
-    "publicationState": "Local preview only; no deployment performed."
+    "publicationState": "Published on JOBX; public citation links and the source section subsequently removed at the user's request."
   }
 }
