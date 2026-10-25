@@ -1,11 +1,20 @@
 import { siteUrl } from '../seo';
+import { blogPosts } from '../blog';
 import { eligibleLandings, landingFor, landingPath } from '../seo-landing';
 import { vacancyPath } from '../vacancy-navigation';
 import { employerPages } from './employers';
 import { readLandingSnapshot, publicVacancyDates } from './sitemap-data';
 
 export function pagesEntries() {
-  return ['/', '/companies', '/cv', '/map', '/business'].map((path) => ({
+  return [
+    '/',
+    '/companies',
+    '/cv',
+    '/map',
+    '/business',
+    '/blog',
+    ...blogPosts.map((post) => `/blog/${post.slug}`),
+  ].map((path) => ({
     url: `${siteUrl}${path}`,
   }));
 }

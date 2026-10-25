@@ -23,6 +23,10 @@ import {
   resumeLabels,
 } from '@/lib/analytics-funnel';
 import { groupActions } from '@/lib/analytics-actions';
+import {
+  comparisonChange,
+  type AnalyticsComparison,
+} from '@/lib/analytics-comparison';
 import type {
   ActivityPoint,
   AnalyticsSummary,
@@ -34,8 +38,8 @@ const windows = [
   { period: 'yesterday', label: 'გუშინ' },
   { period: 7, label: '7 დღე' },
   { period: 30, label: '30 დღე' },
-  { period: 90, label: '3 თვე' },
-  { period: 365, label: 'წელი' },
+  { period: 90, label: '90 დღე' },
+  { period: 365, label: '365 დღე' },
 ] as const;
 type Window = (typeof windows)[number]['period'];
 
@@ -44,11 +48,11 @@ type Window = (typeof windows)[number]['period'];
    of them at a time, named by the selected tab, so identity is never colour
    alone; each keeps its hue whichever tab is open. */
 const measures = [
-  { key: 'search', name: 'ძებნა', short: 'ძებნა', colour: '#2a78d6' },
+  { key: 'search', name: 'სიტყვით ძებნა', short: 'ძებნა', colour: '#2a78d6' },
   { key: 'view', name: 'ვაკანსიის ნახვა', short: 'ნახვა', colour: '#eb6834' },
   {
     key: 'outbound',
-    name: 'გადასვლა დამსაქმებელთან',
+    name: 'პირველწყაროზე გადასვლა',
     short: 'გადასვლა',
     colour: '#1baf7a',
   },
@@ -85,11 +89,13 @@ function bucketLabel(bucket: string, unit: AnalyticsSummary['unit']) {
 }
 function rangeLabel(summary: AnalyticsSummary) {
   if (!summary.from || !summary.to) return '';
-  const day = (bucket: string) => bucketLabel(bucket, 'day');
+  const crossesYear = summary.from.slice(0, 4) !== summary.to.slice(0, 4);
+  const day = (bucket: string) =>
+    `${bucketLabel(bucket, 'day')}${crossesYear ? ` ${bucket.slice(0, 4)}` : ''}`;
   const hour = (bucket: string) => bucket.split('T')[1];
   return summary.unit === 'hour'
     ? `${day(summary.from)} ${hour(summary.from)} — ${day(summary.to)} ${hour(summary.to)}`
-    : `${day(summary.from)} — ${day(summary.to)}`;
+    : `${day(summary.from)} — ${day(summary.to)}, ${hour(summary.to)}-მდე`;
 }
 
 /* A vacancy is stored by id; a title that carries that id (an imported title, a test
@@ -110,9 +116,12 @@ const ofHighest = (rows: Ranked[]) => {
 
 /* Loads only when the tab is opened, so the vacancy list never waits on these counts. */
 export function AnalyticsPanel() {
-  const [period, setPeriod] = useState<Window>('today');
+  const [period, setPeriod] = useState<Window>(7);
+  const [revision, setRevision] = useState(0);
+  const [group, setGroup] = useState<ReportGroup>('overview');
   const [state, setState] = useState<{
     period: Window;
+    revision: number;
     data?: AnalyticsSummary;
     error?: string;
   } | null>(null);
@@ -128,14 +137,17 @@ export function AnalyticsPanel() {
         if (!response.ok) throw Error(body.error || 'ანალიტიკა ვერ ჩაიტვირთა');
         return body as AnalyticsSummary;
       })
-      .then((data) => setState({ period, data }))
+      .then((data) => {
+        if (!controller.signal.aborted) setState({ period, revision, data });
+      })
       .catch((error) => {
         if (error.name !== 'AbortError')
-          setState({ period, error: String(error.message || error) });
+          setState({ period, revision, error: String(error.message || error) });
       });
     return () => controller.abort();
-  }, [period]);
-  const current = state?.period === period ? state : null;
+  }, [period, revision]);
+  const current =
+    state?.period === period && state.revision === revision ? state : null;
   const data = current?.data;
   return (
     <section className="admin-analytics">
@@ -154,6 +166,14 @@ export function AnalyticsPanel() {
             </button>
           ))}
         </fieldset>
+        <button
+          type="button"
+          className="ds-btn ds-btn--secondary ds-btn--sm"
+          disabled={!current}
+          onClick={() => setRevision((value) => value + 1)}
+        >
+          {current?.error ? 'ხელახლა ცდა' : 'განახლება'}
+        </button>
         {data && (
           <p className="admin-analytics-range">
             {rangeLabel(data)} · თბილისის დრო
@@ -167,24 +187,52 @@ export function AnalyticsPanel() {
           {current.error}
         </p>
       ) : (
-        <Report data={data!} />
+        <Report data={data!} group={group} setGroup={setGroup} />
       )}
-      <p className="admin-analytics-note">
-        მოვლენების რაოდენობები: ინახება ტიპი, მნიშვნელობა და დრო; IP მისამართი,
-        cookie და სესია არა.
-      </p>
+      <details className="aa-diag">
+        <summary>როგორ ითვლება მონაცემები</summary>
+        <p className="aa-hint">
+          ნახვები, ძებნები და ღილაკზე დაჭერები მოქმედებების რაოდენობაა და არა
+          უნიკალური ადამიანების. საკონტაქტო ღილაკზე დაჭერა გაგზავნილ განაცხადს
+          არ ნიშნავს. ფორმის ნაბიჯები დამოუკიდებლად ითვლება; მათ შორის სხვაობა
+          მომხმარებლების დაკარგვას არ ზომავს.
+        </p>
+        <p className="aa-hint">
+          პერიოდები თბილისის კალენდარული დღეებით ითვლება, დღევანდელი დღის
+          ჩათვლით. მიმდინარე დღე ჯერ არასრულია. ძებნა ითვლება შეყვანილი სიტყვით;
+          მხოლოდ ფილტრით ძებნა აქ არ შედის. ძველ პერიოდებში ტრეკინგის დაწყებამდე
+          ნულოვანი დღეები ტრაფიკის არქონას არ ადასტურებს.
+        </p>
+      </details>
     </section>
   );
 }
 
 type Section = {
   title: string;
+  group: ReportGroup;
   empty?: string;
   node?: ReactNode;
   wide?: boolean;
 };
 
-function Report({ data }: { data: AnalyticsSummary }) {
+const reportGroups = [
+  ['overview', 'მიმოხილვა'],
+  ['search', 'ძებნა'],
+  ['cv', 'CV-ები'],
+  ['post', 'განცხადებები'],
+] as const;
+type ReportGroup = (typeof reportGroups)[number][0];
+
+function Report({
+  data,
+  group,
+  setGroup,
+}: {
+  data: AnalyticsSummary;
+  group: ReportGroup;
+  setGroup: (group: ReportGroup) => void;
+}) {
   const totals = data.totals;
   const vacancyRows = (rows: Ranked[]): Row[] => {
     const bar = ofHighest(rows);
@@ -245,42 +293,53 @@ function Report({ data }: { data: AnalyticsSummary }) {
   const sections: Section[] = [
     {
       title: 'CV-ის გაგზავნები',
+      group: 'cv',
       wide: true,
       node: data.swipe && <SwipeAnalytics summary={data.swipe} />,
     },
     {
-      title: 'დაკავშირება და ჩართულობა',
+      title: 'საკონტაქტო მოქმედებები',
+      group: 'overview',
       node: <Contacts totals={totals} />,
     },
     {
-      title: 'ძიების შედეგიანობა',
-      empty: 'ძებნა არ დაფიქსირებულა',
-      node: data.searchPerformance.length > 0 && (
+      title: 'უშედეგო ძებნები',
+      group: 'search',
+      empty: 'არ დაფიქსირებულა',
+      node: data.searchPerformance.some((row) => row.empty > 0) && (
         <Card
-          title="ძიების შედეგიანობა"
-          hint="უშედეგო ძებნები პირველ რიგში; შედეგზე არჩეული ფილტრებიც მოქმედებს."
+          title="უშედეგო ძებნები"
+          hint="პირველად ჩანს ყველაზე ხშირად უშედეგო სიტყვები. შედეგზე ფილტრებიც მოქმედებს."
         >
           <Rows
-            unit="ძებნა"
-            rows={data.searchPerformance.map((row) => {
-              const whole_ = row.empty <= row.searches;
-              return {
-                key: row.value,
-                label: row.value,
-                title: row.value,
-                bar: whole_ && row.searches ? row.empty / row.searches : 0,
-                value: whole.format(row.searches),
-                note: whole_
-                  ? `უშედეგო ${share(row.empty, row.searches)}`
-                  : `უშედეგო ${whole.format(row.empty)} · არასრული`,
-              };
-            })}
+            unit="უშედეგო ძებნა"
+            rows={data.searchPerformance
+              .filter((row) => row.empty > 0)
+              .map((row) => {
+                const whole_ = row.empty <= row.searches;
+                return {
+                  key: row.value,
+                  label: row.value,
+                  title: row.value,
+                  bar:
+                    row.empty /
+                    Math.max(
+                      1,
+                      ...data.searchPerformance.map((item) => item.empty),
+                    ),
+                  value: whole.format(row.empty),
+                  note: whole_
+                    ? `${share(row.empty, row.searches)} · სულ ${whole.format(row.searches)}`
+                    : `სულ ${whole.format(row.searches)} · არასრული`,
+                };
+              })}
           />
         </Card>
       ),
     },
     {
       title: 'ყველაზე ხშირი ძებნა',
+      group: 'search',
       node: data.searches.length > 0 && (
         <Card title="ყველაზე ხშირი ძებნა">
           <Rows rows={plainRows(data.searches)} unit="ძებნა" />
@@ -288,18 +347,8 @@ function Report({ data }: { data: AnalyticsSummary }) {
       ),
     },
     {
-      title: 'ძებნა, რომელიც არაფერს პოულობს',
-      node: data.emptySearches.length > 0 && (
-        <Card
-          title="ძებნა, რომელიც არაფერს პოულობს"
-          hint="შედეგის გარეშე დარჩა არჩეული ფილტრებით."
-        >
-          <Rows rows={plainRows(data.emptySearches)} unit="ძებნა" />
-        </Card>
-      ),
-    },
-    {
       title: 'ყველაზე ნანახი ვაკანსიები',
+      group: 'overview',
       node: data.views.length > 0 && (
         <Card title="ყველაზე ნანახი ვაკანსიები">
           <Rows rows={vacancyRows(data.views)} unit="ნახვა" />
@@ -307,15 +356,17 @@ function Report({ data }: { data: AnalyticsSummary }) {
       ),
     },
     {
-      title: 'ყველაზე ხშირი გადასვლა დამსაქმებელთან',
+      title: 'პირველწყაროზე გადასვლები',
+      group: 'overview',
       node: data.outbound.length > 0 && (
-        <Card title="ყველაზე ხშირი გადასვლა დამსაქმებელთან">
+        <Card title="პირველწყაროზე გადასვლები">
           <Rows rows={vacancyRows(data.outbound)} unit="გადასვლა" />
         </Card>
       ),
     },
     {
       title: 'გამოყენებული ფილტრები',
+      group: 'search',
       node: data.filters.length > 0 && (
         <Card title="გამოყენებული ფილტრები">
           <Rows
@@ -330,10 +381,12 @@ function Report({ data }: { data: AnalyticsSummary }) {
     },
     {
       title: 'განცხადების დამატება',
+      group: 'post',
+      wide: true,
       empty: 'ფორმა არ გაუხსნიათ',
       node: postTold && (
         <Funnel
-          title="განცხადების დამატება"
+          title="განცხადების ფორმის მოქმედებები"
           report={post}
           fieldLabels={postFieldLabels}
           extras={<PostExtras rows={data.steps} />}
@@ -341,24 +394,21 @@ function Report({ data }: { data: AnalyticsSummary }) {
       ),
     },
     {
-      title: 'CV კონსტრუქტორი',
+      title: 'CV-ის შექმნის მოქმედებები',
+      group: 'cv',
+      wide: true,
       empty: 'კონსტრუქტორი არ გაუხსნიათ',
       node: resumeTold && (
         <Funnel
-          title="CV კონსტრუქტორი"
+          title="CV-ის შექმნის მოქმედებები"
           report={resume}
-          independent
           extras={
             <>
               {data.resumeStorage && (
                 <p className="aa-hint">
-                  ბაზაში არსებული აქტიური CV:{' '}
-                  <strong>{whole.format(data.resumeStorage.active)}</strong>.
-                  არჩეულ პერიოდში შექმნილი:{' '}
-                  <strong>{whole.format(data.resumeStorage.created)}</strong>;
-                  განახლებული:{' '}
-                  <strong>{whole.format(data.resumeStorage.updated)}</strong>.
-                  ერთი CV-ის განმეორებითი შენახვა ახალ CV-ად არ ითვლება.
+                  ამ პერიოდში ბოლოს შენახული CV:{' '}
+                  {whole.format(data.resumeStorage.updated)} — ახალი ჩანაწერების
+                  ჩათვლით. ბეჭდვის დაჭერა PDF-ის შენახვას არ ადასტურებს.
                 </p>
               )}
               <ResumeExtras rows={data.resume} />
@@ -368,12 +418,113 @@ function Report({ data }: { data: AnalyticsSummary }) {
       ),
     },
   ];
-  const quiet = sections.filter((section) => !section.node);
+  const visible = sections.filter((section) => section.group === group);
+  const quiet = visible.filter((section) => !section.node);
   return (
     <>
-      <Activity data={data} />
-      <div className="aa-grid">
-        {sections.map(
+      <fieldset className="aa-navigation admin-chips">
+        <legend className="sr-only">ანალიტიკის განყოფილება</legend>
+        {reportGroups.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            className="ds-chip"
+            aria-pressed={group === key}
+            onClick={() => setGroup(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </fieldset>
+      {group === 'overview' && (
+        <>
+          <MetricCards
+            items={[
+              ['CV-ის გაგზავნა', data.swipe?.sends, 'ელფოსტის სერვისმა მიიღო'],
+              [
+                'გამგზავნი კანდიდატები',
+                data.swipe?.candidates,
+                'განსხვავებული ელფოსტებით',
+              ],
+              [
+                'შემოსული განცხადებები',
+                data.receivedPosts,
+                'ფორმიდან მიღებული ჩანაწერები',
+              ],
+            ]}
+          />
+          <Activity data={data} />
+          {data.comparison && <PeriodComparison comparison={data.comparison} />}
+        </>
+      )}
+      {group === 'search' && (
+        <MetricCards
+          items={[
+            ['სიტყვით ძებნა', totals.search, 'საძიებო სიტყვის შეყვანით'],
+            [
+              'უშედეგო ძებნა',
+              totals.search_empty,
+              `ძებნების ${share(totals.search_empty, totals.search)}`,
+            ],
+            [
+              'ფილტრის გამოყენება',
+              totals.filter,
+              'არჩეული ან შეცვლილი ფილტრები',
+            ],
+          ]}
+        />
+      )}
+      {group === 'cv' && data.resumeStorage && (
+        <>
+          <MetricCards
+            items={[
+              [
+                'ამ პერიოდში შექმნილი CV',
+                data.resumeStorage.created,
+                'ბაზაში დარჩენილი ჩანაწერები',
+              ],
+              [
+                'შენახვის მოქმედებები',
+                data.resume.find((r) => r.value === 'stored')?.count ?? 0,
+                'განმეორებითი შენახვის ჩათვლით',
+              ],
+              [
+                'აქტიური CV ახლა',
+                data.resumeStorage.active,
+                'მიმდინარე მარაგი, ყველა პერიოდიდან',
+              ],
+            ]}
+          />
+          <p className="aa-hint">
+            შექმნილი CV-ების რაოდენობა არ მოიცავს უკვე წაშლილ ჩანაწერებს.
+          </p>
+        </>
+      )}
+      {group === 'post' && (
+        <MetricCards
+          items={[
+            [
+              'შემოსული განცხადებები',
+              data.receivedPosts,
+              'ფორმიდან მიღებული ჩანაწერები',
+            ],
+            [
+              'ფორმის გახსნა',
+              data.steps.find((r) => r.value === 'opened')?.count ?? 0,
+              'გახსნის მოქმედებები',
+            ],
+            [
+              'გაგზავნის მცდელობა',
+              data.steps.find((r) => r.value === 'submitted')?.count ?? 0,
+              'ღილაკზე დაჭერები',
+            ],
+          ]}
+        />
+      )}
+      <div
+        className={`aa-grid${group === 'overview' ? ' aa-grid--overview' : ''}`}
+      >
+        {visible.map(
           (section) =>
             section.node && (
               <div
@@ -397,8 +548,98 @@ function Report({ data }: { data: AnalyticsSummary }) {
           ))}
         </p>
       )}
-      <Diagnostics rows={data.actions} />
+      {group === 'overview' && <Diagnostics rows={data.actions} />}
     </>
+  );
+}
+
+function MetricCards({
+  items,
+}: {
+  items: [string, number | undefined, string][];
+}) {
+  return (
+    <dl className="aa-metrics">
+      {items.map(([label, value, note]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>
+            {value === undefined ? '—' : whole.format(value)}
+            <span>{note}</span>
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function PeriodComparison({ comparison }: { comparison: AnalyticsComparison }) {
+  const rows = [
+    ['search', 'სიტყვით ძებნა'],
+    ['view', 'ვაკანსიის ნახვა'],
+    ['outbound', 'პირველწყაროზე გადასვლა'],
+    ['sends', 'CV-ის გაგზავნა'],
+    ['receivedPosts', 'შემოსული განცხადებები'],
+  ] as const;
+  const date = (value: string) =>
+    `${bucketLabel(value, 'day')} ${value.slice(0, 4)}, ${value.slice(11)}`;
+  return (
+    <Card
+      title="წინა პერიოდთან შედარება"
+      hint={
+        comparison.mode === 'completed-days'
+          ? 'შედარება დღევანდელი დღის გარეშეა; ორივე მონაკვეთი თანაბარი ხანგრძლივობისაა.'
+          : comparison.mode === 'same-time'
+            ? 'გუშინდელ დღეს ზუსტად იმავე საათამდე ვადარებთ.'
+            : 'ორ სრულ კალენდარულ დღეს ვადარებთ.'
+      }
+    >
+      {!comparison.available ? (
+        <p className="aa-hint">
+          შედარებისთვის წინა პერიოდის საკმარისი ისტორია ჯერ არ გვაქვს.
+        </p>
+      ) : (
+        <>
+          <div className="aa-comparison-dates">
+            <p>
+              მიმდინარე: {date(comparison.from)} — {date(comparison.to)}-მდე
+            </p>
+            <p>
+              წინა: {date(comparison.previousFrom)} —{' '}
+              {date(comparison.previousTo)}-მდე
+            </p>
+          </div>
+          <table className="aa-comparison-table">
+            <caption className="sr-only">
+              მითითებულ თანაბარ პერიოდებში დაფიქსირებული რაოდენობები და ცვლილება
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">მაჩვენებელი</th>
+                <th scope="col">მიმდინარე</th>
+                <th scope="col">წინა</th>
+                <th scope="col">ცვლილება</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(([key, label]) => (
+                <tr key={key}>
+                  <th scope="row">{label}</th>
+                  <td>{whole.format(comparison.current[key])}</td>
+                  <td>{whole.format(comparison.previous[key])}</td>
+                  <td>
+                    {comparisonChange(
+                      comparison.current[key],
+                      comparison.previous[key],
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </Card>
   );
 }
 
@@ -483,20 +724,20 @@ function Rows({
           aria-expanded={open}
           onClick={() => setOpen(!open)}
         >
-          {open ? 'ნაკლების ჩვენება' : `ყველას ჩვენება · ${rows.length}`}
+          {open ? 'ნაკლების ჩვენება' : `მეტის ჩვენება · ${rows.length}`}
         </button>
       )}
     </>
   );
 }
 
-/* Contacts and engagement are counted presses, each read against the views of the
-   same window. A control nobody pressed stays listed, quieter. */
+/* These are independent presses, not user conversions or a saved-item inventory. */
 function Contacts({ totals }: { totals: AnalyticsSummary['totals'] }) {
   /* Only what was pressed gets a row; the rest are named on one line below. */
   const group = (items: readonly (readonly [string, number])[]) => {
     const used = items.filter(([, count]) => count > 0);
     const idle = items.filter(([, count]) => !count);
+    const highest = Math.max(1, ...used.map(([, count]) => count));
     return (
       <>
         {used.length > 0 && (
@@ -506,9 +747,8 @@ function Contacts({ totals }: { totals: AnalyticsSummary['totals'] }) {
             rows={used.map(([label, count]) => ({
               key: label,
               label,
-              bar: totals.view ? count / totals.view : 0,
+              bar: count / highest,
               value: whole.format(count),
-              note: share(count, totals.view),
             }))}
           />
         )}
@@ -523,15 +763,15 @@ function Contacts({ totals }: { totals: AnalyticsSummary['totals'] }) {
   const engaged = totals.save + totals.saved_search + totals.application;
   return (
     <Card
-      title="დაკავშირება და ჩართულობა"
-      hint="ღილაკზე დაჭერები, თითო ვაკანსიასა და მოქმედებაზე ერთხელ ბრაუზერის ჩანართის სესიაში. ზარის დასრულებას ან წერილის გაგზავნას არ ადასტურებს. წილი ნახვებთან."
+      title="საკონტაქტო მოქმედებები"
+      hint="ღილაკზე დაჭერები. დასრულებულ ზარს ან გაგზავნილ წერილს არ ადასტურებს."
     >
       {contacts(totals) > 0 && (
         <div className="aa-contact-mix">
           <h4 className="aa-subhead">
-            კონტაქტი <b>{whole.format(contacts(totals))}</b>
+            დაჭერები <b>{whole.format(contacts(totals))}</b>
           </h4>
-          <ContactMix counts={totals} legend />
+          <ContactMix counts={totals} />
         </div>
       )}
       {group([
@@ -545,9 +785,9 @@ function Contacts({ totals }: { totals: AnalyticsSummary['totals'] }) {
         ჩართულობა <b>{whole.format(engaged)}</b>
       </h4>
       {group([
-        ['შენახული ვაკანსია', totals.save],
-        ['შენახული ძებნა', totals.saved_search],
-        ['განაცხადი', totals.application],
+        ['ვაკანსიის შენახვა', totals.save],
+        ['ძებნის შენახვა', totals.saved_search],
+        ['განაცხადის სტატუსის შეცვლა', totals.application],
       ])}
     </Card>
   );
@@ -575,9 +815,7 @@ function Activity({ data }: { data: AnalyticsSummary }) {
       ? `უშედეგო ${whole.format(totals.search_empty)} · ${share(totals.search_empty, totals.search)}`
       : 'ძებნა არ ყოფილა',
     view: 'გახსნილი ვაკანსიის გვერდები',
-    outbound: totals.view
-      ? `ნახვის ${share(totals.outbound, totals.view)}`
-      : 'პირველწყაროზე გადასვლა',
+    outbound: 'გადასვლის ღილაკზე დაჭერები',
   };
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const move = (event: KeyboardEvent, index: number) => {
@@ -846,61 +1084,51 @@ function Funnel({
   report,
   fieldLabels = {},
   extras,
-  independent = false,
 }: {
   title: string;
   report: ReturnType<typeof buildFunnel>;
   /** Readable names for the fields in "ფორმამ არ მიიღო". */
   fieldLabels?: Record<string, string>;
   extras?: ReactNode;
-  independent?: boolean;
 }) {
   return (
     <Card
       title={title}
-      hint={
-        independent
-          ? 'ითვლება მოქმედებები, არა ადამიანები. სექციები შეიძლება ნებისმიერი რიგით გაიხსნას; ბეჭდვის დაჭერა PDF-ის შენახვას არ ადასტურებს.'
-          : 'წილი გახსნებთან, კლება წინა საფეხურთან. ითვლება საფეხურები, არა ადამიანები.'
-      }
+      hint="მოქმედებები დამოუკიდებლად ითვლება; ყველა ნაბიჯის გავლა აუცილებელი არ არის."
     >
       <Rows
         unit="ჯერ"
         limit={8}
-        rows={report.steps.map((step, index) => ({
+        rows={report.steps.map((step) => ({
           key: step.name,
           label: step.label,
-          bar: independent
-            ? step.count / Math.max(1, ...report.steps.map((s) => s.count))
-            : step.share / 100,
+          bar: step.count / Math.max(1, ...report.steps.map((s) => s.count)),
           value: whole.format(step.count),
-          note: independent
-            ? undefined
-            : index > 0 && step.drop > 0
-              ? `${step.share}% · −${step.drop}%`
-              : `${step.share}%`,
         }))}
       />
-      {extras}
-      {!!report.left.length && (
-        <p className="aa-hint">
-          შეწყვიტა:{' '}
-          {report.left
-            .map((step) => `${step.label} — ${whole.format(step.count)}`)
-            .join(' · ')}
-        </p>
-      )}
-      {!!report.refused.length && (
-        <p className="aa-hint">
-          ფორმამ არ მიიღო:{' '}
-          {report.refused
-            .map(
-              (step) =>
-                `${fieldLabels[step.name] ?? step.name} — ${whole.format(step.count)}`,
-            )
-            .join(' · ')}
-        </p>
-      )}
+      <details className="aa-details">
+        <summary>დამატებითი მოქმედებები და შეცდომები</summary>
+        {extras}
+        {!!report.left.length && (
+          <p className="aa-hint">
+            გვერდის დატოვებისას ბოლო ნაბიჯი:{' '}
+            {report.left
+              .map((step) => `${step.label} — ${whole.format(step.count)}`)
+              .join(' · ')}
+          </p>
+        )}
+        {!!report.refused.length && (
+          <p className="aa-hint">
+            ფორმამ არ მიიღო:{' '}
+            {report.refused
+              .map(
+                (step) =>
+                  `${fieldLabels[step.name] ?? step.name} — ${whole.format(step.count)}`,
+              )
+              .join(' · ')}
+          </p>
+        )}
+      </details>
     </Card>
   );
 }
@@ -965,6 +1193,13 @@ function Diagnostics({ rows }: { rows: Ranked[] }) {
     (filter) => `ფილტრის მოხსნა უშედეგოდან: ${filterNames[filter] ?? filter}`,
   );
   const errors = groups.find((group) => group.title === 'შეცდომები');
+  const notFound =
+    errors?.rows
+      .filter(
+        (row) => row.code === 'not_found' || row.code.endsWith('_missing'),
+      )
+      .reduce((sum, row) => sum + row.count, 0) ?? 0;
+  const loadingErrors = (errors?.total ?? 0) - notFound;
   const used = groups
     .filter((group) => group !== errors)
     .reduce((sum, group) => sum + group.total, 0);
@@ -972,15 +1207,16 @@ function Diagnostics({ rows }: { rows: Ranked[] }) {
     <details className="aa-diag">
       <summary>
         <ChevronDown className="admin-summary-mark" aria-hidden="true" />
-        <span className="aa-diag-title">დიაგნოსტიკა</span>
+        <span className="aa-diag-title">მოქმედებები და შეცდომები</span>
         <span className="aa-diag-meta">
-          ღილაკები და ნავიგაცია {whole.format(used)}
+          სხვა მოქმედებები {whole.format(used)}
           {errors && (
             <>
               {' · '}
-              <span className={errors.total ? 'aa-danger' : undefined}>
-                შეცდომა {whole.format(errors.total)}
+              <span className={loadingErrors ? 'aa-danger' : undefined}>
+                ჩატვირთვის შეცდომა {whole.format(loadingErrors)}
               </span>
+              {' · '}404 პასუხი {whole.format(notFound)}
             </>
           )}
         </span>

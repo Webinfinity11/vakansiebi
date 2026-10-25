@@ -1,0 +1,42 @@
+.install-app {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 45;
+  width: min(352px, calc(100vw - 48px));
+  padding: 24px;
+  color: var(--ds-ink);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: 0 8px 32px #0002;
+}
+.install-app > svg {
+  color: var(--ds-accent-ink);
+}
+.install-app h2 {
+  margin: 12px 28px 8px 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+.install-app p {
+  margin: 0 0 16px;
+  color: var(--ds-ink-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.install-app .install-app-close {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 44px;
+  height: 44px;
+}
+.install-app > button:not(.install-app-close) {
+  min-height: 44px;
+}
+@media (max-width: 899px), (pointer: coarse) {
+  .install-app {
+    display: none;
+  }
+}

@@ -1903,12 +1903,15 @@
   flex-wrap: nowrap;
   overflow-x: auto;
   gap: var(--jobx-space-10px);
-  padding: 0;
+  padding: 5px;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 5px;
   margin: 0;
   list-style: none;
 }
 .vacancy-searches li {
   flex: 0 0 auto;
+  scroll-snap-align: start;
 }
 .vacancy-searches a {
   display: flex;
@@ -1943,6 +1946,12 @@
   margin-top: var(--jobx-space-24px);
 }
 @media (max-width: 760px) {
+  .vacancy-searches li {
+    max-width: 85%;
+  }
+  .vacancy-searches a {
+    white-space: normal;
+  }
   .vacancy-page
     .vacancy-layout:has(> .vacancy-description-panel)
     > .vacancy-searches {
@@ -4022,6 +4031,7 @@
 .jobx-footer {
   overflow-anchor: none;
 }
+
 .search-directory {
   display: block;
   max-width: 1224px;

@@ -125,9 +125,132 @@
   color: var(--ds-ink-2);
 }
 
-/* Below 1100px the personal actions and the primary drop their words, keeping the icon and
-   an accessible name; the saved count stays, as a badge on the icon. */
+/* The menu also holds language preferences, so it stays reachable at every width. */
+.board-shell .topbar.public-header .site-menu-trigger {
+  display: inline-flex;
+}
+.public-menu[data-slot='sheet-content'] {
+  width: min(360px, calc(100vw - 24px));
+  padding: 24px 20px max(20px, env(safe-area-inset-bottom));
+  gap: 24px;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  overflow-y: auto;
+  border-radius: 24px 0 0 24px;
+  border: 1px solid var(--ds-line);
+  box-shadow: -12px 0 48px #101d3926;
+}
+.public-menu-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.public-menu-heading .jobx-brand,
+.public-menu-heading .jobx-brand img {
+  width: 104px;
+  height: auto;
+  margin: 0;
+}
+.public-menu-heading [data-slot='sheet-title'] {
+  color: var(--ds-ink);
+  font-size: 20px;
+}
+.public-menu-heading button,
+.public-menu-preferences button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.public-menu nav {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+.public-menu nav a {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 56px;
+  height: auto;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  color: var(--ds-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-decoration: none;
+}
+.public-menu-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--ds-ink-2);
+  border-radius: 10px;
+  background: var(--ds-surface-muted);
+}
+.public-menu nav a[aria-current='page'] .public-menu-icon {
+  color: var(--ds-accent-ink);
+  background: var(--ds-surface);
+}
+.public-menu-arrow {
+  color: var(--ds-ink-3);
+}
+.public-menu nav a.public-menu-personal {
+  margin-top: 16px;
+}
+.public-menu nav a:hover,
+.public-menu nav a[aria-current='page'] {
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent-ink);
+}
+.public-menu-count {
+  min-width: 24px;
+  padding: 3px 6px;
+  text-align: center;
+  border-radius: 8px;
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent-ink);
+  font-size: 12px;
+}
+.public-menu-bottom {
+  margin-top: auto;
+}
+.public-menu .public-menu-business {
+  width: 100%;
+  min-height: 48px;
+  margin-bottom: 18px;
+}
+.public-menu-preferences {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ds-line);
+}
+.public-menu-preference {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.public-menu-preference > span {
+  font-size: 13px;
+  color: var(--ds-ink-2);
+}
 @media (max-width: 1100px) {
+  .board-shell .topbar.public-header .header-inner .site-nav,
+  .board-shell .topbar.public-header .header-inner .site-search,
+  .board-shell .topbar.public-header .header-inner .header-cv,
+  .board-shell .topbar.public-header .header-inner .site-post,
+  .board-shell .topbar.public-header .header-inner .site-theme {
+    display: none;
+  }
   .board-shell .topbar.public-header .header-inner {
     gap: var(--ds-space-4);
   }
@@ -148,6 +271,32 @@
   }
 }
 /* Phones (≤760px) are laid out in app/phone.css. */
+.public-menu-preferences .site-language {
+  width: auto;
+  min-width: 76px;
+  padding-inline: 8px;
+  gap: 5px;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-sm);
+  font-weight: var(--ds-weight-strong);
+}
+.site-language .language-flag {
+  font-size: 20px;
+  line-height: 1;
+}
+.site-language > svg {
+  width: 12px;
+}
+@media (max-width: 600px) {
+  .board-shell .topbar.public-header .site-nav {
+    display: none;
+  }
+}
+@media (max-width: 380px) {
+  .board-shell .topbar.public-header .header-cv {
+    display: none;
+  }
+}
 @media (max-width: 430px) {
   .board-shell .topbar.public-header .header-inner.header-inner {
     gap: var(--ds-space-1);

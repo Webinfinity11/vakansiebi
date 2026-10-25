@@ -1,3 +1,4 @@
+import { UiText } from '@/app/ui-language';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { cache } from 'react';
@@ -80,40 +81,52 @@ export default async function CompaniesPage() {
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
           <Link href="/" prefetch={false}>
             <ChevronLeft size={16} aria-hidden="true" />
-            ვაკანსიები
+            <UiText>{'ვაკანსიები'}</UiText>
           </Link>
           <span aria-hidden="true">/</span>
-          <span>კომპანიები</span>
+          <span>
+            <UiText>{'კომპანიები'}</UiText>
+          </span>
         </nav>
         {companies && companies.length > 0 ? (
           <CompaniesDirectory companies={companies}>
-            <h1>კომპანიები</h1>
+            <h1>
+              <UiText>{'კომპანიები'}</UiText>
+            </h1>
           </CompaniesDirectory>
         ) : (
           <>
             <header className="companies-head">
-              <h1>კომპანიები</h1>
+              <h1>
+                <UiText>{'კომპანიები'}</UiText>
+              </h1>
             </header>
             <section className="companies-empty ds-appear">
               <span className="companies-empty-mark" aria-hidden="true">
                 <Building2 size={20} />
               </span>
               <h2>
-                {companies
-                  ? 'კომპანიების სია ჯერ ცარიელია'
-                  : 'კომპანიების სია ახლა ვერ ჩაიტვირთა'}
+                {companies ? (
+                  <UiText>კომპანიების სია ჯერ ცარიელია</UiText>
+                ) : (
+                  <UiText>კომპანიების სია ახლა ვერ ჩაიტვირთა</UiText>
+                )}
               </h2>
               <p>
-                {companies
-                  ? 'სია ვაკანსიების განახლებასთან ერთად შეივსება.'
-                  : 'სცადე ცოტა ხანში. ვაკანსიები ამ დროსაც ხელმისაწვდომია.'}
+                {companies ? (
+                  <UiText>სია ვაკანსიების განახლებასთან ერთად შეივსება.</UiText>
+                ) : (
+                  <UiText>
+                    სცადე ცოტა ხანში. ვაკანსიები ამ დროსაც ხელმისაწვდომია.
+                  </UiText>
+                )}
               </p>
               <Link
                 className="ds-btn ds-btn--secondary"
                 href="/"
                 prefetch={false}
               >
-                ყველა ვაკანსიის ნახვა
+                <UiText>{'ყველა ვაკანსიის ნახვა'}</UiText>
               </Link>
             </section>
           </>

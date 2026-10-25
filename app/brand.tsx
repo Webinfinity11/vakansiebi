@@ -1,10 +1,12 @@
 'use client';
+import { useUi } from './ui-language';
 import Image from 'next/image';
 import { clearSearchPosition } from '@/lib/vacancy-navigation';
 // A document navigation intentionally resets the catalogue and fetches fresh data.
 /* The masthead logo is what a phone paints last and largest, so the header asks
    for it up front; the footer copy is below the fold and must not compete. */
 export function Brand({ priority = false }: { priority?: boolean }) {
+  const { ui } = useUi();
   return (
     // oxlint-disable-next-line next/no-html-link-for-pages -- Logo deliberately resets the document and transient state.
     <a
@@ -20,7 +22,7 @@ export function Brand({ priority = false }: { priority?: boolean }) {
         )
           clearSearchPosition();
       }}
-      aria-label="JOBX — მთავარი გვერდი"
+      aria-label={ui('JOBX — მთავარი გვერდი')}
     >
       <Image
         src="/brand/jobx.png"

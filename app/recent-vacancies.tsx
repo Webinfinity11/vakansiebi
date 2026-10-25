@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import { vacancyCardTitle } from '@/lib/vacancy-card-labels';
 import { ChevronDown, History } from 'lucide-react';
 import { vacancyPath } from '@/lib/vacancy-navigation';
@@ -13,11 +14,12 @@ export function RecentVacancies({
   returnPath: string;
   onClear: () => void;
 }) {
+  const { ui } = useUi();
   return (
     <details className="recent-strip">
       <summary className="recent-summary">
         <History size={16} aria-hidden="true" />
-        <span className="recent-label">ბოლოს ნანახი</span>
+        <span className="recent-label">{ui('ბოლოს ნანახი')}</span>
         <span className="recent-count">{items.length}</span>
         <ChevronDown className="disclosure-chevron" aria-hidden="true" />
       </summary>
@@ -27,7 +29,7 @@ export function RecentVacancies({
           className="ds-btn ds-btn--ghost ds-btn--sm"
           onClick={onClear}
         >
-          გასუფთავება
+          {ui('გასუფთავება')}
         </button>
       </div>
       <div className="recent-track">
@@ -42,7 +44,7 @@ export function RecentVacancies({
             event="open_recent"
           >
             <strong title={item.title}>{vacancyCardTitle(item.title)}</strong>
-            <span>{item.company || 'კერძო განცხადება'}</span>
+            <span>{item.company || ui('კერძო განცხადება')}</span>
           </ListHopLink>
         ))}
       </div>

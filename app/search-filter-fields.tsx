@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import { Fragment, useState } from 'react';
 import {
   SlidersHorizontal,
@@ -82,6 +83,7 @@ export function SearchFilterFields({
   onReset?: () => void;
   activeCount?: number;
 }) {
+  const { ui } = useUi();
   const [allCategoriesVisible, setAllCategoriesVisible] = useState(false);
   /* Directions in the order the current search fills them, so what was asked
        for leads and a 1,968-vacancy direction is not filed below a 77-vacancy
@@ -115,7 +117,8 @@ export function SearchFilterFields({
       {!mobile && (
         <div className="filter-head">
           <h2>
-            <SlidersHorizontal size={16} /> ფილტრები
+            <SlidersHorizontal size={16} />
+            {ui(' ფილტრები')}
           </h2>
           <button
             type="button"
@@ -123,14 +126,14 @@ export function SearchFilterFields({
             onClick={onReset}
             disabled={!activeCount}
           >
-            გასუფთავება
+            {ui('გასუფთავება')}
           </button>
         </div>
       )}
       <div className="filter-primary-city">
-        <h3>ქალაქი</h3>
+        <h3>{ui('ქალაქი')}</h3>
         <Choice
-          label="ყველა ქალაქი"
+          label={ui('ყველა ქალაქი')}
           mobile={mobile}
           value={draft.city}
           onChange={changeCity}
@@ -146,9 +149,9 @@ export function SearchFilterFields({
       />
       {mobile ? (
         <div className="filter-primary-category">
-          <h3>მიმართულება</h3>
+          <h3>{ui('მიმართულება')}</h3>
           <Choice
-            label="ყველა მიმართულება"
+            label={ui('ყველა მიმართულება')}
             mobile={mobile}
             value={draft.category}
             onChange={changeCategory}
@@ -157,7 +160,7 @@ export function SearchFilterFields({
         </div>
       ) : (
         <>
-          <h3>მიმართულება</h3>
+          <h3>{ui('მიმართულება')}</h3>
           <div className="category-options">
             {(['ყველა', ...orderedCategories] as const)
               .filter(
@@ -189,7 +192,9 @@ export function SearchFilterFields({
                         size={16}
                         aria-hidden="true"
                       />
-                      <span>{c === 'ყველა' ? 'ყველა მიმართულება' : c}</span>
+                      <span>
+                        {c === 'ყველა' ? ui('ყველა მიმართულება') : ui(c)}
+                      </span>
                       {facets && (
                         <small className="facet-count">
                           {c === 'ყველა'
@@ -206,7 +211,7 @@ export function SearchFilterFields({
                       subcategories.some((item) => item.category === c) && (
                         <fieldset
                           className="subcategory-options"
-                          aria-label={`${c} — ქვემიმართულება`}
+                          aria-label={ui('{0} — ქვემიმართულება', [c])}
                         >
                           {[
                             { id: '', label: 'ყველა პოზიცია' },
@@ -219,7 +224,9 @@ export function SearchFilterFields({
                               title={
                                 item.id
                                   ? undefined
-                                  : 'ამ მიმართულების ყველა ვაკანსია, დაუზუსტებელი პოზიციების ჩათვლით'
+                                  : ui(
+                                      'ამ მიმართულების ყველა ვაკანსია, დაუზუსტებელი პოზიციების ჩათვლით',
+                                    )
                               }
                             >
                               <input
@@ -230,7 +237,7 @@ export function SearchFilterFields({
                                 checked={(draft.subcategory || '') === item.id}
                                 onChange={() => setSubcategory(item.id)}
                               />
-                              <span>{item.label}</span>
+                              <span>{ui(item.label)}</span>
                               {facets && (
                                 <small className="facet-count">
                                   {item.id
@@ -256,7 +263,9 @@ export function SearchFilterFields({
             aria-expanded={allCategoriesVisible}
             onClick={() => setAllCategoriesVisible((value) => !value)}
           >
-            {allCategoriesVisible ? 'ნაკლების ჩვენება' : 'ყველა მიმართულება'}
+            {allCategoriesVisible
+              ? ui('ნაკლების ჩვენება')
+              : ui('ყველა მიმართულება')}
             <span aria-hidden="true">{allCategoriesVisible ? '−' : '+'}</span>
           </button>
         </>
@@ -264,7 +273,9 @@ export function SearchFilterFields({
       {mobile &&
         subcategories.some((item) => item.category === draft.category) && (
           <div className="filter-subcategory">
-            <label htmlFor={`${prefix}-subcategory`}>ქვემიმართულება</label>
+            <label htmlFor={`${prefix}-subcategory`}>
+              {ui('ქვემიმართულება')}
+            </label>
             <SelectField
               id={`${prefix}-subcategory`}
               value={draft.subcategory || allSubcategories}
@@ -276,7 +287,7 @@ export function SearchFilterFields({
               options={[
                 {
                   value: allSubcategories,
-                  label: `ყველა — ${draft.category}`,
+                  label: `${ui('ყველა')} — ${ui(draft.category)}`,
                 },
                 ...orderedSubcategories(draft.category).map((item) => ({
                   value: item.id,
@@ -288,19 +299,19 @@ export function SearchFilterFields({
               className="filter-subcategory-help"
               id={`${prefix}-subcategory-help`}
             >
-              დაუზუსტებელი ვაკანსიებიც ჩანს „ყველა“-ში.
+              {ui('დაუზუსტებელი ვაკანსიებიც ჩანს „ყველა“-ში.')}
             </p>
           </div>
         )}
       <div className="filter-divider" />
-      <h3>სამუშაო პირობები</h3>
+      <h3>{ui('სამუშაო პირობები')}</h3>
       <label className="check-row" htmlFor={`${prefix}-remote`}>
         <Checkbox
           id={`${prefix}-remote`}
           checked={draft.remote}
           onCheckedChange={changeRemote}
         />
-        დისტანციური
+        {ui('დისტანციური')}
       </label>
       <label className="check-row" htmlFor={`${prefix}-paid`}>
         <Checkbox
@@ -308,7 +319,7 @@ export function SearchFilterFields({
           checked={draft.paid}
           onCheckedChange={changePaid}
         />
-        ხელფასი მითითებულია
+        {ui('ხელფასი მითითებულია')}
       </label>
       <label className="check-row" htmlFor={`${prefix}-entry-level`}>
         <Checkbox
@@ -316,11 +327,11 @@ export function SearchFilterFields({
           checked={draft.entryLevel}
           onCheckedChange={(entryLevel) => changeAdvanced({ entryLevel })}
         />
-        გამოცდილების გარეშე
+        {ui('გამოცდილების გარეშე')}
       </label>
       {/* Every option in sight, one tap each, as the salary amounts are. */}
       <fieldset className="filter-chips">
-        <legend>განაკვეთი</legend>
+        <legend>{ui('განაკვეთი')}</legend>
         {employmentChoices.map(([employment, label]) => (
           <button
             key={employment}
@@ -329,16 +340,16 @@ export function SearchFilterFields({
             aria-pressed={draft.employment === employment}
             onClick={() => changeAdvanced({ employment })}
           >
-            {label}
+            {ui(label)}
           </button>
         ))}
       </fieldset>
       <p className="filter-help">
-        პირობები იფილტრება განცხადებაში მითითებული ინფორმაციით.
+        {ui('პირობები იფილტრება განცხადებაში მითითებული ინფორმაციით.')}
       </p>
       <div className="source-note">
         <ShieldCheck size={20} />
-        <p>იპოვე აქ. დეტალები გადაამოწმე პირველწყაროზე.</p>
+        <p>{ui('იპოვე აქ. დეტალები გადაამოწმე პირველწყაროზე.')}</p>
       </div>
     </>
   );

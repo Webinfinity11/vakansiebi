@@ -1,7 +1,12 @@
 import { db } from '../lib/server/db';
 import { searchPlan } from '../lib/server/search-plan';
 import { cities } from '../lib/cities';
-import { traitKeys, traits, type LandingCount } from '../lib/seo-landing';
+import {
+  roleTraits,
+  traitKeys,
+  traits,
+  type LandingCount,
+} from '../lib/seo-landing';
 import { categories } from '../lib/types';
 import { roleVocabulary } from '../lib/search-language';
 import { subcategories, subcategoryForTitle } from '../lib/subcategories';
@@ -107,6 +112,7 @@ export async function refreshLandingCounts({
           count: jobs.filter((job) => byCity.get(city)!.has(job.id)).length,
         });
     };
+    const byTrait = new Map<string, Set<string>>();
     for (const trait of [null, ...traitKeys]) {
       const jobs = trait
         ? await matching(
@@ -114,6 +120,7 @@ export async function refreshLandingCounts({
             canonicalIds,
           )
         : base;
+      if (trait) byTrait.set(trait, new Set(jobs.map((job) => job.id)));
       countPlaces(jobs, null, trait);
       for (const category of categories.filter((name) => name !== 'სხვა'))
         countPlaces(
@@ -122,13 +129,22 @@ export async function refreshLandingCounts({
           trait,
         );
     }
-    for (const { label } of roleVocabulary)
-      countPlaces(
-        await matching(new URLSearchParams({ q: label }), canonicalIds),
-        null,
-        null,
-        label,
+    for (const { label } of roleVocabulary) {
+      const jobs = await matching(
+        new URLSearchParams({ q: label }),
+        canonicalIds,
       );
+      countPlaces(jobs, null, null, label);
+      // Reuse the same canonical ids and the already-computed condition sets.
+      // Adding a reviewed role/condition page does not add another SQL scan.
+      for (const trait of roleTraits[label] ?? [])
+        countPlaces(
+          jobs.filter((job) => byTrait.get(trait)!.has(job.id)),
+          null,
+          trait,
+          label,
+        );
+    }
     for (const { id, category } of subcategories)
       countPlaces(
         base.filter((job) => job.subcategory === id),

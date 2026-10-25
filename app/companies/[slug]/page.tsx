@@ -1,3 +1,4 @@
+import { UiText } from '@/app/ui-language';
 import { ServerSiteFooter } from '../../server-site-footer';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -247,18 +248,20 @@ export default async function CompanyPage(props: Props) {
         <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
           <Link href="/" prefetch={false}>
             <ChevronLeft size={16} aria-hidden="true" />
-            ვაკანსიები
+            <UiText>{'ვაკანსიები'}</UiText>
           </Link>
           <span aria-hidden="true">/</span>
           <Link href="/companies" prefetch={false}>
-            კომპანიები
+            <UiText>{'კომპანიები'}</UiText>
           </Link>
         </nav>
         <section className="company-page-head" aria-labelledby="company-title">
           <div className="detail-company">
             <CompanyLogo large company={employer.name} url={logoUrl} />
             <div>
-              <span>კომპანია</span>
+              <span>
+                <UiText>{'კომპანია'}</UiText>
+              </span>
               <h1 id="company-title">{companyVacancyTitle(employer.name)}</h1>
             </div>
           </div>
@@ -275,7 +278,9 @@ export default async function CompanyPage(props: Props) {
             <div className="company-about">
               {overview && (
                 <div className="company-overview">
-                  <h2>კომპანიის შესახებ</h2>
+                  <h2>
+                    <UiText>{'კომპანიის შესახებ'}</UiText>
+                  </h2>
                   <p>{overview.summary}</p>
                   {profile.descriptionSource && (
                     <a
@@ -283,14 +288,14 @@ export default async function CompanyPage(props: Props) {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      ოფიციალური წყარო
+                      <UiText>{'ოფიციალური წყარო'}</UiText>
                     </a>
                   )}
                   {overview.full && (
                     <details className="company-description">
                       <summary>
                         <ChevronDown aria-hidden="true" />
-                        სრულად წაკითხვა
+                        <UiText>{'სრულად წაკითხვა'}</UiText>
                       </summary>
                       <p>{overview.full}</p>
                     </details>
@@ -305,7 +310,7 @@ export default async function CompanyPage(props: Props) {
                   rel="noopener noreferrer"
                 >
                   <Globe2 aria-hidden="true" />
-                  ვებსაიტი
+                  <UiText>{'ვებსაიტი'}</UiText>
                 </a>
               )}
             </div>
@@ -319,8 +324,13 @@ export default async function CompanyPage(props: Props) {
               className="company-filters"
               key={here}
             >
-              <label className="company-filter-query">
-                <span>ვაკანსიის ძიება</span>
+              <label
+                className="company-filter-query"
+                aria-label="ვაკანსიის ძიება"
+              >
+                <span>
+                  <UiText>{'ვაკანსიის ძიება'}</UiText>
+                </span>
                 <input
                   type="search"
                   name="q"
@@ -330,13 +340,17 @@ export default async function CompanyPage(props: Props) {
                 />
               </label>
               <label>
-                <span id="company-city-label">ქალაქი</span>
+                <span id="company-city-label">
+                  <UiText>{'ქალაქი'}</UiText>
+                </span>
                 <select
                   name="city"
                   aria-labelledby="company-city-label"
                   defaultValue={filters.city}
                 >
-                  <option value="">ყველა ქალაქი</option>
+                  <option value="">
+                    <UiText>{'ყველა ქალაქი'}</UiText>
+                  </option>
                   {filters.city &&
                     !employer.cities.some((c) => c.name === filters.city) && (
                       <option value={filters.city}>{filters.city}</option>
@@ -349,31 +363,45 @@ export default async function CompanyPage(props: Props) {
                 </select>
               </label>
               <label>
-                <span id="company-category-label">მიმართულება</span>
+                <span id="company-category-label">
+                  <UiText>{'მიმართულება'}</UiText>
+                </span>
                 <select
                   name="category"
                   aria-labelledby="company-category-label"
                   defaultValue={filters.category}
                 >
-                  <option value="">ყველა მიმართულება</option>
+                  <option value="">
+                    <UiText>{'ყველა მიმართულება'}</UiText>
+                  </option>
                   {categories.map((category) => (
                     <option key={category} value={category}>
-                      {category}
+                      <UiText>{category}</UiText>
                     </option>
                   ))}
                 </select>
               </label>
               <label>
-                <span id="company-sort-label">დალაგება</span>
+                <span id="company-sort-label">
+                  <UiText>{'დალაგება'}</UiText>
+                </span>
                 <select
                   name="sort"
                   aria-labelledby="company-sort-label"
                   defaultValue={filters.sort}
                 >
-                  <option value="new">უახლესი</option>
-                  <option value="salary">მაღალი ხელფასი</option>
-                  <option value="deadline">ვადა იწურება</option>
-                  <option value="relevance">შესაბამისობა</option>
+                  <option value="new">
+                    <UiText>{'უახლესი'}</UiText>
+                  </option>
+                  <option value="salary">
+                    <UiText>{'მაღალი ხელფასი'}</UiText>
+                  </option>
+                  <option value="deadline">
+                    <UiText>{'ვადა იწურება'}</UiText>
+                  </option>
+                  <option value="relevance">
+                    <UiText>{'შესაბამისობა'}</UiText>
+                  </option>
                 </select>
               </label>
               <div className="company-filter-actions">
@@ -384,10 +412,10 @@ export default async function CompanyPage(props: Props) {
                     value="true"
                     defaultChecked={filters.paid}
                   />
-                  ხელფასი მითითებულია
+                  <UiText>{'ხელფასი მითითებულია'}</UiText>
                 </label>
                 <button type="submit" className="ds-btn ds-btn--primary">
-                  ძებნა
+                  <UiText>{'ძებნა'}</UiText>
                 </button>
                 {filtered && (
                   <Link
@@ -395,22 +423,29 @@ export default async function CompanyPage(props: Props) {
                     prefetch={false}
                     className="ds-btn ds-btn--secondary"
                   >
-                    გასუფთავება
+                    <UiText>{'გასუფთავება'}</UiText>
                   </Link>
                 )}
               </div>
             </form>
           </search>
           <h2 id="company-jobs">
-            {filtered ? 'ძიების შედეგები' : 'აქტიური ვაკანსიები'}{' '}
+            {filtered ? (
+              <UiText>ძიების შედეგები</UiText>
+            ) : (
+              <UiText>აქტიური ვაკანსიები</UiText>
+            )}{' '}
             <span className="ds-badge ds-badge--accent company-count">
               {result.total}
             </span>
           </h2>
           {!result.total && (
             <output>
-              ამ ფილტრებით ვაკანსია ვერ მოიძებნა. შეცვალე ძიება ან გაასუფთავე
-              ფილტრები.
+              <UiText>
+                {
+                  'ამ ფილტრებით ვაკანსია ვერ მოიძებნა. შეცვალე ძიება ან გაასუფთავე ფილტრები.'
+                }
+              </UiText>
             </output>
           )}
           <ul className="company-jobs">
@@ -443,7 +478,8 @@ export default async function CompanyPage(props: Props) {
                         )}
                         {job.deadline && (
                           <time dateTime={job.deadline}>
-                            ბოლო ვადა {formatDate(job.deadline)}
+                            <UiText>{'ბოლო ვადა '}</UiText>
+                            {formatDate(job.deadline)}
                           </time>
                         )}
                       </span>
@@ -452,13 +488,17 @@ export default async function CompanyPage(props: Props) {
                       {salary && <b>{salary}</b>}
                       {left !== null && left >= 0 && left <= 3 ? (
                         <span className="ds-badge ds-badge--warning">
-                          {left === 0 ? 'ბოლო დღე' : `${left} დღე დარჩა`}
+                          {left === 0 ? (
+                            <UiText>ბოლო დღე</UiText>
+                          ) : (
+                            `${left} დღე დარჩა`
+                          )}
                         </span>
                       ) : (
                         fresh !== null &&
                         fresh <= 2 && (
                           <span className="ds-badge ds-badge--accent">
-                            ახალი
+                            <UiText>{'ახალი'}</UiText>
                           </span>
                         )
                       )}
@@ -477,7 +517,7 @@ export default async function CompanyPage(props: Props) {
                   prefetch={false}
                 >
                   <ChevronLeft aria-hidden="true" />
-                  წინა
+                  <UiText>{'წინა'}</UiText>
                 </Link>
               ) : (
                 <span />
@@ -491,7 +531,7 @@ export default async function CompanyPage(props: Props) {
                   href={companyResultsPath(path, filters, page + 1)}
                   prefetch={false}
                 >
-                  შემდეგი
+                  <UiText>{'შემდეგი'}</UiText>
                   <ChevronRight aria-hidden="true" />
                 </Link>
               ) : (

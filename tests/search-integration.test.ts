@@ -177,6 +177,7 @@ void test(
         (error: unknown) => {
           assert.ok(error instanceof ApiError);
           assert.equal(apiError(error).status, 503);
+          assert.equal(apiError(error).headers.get('X-Jobx-Error'), 'timeout');
           return true;
         },
       );
@@ -333,6 +334,21 @@ void test(
         6,
       );
       const original = (await search({ ids: ids[0] })).jobs[0];
+      const normalDetail = await publicJobs(
+        new URLSearchParams({ ids: ids[0] }),
+      );
+      const internalDetail = await publicJobs(
+        new URLSearchParams({ ids: ids[0] }),
+        false,
+        { skipSavedAvailability: true },
+      );
+      assert.deepEqual(internalDetail.jobs, normalDetail.jobs);
+      assert.equal('available' in normalDetail, true);
+      assert.equal(
+        'available' in internalDetail,
+        false,
+        'internal reads skip only unused saved-list metadata',
+      );
       const similar = await similarVacancies(original, ids[4]);
       assert.ok(
         similar.every(

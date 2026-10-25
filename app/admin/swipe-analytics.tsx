@@ -14,10 +14,10 @@ export function SwipeAnalytics({ summary }: { summary: SwipeSummary }) {
     <section className="aa-card aa-swipe-card" aria-label="CV-ის გაგზავნები">
       <header>
         <h3>
-          <Send size={18} aria-hidden="true" /> CV-ის გაგზავნები · Swipe
+          <Send size={18} aria-hidden="true" /> CV-ის გაგზავნები
         </h3>
         <span className="application-status" data-status="sent">
-          <CheckCircle2 size={14} aria-hidden="true" /> რეალური გაგზავნები
+          <CheckCircle2 size={14} aria-hidden="true" /> სისტემიდან გაგზავნილი
         </span>
       </header>
       <p className="aa-hint">
@@ -39,70 +39,72 @@ export function SwipeAnalytics({ summary }: { summary: SwipeSummary }) {
         ))}
       </dl>
       <p className="aa-hint">
-        Swipe-ის გახსნა: {whole.format(summary.opens)} · გამოტოვება:{' '}
-        {whole.format(summary.skips)}. კანდიდატები ითვლება განსხვავებული
-        ელფოსტებით შერჩეულ პერიოდში.
+        შერჩევის რეჟიმის გახსნა: {whole.format(summary.opens)} · ვაკანსიის
+        გამოტოვება: {whole.format(summary.skips)}. კანდიდატები ითვლება
+        განსხვავებული ელფოსტებით შერჩეულ პერიოდში.
       </p>
-      <h4 className="aa-subhead">ბოლო გაგზავნები</h4>
-      {summary.latest.length ? (
-        <ul className="swipe-delivery-list">
-          {shown.map((row) => (
-            <li key={row.id}>
-              <div className="swipe-delivery-details">
-                <strong className="swipe-delivery-name">
-                  {row.name || row.email}
-                </strong>
-                <span className="swipe-delivery-contact">
-                  <a href={`mailto:${row.email}`}>{row.email}</a>
-                  {row.phone && <span> · {row.phone}</span>}
-                </span>
-                <a
-                  className="swipe-delivery-vacancy"
-                  href={vacancyPath({ id: row.jobId, title: row.title })}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {row.title}
-                </a>
-                <span className="swipe-delivery-recipient">
-                  მიმღები: {row.recipient}
-                </span>
-                <div className="swipe-delivery-meta">
-                  <span className="application-status" data-status="sent">
-                    <CheckCircle2 size={14} aria-hidden="true" /> გაიგზავნა
+      <details className="aa-details">
+        <summary>ბოლო გაგზავნები · {whole.format(summary.sends)}</summary>
+        {summary.latest.length ? (
+          <ul className="swipe-delivery-list">
+            {shown.map((row) => (
+              <li key={row.id}>
+                <div className="swipe-delivery-details">
+                  <strong className="swipe-delivery-name">
+                    {row.name || row.email}
+                  </strong>
+                  <span className="swipe-delivery-contact">
+                    <a href={`mailto:${row.email}`}>{row.email}</a>
+                    {row.phone && <span> · {row.phone}</span>}
                   </span>
-                  <time dateTime={row.sentAt}>{adminTime(row.sentAt)}</time>
-                  <span>
-                    {row.cvKind === 'upload' ? 'ატვირთული PDF' : 'JOBX CV'}
+                  <a
+                    className="swipe-delivery-vacancy"
+                    href={vacancyPath({ id: row.jobId, title: row.title })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {row.title}
+                  </a>
+                  <span className="swipe-delivery-recipient">
+                    მიმღები: {row.recipient}
                   </span>
+                  <div className="swipe-delivery-meta">
+                    <span className="application-status" data-status="sent">
+                      <CheckCircle2 size={14} aria-hidden="true" /> გაიგზავნა
+                    </span>
+                    <time dateTime={row.sentAt}>{adminTime(row.sentAt)}</time>
+                    <span>
+                      {row.cvKind === 'upload' ? 'ატვირთული PDF' : 'JOBX CV'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <ApplicationCvLinks application={row} />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="aa-hint">ამ პერიოდში გაგზავნები არ ყოფილა.</p>
-      )}
-      {summary.latest.length > 5 && (
-        <button
-          type="button"
-          className="ds-btn ds-btn--secondary ds-btn--sm"
-          aria-expanded={expanded}
-          onClick={() => setExpanded((value) => !value)}
-        >
-          {expanded
-            ? 'ნაკლების ჩვენება'
-            : `ბოლო ${summary.latest.length} გაგზავნის ნახვა`}
-        </button>
-      )}
-      {summary.sends > shown.length && shown.length > 0 && (
-        <p className="aa-hint">
-          ნაჩვენებია ბოლო {shown.length} გაგზავნა შერჩეული პერიოდის{' '}
-          {whole.format(summary.sends)} გაგზავნიდან. სრული ისტორია
-          ხელმისაწვდომია „CV-ები“ განყოფილებაში, „Swipe განაცხადებში“.
-        </p>
-      )}
+                <ApplicationCvLinks application={row} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="aa-hint">ამ პერიოდში გაგზავნები არ ყოფილა.</p>
+        )}
+        {summary.latest.length > 5 && (
+          <button
+            type="button"
+            className="ds-btn ds-btn--secondary ds-btn--sm"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded
+              ? 'ნაკლების ჩვენება'
+              : `ბოლო ${summary.latest.length} გაგზავნის ნახვა`}
+          </button>
+        )}
+        {summary.sends > shown.length && shown.length > 0 && (
+          <p className="aa-hint">
+            ნაჩვენებია ბოლო {shown.length} გაგზავნა შერჩეული პერიოდის{' '}
+            {whole.format(summary.sends)} გაგზავნიდან. სრული ისტორია
+            ხელმისაწვდომია „CV-ები“ განყოფილებაში, „Swipe განაცხადებში“.
+          </p>
+        )}
+      </details>
     </section>
   );
 }

@@ -63,6 +63,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status = 400,
+    public code?: 'timeout',
   ) {
     super(message);
   }
@@ -92,7 +93,16 @@ export async function clearSession() {
 }
 export function apiError(e: unknown) {
   if (e instanceof ApiError)
-    return Response.json({ error: e.message }, { status: e.status });
+    return Response.json(
+      { error: e.message },
+      {
+        status: e.status,
+        headers: {
+          'Cache-Control': 'private, no-store',
+          ...(e.code ? { 'X-Jobx-Error': e.code } : {}),
+        },
+      },
+    );
   if (e instanceof Error && e.name === 'ZodError')
     return Response.json(
       { error: 'შეამოწმე ფორმაში შეყვანილი მონაცემები' },

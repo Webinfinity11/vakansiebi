@@ -1,3 +1,5 @@
+'use client';
+import { useUi } from '@/app/ui-language';
 import type { ReactNode } from 'react';
 import type { PublicJob } from '@/lib/types';
 
@@ -8,6 +10,7 @@ export function VacancySections({
   jobs: PublicJob[];
   renderCard: (job: PublicJob, index: number) => ReactNode;
 }) {
+  const { ui } = useUi();
   const premium = jobs.filter(
     (j) => j.placement?.priority && j.placement.tier === 'premium',
   );
@@ -23,7 +26,7 @@ export function VacancySections({
       {!!premium.length && (
         <section
           className="featured-vacancies featured-premium"
-          aria-label="პრემიუმ ვაკანსიები"
+          aria-label={ui('პრემიუმ ვაკანსიები')}
         >
           <div>{premium.map(card)}</div>
         </section>
@@ -31,14 +34,17 @@ export function VacancySections({
       {!!vip.length && (
         <section
           className="featured-vacancies featured-vip"
-          aria-label="VIP ვაკანსიები"
+          aria-label={ui('VIP ვაკანსიები')}
         >
           <div>{vip.map(card)}</div>
         </section>
       )}
       {!!regular.length && (
-        <section className="regular-vacancies" aria-label="სხვა ვაკანსიები">
-          <h3>სხვა ვაკანსიები</h3>
+        <section
+          className="regular-vacancies"
+          aria-label={ui('სხვა ვაკანსიები')}
+        >
+          <h3>{ui('სხვა ვაკანსიები')}</h3>
           {regular.map(card)}
         </section>
       )}

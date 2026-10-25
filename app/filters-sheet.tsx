@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   Sheet,
@@ -29,6 +30,7 @@ export function FiltersSheet({
   withEmail?: boolean;
   className?: string;
 }) {
+  const { ui } = useUi();
   const key = searchParams(value).toString();
   const requestKey = key + (withEmail ? '&withEmail=1' : '');
   const [count, setCount] = useState<{ key: string; total: number } | null>(
@@ -61,21 +63,24 @@ export function FiltersSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        closeLabel={ui('დახურვა')}
         side="bottom"
         className={`mobile-filters-sheet ${className}`}
       >
         <SheetHeader>
-          <SheetTitle>ფილტრები</SheetTitle>
+          <SheetTitle>{ui('ფილტრები')}</SheetTitle>
           <button
             type="button"
             className="ds-btn ds-btn--ghost ds-btn--sm mobile-filters-clear"
             disabled={!key}
             onClick={() => onChange(readSearch(new URLSearchParams()))}
           >
-            გასუფთავება
+            {ui('გასუფთავება')}
           </button>
           <SheetDescription>
-            მონიშნე პირობები. სია განახლდება „შედეგების ჩვენებაზე“ დაჭერისას.
+            {ui(
+              'მონიშნე პირობები. სია განახლდება „შედეგების ჩვენებაზე“ დაჭერისას.',
+            )}
           </SheetDescription>
         </SheetHeader>
         <div className="filters">{children}</div>
@@ -91,10 +96,12 @@ export function FiltersSheet({
             onClick={onApply}
           >
             {total === null
-              ? 'შედეგების ჩვენება'
+              ? ui('შედეგების ჩვენება')
               : total === 0
-                ? 'ვაკანსია ვერ მოიძებნა'
-                : `ნახე ${new Intl.NumberFormat('ka-GE').format(total)} ვაკანსია`}
+                ? ui('ვაკანსია ვერ მოიძებნა')
+                : ui('ნახე {0} ვაკანსია', [
+                    new Intl.NumberFormat('ka-GE').format(total),
+                  ])}
           </button>
         </div>
       </SheetContent>

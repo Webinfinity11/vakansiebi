@@ -1,5 +1,4 @@
-import { db } from './db';
-import { searchPlan } from './search-plan';
+import { publicRead, searchPlan } from './search-plan';
 import { publicJobs } from './jobs';
 import {
   roleTerms,
@@ -27,7 +26,7 @@ export async function similarVacancies(
   const sameCity = `lower(COALESCE(j.p_city,''))=lower(${city}) AND ${city} NOT IN ('','სხვა','საქართველო')`;
   const sameCategory = `j.p_category=${category} AND ${category} NOT IN ('','სხვა')`;
   const rows = (
-    await db().query(
+    await publicRead(
       `${plan.cte} SELECT j.id,record.published FROM searchable j JOIN jobs record ON record.id=j.id WHERE ${plan.where} AND j.id<>${id}::uuid AND (${overlap}>0 OR (${sameCity} AND ${sameCategory})) ORDER BY ${overlap} DESC,(${sameCity}) DESC,j.published_at DESC,j.id LIMIT 40`,
       args,
     )
@@ -46,6 +45,8 @@ export async function similarVacancies(
       ids: ranked.map((item) => item.id).join(','),
       summary: '1',
     }),
+    false,
+    { skipSavedAvailability: true },
   );
   return ranked.flatMap((item) => {
     const candidate = result.jobs.find((j) => j.id === item.id);

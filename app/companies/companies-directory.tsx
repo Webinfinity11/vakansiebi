@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import Link from 'next/link';
 import {
   useDeferredValue,
@@ -32,6 +33,7 @@ export function CompaniesDirectory({
   /** The page heading, placed above the count line this list keeps true. */
   children: ReactNode;
 }) {
+  const { ui } = useUi();
   const [query, setQuery] = useState('');
   const deferred = useDeferredValue(query);
   const names = useMemo(
@@ -69,19 +71,22 @@ export function CompaniesDirectory({
       <header className="companies-head">
         {children}
         <p>
-          {companies.length} კომპანია · {vacancies} აქტიური ვაკანსია
+          {companies.length}
+          {ui(' კომპანია · ')}
+          {vacancies}
+          {ui(' აქტიური ვაკანსია')}
         </p>
       </header>
       <div className="companies-tools">
         <label className="companies-search">
           <Search size={16} aria-hidden="true" />
-          <span className="sr-only">კომპანიის ძებნა სახელით</span>
+          <span className="sr-only">{ui('კომპანიის ძებნა სახელით')}</span>
           <input
             className="ds-input"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="მოძებნე კომპანია"
+            placeholder={ui('მოძებნე კომპანია')}
             autoComplete="off"
             enterKeyHint="search"
           />
@@ -89,7 +94,7 @@ export function CompaniesDirectory({
             <button
               type="button"
               className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm companies-search-clear"
-              aria-label="ძებნის გასუფთავება"
+              aria-label={ui('ძებნის გასუფთავება')}
               onClick={() => setQuery('')}
             >
               <X size={16} aria-hidden="true" />
@@ -97,7 +102,7 @@ export function CompaniesDirectory({
           )}
         </label>
         <p className="companies-found" aria-live="polite">
-          {needle ? `ნაპოვნია ${shown.length}` : ''}
+          {needle ? ui('ნაპოვნია {0}', [shown.length]) : ''}
         </p>
       </div>
       <ul ref={grid} className="companies-grid" hidden={!shown.length}>
@@ -122,7 +127,8 @@ export function CompaniesDirectory({
                   {companyVacancyTitle(company.name)}
                 </span>
                 <span className="companies-card-jobs">
-                  {company.jobs} აქტიური ვაკანსია
+                  {company.jobs}
+                  {ui(' აქტიური ვაკანსია')}
                 </span>
                 {company.cities.length > 0 && (
                   <span className="companies-card-cities">
@@ -137,16 +143,21 @@ export function CompaniesDirectory({
       </ul>
       {!shown.length && needle && (
         <div className="companies-empty companies-empty--filter ds-appear">
-          <h2>„{query.trim()}“ ვერ მოიძებნა</h2>
+          <h2>
+            „{query.trim()}
+            {ui('“ ვერ მოიძებნა')}
+          </h2>
           <p>
-            სიაში მხოლოდ ის კომპანიებია, რომლებსაც ახლა აქტიური ვაკანსია აქვთ.
+            {ui(
+              'სიაში მხოლოდ ის კომპანიებია, რომლებსაც ახლა აქტიური ვაკანსია აქვთ.',
+            )}
           </p>
           <button
             type="button"
             className="ds-btn ds-btn--secondary"
             onClick={() => setQuery('')}
           >
-            ყველა კომპანიის ჩვენება
+            {ui('ყველა კომპანიის ჩვენება')}
           </button>
         </div>
       )}

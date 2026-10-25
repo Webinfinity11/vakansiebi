@@ -41,3 +41,26 @@ void test('a code the admin does not know yet is shown by name in a last group',
     { code: 'brand_new', label: 'brand_new', count: 4 },
   ]);
 });
+
+void test('classified load failures and legacy failures are counted once in the same error group', () => {
+  const groups = groupActions(
+    [
+      { value: 'results_error', count: 3 },
+      { value: 'results_timeout', count: 5 },
+      { value: 'more_network', count: 2 },
+      { value: 'similar_limited', count: 1 },
+    ],
+    String,
+  );
+  assert.equal(groups.length, actionGroups.length);
+  const errors = groups.find((g) => g.title === 'შეცდომები')!;
+  assert.equal(errors.total, 11);
+  assert.equal(
+    errors.rows.find((r) => r.code === 'results_timeout')?.label,
+    'ძებნა · დრო ამოიწურა',
+  );
+  assert.equal(
+    groups.reduce((sum, g) => sum + g.total, 0),
+    11,
+  );
+});

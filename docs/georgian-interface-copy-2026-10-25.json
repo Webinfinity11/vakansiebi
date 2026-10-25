@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-25",
+  "reason": "User rejected an unnatural blog headline and asked that Georgian terminology be based on established usage.",
+  "reviewedPrimarySources": [
+    {
+      "url": "https://www.blog.hr.ge/",
+      "observedLabels": ["ბლოგი", "წაკითხვა", "ვაკანსიების ნახვა", "სტატიები"],
+      "use": "Evidence for short, established navigation and reading actions; marketing slogans and article content were not copied."
+    },
+    {
+      "url": "https://hrhub.ge/",
+      "observedLabels": ["კარიერა/რჩევები", "HR-ების ბლოგი", "სიახლეები"],
+      "use": "Evidence for naming the content type and subject directly."
+    },
+    {
+      "url": "https://www.jobs.ge/ge/faq/",
+      "observedTerms": ["რეზიუმე", "ვაკანსია"],
+      "use": "Established document terminology; header and article actions now match the existing footer's რეზიუმეს შექმნა."
+    }
+  ],
+  "changes": {
+    "blogHeading": "ბლოგი",
+    "intro": "სტატიები სამსახურის ძიების, ანაზღაურებისა და სამუშაო გრაფიკის შესახებ.",
+    "articleAction": "წაკითხვა",
+    "vacanciesAction": "ვაკანსიების ნახვა",
+    "contentsLabel": "სარჩევი",
+    "articleCopy": "Reworded descriptions, the part-time takeaway and several section headings to name their subject directly: comparing pay, calculating monthly income, matching lecture schedules and agreeing on shifts.",
+    "removed": "Vague marketing headlines, redundant JOBX/blog eyebrow and next-step slogan. Rejected strings removed from the UI translation dictionary.",
+    "rules": "Natural Georgian wording and typography preferences recorded in AGENTS.md."
+  },
+  "scope": "Blog interface, descriptions and section headings, metadata and shared header/menu terminology. Source vacancy text and researched article facts are unchanged. This is a wording review, not a linguistic standard or search-ranking claim."
+}

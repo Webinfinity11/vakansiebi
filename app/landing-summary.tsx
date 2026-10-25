@@ -12,6 +12,8 @@ import {
 import Link from 'next/link';
 import { landingCopy, landingName, type Landing } from '@/lib/seo-landing';
 import { factsText, type LandingFacts } from '@/lib/landing-facts';
+import { useUi } from './ui-language';
+import { englishLandingHeading } from '@/lib/ui-landings';
 
 type Seed = { path: string; facts: Promise<LandingFacts | null> };
 const SeedContext = createContext<Seed | null>(null);
@@ -35,6 +37,7 @@ export function LandingSummary({
   landing: Landing;
   total?: number;
 }) {
+  const { locale, ui } = useUi();
   const seed = useContext(SeedContext);
   /* One paragraph, the size the sentence alone had: what the list is, then the
      figures only this list has. The figures are what make the page its own. */
@@ -42,18 +45,43 @@ export function LandingSummary({
      page has. Until they arrive, the sentence stands alone. */
   return (
     <p className="landing-copy">
-      {landingCopy(landing)}
+      {locale === 'en'
+        ? `${englishLandingHeading(landing)}. Compare pay, schedules and requirements in the original listings.${landing.trait === 'daily' ? ' A daily pay rate does not necessarily mean daily payment; check the payment schedule with the employer.' : ''}`
+        : landingCopy(landing)}
       <Suspense fallback={null}>
         {seed?.path === landing.path ? (
           <Seeded
             facts={seed.facts}
             total={total}
-            name={landingName(landing)}
+            name={
+              locale === 'en'
+                ? englishLandingHeading(landing)
+                : landingName(landing)
+            }
           />
         ) : (
           <Fetched key={landing.path} landing={landing} total={total} />
         )}
       </Suspense>
+      {landing.path === '/?salaryPeriod=day' && (
+        <>
+          {' '}
+          <Link
+            href="/blog/dghiuri-anazghaureba-ra-gadaamotsmo"
+            prefetch={false}
+          >
+            {ui('როგორ შეადარო დღიური ანაზღაურება')}
+          </Link>
+        </>
+      )}
+      {landing.path === '/?employment=part-time' && (
+        <>
+          {' '}
+          <Link href="/blog/nakhevari-ganakveti-da-stsavla" prefetch={false}>
+            {ui('როგორ შეუთავსო სამსახური სწავლას')}
+          </Link>
+        </>
+      )}
     </p>
   );
 }
@@ -71,6 +99,7 @@ function Seeded({
 }
 
 function Fetched({ landing, total }: { landing: Landing; total?: number }) {
+  const { locale } = useUi();
   const [facts, setFacts] = useState<LandingFacts | null>(null);
   const path = landing.path;
   useEffect(() => {
@@ -81,7 +110,13 @@ function Fetched({ landing, total }: { landing: Landing; total?: number }) {
     return () => controller.abort();
   }, [path]);
   return facts ? (
-    <Facts facts={facts} total={total} name={landingName(landing)} />
+    <Facts
+      facts={facts}
+      total={total}
+      name={
+        locale === 'en' ? englishLandingHeading(landing) : landingName(landing)
+      }
+    />
   ) : null;
 }
 
@@ -94,7 +129,8 @@ function Facts({
   total?: number;
   name: string;
 }) {
-  const text = factsText(facts, total, name);
+  const { locale } = useUi();
+  const text = factsText(facts, total, name, locale);
   const employers = total > 0 ? facts.employers.slice(0, 3) : [];
   return (
     <>
@@ -106,7 +142,12 @@ function Facts({
           {` ${text.employers} `}
           {employers.map((employer, index) => (
             <span key={employer.slug}>
-              {index > 0 && (index === employers.length - 1 ? ' და ' : ', ')}
+              {index > 0 &&
+                (index === employers.length - 1
+                  ? locale === 'en'
+                    ? ' and '
+                    : ' და '
+                  : ', ')}
               <Link
                 href={`/companies/${encodeURIComponent(employer.slug)}`}
                 prefetch={false}

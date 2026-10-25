@@ -59,10 +59,12 @@ function SheetContent({
   children,
   side = 'right',
   showCloseButton = true,
+  closeLabel = 'დახურვა',
   ...props
 }: SheetPrimitive.Popup.Props & {
   side?: 'top' | 'right' | 'bottom' | 'left';
   showCloseButton?: boolean;
+  closeLabel?: string;
 }) {
   return (
     <SheetPortal>
@@ -93,7 +95,7 @@ function SheetContent({
             }
           >
             <XIcon />
-            <span className="sr-only">დახურვა</span>
+            <span className="sr-only">{closeLabel}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import { VacancyStatus } from './vacancy-status';
 import { vacancyCardTitle, vacancyCardSalary } from '@/lib/vacancy-card-labels';
 import Link from 'next/link';
@@ -9,6 +10,12 @@ import { useVacancyActivity } from './use-vacancy-activity';
 import { markListHop, vacancyPath } from '@/lib/vacancy-navigation';
 import type { SimilarVacancy } from '@/lib/similar-vacancies';
 import { trackAction } from '@/lib/analytics-client';
+import {
+  fetchPublicJson,
+  isSimilarJobs,
+  loadFailureAction,
+  loadFailureMessage,
+} from '@/lib/public-load';
 export function SimilarVacancies({
   id,
   returnTo,
@@ -16,10 +23,12 @@ export function SimilarVacancies({
   id: string;
   returnTo: string;
 }) {
+  const { ui } = useUi();
   const [result, setResult] = useState<{
     key: string;
+    attempt: number;
     jobs: SimilarVacancy[];
-    error: boolean;
+    error: string;
   } | null>(null);
   const [retry, setRetry] = useState(0);
   const activity = useVacancyActivity();
@@ -30,35 +39,38 @@ export function SimilarVacancies({
     const controller = new AbortController();
     const query = new URLSearchParams();
     if (excluded) query.set('exclude', excluded);
-    void fetch(`/api/jobs/${id}/similar?${query}`, {
+    void fetchPublicJson(`/api/jobs/${id}/similar?${query}`, {
       signal: controller.signal,
+      valid: isSimilarJobs,
     })
-      .then(async (response) => {
-        if (!response.ok) throw Error('unavailable');
-        return response.json();
-      })
       .then((data) => {
         if (!controller.signal.aborted)
-          setResult({ key, jobs: data.jobs, error: false });
+          setResult({ key, attempt: retry, jobs: data.jobs, error: '' });
       })
-      .catch(() => {
+      .catch((error) => {
         if (controller.signal.aborted) return;
-        setResult({ key, jobs: [], error: true });
-        trackAction('similar_error');
+        setResult({
+          key,
+          attempt: retry,
+          jobs: [],
+          error: loadFailureMessage(error),
+        });
+        trackAction(loadFailureAction('similar', error));
       });
     return () => controller.abort();
   }, [activity.ready, id, excluded, key, retry]);
-  const current = result?.key === key ? result : null;
+  const current =
+    result?.key === key && result.attempt === retry ? result : null;
   return (
     <section
       className="similar-vacancies"
       aria-labelledby="similar-title"
       aria-busy={!current}
     >
-      <h2 id="similar-title">მსგავსი ვაკანსიები</h2>
+      <h2 id="similar-title">{ui('მსგავსი ვაკანსიები')}</h2>
       {!current ? (
         <>
-          <p className="sr-only">მსგავსი ვაკანსიები იტვირთება</p>
+          <p className="sr-only">{ui('მსგავსი ვაკანსიები იტვირთება')}</p>
           <div className="similar-grid" aria-hidden="true">
             {[0, 1, 2].map((index) => (
               <div className="similar-placeholder" key={index}>
@@ -72,17 +84,21 @@ export function SimilarVacancies({
           </div>
         </>
       ) : current.error ? (
-        <button
-          className="secondary-button"
-          onClick={() => setRetry((v) => v + 1)}
-        >
-          მსგავსი ვაკანსიების ჩატვირთვა
-        </button>
+        <>
+          <output className="filter-help">{current.error}</output>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setRetry((v) => v + 1)}
+          >
+            {ui('ხელახლა ცდა')}
+          </button>
+        </>
       ) : !current.jobs.length ? (
         <p className="filter-help">
-          ამ ეტაპზე მსგავსი აქტიური ვაკანსია ვერ მოიძებნა.{' '}
+          {ui('ამ ეტაპზე მსგავსი აქტიური ვაკანსია ვერ მოიძებნა.')}{' '}
           <Link href={returnTo} prefetch={false}>
-            ძებნაზე დაბრუნება
+            {ui('ძებნაზე დაბრუნება')}
           </Link>
         </p>
       ) : (
@@ -112,7 +128,7 @@ export function SimilarVacancies({
                 </span>
               )}
               <p>{reasons.join(' · ')}</p>
-              <span className="similar-open">ვაკანსიის ნახვა</span>
+              <span className="similar-open">{ui('ვაკანსიის ნახვა')}</span>
             </Link>
           ))}
         </div>

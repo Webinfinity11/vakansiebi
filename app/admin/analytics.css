@@ -2,6 +2,83 @@
    ranked cards, then the diagnostics folded away. Every colour and size is a token. */
 
 /* The headline card: three counts as tabs across its top, the chart below. */
+.aa-navigation {
+  border-bottom: 1px solid var(--ds-line);
+  padding-bottom: var(--ds-space-3);
+}
+.aa-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ds-space-3);
+  margin: 0;
+}
+.aa-metrics > div {
+  padding: var(--ds-space-4);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  min-width: 0;
+}
+.aa-metrics dt {
+  color: var(--ds-ink-2);
+  font-size: var(--ds-text-sm);
+}
+.aa-metrics dd {
+  margin: var(--ds-space-2) 0 0;
+  font-size: var(--ds-text-num);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-ink);
+}
+.aa-metrics dd span {
+  display: block;
+  margin-top: var(--ds-space-1);
+  font-size: var(--ds-text-xs);
+  font-weight: 400;
+  color: var(--ds-ink-3);
+}
+.aa-details {
+  padding-top: var(--ds-space-2);
+  border-top: 1px solid var(--ds-line-soft);
+}
+.aa-details > summary {
+  cursor: pointer;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-ink-2);
+}
+.aa-details[open] > summary {
+  margin-bottom: var(--ds-space-3);
+}
+.aa-comparison-dates {
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  line-height: 1.7;
+}
+.aa-comparison-dates p {
+  margin: 0;
+}
+.aa-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.aa-comparison-table th,
+.aa-comparison-table td {
+  padding: var(--ds-space-2) var(--ds-space-1);
+  border-bottom: 1px solid var(--ds-line-soft);
+  text-align: end;
+}
+.aa-comparison-table th:first-child {
+  text-align: start;
+  font-weight: 500;
+}
+.aa-comparison-table thead {
+  color: var(--ds-ink-3);
+}
+.aa-comparison-table tbody td:last-child {
+  font-weight: 600;
+}
 .aa-chart {
   border: 1px solid var(--ds-line);
   border-radius: var(--ds-radius-lg);
@@ -101,6 +178,9 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ds-space-4);
+}
+.aa-grid--overview > .aa-cell:first-child {
+  grid-row: span 2;
 }
 .aa-cell {
   display: flex;
@@ -208,7 +288,9 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding-block: var(--ds-space-1);
   color: var(--ds-ink);
 }
 .aa-row-label a {
@@ -300,6 +382,22 @@
 }
 
 @media (max-width: 760px) {
+  .aa-comparison-table {
+    font-size: var(--ds-text-xs);
+  }
+  .aa-grid--overview > .aa-cell:first-child {
+    grid-row: auto;
+  }
+  .aa-metrics {
+    grid-template-columns: 1fr;
+    gap: var(--ds-space-2);
+  }
+  .aa-metrics > div {
+    padding: var(--ds-space-3);
+  }
+  .aa-metrics dd {
+    font-size: var(--ds-text-xl);
+  }
   .aa-grid,
   .aa-groups {
     grid-template-columns: 1fr;

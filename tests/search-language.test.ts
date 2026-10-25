@@ -9,6 +9,7 @@ import {
   syncopeVariant,
 } from '../lib/search-language';
 import { searchTerms } from '../lib/job-intelligence';
+import { roleVocabulary } from '../lib/search-language';
 import { readSearch, searchParams } from '../lib/search-state';
 import { filtersSchema } from '../lib/personal-space';
 void test('reviewed role equivalents preserve all query terms and technical punctuation', () => {
@@ -29,6 +30,30 @@ void test('reviewed role equivalents preserve all query terms and technical punc
     'an alternative a shorter Georgian stem already covers is not searched twice',
   );
 });
+void test('dishwashing is one reviewed occupation without broadening it to every washing job', () => {
+  for (const query of [
+    'ჭურჭლის მრეცხავი',
+    'ჭურჭლის მრეცხავის',
+    'ჭურჭლის   მრეცხავი',
+    'dishwasher',
+  ]) {
+    const groups = searchGroups(query);
+    assert.equal(groups.length, 1);
+    assert.ok(groups[0].includes('ჭურჭლის მრეცხავ'));
+    assert.ok(groups[0].includes('dishwasher'));
+    assert.ok(!groups[0].includes('მრეცხავ'));
+  }
+  assert.equal(
+    roleVocabulary.find((role) => role.label === 'ჭურჭლის მრეცხავი')?.genitive,
+    'ჭურჭლის მრეცხავის',
+  );
+  assert.equal(
+    searchGroups('ჭურჭლის მრეცხავი ღამის ცვლა').length,
+    4,
+    'extra typed words are still required',
+  );
+});
+
 void test('a dropped vowel is the same word, and only where Georgian drops one', () => {
   assert.equal(syncopeVariant('ბუღალტერ'), 'ბუღალტრ');
   assert.equal(syncopeVariant('ბუღალტრ'), 'ბუღალტერ');

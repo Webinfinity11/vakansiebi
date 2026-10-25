@@ -20,11 +20,13 @@ import { tbilisiDistricts } from '../street-address';
 import { legalFormSql } from '../employer-identity';
 import { db } from './db';
 import { ApiError } from './auth';
+import { createHash } from 'node:crypto';
 
 // Bound server work without changing pooled sessions used by the importer/admin.
 // SET LOCAL is restored on both success and cancellation; a broken connection
 // is discarded if rollback cannot restore it.
 export async function publicRead(statement: string, args: unknown[] = []) {
+  const started = performance.now();
   const client = await db().connect();
   let discard: Error | undefined;
   try {
@@ -50,8 +52,19 @@ export async function publicRead(statement: string, args: unknown[] = []) {
       typeof error === 'object' &&
       'code' in error &&
       error.code === '57014'
-    )
-      throw new ApiError('მოთხოვნა დაგვიანდა. სცადე ხელახლა.', 503);
+    ) {
+      console.error(
+        JSON.stringify({
+          event: 'public_query_timeout',
+          query: createHash('sha256')
+            .update(statement)
+            .digest('hex')
+            .slice(0, 12),
+          durationMs: Math.round(performance.now() - started),
+        }),
+      );
+      throw new ApiError('მოთხოვნა დაგვიანდა. სცადე ხელახლა.', 503, 'timeout');
+    }
     throw error;
   } finally {
     client.release(discard);
@@ -548,21 +561,21 @@ export function searchPlan(
   const visible = base;
   const current = `(COALESCE(${p('deadline')},'')='' OR ${p('deadline')}>=${today}) AND NOT (lower(${p('title')}) ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]]|(?:სამსახურის[[:space:]]+მაძიებელი|ვეძებ[[:space:]]+სამსახურს)(?:[[:space:]!.,]|$))')`;
   if (params.has('ids'))
-    base += ` AND j.id::text=ANY(${bind(
+    base += ` AND j.id=ANY(${bind(
       (params.get('ids') || '')
         .split(',')
         .filter((id) => z.uuid().safeParse(id).success)
         .slice(0, 100),
-    )}::text[])`;
+    )}::uuid[])`;
   if (options.jobIds)
     base += ` AND j.id=ANY(${bind([...options.jobIds])}::uuid[])`;
   if (params.has('exclude'))
-    base += ` AND NOT (j.id::text=ANY(${bind(
+    base += ` AND NOT (j.id=ANY(${bind(
       (params.get('exclude') || '')
         .split(',')
         .filter((id) => z.uuid().safeParse(id).success)
         .slice(0, 100),
-    )}::text[]))`;
+    )}::uuid[]))`;
   // Quick choice only shows vacancies a CV can be mailed to; the deck still
   // reads the address itself and skips one that is not an application inbox.
   if (params.get('withEmail') === '1')

@@ -16,7 +16,10 @@ void test(
     await c.connect();
     try {
       await c.query('BEGIN');
-      await c.query(`CREATE TEMP TABLE jobs (id text PRIMARY KEY,status text,automation_paused boolean,automation_managed boolean,draft jsonb,published jsonb);
+      await c.query(`CREATE TEMP TABLE jobs (id text PRIMARY KEY,status text,automation_paused boolean,automation_managed boolean,draft jsonb,published jsonb,
+        search_company text GENERATED ALWAYS AS (published->>'company') STORED,
+        search_city text GENERATED ALWAYS AS (published->>'city') STORED,
+        search_deadline text GENERATED ALWAYS AS (published->>'deadline') STORED);
         CREATE TEMP TABLE sources(id text,retired boolean);
         CREATE TEMP TABLE source_items(id text,job_id text,source_id text,url text,listing_hints jsonb,failures int,raw jsonb,quality_candidate jsonb);
         INSERT INTO sources VALUES ('hr',false),('jobs',false);`);
@@ -33,12 +36,10 @@ void test(
         ['b', edited, original],
         ['c', original, null],
       ] as const) {
-        await c.query('INSERT INTO jobs VALUES($1,$2,false,true,$3,$4)', [
-          id,
-          published ? 'published' : 'pending',
-          draft,
-          published,
-        ]);
+        await c.query(
+          'INSERT INTO jobs(id,status,automation_paused,automation_managed,draft,published) VALUES($1,$2,false,true,$3,$4)',
+          [id, published ? 'published' : 'pending', draft, published],
+        );
       }
       const rows = (
         await c.query(
@@ -113,6 +114,46 @@ void test(
           .flatMap((r) => r.ids)
           .sort((a: string, b: string) => a.localeCompare(b)),
         ['a', 'b'],
+      );
+      await c.query('UPDATE jobs SET published=$1 WHERE id=$2', [
+        { ...original, deadline: '2000-01-01' },
+        'a',
+      ]);
+      await c.query('UPDATE jobs SET published=$1 WHERE id=$2', [
+        {
+          ...original,
+          company: ' Revised Studio ',
+          city: ' ბათუმი ',
+          logoUrl: linked.logoUrl,
+          deadline: null,
+        },
+        'b',
+      ]);
+      employers = (await c.query(employerRowsSql)).rows;
+      assert.deepEqual(
+        employers,
+        [
+          {
+            name: 'Revised Studio',
+            logo: linked.logoUrl,
+            city: 'ბათუმი',
+            sources: ['hr', 'jobs'],
+            ids: ['b'],
+          },
+        ],
+        'published edits update the directory immediately and an expired job is excluded',
+      );
+      await c.query("UPDATE sources SET retired=true WHERE id='jobs'");
+      assert.deepEqual((await c.query(employerRowsSql)).rows[0].sources, [
+        'hr',
+      ]);
+      await c.query(
+        "UPDATE jobs SET published=published || '{\"company\":null}'::jsonb WHERE id='b'",
+      );
+      assert.deepEqual(
+        (await c.query(employerRowsSql)).rows,
+        [],
+        'a removed company leaves no stale directory entry',
       );
     } finally {
       await c.query('ROLLBACK');

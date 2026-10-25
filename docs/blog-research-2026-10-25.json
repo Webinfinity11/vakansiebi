@@ -1,0 +1,64 @@
+{
+  "checkedAt": "2026-10-25",
+  "scope": "First sourced Georgian blog article; research of search intent and competing result pages, not a complete ranking or search-volume audit.",
+  "firstArticle": "/blog/dghiuri-anazghaureba-ra-gadaamotsmo",
+  "decision": "Support the existing daily-pay listing with an informational guide about rates, hours and payment dates. Keep the listing as the destination for people seeking current jobs.",
+  "siteEvidence": {
+    "file": "reports/seo-keywords-2026-09-29/gsc-georgia-queries.json",
+    "capturedAt": "2026-09-29",
+    "reportedDataWindow": "2026-09-16 through 2026-09-27",
+    "exampleQuery": "სამუშაო დღიური ანაზღაურებით",
+    "clicks": 2,
+    "impressions": 10,
+    "limitation": "Historical, small sample. These are JOBX impressions and clicks, not total search demand. No fresh GSC data or keyword-volume estimates were obtained during this research."
+  },
+  "queriesReviewed": [
+    "სამუშაო დღიური ანაზღაურებით რჩევები დღიურად ხელფასი",
+    "სამუშაო დღიური ანაზღაურებით თბილისი -site:jobx.ge -site:facebook.com -site:instagram.com",
+    "დღიური ანაზღაურება ბლოგი",
+    "როგორ დავწეროთ CV გამოცდილების გარეშე"
+  ],
+  "competingPages": [
+    {
+      "url": "https://jobs.ss.ge/ka/details/dghiuri-musha-88239079",
+      "observation": "Archived listing distinguishes 70 GEL per day from twice-monthly bank payments. Used as a cited example, never as a currently available job or typical wage."
+    },
+    {
+      "url": "https://mushebi.ge/ka/vacancies",
+      "observation": "Recruitment page targets laborer and driver roles with daily rates and direct contact. It serves vacancy/application intent. No inference about ranking position or general market wages."
+    },
+    {
+      "url": "https://geoworks.ge/job/shawarma-cook--?lang=ka",
+      "observation": "Expired vacancy displays a monthly label in the header but a daily rate in the body. This illustrates why readers should check the full conditions. Not used to generalize about that site's reliability or copied into the article."
+    }
+  ],
+  "primarySources": [
+    {
+      "url": "https://matsne.gov.ge/ka/document/view/1155567",
+      "sections": [14, 27, 41],
+      "use": "Essential employment terms, overtime agreement and payment frequency; latest consolidated HTML checked."
+    },
+    {
+      "url": "https://jobs.ss.ge/ka/details/dghiuri-musha-88239079",
+      "use": "Published employer conditions. Displayed period July 6–August 5; article explicitly labels the example as old. No contact information reproduced."
+    },
+    {
+      "url": "https://developers.google.com/search/docs/fundamentals/creating-helpful-content",
+      "use": "Editorial approach only: original useful comparison and source attribution. Not a source for employment or legal claims."
+    }
+  ],
+  "implementation": {
+    "primaryIntent": "Understand and compare daily pay before accepting work",
+    "listingIntent": "Find currently available jobs at /?salaryPeriod=day",
+    "originalValue": "Explicitly illustrative hourly comparison, monthly-day arithmetic and five practical employer questions",
+    "sources": "Links beside factual claims and full source list with a manually maintained review date",
+    "seo": "Unique title, description, self-canonical, visible headings, BlogPosting and breadcrumbs, static HTML, sitemap, contextual links in both directions",
+    "publication": "One article in the local public catalogue. Three unlaunched generic drafts removed; future articles added only after research.",
+    "measurementAfterRelease": "Compare non-brand blog and daily-pay landing impressions/clicks in equivalent GSC periods. Assess queries and landing-page overlap. No ranking or traffic gain is promised."
+  },
+  "futureResearchCandidates": [
+    "Part-time jobs: hours and schedule compatibility, starting with the small existing GSC signal",
+    "First CV without work experience: validate demand and consult primary career guidance",
+    "Profession-specific guides across sectors, selected from actual queries and listings"
+  ]
+}

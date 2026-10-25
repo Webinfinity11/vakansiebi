@@ -190,10 +190,16 @@ try {
           error instanceof Error ? error.message : error,
         ),
       );
-    if (purged?.applied && purged.expired + purged.removed > 0)
-      console.log(
-        `Purged ended vacancies: ${purged.expired} expired, ${purged.removed} removed`,
-      );
+    if (
+      purged?.applied &&
+      purged.expired +
+        purged.removed +
+        purged.unverified +
+        purged.editor +
+        purged.archived >
+        0
+    )
+      console.log(JSON.stringify({ cleanup: purged }));
     if (once || arg) break;
     await delay(5000);
   } while (!stopped);

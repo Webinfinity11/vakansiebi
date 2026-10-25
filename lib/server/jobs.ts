@@ -35,7 +35,11 @@ import {
   type FilterKey,
   type SearchMeta,
 } from './search-plan';
-import { latinGeorgianSearch, suggestSearch } from '../search-language';
+import {
+  latinGeorgianSearch,
+  roleVocabulary,
+  suggestSearch,
+} from '../search-language';
 import { titleLexicon } from './title-lexicon';
 import { logoCompanyKey } from '../company-logo-identity';
 import { resolveCompanyLogos } from './company-logos';
@@ -48,16 +52,30 @@ const publicResponses =
 export function clearPublicJobsCache() {
   publicResponses.clear();
 }
+type PublicJobsOptions = {
+  jobIds?: readonly string[];
+  /** Internal detail/recommendation reads do not need the saved-list status query. */
+  skipSavedAvailability?: boolean;
+};
 export async function publicJobs(
   params: URLSearchParams,
   preview = false,
-  options: { jobIds?: readonly string[] } = {},
+  options: PublicJobsOptions = {},
 ) {
   const answer = await publicResponses.get(
     publicJobsCacheKey(params, preview, options.jobIds),
     () => loadPublicJobs(params, preview, options),
   );
-  if (answer.total > 0) return answer;
+  // A named profession must keep the same title matches as its landing census.
+  // A zero-result role page must not quietly become jobs that mention the role
+  // only in their descriptions. Explicit deep searches are still available.
+  if (
+    answer.total > 0 ||
+    roleVocabulary.some(
+      ({ label }) => label === readSearch(params).query.trim(),
+    )
+  )
+    return answer;
   const again = (changed: URLSearchParams) =>
     publicResponses.get(
       publicJobsCacheKey(changed, preview, options.jobIds),
@@ -105,7 +123,7 @@ export async function publicJobs(
 async function loadPublicJobs(
   params: URLSearchParams,
   preview = false,
-  options: { jobIds?: readonly string[] } = {},
+  options: PublicJobsOptions = {},
 ) {
   const page = Math.max(
     1,
@@ -370,7 +388,7 @@ async function loadPublicJobs(
     preview,
     companyLinksPending: !preview && summary && !employers,
     search,
-    ...(params.has('ids') && !preview
+    ...(params.has('ids') && !preview && !options.skipSavedAvailability
       ? await savedAvailability(params.get('ids') || '')
       : {}),
     total: count,

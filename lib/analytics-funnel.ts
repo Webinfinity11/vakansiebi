@@ -55,10 +55,10 @@ export function buildFunnel(
 export const postLadder = [
   ['opened', 'ფორმა გაიხსნა'],
   ['started', 'შევსება დაიწყო'],
-  ['details', 'დეტალებამდე მივიდა'],
-  ['plans', 'განთავსების არჩევამდე'],
+  ['details', 'დამატებითი დეტალების შევსება'],
+  ['plans', 'განთავსების არჩევა'],
   ['submitted', 'გაგზავნას დააჭირა'],
-  ['done', 'გაიგზავნა'],
+  ['done', 'გაგზავნის დასტური გამოჩნდა'],
 ] as const;
 
 export const postLabels: Record<string, string> =
@@ -104,7 +104,7 @@ export const resumeLadder = [
   ['section_skills', 'უნარებამდე მივიდა'],
   ['section_languages', 'ენებამდე მივიდა'],
   ['printed', 'ბეჭდვის ღილაკზე დაჭერა'],
-  ['stored', 'JOBX-ზე წარმატებული შენახვის მოთხოვნა'],
+  ['stored', 'JOBX-ზე შენახვა'],
 ] as const;
 
 export const resumeLabels: Record<string, string> = {
@@ -136,7 +136,7 @@ export const resumeLabels: Record<string, string> = {
   language_ka: 'ქართული',
   language_en: 'ინგლისური',
   printed: 'ბეჭდვის ღილაკზე დაჭერა',
-  stored: 'JOBX-ზე წარმატებული შენახვის მოთხოვნა',
+  stored: 'JOBX-ზე შენახვა',
   store_failed: 'CV-ის შენახვა ჩავარდა',
   cleared: 'გასუფთავება',
   left_contact: 'პირადი მონაცემები',

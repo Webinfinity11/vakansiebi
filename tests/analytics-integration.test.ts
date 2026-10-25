@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 
 /* Runs only against a separate test database: `RUN_DB_TESTS=1` with DATABASE_URL pointing at it.
    It truncates the analytics tables, which must never happen to real counts. */
@@ -49,8 +50,14 @@ void test(
     assert.equal(day.unit, 'hour');
     assert.equal(
       day.activity.length,
-      25,
-      'rolling 24 hours includes both partial edge hours',
+      Number(
+        new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Asia/Tbilisi',
+          hour: '2-digit',
+          hourCycle: 'h23',
+        }).format(new Date()),
+      ) + 1,
+      'one day includes today from Tbilisi midnight through the current hour',
     );
     assert.equal(
       day.activity.reduce((n, point) => n + point.search, 0),
@@ -66,6 +73,16 @@ void test(
       'the last point is the hour now running in Tbilisi',
     );
     assert.equal((await analyticsSummary(7)).unit, 'day');
+    for (const days of [7, 30, 90]) {
+      const summary = await analyticsSummary(days);
+      assert.equal(
+        summary.activity.length,
+        days,
+        `${days} calendar days include exactly ${days} buckets`,
+      );
+      assert.equal(summary.from.slice(10), 'T00:00');
+      assert.equal(summary.to.slice(0, 10), day.to.slice(0, 10));
+    }
     assert.equal(
       (await analyticsSummary(365)).unit,
       'week',
@@ -89,8 +106,34 @@ void test(
       4,
     );
 
-    // Events in the partially covered starting bucket must not disappear
-    // from the curve while remaining in the total.
+    // Calendar boundaries remain exact before and after daily aggregation.
+    await db().query(`WITH edge AS (
+      SELECT date_trunc('day',now() AT TIME ZONE 'Asia/Tbilisi') AT TIME ZONE 'Asia/Tbilisi' midnight
+    ) INSERT INTO analytics_events(kind,value,created_at)
+    SELECT 'search','edge-' || days || '-' || label,
+      midnight - (days - 1) * interval '1 day' + delta
+    FROM edge CROSS JOIN (VALUES(7),(30),(90)) periods(days)
+    CROSS JOIN (VALUES('before',interval '-1 microsecond'),('start',interval '0 days')) boundaries(label,delta)`);
+    const boundaryCounts = async () => {
+      for (const days of [7, 30, 90]) {
+        const summary = await analyticsSummary(days, 100);
+        assert.ok(
+          summary.searches.some((row) => row.value === `edge-${days}-start`),
+        );
+        assert.ok(
+          !summary.searches.some((row) => row.value === `edge-${days}-before`),
+        );
+        assert.equal(
+          summary.activity.reduce((sum, row) => sum + row.search, 0),
+          summary.totals.search,
+        );
+      }
+    };
+    await boundaryCounts();
+    await rollupAnalytics(db());
+    await boundaryCounts();
+
+    // The chart and the totals use identical ranges for every grain.
     await db().query(`INSERT INTO analytics_events(kind,value,created_at) VALUES
       ('search','boundary',now()-interval '24 hours'+interval '1 minute'),
       ('search','week boundary',now()-interval '7 days'+interval '1 minute')`);
@@ -176,6 +219,45 @@ void test(
         summary.searches.some((r) => r.value === 'calendar-future'),
         false,
       );
+    }
+    const submittedJobs: string[] = [];
+    try {
+      for (const [isTest, delta] of [
+        [false, '0 days'],
+        [true, '0 days'],
+        [false, '1 day'],
+        [false, '-1 day'],
+      ] as const) {
+        const id = randomUUID();
+        await db().query(
+          `INSERT INTO jobs(id,draft,fingerprint) VALUES($1::uuid,'{}',$1::text)`,
+          [id],
+        );
+        submittedJobs.push(id);
+        await db().query(
+          `INSERT INTO job_submissions(request_id,job_id,client_hash,payload_hash,is_test,created_at)
+          VALUES($1,$1,'analytics-test','analytics-test',$2,
+          (date_trunc('day',now() AT TIME ZONE 'Asia/Tbilisi') AT TIME ZONE 'Asia/Tbilisi') + $3::interval)`,
+          [id, isTest, delta],
+        );
+      }
+      assert.equal(
+        (await analyticsSummary('today')).receivedPosts,
+        today.receivedPosts! + 1,
+        'received submissions exclude test records, future records and the adjacent day',
+      );
+      assert.equal(
+        (await analyticsSummary('yesterday')).receivedPosts,
+        yesterday.receivedPosts! + 1,
+      );
+    } finally {
+      await db().query(
+        'DELETE FROM job_submissions WHERE job_id=ANY($1::uuid[])',
+        [submittedJobs],
+      );
+      await db().query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [
+        submittedJobs,
+      ]);
     }
     await assert.rejects(
       db().query(

@@ -16,6 +16,9 @@ import './featured-vacancies.css';
 // Last: the design system settles colours, controls and buttons for every page.
 import './design-system.css';
 import { themeScript } from '@/lib/theme';
+import { UiLanguageProvider } from './ui-language';
+import { InstallAppProvider } from './install-app';
+import './install-app.css';
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -69,7 +72,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body suppressHydrationWarning>
-        {children}
+        <UiLanguageProvider>
+          <InstallAppProvider>{children}</InstallAppProvider>
+        </UiLanguageProvider>
         <Suspense fallback={null}>
           <SiteTracking />
         </Suspense>

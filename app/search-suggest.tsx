@@ -1,6 +1,7 @@
+'use client';
+import { useUi } from '@/app/ui-language';
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- a combobox listbox: the native
    <select>/<option> the rule prefers cannot float under a free-text input. */
-'use client';
 import './search-features.css';
 import {
   useEffect,
@@ -64,6 +65,7 @@ const serverIsPhone = () => false;
    opens on what they searched before and on the roles this catalogue actually
    answers — one tap instead of one guess. */
 function StartPanel({ onPick }: { onPick: (value: string) => void }) {
+  const { ui } = useUi();
   const phone = useSyncExternalStore(subscribePhone, isPhone, serverIsPhone);
   const [recent, setRecent] = useState<string[]>([]);
   const [popular, setPopular] = useState<string[]>([]);
@@ -85,7 +87,7 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
       {recent.length > 0 && (
         <section className="search-start-recent">
           <header>
-            <h2>ბოლოს მოძებნილი</h2>
+            <h2>{ui('ბოლოს მოძებნილი')}</h2>
             <button
               type="button"
               className="ds-btn ds-btn--ghost ds-btn--sm"
@@ -94,7 +96,8 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
                 setRecent([]);
               }}
             >
-              <Trash2 size={14} aria-hidden="true" /> გასუფთავება
+              <Trash2 size={14} aria-hidden="true" />
+              {ui(' გასუფთავება')}
             </button>
           </header>
           <ul>
@@ -111,7 +114,7 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
                 <button
                   type="button"
                   className="search-start-forget"
-                  aria-label={`„${value}“ ისტორიიდან წაშლა`}
+                  aria-label={ui('„{0}“ ისტორიიდან წაშლა', [value])}
                   onClick={() => {
                     forgetRecentSearch(value);
                     setRecent(readRecentSearches());
@@ -126,7 +129,7 @@ function StartPanel({ onPick }: { onPick: (value: string) => void }) {
       )}
       {popular.length > 0 && (
         <section className="search-start-popular">
-          <h2>პოპულარული ძიებები</h2>
+          <h2>{ui('პოპულარული ძიებები')}</h2>
           <div className="search-start-chips">
             {popular.slice(0, phone ? 6 : 18).map((value) => (
               <button
@@ -155,6 +158,7 @@ export function SearchSuggest({
   onPick: (value: string) => void;
   listId: string;
 }) {
+  const { ui } = useUi();
   const [result, setResult] = useState<{
     key: string;
     list: Suggestion[];
@@ -293,7 +297,7 @@ export function SearchSuggest({
   // The native <option> the linter prefers cannot live outside a <select>.
   return (
     <div className="search-suggest">
-      <div role="listbox" id={listId} aria-label="შემოთავაზებები">
+      <div role="listbox" id={listId} aria-label={ui('შემოთავაზებები')}>
         {items.map((s, i) => (
           <button
             key={s.kind + s.value}

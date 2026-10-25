@@ -1,3 +1,4 @@
+import { UiText } from '@/app/ui-language';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -63,12 +64,13 @@ export default async function BusinessPage() {
       tier: 'vip',
       name: 'VIP',
       price: 'უფასო',
-      period: `პირველი ${introductoryDays} დღე`,
+      period: 'პირველი {0} დღე',
+      periodValues: [introductoryDays],
       description: 'პირველი VIP განთავსება, თითო კომპანიისთვის ერთხელ.',
       features: [
         'სტანდარტული განთავსების შესაძლებლობები',
         'სტანდარტულ შედეგებზე წინ გამოჩენა',
-        `${introductoryDays} დღე გააქტიურებიდან`,
+        '{0} დღე გააქტიურებიდან',
       ],
       className: 'business-plan-vip',
     },
@@ -76,17 +78,18 @@ export default async function BusinessPage() {
       tier: 'premium',
       name: 'პრემიუმი',
       price: `${premiumPriceGEL} ₾`,
-      period: `${premiumDays} დღით`,
+      period: '{0} დღით',
+      periodValues: [premiumDays],
       description: 'მეტი ხილვადობა შესაბამისი ძიების შედეგების თავში.',
       features: [
         'სტანდარტული განთავსების შესაძლებლობები',
         'VIP და სტანდარტულ შედეგებზე წინ გამოჩენა',
-        `${premiumDays} დღე გააქტიურებიდან`,
+        '{0} დღე გააქტიურებიდან',
       ],
       className: 'business-plan-premium',
     },
   ];
-  const questions = [
+  const questions: { question: string; answer: string; values?: number[] }[] = [
     {
       question: 'შემიძლია ვაკანსია უფასოდ განვათავსო?',
       answer:
@@ -104,11 +107,15 @@ export default async function BusinessPage() {
     },
     {
       question: 'ვის შეუძლია უფასო VIP-ის გამოყენება?',
-      answer: `პირველი VIP განთავსება ${introductoryDays} დღით უფასოა, თითო კომპანიისთვის ერთხელ. შემდეგ განცხადება ავტომატურად გადადის სტანდარტულ განთავსებაზე და რჩება განაცხადების მიღების ვადის ამოწურვამდე. შეთავაზების გამოყენების შესაძლებლობა განცხადების შემოწმებისას დგინდება.`,
+      answer:
+        'პირველი VIP განთავსება {0} დღით უფასოა, თითო კომპანიისთვის ერთხელ. შემდეგ განცხადება ავტომატურად გადადის სტანდარტულ განთავსებაზე და რჩება განაცხადების მიღების ვადის ამოწურვამდე. შეთავაზების გამოყენების შესაძლებლობა განცხადების შემოწმებისას დგინდება.',
+      values: [introductoryDays],
     },
     {
       question: 'როგორ გადავიხადო პრემიუმის საფასური?',
-      answer: `განაცხადში პრემიუმის არჩევისას მიიღებ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. ფასი ${premiumPriceGEL} ₾-ია ${premiumDays} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.`,
+      answer:
+        'განაცხადში პრემიუმის არჩევისას მიიღებ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.',
+      values: [premiumPriceGEL, premiumDays],
     },
   ];
   return (
@@ -138,18 +145,20 @@ export default async function BusinessPage() {
           </div>
           <div className="business-hero-copy">
             <span className="business-eyebrow">
-              <Building2 size={15} aria-hidden="true" /> JOBX ბიზნესისთვის
+              <Building2 size={15} aria-hidden="true" />
+              <UiText>{' JOBX ბიზნესისთვის'}</UiText>
             </span>
             <h1 id="business-title">
               {/* The spaces keep the words apart in the heading's text, which
                   is what search results and screen readers read. */}
-              კარგ გუნდს <br />
-              კარგი ადამიანები <br />
-              <span>ქმნიან.</span>
+              <UiText>კარგ გუნდს კარგი ადამიანები ქმნიან.</UiText>
             </h1>
             <p>
-              უფასო ვაკანსიის განთავსება JOBX-ზე, რეგისტრაციის გარეშე. გააცანი
-              შენი გუნდი მომავალ თანამშრომელს.
+              <UiText>
+                {
+                  'უფასო ვაკანსიის განთავსება JOBX-ზე, რეგისტრაციის გარეშე. გააცანი შენი გუნდი მომავალ თანამშრომელს.'
+                }
+              </UiText>
             </p>
             <div className="business-actions">
               <Link
@@ -157,28 +166,32 @@ export default async function BusinessPage() {
                 prefetch={false}
                 className="ds-btn ds-btn--primary"
               >
-                ვაკანსიის დამატება <ArrowUpRight size={18} aria-hidden="true" />
+                <UiText>{'ვაკანსიის დამატება '}</UiText>
+                <ArrowUpRight size={18} aria-hidden="true" />
               </Link>
               <a href="#placements" className="ds-btn ds-btn--secondary">
-                განთავსების პირობები{' '}
+                <UiText>{'განთავსების პირობები'}</UiText>{' '}
                 <ChevronDown size={16} aria-hidden="true" />
               </a>
             </div>
             <span className="business-hero-note">
-              <CheckCircle2 size={15} aria-hidden="true" /> დაიწყე უფასო
-              სტანდარტული განთავსებით
+              <CheckCircle2 size={15} aria-hidden="true" />
+              <UiText>{' დაიწყე უფასო სტანდარტული განთავსებით'}</UiText>
             </span>
           </div>
         </section>
         <ul className="business-facts" aria-label="განთავსება JOBX-ზე">
           <li>
-            <Check size={16} aria-hidden="true" /> რეგისტრაციის გარეშე
+            <Check size={16} aria-hidden="true" />
+            <UiText>{' რეგისტრაციის გარეშე'}</UiText>
           </li>
           <li>
-            <Check size={16} aria-hidden="true" /> უფასო სტანდარტული განთავსება
+            <Check size={16} aria-hidden="true" />
+            <UiText>{' უფასო სტანდარტული განთავსება'}</UiText>
           </li>
           <li>
-            <Check size={16} aria-hidden="true" /> კანდიდატთან პირდაპირი კავშირი
+            <Check size={16} aria-hidden="true" />
+            <UiText>{' კანდიდატთან პირდაპირი კავშირი'}</UiText>
           </li>
         </ul>
 
@@ -187,31 +200,48 @@ export default async function BusinessPage() {
           aria-labelledby="business-process-title"
         >
           <div className="business-section-heading">
-            <h2 id="business-process-title">როგორ განათავსო ვაკანსია უფასოდ</h2>
+            <h2 id="business-process-title">
+              <UiText>{'როგორ განათავსო ვაკანსია უფასოდ'}</UiText>
+            </h2>
           </div>
           <ol>
             <li>
               <span>01</span>
-              <h3>შეავსე განცხადება</h3>
+              <h3>
+                <UiText>{'შეავსე განცხადება'}</UiText>
+              </h3>
               <p>
-                მიუთითე პოზიცია, პირობები, კომპანიის მონაცემები და განაცხადის
-                მიღების გზა.
+                <UiText>
+                  {
+                    'მიუთითე პოზიცია, პირობები, კომპანიის მონაცემები და განაცხადის მიღების გზა.'
+                  }
+                </UiText>
               </p>
             </li>
             <li>
               <span>02</span>
-              <h3>გაიარე შემოწმება</h3>
+              <h3>
+                <UiText>{'გაიარე შემოწმება'}</UiText>
+              </h3>
               <p>
-                გაგზავნილ განცხადებას ადმინისტრატორი განიხილავს და
-                გამოქვეყნებამდე ამოწმებს.
+                <UiText>
+                  {
+                    'გაგზავნილ განცხადებას ადმინისტრატორი განიხილავს და გამოქვეყნებამდე ამოწმებს.'
+                  }
+                </UiText>
               </p>
             </li>
             <li>
               <span>03</span>
-              <h3>გამოჩნდი ძიებაში</h3>
+              <h3>
+                <UiText>{'გამოჩნდი ძიებაში'}</UiText>
+              </h3>
               <p>
-                დამტკიცებული ვაკანსია ხელმისაწვდომი გახდება; კანდიდატები
-                მითითებული გზით დაგიკავშირდებიან.
+                <UiText>
+                  {
+                    'დამტკიცებული ვაკანსია ხელმისაწვდომი გახდება; კანდიდატები მითითებული გზით დაგიკავშირდებიან.'
+                  }
+                </UiText>
               </p>
             </li>
           </ol>
@@ -224,9 +254,13 @@ export default async function BusinessPage() {
         >
           <div className="business-section-heading">
             <h2 id="business-placements-title">
-              აირჩიე შენთვის შესაფერისი განთავსება
+              <UiText>{'აირჩიე შენთვის შესაფერისი განთავსება'}</UiText>
             </h2>
-            <p>განთავსების ტიპს განცხადების შევსებისას აირჩევ.</p>
+            <p>
+              <UiText>
+                {'განთავსების ტიპს განცხადების შევსებისას აირჩევ.'}
+              </UiText>
+            </p>
           </div>
           <div className="business-plan-grid">
             {plans.map((plan) => (
@@ -235,29 +269,41 @@ export default async function BusinessPage() {
                 className={`business-plan ${plan.className}`}
               >
                 <div className="business-plan-top">
-                  <h3 className="business-plan-label">{plan.name}</h3>
+                  <h3 className="business-plan-label">
+                    <UiText>{plan.name}</UiText>
+                  </h3>
                   {plan.name === 'VIP' ? (
                     <span className="business-plan-offer">
-                      დროებითი შეთავაზება
+                      <UiText>{'დროებითი შეთავაზება'}</UiText>
                     </span>
                   ) : null}
                 </div>
                 <p className="business-plan-price">
-                  {plan.price}
-                  <span>{plan.period}</span>
+                  <UiText>{plan.price}</UiText>
+                  <span>
+                    <UiText values={plan.periodValues}>{plan.period}</UiText>
+                  </span>
                 </p>
-                <p className="business-plan-description">{plan.description}</p>
+                <p className="business-plan-description">
+                  <UiText>{plan.description}</UiText>
+                </p>
                 <ul>
                   {plan.features.map((feature) => (
                     <li key={feature}>
                       <Check size={15} aria-hidden="true" />
-                      {feature}
+                      <UiText
+                        values={[
+                          plan.tier === 'vip' ? introductoryDays : premiumDays,
+                        ]}
+                      >
+                        {feature}
+                      </UiText>
                     </li>
                   ))}
                 </ul>
                 {plan.name === 'პრემიუმი' && !premiumAvailable && (
                   <small className="business-plan-unavailable">
-                    პრემიუმის გადახდა ამჟამად მიუწვდომელია.
+                    <UiText>{'პრემიუმის გადახდა ამჟამად მიუწვდომელია.'}</UiText>
                   </small>
                 )}
                 {plan.tier !== 'premium' || premiumAvailable ? (
@@ -266,41 +312,48 @@ export default async function BusinessPage() {
                     prefetch={false}
                     className="business-plan-button"
                   >
-                    {plan.tier === 'standard'
-                      ? 'უფასოდ განთავსება'
-                      : plan.tier === 'vip'
-                        ? 'VIP-ის არჩევა'
-                        : 'პრემიუმის არჩევა'}
+                    {plan.tier === 'standard' ? (
+                      <UiText>უფასოდ განთავსება</UiText>
+                    ) : plan.tier === 'vip' ? (
+                      <UiText>VIP-ის არჩევა</UiText>
+                    ) : (
+                      <UiText>პრემიუმის არჩევა</UiText>
+                    )}
                     <ArrowUpRight size={17} aria-hidden="true" />
                   </Link>
                 ) : (
                   <button className="business-plan-button" disabled>
-                    ამჟამად მიუწვდომელია
+                    <UiText>{'ამჟამად მიუწვდომელია'}</UiText>
                   </button>
                 )}
               </article>
             ))}
           </div>
           <p className="business-plan-terms">
-            VIP-ის უფასო შეთავაზება შემოწმდება დამტკიცებისას. VIP და პრემიუმ
-            პერიოდი ითვლება გააქტიურებიდან; ვადის გასვლის შემდეგ განცხადება
-            სტანდარტულ რეჟიმში რჩება, მის მითითებულ ბოლო ვადამდე. თანხა
-            ავტომატურად არ ჩამოიჭრება.
+            <UiText>
+              {
+                'VIP-ის უფასო შეთავაზება შემოწმდება დამტკიცებისას. VIP და პრემიუმ პერიოდი ითვლება გააქტიურებიდან; ვადის გასვლის შემდეგ განცხადება სტანდარტულ რეჟიმში რჩება, მის მითითებულ ბოლო ვადამდე. თანხა ავტომატურად არ ჩამოიჭრება.'
+              }
+            </UiText>
           </p>
         </section>
 
         <section className="business-faq" aria-labelledby="business-faq-title">
           <div className="business-section-heading">
-            <h2 id="business-faq-title">კითხვები და პასუხები</h2>
+            <h2 id="business-faq-title">
+              <UiText>{'კითხვები და პასუხები'}</UiText>
+            </h2>
           </div>
           <div>
-            {questions.map(({ question, answer }) => (
+            {questions.map(({ question, answer, values }) => (
               <details key={question}>
                 <summary>
-                  {question}
+                  <UiText>{question}</UiText>
                   <ChevronDown size={18} aria-hidden="true" />
                 </summary>
-                <p>{answer}</p>
+                <p>
+                  <UiText values={values}>{answer}</UiText>
+                </p>
               </details>
             ))}
           </div>
@@ -311,8 +364,12 @@ export default async function BusinessPage() {
           aria-labelledby="business-start-title"
         >
           <div>
-            <h2 id="business-start-title">დავიწყოთ შენი ვაკანსიით.</h2>
-            <p>თუ შევსებისას კითხვა გაგიჩნდება, დაგვირეკე.</p>
+            <h2 id="business-start-title">
+              <UiText>{'დავიწყოთ შენი ვაკანსიით.'}</UiText>
+            </h2>
+            <p>
+              <UiText>{'თუ შევსებისას კითხვა გაგიჩნდება, დაგვირეკე.'}</UiText>
+            </p>
           </div>
           <div className="business-start-actions">
             <Link
@@ -320,14 +377,16 @@ export default async function BusinessPage() {
               prefetch={false}
               className="ds-btn ds-btn--primary"
             >
-              ვაკანსიის დამატება <ArrowUpRight size={18} aria-hidden="true" />
+              <UiText>{'ვაკანსიის დამატება '}</UiText>
+              <ArrowUpRight size={18} aria-hidden="true" />
             </Link>
             <a
               href={`tel:${invoiceContact.telephone}`}
               className="business-contact"
             >
               <Phone size={15} aria-hidden="true" />
-              განთავსებაზე კითხვა გაქვს? {invoiceContact.phone}
+              <UiText>{'განთავსებაზე კითხვა გაქვს? '}</UiText>
+              {invoiceContact.phone}
             </a>
           </div>
         </section>

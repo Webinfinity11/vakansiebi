@@ -39,6 +39,37 @@ void test('pagination never makes arbitrary searches or private filters indexabl
   }
 });
 
+void test('reviewed profession conditions have distinct titles and canonical URLs without opening arbitrary combinations', () => {
+  const cases = [
+    [
+      'q=ჭურჭლის მრეცხავი&salaryPeriod=day',
+      'ჭურჭლის მრეცხავის ვაკანსიები დღიური ანაზღაურებით',
+    ],
+    ['q=დეველოპერი&remote=true', 'დეველოპერის დისტანციური ვაკანსიები'],
+    [
+      'q=ბუღალტერი&employment=part-time&city=თბილისი',
+      'ბუღალტერის ვაკანსიები ნახევარ განაკვეთზე თბილისში',
+    ],
+    ['q=ექთანი&employment=part-time', 'ექთნის ვაკანსიები ნახევარ განაკვეთზე'],
+  ];
+  for (const [query, heading] of cases) {
+    const seo = searchSeo(new URLSearchParams(query));
+    assert.equal(seo.index, true);
+    assert.equal(seo.title, heading + ' | JOBX');
+    assert.equal(
+      searchSeo(new URLSearchParams(seo.path.slice(2))).path,
+      seo.path,
+    );
+    assert.ok(seo.description.includes(heading));
+  }
+  for (const query of [
+    'q=ექთანი&remote=true',
+    'q=მოლარე&remote=true',
+    'q=ჭურჭლის მრეცხავი&salaryPeriod=day&paid=true',
+  ])
+    assert.equal(searchSeo(new URLSearchParams(query)).index, false, query);
+});
+
 void test('page one and tracking-only addresses consolidate to the homepage', () => {
   for (const query of [
     'page=1',

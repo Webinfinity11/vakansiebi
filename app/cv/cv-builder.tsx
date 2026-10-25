@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 
 import Image from 'next/image';
 import { flushSync } from 'react-dom';
@@ -136,6 +137,7 @@ function MonthField({
   onChange: (value: string) => void;
   disabled?: boolean;
 }) {
+  const { ui } = useUi();
   const [draft, setDraft] = useState(() => {
     const [year = '', month = ''] = value.split('-');
     return { year, month };
@@ -155,16 +157,16 @@ function MonthField({
       <legend>{label}</legend>
       <div>
         <SelectField
-          label={`${label}: თვე`}
-          placeholder="თვე"
+          label={ui('{0}: თვე', [label])}
+          placeholder={ui('თვე')}
           value={month}
           disabled={disabled}
           options={monthOptions}
           onChange={(value) => set({ year, month: value })}
         />
         <SelectField
-          label={`${label}: წელი`}
-          placeholder="წელი"
+          label={ui('{0}: წელი', [label])}
+          placeholder={ui('წელი')}
           value={year}
           disabled={disabled}
           options={yearChoices}
@@ -425,6 +427,7 @@ function Preview({
   samplePhoto: boolean;
   view: string;
 }) {
+  const { locale } = useUi();
   const container = useRef<HTMLDivElement>(null);
   const paper = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ scale: 0.65, height: 1123 });
@@ -447,9 +450,9 @@ function Preview({
     return () => observer.disconnect();
   }, [cv, view]);
   return (
-    <aside className="cv-preview" aria-label={cvText.ka.preview}>
+    <aside className="cv-preview" aria-label={cvText[locale].preview}>
       <div className="cv-preview-heading">
-        <span>{cvText.ka.preview}</span>
+        <span>{cvText[locale].preview}</span>
         <span>A4</span>
       </div>
       <div
@@ -465,7 +468,7 @@ function Preview({
         <div ref={paper} className="cv-preview-paper">
           <CvSheet cv={cv} samplePhoto={samplePhoto} />
           {size.height > 1123 && (
-            <div className="cv-page-break">{cvText.ka.pageBreak}</div>
+            <div className="cv-page-break">{cvText[locale].pageBreak}</div>
           )}
         </div>
       </div>
@@ -510,6 +513,7 @@ function hasCvContent(cv: Cv): boolean {
 }
 
 export function CvBuilder() {
+  const { ui, locale } = useUi();
   const [printing, setPrinting] = useState(false);
   const [cv, setCv] = useState<Cv>(() => emptyCv());
   const [mounted, setMounted] = useState(false);
@@ -577,7 +581,7 @@ export function CvBuilder() {
     setOpenSection(next);
   }
 
-  const t = cvText.ka;
+  const t = cvText[locale];
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -736,11 +740,11 @@ export function CvBuilder() {
     return (
       <main className="cv-main" aria-busy="true">
         <div className="cv-intro">
-          <h1>{cvText.ka.heading}</h1>
-          <p className="cv-note">{cvText.ka.intro}</p>
+          <h1>{t.heading}</h1>
+          <p className="cv-note">{t.intro}</p>
         </div>
         <div className="cv-loading">
-          <SkeletonRows rows={3} block label="რედაქტორი იტვირთება" />
+          <SkeletonRows rows={3} block label={ui('რედაქტორი იტვირთება')} />
           <span className="ds-skeleton ds-skeleton--block cv-loading-paper" />
         </div>
       </main>
@@ -798,8 +802,8 @@ export function CvBuilder() {
         <p className="cv-note">{t.intro}</p>
       </div>
       <div className="cv-toolbar">
-        <div className="cv-segment" aria-label="რეზიუმეს ენა">
-          <span>რეზიუმეს ენა:</span>
+        <div className="cv-segment" aria-label={ui('რეზიუმეს ენა')}>
+          <span>{ui('რეზიუმეს ენა:')}</span>
           {cvLanguages.map((language) => (
             <button
               key={language}
@@ -807,7 +811,7 @@ export function CvBuilder() {
               aria-pressed={cv.language === language}
               onClick={() => update({ language, showPhoto: language === 'ka' })}
             >
-              {language === 'ka' ? 'ქართული' : 'English'}
+              {language === 'ka' ? ui('ქართული') : 'English'}
             </button>
           ))}
         </div>
@@ -837,14 +841,14 @@ export function CvBuilder() {
           {t.printHint}
         </p>
       )}
-      <output className="cv-message">{error || status}</output>
+      <output className="cv-message">{ui(error || status)}</output>
       <div className="cv-mobile-tabs cv-segment">
         <button
           type="button"
           aria-pressed={view === 'form'}
           onClick={() => setView('form')}
         >
-          ფორმა
+          {ui('ფორმა')}
         </button>
         <button
           type="button"
@@ -1155,7 +1159,7 @@ export function CvBuilder() {
                             onChange={(value) => change({ [key]: value })}
                             placeholder={
                               key === 'description'
-                                ? 'თითო მიღწევა ახალ ხაზზე'
+                                ? ui('თითო მიღწევა ახალ ხაზზე')
                                 : t.placeholders[key]
                             }
                             maxLength={key === 'description' ? 2000 : 120}

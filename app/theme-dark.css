@@ -2599,6 +2599,9 @@
 :root[data-theme='dark'] .board-shell .topbar.public-header {
   box-shadow: none;
 }
+:root[data-theme='dark'] .public-menu[data-slot='sheet-content'] {
+  box-shadow: -12px 0 48px #0506093d;
+}
 
 /* ── from app/post-job.css ── */
 :root[data-theme='dark'] .post-job-shell {

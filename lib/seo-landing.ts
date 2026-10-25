@@ -4,6 +4,7 @@ import { roleVocabulary } from './search-language';
 import { subcategoryFor } from './subcategories';
 import { categories } from './types';
 import type { SearchFilters } from './personal-space';
+import { fieldGuidance, professionGuidance } from './landing-guidance';
 
 /* A search this site is willing to be found by. Readers do not look for "a job
    board"; they look for "გაყიდვების ვაკანსიები თბილისში" or "ვაკანსიები დღიური
@@ -58,6 +59,24 @@ export const traits = {
 >;
 export type TraitKey = keyof typeof traits;
 export const traitKeys = Object.keys(traits) as TraitKey[];
+
+// Reviewed intersections only; the same ten-result floor still controls
+// indexing, the sitemap and links. The worker intersects existing result sets.
+export const roleTraits: Readonly<Record<string, readonly TraitKey[]>> = {
+  'ჭურჭლის მრეცხავი': ['daily'],
+  მზარეული: ['daily'],
+  ბარისტა: ['part-time'],
+  დეველოპერი: ['remote', 'internship'],
+  დიზაინერი: ['remote'],
+  ბუღალტერი: ['part-time', 'entry'],
+  კონსულტანტი: ['entry'],
+  მძღოლი: ['daily'],
+  კურიერი: ['daily'],
+  ექთანი: ['part-time'],
+  მასწავლებელი: ['part-time'],
+  ასისტენტი: ['entry'],
+  შემდუღებელი: ['daily'],
+};
 
 export type Landing = {
   category: string | null;
@@ -300,9 +319,10 @@ export function landingFor(params: URLSearchParams): Landing | null {
      of — "ლოჯისტიკის ვაკანსიები დღიური ანაზღაურებით ბათუმში" is a search, not a
      stray combination. What keeps it honest is the sitemap, which counts each
      one and lists only those a reader would find something on. */
-  /* A profession already names the work; a field on top of it is a narrower way
-     of saying the same thing, and a condition on top of that empties the page. */
-  if (role && (category || trait)) return null;
+  // Category + profession remains a free filter. A reviewed work condition
+  // may narrow a profession without generating every possible combination.
+  if (role && (category || (trait && !roleTraits[role]?.includes(trait))))
+    return null;
   if (!category && !city && !trait && !role) return null;
   /* A subcategory lives inside its field, and it is already as narrow as a page
      should be: a city may follow it, a condition or a profession may not. */
@@ -323,8 +343,15 @@ export function landingHeading(landing: Choice) {
   }
   if (landing.role) {
     const role = roleFor(landing.role);
-    const where = landing.city ? ' ' + cityIn(landing.city) : ' საქართველოში';
-    return `${role?.genitive ?? landing.role} ვაკანსიები${where}`;
+    const trait = landing.trait ? traits[landing.trait] : null;
+    const before = trait && 'before' in trait ? trait.before + ' ' : '';
+    const after = trait && 'after' in trait ? ' ' + trait.after : '';
+    const where = landing.city
+      ? ' ' + cityIn(landing.city)
+      : trait
+        ? ''
+        : ' საქართველოში';
+    return `${role?.genitive ?? landing.role} ${before}ვაკანსიები${after}${where}`;
   }
   const trait = landing.trait ? traits[landing.trait] : null;
   const before = trait && 'before' in trait ? trait.before + ' ' : '';
@@ -415,6 +442,7 @@ export function landingName(landing: Choice) {
 }
 
 const roleGuidance: Record<string, { copy: string; snippet: string }> = {
+  ...professionGuidance,
   კონდიტერი: {
     copy: 'განასხვავე კონდიტერისა და დამხმარის პოზიციები. შეადარე სამუშაო საათები, გამოცდილების მოთხოვნა და საკონდიტრო ნაწარმის მიმართულება.',
     snippet: 'შეადარე კონდიტერისა და დამხმარის პოზიციები, გრაფიკი და ხელფასი.',
@@ -433,6 +461,8 @@ export function landingCopy(landing: Choice) {
   if (landing.subcategory && landing.category)
     return `${landingHeading(landing)}: ${genitive[landing.category]} ვაკანსიებიდან მხოლოდ ${subcategoryGenitive[landing.subcategory]} აქტიური განცხადებები. სია ყოველდღიურად ახლდება. შეადარე ანაზღაურება, გრაფიკი და პირობები.`;
   if (landing.role) {
+    if (landing.trait)
+      return `${landingHeading(landing)}. ${traits[landing.trait].copy}`;
     const role = roleFor(landing.role);
     const where = landing.city ? cityIn(landing.city) : 'საქართველოს მასშტაბით';
     const guidance = roleGuidance[role?.label ?? landing.role];
@@ -443,12 +473,8 @@ export function landingCopy(landing: Choice) {
   // The heading names the list; the condition's own words follow and never restate it.
   if (landing.trait)
     return `${landingHeading(landing)}. ${traits[landing.trait].copy}`;
-  if (landing.category === 'იურიდიული')
-    return `${landingHeading(landing)}. შეადარე სამართლის მიმართულება, გამოცდილების მოთხოვნა და სამუშაო გრაფიკი. გადაამოწმე, პოზიცია იურისტისთვისაა თუ თანაშემწისთვის.`;
-  if (landing.category && landing.city)
-    return `${genitive[landing.category]} ვაკანსიები ${cityIn(landing.city)}. სია ყოველდღიურად ივსება ახალი განცხადებებით.`;
-  if (landing.category)
-    return `${genitive[landing.category]} აქტიური ვაკანსიები საქართველოში ერთ სიაში. შეადარე ანაზღაურება, სამუშაოს ადგილმდებარეობა და პირობები.`;
+  if (landing.category && fieldGuidance[landing.category])
+    return `${landingHeading(landing)}. ${fieldGuidance[landing.category].copy}`;
   return `ვაკანსიები ${cityIn(landing.city!)}: მოძებნე სამსახური პროფესიის, ანაზღაურებისა და სამუშაო გრაფიკის მიხედვით. შეადარე აქტიური განცხადებები და გაეცანი დამსაქმებლის პირობებს.`;
 }
 /* The snippet under the link: what the list is and how many it holds, within the
@@ -462,14 +488,14 @@ export function landingDescription(landing: Choice, count?: number) {
     ? `${heading}: ${new Intl.NumberFormat('ka-GE').format(count)} აქტიური განცხადება.`
     : `${heading}.`;
   const focused = !landing.subcategory
-    ? landing.role
-      ? roleGuidance[roleFor(landing.role)?.label ?? landing.role]?.snippet
-      : landing.trait === 'daily'
-        ? 'შეადარე დღიური თანხა და ცვლის საათები; გადახდის გრაფიკი გადაამოწმე.'
-        : landing.trait === 'part-time'
-          ? 'შეადარე სამუშაო საათები, დღეები და ანაზღაურება.'
-          : landing.category === 'იურიდიული'
-            ? 'შეადარე სამართლის მიმართულება და გამოცდილების მოთხოვნა.'
+    ? landing.trait === 'daily'
+      ? 'შეადარე დღიური თანხა და ცვლის საათები; გადახდის გრაფიკი გადაამოწმე.'
+      : landing.trait === 'part-time'
+        ? 'შეადარე სამუშაო საათები, დღეები და ანაზღაურება.'
+        : landing.role
+          ? roleGuidance[roleFor(landing.role)?.label ?? landing.role]?.snippet
+          : landing.category
+            ? fieldGuidance[landing.category]?.snippet
             : null
     : null;
   for (const tail of [
@@ -554,7 +580,14 @@ const fieldRoles: Record<string, readonly string[]> = {
   ადმინისტრაცია: ['ადმინისტრატორი', 'ასისტენტი', 'ოპერატორი', 'რეკრუტერი'],
   ფინანსები: ['ბუღალტერი', 'ანალიტიკოსი', 'კონსულტანტი', 'მენეჯერი'],
   ლოჯისტიკა: ['მძღოლი', 'კურიერი', 'მტვირთავი', 'დისპეტჩერი'],
-  მომსახურება: ['მიმტანი', 'ბარისტა', 'მზარეული', 'ბარმენი', 'დამლაგებელი'],
+  მომსახურება: [
+    'მიმტანი',
+    'ბარისტა',
+    'მზარეული',
+    'ჭურჭლის მრეცხავი',
+    'ბარმენი',
+    'დამლაგებელი',
+  ],
   სამედიცინო: ['ექიმი', 'ექთანი', 'ფარმაცევტი', 'მასაჟისტი'],
   განათლება: ['მასწავლებელი', 'მთარგმნელი'],
   მშენებლობა: ['ელექტრიკოსი', 'შემდუღებელი', 'ინჟინერი', 'ტექნიკოსი'],
@@ -572,7 +605,7 @@ const directoryIndexes = new WeakMap<
   }
 >();
 function parentLandingPath(choice: Choice) {
-  if (choice.trait && (choice.category || choice.city))
+  if (choice.trait && (choice.category || choice.city || choice.role))
     return landingPath({ ...choice, trait: null });
   if (choice.city && (choice.category || choice.role))
     return landingPath({ ...choice, city: null });
@@ -596,6 +629,18 @@ function directoryIndex(rows: readonly LandingCount[]) {
     const group = children.get(parent) ?? [];
     group.push(link);
     children.set(parent, group);
+    // A condition can be narrowed by a reviewed profession. The role page is
+    // its primary parent; link from the condition as well, including city scope.
+    if (row.role && row.trait) {
+      const conditionPath = landingPath({
+        category: null,
+        city: row.city,
+        trait: row.trait,
+      });
+      const conditionGroup = children.get(conditionPath) ?? [];
+      conditionGroup.push(link);
+      children.set(conditionPath, conditionGroup);
+    }
     // A city reader can narrow by field too, without returning to the footer.
     if (row.category && row.city && !row.trait && !row.subcategory) {
       const cityPath = landingPath({
@@ -639,18 +684,54 @@ export function relatedLandings(
   if (rows) {
     const index = directoryIndex(rows);
     const parent = index.links.get(parentLandingPath(landing));
-    return [
+    const professions =
+      landing.category && !landing.trait && !landing.subcategory
+        ? (fieldRoles[landing.category] ?? []).flatMap((role) => {
+            const link = index.links.get(
+              landingPath({
+                category: null,
+                city: landing.city,
+                trait: null,
+                role,
+              }),
+            );
+            return link ? [link] : [];
+          })
+        : [];
+    const neighbours = [
       ...(parent ? [parent] : []),
-      ...(index.children.get(landing.path) ?? []),
-    ].sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
+      ...professions,
+      ...(index.children.get(landing.path) ?? []).toSorted(
+        (a, b) => b.count - a.count || a.path.localeCompare(b.path),
+      ),
+    ];
+    const seen = new Set([landing.path]);
+    return neighbours.filter((link) => {
+      if (seen.has(link.path)) return false;
+      seen.add(link.path);
+      return true;
+    });
   }
   const nearby: Choice[] = [];
+  if (landing.role) {
+    nearby.push(
+      ...(landing.trait
+        ? [
+            { ...landing, trait: null },
+            { ...landing, role: null },
+          ]
+        : (roleTraits[landing.role] ?? []).map((trait) => ({
+            ...landing,
+            trait,
+          }))),
+    );
+  }
   if (landing.role && !landing.city)
     nearby.push(
       ...linkedCities.map((city) => ({
         category: null,
         city,
-        trait: null,
+        trait: landing.trait,
         role: landing.role,
       })),
     );
@@ -658,7 +739,7 @@ export function relatedLandings(
     nearby.push({
       category: null,
       city: null,
-      trait: null,
+      trait: landing.trait,
       role: landing.role,
     });
   if (landing.subcategory)

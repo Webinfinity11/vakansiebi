@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import { LocateFixed } from 'lucide-react';
 import {
   Select,
@@ -31,6 +32,7 @@ export function Choice({
   locating?: boolean;
   mobile?: boolean;
 }) {
+  const { ui } = useUi();
   return (
     <Select
       value={value}
@@ -39,9 +41,13 @@ export function Choice({
         else onChange(v || 'ყველა');
       }}
     >
-      <SelectTrigger id={id} aria-label={label} className="choice">
+      <SelectTrigger id={id} aria-label={ui(label)} className="choice">
         <SelectValue>
-          {locating ? 'ქალაქს ვადგენთ…' : value === 'ყველა' ? label : value}
+          {locating
+            ? ui('ქალაქს ვადგენთ…')
+            : value === 'ყველა'
+              ? ui(label)
+              : ui(value)}
         </SelectValue>
       </SelectTrigger>
       <SelectContent
@@ -56,12 +62,13 @@ export function Choice({
             disabled={locating}
             className={itemClass}
           >
-            <LocateFixed size={16} aria-hidden="true" /> ჩემთან ახლოს
+            <LocateFixed size={16} aria-hidden="true" />
+            {ui(' ჩემთან ახლოს')}
           </SelectItem>
         )}
         {['ყველა', ...options].map((o) => (
-          <SelectItem key={o} value={o} className={itemClass}>
-            {o}
+          <SelectItem key={ui(o)} value={ui(o)} className={itemClass}>
+            {ui(o)}
           </SelectItem>
         ))}
       </SelectContent>

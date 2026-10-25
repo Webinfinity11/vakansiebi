@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import type { AdvancedFilters } from './advanced-filters';
 import { advancedValues } from '@/lib/advanced-filter-values';
 import { SelectField } from './select-field';
@@ -11,6 +12,7 @@ export function SalaryFilter({
   onChange: (value: AdvancedFilters) => void;
   prefix: string;
 }) {
+  const { ui } = useUi();
   const change = <K extends keyof AdvancedFilters>(
     key: K,
     next: AdvancedFilters[K],
@@ -27,11 +29,11 @@ export function SalaryFilter({
       className="salary-filter"
       aria-labelledby={`${prefix}-pay-heading`}
     >
-      <h3 id={`${prefix}-pay-heading`}>ანაზღაურება (₾)</h3>
+      <h3 id={`${prefix}-pay-heading`}>{ui('ანაზღაურება (₾)')}</h3>
       {/* "თვეში" / "დღეში" says what it is; the label only repeated it. */}
       <SelectField
         id={`${prefix}-pay-period`}
-        label="ანაზღაურების პერიოდი"
+        label={ui('ანაზღაურების პერიოდი')}
         value={value.salaryPeriod}
         onChange={(next) =>
           change('salaryPeriod', next as AdvancedFilters['salaryPeriod'])
@@ -41,7 +43,10 @@ export function SalaryFilter({
           { value: 'day', label: 'დღეში' },
         ]}
       />
-      <fieldset className="salary-presets" aria-label="მინიმალური ანაზღაურება">
+      <fieldset
+        className="salary-presets"
+        aria-label={ui('მინიმალური ანაზღაურება')}
+      >
         {[
           null,
           ...(value.salaryPeriod === 'day'
@@ -64,8 +69,10 @@ export function SalaryFilter({
             }
           >
             {amount === null
-              ? 'ნებისმიერი'
-              : `${amount.toLocaleString('en-US').replace(',', ' ')} ₾-დან`}
+              ? ui('ნებისმიერი')
+              : ui('{0} ₾-დან', [
+                  amount.toLocaleString('en-US').replace(',', ' '),
+                ])}
           </button>
         ))}
       </fieldset>

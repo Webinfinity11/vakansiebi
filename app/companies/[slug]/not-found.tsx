@@ -1,3 +1,4 @@
+import { UiText } from '@/app/ui-language';
 import Link from 'next/link';
 import { Building2 } from 'lucide-react';
 import { PublicHeader } from '../../public-header';
@@ -8,25 +9,33 @@ export default function NotFound() {
   return (
     <div className="board-shell not-found-shell">
       <PublicHeader />
-      <title>დამსაქმებლის გვერდი ვერ მოიძებნა | JOBX</title>
+      <title>
+        <UiText>{'დამსაქმებლის გვერდი ვერ მოიძებნა | JOBX'}</UiText>
+      </title>
       <TrackOnce code="not_found" />
       <main className="not-found-main">
         <section className="not-found-card ds-appear">
           <span className="not-found-mark" aria-hidden="true">
             <Building2 />
           </span>
-          <h1>დამსაქმებლის გვერდი ვერ მოიძებნა</h1>
-          <p>ამ დამსაქმებელს ახლა საკმარისი აქტიური ვაკანსია არ აქვს.</p>
+          <h1>
+            <UiText>{'დამსაქმებლის გვერდი ვერ მოიძებნა'}</UiText>
+          </h1>
+          <p>
+            <UiText>
+              {'ამ დამსაქმებელს ახლა საკმარისი აქტიური ვაკანსია არ აქვს.'}
+            </UiText>
+          </p>
           <div className="not-found-actions">
             <Link className="primary" href="/">
-              ყველა ვაკანსიის ნახვა
+              <UiText>{'ყველა ვაკანსიის ნახვა'}</UiText>
             </Link>
             <Link
               className="secondary-button"
               href="/companies"
               prefetch={false}
             >
-              კომპანიების სია
+              <UiText>{'კომპანიების სია'}</UiText>
             </Link>
           </div>
         </section>

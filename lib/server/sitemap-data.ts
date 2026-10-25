@@ -53,9 +53,24 @@ export async function publicVacancyDatesOrLast(now = Date.now()) {
 
 export type { LandingCount } from '../seo-landing';
 export const landingCountsMaxAgeMs = 24 * 60 * 60 * 1000;
+export const landingCountsCacheMs = 60_000;
+type LandingSnapshot = {
+  rows: (LandingCount & { computed_at: Date })[];
+  computedAt: Date;
+};
+let landingSnapshot: {
+  at: number;
+  value: Promise<LandingSnapshot>;
+} | null = null;
 
-/** One small SELECT, with no job search or census on the request path. */
-export async function readLandingSnapshot(now = Date.now()) {
+export function clearLandingCountsCache() {
+  landingSnapshot = null;
+}
+
+/** Load once per minute per process; concurrent renders share the same read.
+ * The worker publishes hourly. This only caches that existing snapshot, never
+ * vacancy text or personalized results. Errors are retried on the next request. */
+async function loadLandingSnapshot(): Promise<LandingSnapshot> {
   const query = {
     text: 'SELECT category, city, trait, role, subcategory, count, computed_at FROM landing_counts',
     query_timeout: 2_000,
@@ -65,12 +80,31 @@ export async function readLandingSnapshot(now = Date.now()) {
   const computedAt = new Date(
     Math.min(...result.rows.map((row) => new Date(row.computed_at).getTime())),
   );
-  if (
-    !Number.isFinite(computedAt.getTime()) ||
-    now - computedAt.getTime() > landingCountsMaxAgeMs
-  )
-    throw new Error('Landing counts stale');
   return { rows: result.rows, computedAt };
+}
+export async function readLandingSnapshot(now = Date.now()) {
+  if (
+    !landingSnapshot ||
+    now < landingSnapshot.at ||
+    now - landingSnapshot.at >= landingCountsCacheMs
+  ) {
+    landingSnapshot = { at: now, value: loadLandingSnapshot() };
+  }
+  const current = landingSnapshot;
+  try {
+    const result = await current.value;
+    // Recheck on every hit: caching cannot extend the 24-hour freshness limit.
+    if (
+      !Number.isFinite(result.computedAt.getTime()) ||
+      now - result.computedAt.getTime() > landingCountsMaxAgeMs
+    )
+      throw new Error('Landing counts stale');
+    return result;
+  } catch (error) {
+    // An older, slow failure must not evict a newer successful read.
+    if (landingSnapshot === current) landingSnapshot = null;
+    throw error;
+  }
 }
 export async function allLandingCounts(now = Date.now()) {
   return (await readLandingSnapshot(now)).rows;

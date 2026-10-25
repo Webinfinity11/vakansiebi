@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ExternalLink, X } from 'lucide-react';
@@ -18,6 +19,7 @@ export function VacancyPanel({
   vacancy: MapVacancy;
   onClose: () => void;
 }) {
+  const { ui } = useUi();
   const [job, setJob] = useState<PublicJob | null>(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -65,21 +67,22 @@ export function VacancyPanel({
           className="ds-btn ds-btn--ghost ds-btn--sm"
           onClick={onClose}
         >
-          <ArrowLeft size={16} aria-hidden="true" /> რუკაზე დაბრუნება
+          <ArrowLeft size={16} aria-hidden="true" />
+          {ui(' რუკაზე დაბრუნება')}
         </button>
         <a
           href={`/vacancies/${encodeURIComponent(vacancySegment(vacancy))}`}
           target="_blank"
           rel="noopener noreferrer"
           className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm"
-          aria-label="ვაკანსიის ახალ ჩანართში გახსნა"
+          aria-label={ui('ვაკანსიის ახალ ჩანართში გახსნა')}
         >
           <ExternalLink size={16} aria-hidden="true" />
         </a>
         <button
           type="button"
           className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm"
-          aria-label="ვაკანსიის დახურვა"
+          aria-label={ui('ვაკანსიის დახურვა')}
           onClick={onClose}
         >
           <X size={16} aria-hidden="true" />
@@ -97,7 +100,7 @@ export function VacancyPanel({
                 setAttempt((n) => n + 1);
               }}
             >
-              თავიდან ცდა
+              {ui('თავიდან ცდა')}
             </button>
           </div>
         ) : job ? (
@@ -111,7 +114,7 @@ export function VacancyPanel({
         ) : (
           <>
             <h2 className="job-map-detail-loading-title">{vacancy.title}</h2>
-            <SkeletonRows rows={4} block label="ვაკანსია იტვირთება" />
+            <SkeletonRows rows={4} block label={ui('ვაკანსია იტვირთება')} />
           </>
         )}
       </div>

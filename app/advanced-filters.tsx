@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import { SalaryFilter } from './salary-filter';
 import { SelectField } from './select-field';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -49,6 +50,7 @@ export default function AdvancedFilterControls({
   showEmployment?: boolean;
   showSalary?: boolean;
 }) {
+  const { ui } = useUi();
   const change = <K extends keyof AdvancedFilters>(
     key: K,
     next: AdvancedFilters[K],
@@ -57,7 +59,7 @@ export default function AdvancedFilterControls({
     <div className="advanced-filters">
       {showEmployment && (
         <>
-          <label htmlFor={`${prefix}-employment`}>განაკვეთი</label>
+          <label htmlFor={`${prefix}-employment`}>{ui('განაკვეთი')}</label>
           <SelectField
             id={`${prefix}-employment`}
             value={value.employment}
@@ -77,9 +79,9 @@ export default function AdvancedFilterControls({
           checked={value.entryLevel}
           onCheckedChange={(checked) => change('entryLevel', checked)}
         />
-        გამოცდილების გარეშე
+        {ui('გამოცდილების გარეშე')}
       </label>
-      <label htmlFor={`${prefix}-posted`}>გამოქვეყნებულია</label>
+      <label htmlFor={`${prefix}-posted`}>{ui('გამოქვეყნებულია')}</label>
       <SelectField
         id={`${prefix}-posted`}
         value={String(value.postedWithin)}
@@ -95,7 +97,7 @@ export default function AdvancedFilterControls({
         <SalaryFilter value={value} onChange={onChange} prefix={prefix} />
       )}
       <p className="filter-help">
-        პირობები იფილტრება მხოლოდ განცხადებაში მითითებული ინფორმაციით.
+        {ui('პირობები იფილტრება მხოლოდ განცხადებაში მითითებული ინფორმაციით.')}
       </p>
     </div>
   );

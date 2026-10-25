@@ -139,7 +139,15 @@
     transform var(--ds-duration-fast) var(--ds-ease);
 }
 /* A press sinks the button a hair: felt, not seen. */
-:is(.ds-btn, .primary, .post-primary, .cv-primary, .secondary-button, .post-secondary, .text-button):active:not(:disabled) {
+:is(
+    .ds-btn,
+    .primary,
+    .post-primary,
+    .cv-primary,
+    .secondary-button,
+    .post-secondary,
+    .text-button
+  ):active:not(:disabled) {
   transform: scale(0.98);
 }
 .ds-btn:focus-visible,
@@ -367,7 +375,17 @@ svg.lucide {
   flex: none;
   stroke-width: var(--ds-icon-stroke);
 }
-:is(.ds-btn, .primary, .post-primary, .cv-primary, .secondary-button, .post-secondary, .text-button, .ds-select, .choice)
+:is(
+    .ds-btn,
+    .primary,
+    .post-primary,
+    .cv-primary,
+    .secondary-button,
+    .post-secondary,
+    .text-button,
+    .ds-select,
+    .choice
+  )
   > svg.lucide {
   width: var(--ds-icon-md);
   height: var(--ds-icon-md);
@@ -451,13 +469,14 @@ svg.lucide {
   display: block;
   height: 12px;
   border-radius: var(--ds-radius-sm);
-  background: linear-gradient(
-      90deg,
-      transparent 0%,
-      color-mix(in srgb, var(--ds-surface) 55%, transparent) 50%,
-      transparent 100%
-    )
-    0 0 / 200% 100% no-repeat,
+  background:
+    linear-gradient(
+        90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--ds-surface) 55%, transparent) 50%,
+        transparent 100%
+      )
+      0 0 / 200% 100% no-repeat,
     var(--ds-line-soft);
   animation: ds-sheen 1.8s ease-in-out infinite;
 }
@@ -479,10 +498,14 @@ svg.lucide {
 }
 @keyframes ds-sheen {
   from {
-    background-position: 150% 0, 0 0;
+    background-position:
+      150% 0,
+      0 0;
   }
   to {
-    background-position: -50% 0, 0 0;
+    background-position:
+      -50% 0,
+      0 0;
   }
 }
 /* Content arriving after a load settles in instead of popping. */
@@ -493,13 +516,27 @@ svg.lucide {
 .ds-appear-list > * {
   animation: ds-appear var(--ds-duration-slow) var(--ds-ease) backwards;
 }
-.ds-appear-list > :nth-child(2) { animation-delay: 30ms; }
-.ds-appear-list > :nth-child(3) { animation-delay: 60ms; }
-.ds-appear-list > :nth-child(4) { animation-delay: 90ms; }
-.ds-appear-list > :nth-child(5) { animation-delay: 120ms; }
-.ds-appear-list > :nth-child(6) { animation-delay: 150ms; }
-.ds-appear-list > :nth-child(7) { animation-delay: 180ms; }
-.ds-appear-list > :nth-child(n + 8) { animation-delay: 210ms; }
+.ds-appear-list > :nth-child(2) {
+  animation-delay: 30ms;
+}
+.ds-appear-list > :nth-child(3) {
+  animation-delay: 60ms;
+}
+.ds-appear-list > :nth-child(4) {
+  animation-delay: 90ms;
+}
+.ds-appear-list > :nth-child(5) {
+  animation-delay: 120ms;
+}
+.ds-appear-list > :nth-child(6) {
+  animation-delay: 150ms;
+}
+.ds-appear-list > :nth-child(7) {
+  animation-delay: 180ms;
+}
+.ds-appear-list > :nth-child(n + 8) {
+  animation-delay: 210ms;
+}
 @keyframes ds-appear {
   from {
     opacity: 0;
@@ -600,7 +637,33 @@ svg.lucide {
   .admin-scrim {
     animation: none;
   }
-  :is(.ds-btn, .primary, .post-primary, .cv-primary, .secondary-button, .post-secondary, .text-button):active {
+  :is(
+    .ds-btn,
+    .primary,
+    .post-primary,
+    .cv-primary,
+    .secondary-button,
+    .post-secondary,
+    .text-button
+  ):active {
     transform: none;
   }
+}
+
+/* Keep the maker credit legible in both themes, beside the muted copyright. */
+.board-shell .jobx-footer .footer-copyright .footer-credit {
+  display: inline;
+  color: var(--ds-ink);
+  font-size: var(--ds-text-sm);
+  font-weight: 600;
+  line-height: 1.6;
+}
+.board-shell .jobx-footer .footer-credit strong {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.board-shell .jobx-footer .footer-copyright .footer-credit:hover,
+.board-shell .jobx-footer .footer-copyright .footer-credit:focus-visible {
+  color: var(--ds-accent-ink);
 }

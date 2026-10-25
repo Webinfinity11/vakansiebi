@@ -15,6 +15,7 @@ import {
   landingPath,
   minimumLandingJobs,
   relatedLandings,
+  roleTraits,
   traitKeys,
   type LandingCount,
 } from '../lib/seo-landing';
@@ -29,7 +30,8 @@ function completeCatalogue(): LandingCount[] {
       }
   for (const { label: role } of roleVocabulary)
     for (const city of [null, ...cities])
-      rows.push({ category: null, city, trait: null, role, count: 20 });
+      for (const trait of [null, ...(roleTraits[role] ?? [])])
+        rows.push({ category: null, city, trait, role, count: 20 });
   for (const { id: subcategory, category } of subcategories)
     for (const city of [null, ...cities])
       rows.push({ category, city, trait: null, subcategory, count: 20 });
@@ -49,7 +51,7 @@ void test('every eligible combination can be reached from the compact footer', (
     const children = relatedLandings(landing, rows);
     assert.ok(
       // A field: its cities, its conditions and up to eight subcategories.
-      children.length <= 30,
+      children.length <= 40,
       `${path} has too many immediate neighbours`,
     );
     assert.equal(
@@ -59,6 +61,40 @@ void test('every eligible combination can be reached from the compact footer', (
     for (const child of children) reached.add(child.path);
   }
   assert.deepEqual([...reached].sort(), rows.map(landingPath).sort());
+});
+
+void test('fields expose their professions and conditions expose only populated reviewed role combinations', () => {
+  const rows = completeCatalogue();
+  for (const [category, expected] of [
+    ['ტექნოლოგიები', 'დეველოპერი'],
+    ['ფინანსები', 'ბუღალტერი'],
+    ['სამედიცინო', 'ექთანი'],
+    ['ლოჯისტიკა', 'კურიერი'],
+    ['განათლება', 'მასწავლებელი'],
+  ]) {
+    const landing = landingFor(new URLSearchParams({ category }))!;
+    assert.ok(
+      relatedLandings(landing, rows)
+        .slice(0, 4)
+        .some(
+          ({ path }) =>
+            landingFor(new URLSearchParams(path.slice(2)))?.role === expected,
+        ),
+      category,
+    );
+  }
+  const daily = landingFor(new URLSearchParams({ salaryPeriod: 'day' }))!;
+  const path = landingPath({
+    category: null,
+    city: null,
+    trait: 'daily',
+    role: 'ჭურჭლის მრეცხავი',
+  });
+  assert.ok(relatedLandings(daily, rows).some((link) => link.path === path));
+  const thin = rows.map((row) =>
+    landingPath(row) === path ? { ...row, count: 9 } : row,
+  );
+  assert.ok(!relatedLandings(daily, thin).some((link) => link.path === path));
 });
 
 void test('thin pages remain searches but disappear from all navigation and indexing', () => {
@@ -166,7 +202,7 @@ void test('every landing has a distinct heading and description, including condi
 
 void test('stored counts use one SELECT and reject empty, stale and failed reads', async (t) => {
   const { db } = await import('../lib/server/db');
-  const { allLandingCounts, landingCountsMaxAgeMs } =
+  const { allLandingCounts, landingCountsMaxAgeMs, clearLandingCountsCache } =
     await import('../lib/server/sitemap-data');
   const previous = process.env.DATABASE_URL;
   process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
@@ -188,6 +224,7 @@ void test('stored counts use one SELECT and reject empty, stale and failed reads
     return { rows };
   });
   try {
+    clearLandingCountsCache();
     assert.deepEqual(await allLandingCounts(now), [row]);
     assert.equal(statements.length, 1);
     assert.match(statements[0], /FROM landing_counts$/);
@@ -200,6 +237,7 @@ void test('stored counts use one SELECT and reject empty, stale and failed reads
       /stale/,
     );
     rows = [];
+    clearLandingCountsCache();
     await assert.rejects(allLandingCounts(now), /unavailable/);
     rows = [row];
     fail = true;
@@ -207,6 +245,69 @@ void test('stored counts use one SELECT and reject empty, stale and failed reads
     fail = false;
     assert.deepEqual(await allLandingCounts(now), [row], 'failure is retried');
   } finally {
+    clearLandingCountsCache();
+    if (previous === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous;
+  }
+});
+
+void test('landing counts coalesce concurrent reads, refresh in a minute, and expire even on cache hits', async (t) => {
+  const { db } = await import('../lib/server/db');
+  const {
+    allLandingCounts,
+    landingCountsCacheMs,
+    landingCountsMaxAgeMs,
+    clearLandingCountsCache,
+  } = await import('../lib/server/sitemap-data');
+  const previous = process.env.DATABASE_URL;
+  process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
+  const now = Date.now();
+  let computed_at = new Date(now);
+  let count = 12;
+  let reads = 0;
+  t.mock.method(db(), 'query', async () => {
+    reads++;
+    return {
+      rows: [
+        {
+          category: 'გაყიდვები',
+          city: null,
+          trait: null,
+          role: null,
+          subcategory: null,
+          count,
+          computed_at,
+        },
+      ],
+    };
+  });
+  try {
+    clearLandingCountsCache();
+    const concurrent = await Promise.all(
+      Array.from({ length: 100 }, () => allLandingCounts(now)),
+    );
+    assert.equal(reads, 1, 'one database read for 100 concurrent requests');
+    assert.ok(concurrent.every((rows) => rows[0].count === 12));
+    count = 15;
+    assert.equal(
+      (await allLandingCounts(now + landingCountsCacheMs - 1))[0].count,
+      12,
+    );
+    assert.equal(
+      (await allLandingCounts(now + landingCountsCacheMs))[0].count,
+      15,
+    );
+    assert.equal(reads, 2);
+    clearLandingCountsCache();
+    computed_at = new Date(now - landingCountsMaxAgeMs + 10);
+    await allLandingCounts(now);
+    await assert.rejects(allLandingCounts(now + 11), /stale/);
+    assert.equal(reads, 3, 'the age limit also applies to a cached response');
+    computed_at = new Date(now + 12);
+    assert.equal((await allLandingCounts(now + 12))[0].count, 15);
+    assert.equal(reads, 4, 'a stale response is evicted and retried');
+  } finally {
+    clearLandingCountsCache();
     if (previous === undefined) delete process.env.DATABASE_URL;
     else process.env.DATABASE_URL = previous;
   }

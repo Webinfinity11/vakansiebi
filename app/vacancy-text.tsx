@@ -1,8 +1,10 @@
 import type { PublicJob as Job } from '@/lib/types';
-export function formatDate(value?: string) {
+export function formatDate(value?: string, locale: 'ka' | 'en' = 'ka') {
   if (!value || !Number.isFinite(Date.parse(value))) return '';
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
   if (!year || !month || !day) return '';
+  if (locale === 'en')
+    return `${day} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month - 1]}`;
   return `${day} ${['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'][month - 1]}`;
 }
 function TextLinks({
@@ -64,7 +66,10 @@ export function Description({
       });
   }
   return (
-    <div className="vacancy-description">
+    <div
+      className="vacancy-description"
+      lang={/[ა-ჰ]/.test(text) ? 'ka' : undefined}
+    >
       {blocks.map((block, i) => {
         if (block.kind === 'ul' || block.kind === 'ol') {
           const Tag = block.kind;

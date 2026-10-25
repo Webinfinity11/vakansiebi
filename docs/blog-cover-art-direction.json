@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-10-25",
+  "tool": "built-in image_gen via image_gen__imagegen",
+  "use": "JOBX blog card covers, article banners and social preview images",
+  "style": "Cobalt, navy and cyan on a pale blue field; matte paper texture; broad faint diagonal band; centered topic objects; 2:1 aspect ratio; no text baked into artwork.",
+  "delivery": "1280 × 640 WebP, pre-compressed at quality 82, served directly without per-request image transformations. Generated originals retained.",
+  "assets": [
+    {
+      "path": "public/blog/daily-pay-cover.webp",
+      "source": "/Users/kapana/.codex-profiles/infinity/generated_images/01a16e17-f0b0-7ee2-9349-fd7b5d61910f/exec-f7c6ec23-2df2-4201-bed1-4aef1b83cce2.png",
+      "prompt": "Use case: stylized-concept. Asset type: finished editorial banner illustration for JOBX, a Georgian job-search website.\nCreate a minimal, distinctive wide landscape illustration about daily pay, work hours and payment dates. One carefully composed arrangement of a simple cobalt-blue analog clock without numbers, a small clean paper calendar with blue abstract grid squares and two cyan highlighted dates, and a modest stack of plain coin discs with no symbols. Understated tactile matte paper-cut and softly beveled geometry, editorial design rather than stock corporate clip art or glossy 3D. Precise silhouettes, subtle soft shadows, restrained depth.\nPalette: warm near-white #f4f7fd, vivid cobalt #2457e6, dark navy #17233f and a little sky cyan #16b7ef. Background is a quiet pale blue field with a single broad, very faint diagonal translucent blue shape echoing the JOBX brand. No gradients with rainbow colors. Compose the objects as a calm connected group around the center, occupying the middle 65% of the image. Generous margins and empty space on every edge, safe to crop slightly to 2:1 on small screens. Roughly 2:1 landscape canvas. It must read as an editorial cover for comparing time and wages at thumbnail size.\nNo words, no letters, no numbers, no currency symbols, no logos, no people, no watermarks, no UI screenshot, no border, no button. Typography will be real HTML outside the image. This is the actual artwork, not a page mockup."
+    },
+    {
+      "path": "public/blog/part-time-study-cover.webp",
+      "source": "/Users/kapana/.codex-profiles/infinity/generated_images/01a16e17-f0b0-7ee2-9349-fd7b5d61910f/exec-8f7c32d8-c547-4491-9278-033158e30732.png",
+      "prompt": "Use case: stylized-concept. Asset type: a second editorial banner in the same JOBX blog cover series.\nThe provided image is STYLE REFERENCE ONLY. Preserve its distinctive matte paper texture, softly beveled geometric objects, blue-white-cyan palette, soft studio shadows, broad faint diagonal blue background shape, calm grouped composition and 2:1 landscape framing. Create a different illustration about combining part-time work with university study: one open blank ivory notebook with a cobalt-blue cover in the lower center, one upright simple weekly planner with abstract blue blocks and two cyan highlighted blocks behind it, and one smaller cobalt-blue analog clock without numerals beside them. Make the notebook the dominant focal object, so this is clearly a different cover from the pay article. Only these three objects, no coins, no pens, no laptops, no floating decorations. Middle 65% centered grouping with generous breathing room and safe margins. Near-white pale blue background, cobalt #2457e6, navy #17233f, cyan #16b7ef, ivory paper. Same lighting, consistent art direction.\nNo words, letters, numbers, logos, watermark, currency signs, people, borders or interface elements. Actual finished web artwork, not a UI mockup. Text will be live HTML outside the illustration."
+    }
+  ]
+}

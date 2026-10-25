@@ -30,10 +30,14 @@ export function factsText(
   /** The page's keyword phrase ("ავტოსამრეცხაოს ვაკანსიები"), named once more
       in the figures so the text says what the page is about, not "these". */
   name = '',
+  locale: 'ka' | 'en' = 'ka',
 ) {
   if (total <= 0)
     return {
-      lead: 'ამ ეტაპზე აქტიური განცხადება არ არის; ახალი ვაკანსიები სიაში გამოქვეყნებისთანავე გამოჩნდება.',
+      lead:
+        locale === 'en'
+          ? 'No active listings at the moment. New jobs will appear as they are published.'
+          : 'ამ ეტაპზე აქტიური განცხადება არ არის; ახალი ვაკანსიები სიაში გამოქვეყნებისთანავე გამოჩნდება.',
       salary: '',
       employers: '',
     };
@@ -42,16 +46,18 @@ export function factsText(
   // unknown. Clamping could falsely claim every remaining job was newly added.
   const fresh = total === facts.total ? facts.fresh : 0;
   const lead =
-    (name ? `${name}: ` : '') +
-    `ახლა აქტიურია ${groupDigits(total)} განცხადება` +
-    (fresh === 0
-      ? '.'
-      : fresh === total
-        ? total === 1
-          ? ', რომელიც ბოლო კვირაში დაემატა.'
-          : ', ყველა ბოლო კვირაში დაემატა.'
-        : // The count last: "მათ შორის 1 ბოლო 7 დღეში" read as one run of numbers.
-          `, ბოლო კვირაში დაემატა ${groupDigits(fresh)}.`);
+    locale === 'en'
+      ? `${name ? `${name}: ` : ''}${groupDigits(total)} active ${total === 1 ? 'listing' : 'listings'}${fresh ? `, ${groupDigits(fresh)} added in the last week` : ''}.`
+      : (name ? `${name}: ` : '') +
+        `ახლა აქტიურია ${groupDigits(total)} განცხადება` +
+        (fresh === 0
+          ? '.'
+          : fresh === total
+            ? total === 1
+              ? ', რომელიც ბოლო კვირაში დაემატა.'
+              : ', ყველა ბოლო კვირაში დაემატა.'
+            : // The count last: "მათ შორის 1 ბოლო 7 დღეში" read as one run of numbers.
+              `, ბოლო კვირაში დაემატა ${groupDigits(fresh)}.`);
   const salary =
     facts.salary && facts.salary.count <= total ? facts.salary : null;
   const per = salary?.period === 'day' ? 'დღეში' : 'თვეში';
@@ -70,5 +76,17 @@ export function factsText(
       : facts.employers.length === 1
         ? 'ყველაზე აქტიური დამსაქმებელი:'
         : 'ყველაზე აქტიური დამსაქმებლები:';
+  if (locale === 'en')
+    return {
+      lead,
+      salary: !salary
+        ? ''
+        : `The middle 50% of salaries stated in ${groupDigits(salary.count)} listings are ${round(salary.low) === round(salary.high) ? `approximately ₾${groupDigits(round(salary.low))}` : `₾${groupDigits(round(salary.low))}–${groupDigits(round(salary.high))}`} per ${salary.period === 'day' ? 'day' : 'month'}.`,
+      employers: facts.employers.length
+        ? facts.employers.length === 1
+          ? 'Most active employer:'
+          : 'Most active employers:'
+        : '',
+    };
   return { lead, salary: pay, employers };
 }

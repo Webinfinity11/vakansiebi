@@ -30,6 +30,10 @@
 - ტელეფონზე ბარათის გადასმა: მარჯვნივ — შენახვა, მარცხნივ — დამალვა (აღდგენა სიის თავშია).
 - მუქი თემა — მხოლოდ არჩევით, მასთეს ღილაკით. მოწყობილობის პარამეტრი საიტს არ ცვლის; არჩევანი `ertad-theme` გასაღებით ამ ბრაუზერში ინახება.
 - PWA: `/manifest.webmanifest` და ხატულები (192, 512, maskable 512, apple-touch 180) — „მთავარ ეკრანზე დამატება" მუშაობს.
+- GE/EN გადამრთველი დროშებით ცვლის საჯარო ინტერფეისს; ვაკანსიის ტექსტი, ფილტრის მნიშვნელობები, URL და CV დოკუმენტის ენა უცვლელია. არჩევანი `jobx-ui-language` გასაღებით ინახება. ინგლისურის არჩევა არ ქმნის ცალკე ინდექსირებად URL-ებს და თარგმნის გარე API-ს არ იყენებს.
+- 1100px-მდე ნავიგაცია ბურგერ მენიუშია: ვაკანსიები, რუკა, კომპანიები, ბლოგი, შენახულები, CV და ბიზნესის გვერდი. ენის გადამრთველი მენიუშია ყველა ზომაზე; ბურგერი დესკტოპზეც ხელმისაწვდომია. გვერდის ფართო ჰედერში მთავარზე დაბრუნებას ლოგო ასრულებს.
+- დაყენების შეთავაზება ჩანს მხოლოდ დესკტოპზე, რეალური `beforeinstallprompt` მოვლენის შემდეგ, მინიმუმ 30 წამში და განმეორებით ვიზიტზე ან მეორე გვერდზე. დადასტურებული დაყენება (`jobx-install-accepted`) შეთავაზებას აღარ აჩვენებს; უარი, დახურვა ან გაუქმებული ბრაუზერის დიალოგი 7 დღით აჩუმებს. არჩევანი ამ ბრაუზერში ინახება და ღია ჩანართებს შორის სინქრონდება. საიტი არ ამტკიცებს, რომ ოფლაინ რეჟიმი აქვს.
+- `/blog` შეიცავს გადამოწმებულ ქართულ სტატიებს დღიურ ანაზღაურებასა და ნახევარი განაკვეთის სწავლასთან შეთავსებაზე; ახალი სტატიები ემატება გადამოწმების შემდეგ. კონტენტი და წყაროების გადამოწმების თარიღი ინახება `lib/blog.ts`-ში. გვერდები წინასწარ გენერირდება ბაზის მოთხოვნის გარეშე, აქვს canonical, BlogPosting მონაცემები და საიტმაპში მხოლოდ გამოქვეყნებული კატალოგი ხვდება.
 
 ## ლოკალურად გაშვება
 
@@ -170,6 +174,78 @@ To retry a failed release: `gh workflow run deploy.yml --ref main`. Do not addit
 
 Environment-only changes do not change the Git SHA: use Vercel Redeploy once, with the existing build cache, after changing environment variables. `APP_URL` must be `https://jobx.ge`. Verify the CLI project is `infinity-solutions/vakansiebi` before deployment. Keep `git.deploymentEnabled: false`: the GitHub workflow owns automatic releases through the deploy hook, so Vercel's separate Git integration must not trigger a second build.
 
+## Database economy and retention
+
+Catalogue counts share one database read per server process for 60 seconds,
+including concurrent requests. The hourly worker still publishes the same
+complete count snapshot. Every read, including a cache hit, rejects snapshots
+older than 24 hours; failed reads are retried. This cache does not contain vacancy
+text, private records or personalized search results. A refreshed count can take
+up to one additional minute to appear on an already running server instance.
+
+Reviewed profession/condition combinations (for example dishwasher + daily pay,
+developer + remote work, accountant + part-time) use intersections of the worker's
+existing result sets. Each combination adds no extra database scan. Only pages
+with at least ten active results enter the sitemap and related links. Exact
+reviewed professions do not silently widen to description-only matches when
+empty; readers can still explicitly search descriptions. The home page exposes
+all eligible fields, and field pages link to relevant professions across sectors.
+
+Ended-vacancy cleanup runs with the existing scraper, with no extra scheduled
+database wake-ups. Each transaction deletes at most 200 eligible vacancies and
+archives at most 200 expired, manually managed vacancies. It processes the oldest
+records first, skips records being edited, and rolls back on a statement or lock
+timeout. Existing windows remain: automatic expiry 1 day, source removal 7 days,
+unverified archive 14 days, and editorial archive/rejection 30 days, measured from
+the record's last update. Direct submissions, invoices and all swipe application
+statuses protect their related vacancies from deletion. The dry run
+`node --import tsx scripts/purge-ended.ts` reports the full eligible backlog
+without deleting anything; the applied run is always bounded.
+
+Source IDs and their complete raw snapshots are retained after a vacancy is
+purged. They prevent rediscovery from importing it again. No automatic pruning of
+these snapshots, standalone audit history or source-run history has been added.
+Keep their full information until an archive-and-restore workflow is verified;
+the measured orphan snapshot payload was only about 36 MiB on 2026-10-24.
+Anonymous analytics still folds events older than 30 days into daily totals, and
+CVs retain their existing 12-month expiry policy.
+
+Admin analytics uses Tbilisi calendar days, including today: 7 days means today
+and the previous 6 days. Every section uses the same start and end instants.
+Action counts do not identify unique visitors or measure a sequential conversion
+funnel. CV sends count provider-accepted application records, while received
+posting counts exclude test submissions. CV creation counts describe retained
+records; repeated save events and the current active inventory are separate
+metrics. Moving old events to daily totals preserves their counts, not their
+original hourly detail.
+
+The comparison card shows its own date ranges and counts. For multi-day selections
+it excludes today's partial day from both windows and shifts the previous window
+by the selected period (7 days compares 6 complete days with the same weekdays one
+week earlier). Today compares with yesterday up to the same instant; yesterday
+compares two full days. A missing historical baseline is marked unavailable, and
+a zero baseline shows an absolute change instead of an undefined percentage.
+
+Public search, pagination and similar-vacancy requests have a 45-second client
+deadline and manual retry. Expected cancellation when changing filters is not
+counted as a failure. Error events identify the area and bounded cause (network,
+timeout, server, invalid response, missing page, rate limit or invalid request).
+Server timeout logs include a query fingerprint and duration, with no SQL,
+parameters or search text. Similar-vacancy reads use the same 12-second database
+statement limit and transaction-local memory setting as public searches. Internal
+detail and recommendation reads skip the unused saved-list availability lookup;
+public saved-list responses keep it.
+Company-directory reads use the existing generated company, city and deadline
+columns, which PostgreSQL updates with every published snapshot change. Their
+grouping, source visibility and expiry rules remain unchanged.
+
+For a periodic review, run `node --import tsx scripts/db-stats.ts`: compare table
+sizes, the statement statistics reset time, slow/repeated queries and the cleanup
+backlog. Provider compute, transfer and history usage must be checked separately
+in Neon. PostgreSQL's database size is not a bill, and deletion makes space
+reusable without necessarily shrinking physical files immediately. Do not run
+`VACUUM FULL` or change retention windows solely to make a size counter smaller.
+
 ## Google Analytics და Search Console
 
 Google-ში ვაკანსიების საიმედო გაგზავნის რიგი, ლიმიტი და შემოწმება აღწერილია [ოპერაციულ გზამკვლევში](docs/google-indexing-operations.md).
@@ -179,7 +255,6 @@ Google-ში ვაკანსიების საიმედო გაგ�
 Search Console-ში გასაგზავნი sitemap: `https://jobx.ge/sitemap.xml`; `robots.txt` ამ მისამართს უთითებს. ეს `<sitemapindex>` აერთიანებს ოთხ დამოუკიდებელ სიას: `/sitemap-pages.xml`, `/sitemap-categories.xml`, `/sitemap-companies.xml` და `/sitemap-jobs.xml`.
 
 ყოველი სია დამოუკიდებლად ახლდება და ქეშირდება; მონაცემების განახლებისთვის ახალი build საჭირო არ არის. CDN წარმატებულ პასუხს 1 საათით ინახავს (`s-maxage=3600`) და განახლებისას ძველ ასლს დროებით გასცემს (`stale-while-revalidate=86400`). ცალკეული სიის დროებითი ხარვეზი სხვა სიებს არ ცვლის. ვაკანსიების სიას მაქსიმუმ 25,000 URL აქვს; საერთო XML დამხმარე დამატებით იცავს 50,000 URL-ისა და 4 MiB-ის ლიმიტებს.
-
 
 `app/google-analytics.tsx` ტვირთავს Google tag-ს მხოლოდ production `https://jobx.ge`-ის საჯარო გვერდებზე. `page_view` იგზავნება ერთხელ თითო გვერდზე, Next.js-ის ნავიგაციის დროსაც. URL-ის query/hash და referrer-ის კერძო გზები იშლება. ადმინი, ინვოისები და preview გამორიცხულია; ფორმების ველები, აპლიკანტის კონტაქტები და შიდა ძიების ტექსტი არ იგზავნება. სარეკლამო პერსონალიზაცია და Google signals გამორთულია.
 
@@ -280,7 +355,6 @@ Source comparison and recovery scope: [2026-09-10 audit](docs/source-audit-2026-
 Vacancy details retain the complete source description and add important conditions above it. Supported linked employer vacancy pages are also imported in full; source text is not replaced by a generated summary. Extra source facts are visible without expanding a disclosure. A temporary external failure retains the last verified text and stays in the refresh queue. An employer link that is readable but is not this vacancy (a different title, a removed page, a missing or duplicated posting) never blocks the vacancy itself: the record keeps its own source description and no employer text is appended. A snapshot that already holds verified employer text keeps that text and is retried instead of being shortened, but only for a bounded number of attempts, so a permanently broken employer link cannot freeze the record's other source fields. Every skipped employer link is logged with its reason.
 
 After `npm run db:migrate`, use `npx tsx scripts/queue-description-refresh.ts --apply` to explicitly request a fresh fetch of all currently published primary sources, including older paused records. The existing GitHub scraper drains that queue first. Progress is stored in `source_items.refresh_requested_at` / `refresh_completed_at` and `source_runs`; newer editorial edits take precedence over queued requests. See [source adapters](worker/SOURCES.md).
-
 
 ## Admin scraper control
 

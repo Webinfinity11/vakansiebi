@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -77,6 +78,7 @@ function MetroDistance({
   place: MapVacancy['places'][number] | undefined;
   station?: MetroStation;
 }) {
+  const { ui } = useUi();
   if (!place) return null;
   const near = station
     ? {
@@ -90,11 +92,14 @@ function MetroDistance({
   return (
     <span
       className="job-map-walk-time"
-      title={`მიახლოებითი სავალი დრო მეტროდან მისამართამდე: ${place[2]}`}
+      title={ui('მიახლოებითი სავალი დრო მეტროდან მისამართამდე: {0}', [
+        place[2],
+      ])}
     >
       <TrainFront size={13} aria-hidden="true" />
       <span>
-        მეტრო {near.station.name} · ≈{formatWalk(near.minutes)}
+        {ui('მეტრო ')}
+        {near.station.name} · ≈{formatWalk(near.minutes)}
       </span>
     </span>
   );
@@ -118,6 +123,7 @@ function features(list: MapVacancy[]) {
 }
 
 export function JobMap() {
+  const { ui } = useUi();
   const params = useSearchParams();
   const station = stationBySlug(params.get('station') || '');
   const requestedWalk = Number(params.get('walk'));
@@ -688,11 +694,15 @@ export function JobMap() {
     <div className="job-map" data-detail={!!opened}>
       <div className="job-map-bar">
         <div className="job-map-title">
-          <h1>ვაკანსიები რუკაზე</h1>
+          <h1>{ui('ვაკანსიები რუკაზე')}</h1>
           {all ? (
-            <p>სულ {whole.format(total)} ვაკანსია ზუსტი მისამართით</p>
+            <p>
+              {ui('სულ ')}
+              {whole.format(total)}
+              {ui(' ვაკანსია ზუსტი მისამართით')}
+            </p>
           ) : (
-            <p aria-label="ვაკანსიები იტვირთება">
+            <p aria-label={ui('ვაკანსიები იტვირთება')}>
               <span className="ds-skeleton job-map-count-skeleton" />
             </p>
           )}
@@ -701,9 +711,9 @@ export function JobMap() {
           <Search size={16} aria-hidden="true" />
           <input
             type="search"
-            aria-label="პოზიცია ან კომპანია"
+            aria-label={ui('პოზიცია ან კომპანია')}
             value={query}
-            placeholder="პოზიცია ან კომპანია"
+            placeholder={ui('პოზიცია ან კომპანია')}
             onChange={(e) => setQuery(e.target.value)}
             // Counted once a search is left behind, not on every keystroke.
             onBlur={(e) => {
@@ -711,10 +721,11 @@ export function JobMap() {
             }}
           />
         </label>
-        <fieldset className="job-map-chips" aria-label="ფილტრები">
+        <fieldset className="job-map-chips" aria-label={ui('ფილტრები')}>
           {hasFilters && (
             <button type="button" className="ds-chip" onClick={clearFilters}>
-              <X aria-hidden="true" /> გასუფთავება
+              <X aria-hidden="true" />
+              {ui(' გასუფთავება')}
             </button>
           )}
           <button
@@ -727,10 +738,10 @@ export function JobMap() {
             }}
           >
             <Banknote aria-hidden="true" />
-            ხელფასით
+            {ui('ხელფასით')}
           </button>
           <Choice
-            label="ყველა მიმართულება"
+            label={ui('ყველა მიმართულება')}
             value={category || 'ყველა'}
             onChange={(v) => {
               if (v !== 'ყველა') trackAction('map_category');
@@ -772,7 +783,7 @@ export function JobMap() {
             <span aria-hidden="true" />
             <b>
               {all ? (
-                `${whole.format(listed.length)} ვაკანსია ამ ტერიტორიაზე`
+                ui('{0} ვაკანსია ამ ტერიტორიაზე', [whole.format(listed.length)])
               ) : (
                 <span className="ds-skeleton job-map-count-skeleton" />
               )}
@@ -793,12 +804,12 @@ export function JobMap() {
                   className="ds-btn ds-btn--ghost ds-btn--sm"
                   onClick={() => pickStation('')}
                 >
-                  ფილტრის მოხსნა
+                  {ui('ფილტრის მოხსნა')}
                 </button>
               </div>
               <fieldset
                 className="job-map-walk"
-                aria-label="სავარაუდო სავალი დრო"
+                aria-label={ui('სავარაუდო სავალი დრო')}
               >
                 <Footprints size={16} aria-hidden="true" />
                 {metroWalkChoices.map((minutes) => (
@@ -821,11 +832,12 @@ export function JobMap() {
                       trackAction('metro_walk');
                     }}
                   >
-                    {minutes} წთ
+                    {minutes}
+                    {ui(' წთ')}
                   </button>
                 ))}
               </fieldset>
-              <small>ფეხით სავალი დრო მიახლოებითია.</small>
+              <small>{ui('ფეხით სავალი დრო მიახლოებითია.')}</small>
             </div>
           )}
 
@@ -833,9 +845,10 @@ export function JobMap() {
             <div className="job-map-selection">
               <div>
                 <strong>
-                  {whole.format(listed.length)} ვაკანსია ამ ადგილას
+                  {whole.format(listed.length)}
+                  {ui(' ვაკანსია ამ ადგილას')}
                 </strong>
-                <span>არჩეული წერტილის შედეგები</span>
+                <span>{ui('არჩეული წერტილის შედეგები')}</span>
               </div>
               <button
                 type="button"
@@ -846,20 +859,21 @@ export function JobMap() {
                   setDetail(null);
                 }}
               >
-                ტერიტორიის სია
+                {ui('ტერიტორიის სია')}
               </button>
             </div>
           )}
           {all && !station && !group && (
             <div className="job-map-list-heading">
               <strong>
-                {whole.format(listed.length)} ვაკანსია ამ ტერიტორიაზე
+                {whole.format(listed.length)}
+                {ui(' ვაკანსია ამ ტერიტორიაზე')}
               </strong>
             </div>
           )}
           <p className="job-map-hint">
             <MapPin size={14} aria-hidden="true" />
-            ნაჩვენებია მხოლოდ ზუსტი მისამართის მქონე ვაკანსიები.
+            {ui('ნაჩვენებია მხოლოდ ზუსტი მისამართის მქონე ვაკანსიები.')}
           </p>
           {error && (
             <div className="job-map-error" role="alert">
@@ -872,24 +886,28 @@ export function JobMap() {
                   setAttempt((n) => n + 1);
                 }}
               >
-                თავიდან ცდა
+                {ui('თავიდან ცდა')}
               </button>
             </div>
           )}
           {!all && !error && (
-            <SkeletonRows rows={4} block label="ვაკანსიები იტვირთება" />
+            <SkeletonRows rows={4} block label={ui('ვაკანსიები იტვირთება')} />
           )}
           {all && !listed.length && (
             <div className="job-map-empty">
               <MapPinOff aria-hidden="true" />
               <p>
                 {group
-                  ? 'არჩეულ ადგილას ამ ფილტრებით ვაკანსია არ ჩანს.'
+                  ? ui('არჩეულ ადგილას ამ ფილტრებით ვაკანსია არ ჩანს.')
                   : station
-                    ? 'ამ პირობებით ვაკანსია არ ჩანს. გაზარდე სავალი დრო ან აირჩიე სხვა სადგური.'
+                    ? ui(
+                        'ამ პირობებით ვაკანსია არ ჩანს. გაზარდე სავალი დრო ან აირჩიე სხვა სადგური.',
+                      )
                     : query.trim() || category || paid
-                      ? 'ამ ტერიტორიაზე ამ ფილტრებით ვაკანსია ვერ მოიძებნა.'
-                      : 'ამ ტერიტორიაზე ვაკანსია არ ჩანს. რუკა დააშორე ან გადაწიე.'}
+                      ? ui('ამ ტერიტორიაზე ამ ფილტრებით ვაკანსია ვერ მოიძებნა.')
+                      : ui(
+                          'ამ ტერიტორიაზე ვაკანსია არ ჩანს. რუკა დააშორე ან გადაწიე.',
+                        )}
               </p>
               {hasFilters && (
                 <button
@@ -897,7 +915,7 @@ export function JobMap() {
                   className="ds-btn ds-btn--secondary ds-btn--sm"
                   onClick={clearFilters}
                 >
-                  ფილტრების გასუფთავება
+                  {ui('ფილტრების გასუფთავება')}
                 </button>
               )}
             </div>
@@ -917,7 +935,9 @@ export function JobMap() {
                   <CompanyLogo company={v.company} url={v.logoUrl} />
                   <span className="job-map-card-text">
                     {v.premium && (
-                      <em className="ds-badge ds-badge--warning">პრემიუმი</em>
+                      <em className="ds-badge ds-badge--warning">
+                        {ui('პრემიუმი')}
+                      </em>
                     )}
                     <strong>{v.title}</strong>
                     <span>{v.company}</span>
@@ -937,7 +957,8 @@ export function JobMap() {
           {listed.length > listLimit && (
             <div className="job-map-more">
               <span aria-live="polite">
-                ნაჩვენებია {whole.format(Math.min(shownLimit, listed.length))} /{' '}
+                {ui('ნაჩვენებია ')}
+                {whole.format(Math.min(shownLimit, listed.length))} /{' '}
                 {whole.format(listed.length)}
               </span>
               {listed.length > shownLimit && (
@@ -951,7 +972,7 @@ export function JobMap() {
                     })
                   }
                 >
-                  მეტი ვაკანსიის ჩვენება
+                  {ui('მეტი ვაკანსიის ჩვენება')}
                 </button>
               )}
             </div>
@@ -989,7 +1010,8 @@ export function JobMap() {
             }}
           >
             <List size={16} aria-hidden="true" />
-            სია · {whole.format(listed.length)}
+            {ui('სია · ')}
+            {whole.format(listed.length)}
           </button>
 
           {!!nearby.length && (
@@ -999,7 +1021,7 @@ export function JobMap() {
               key={grouped?.length ? `rail:${group!.join()}` : 'rail'}
               ref={rail}
               onScroll={onRailScroll}
-              aria-label="ვაკანსიები რუკის ამ ნაწილში"
+              aria-label={ui('ვაკანსიები რუკის ამ ნაწილში')}
             >
               {nearby.map((v) => (
                 <article
@@ -1013,7 +1035,7 @@ export function JobMap() {
                     <div>
                       {v.premium && (
                         <span className="ds-badge ds-badge--warning">
-                          პრემიუმი
+                          {ui('პრემიუმი')}
                         </span>
                       )}
                       <strong>{v.title}</strong>
@@ -1040,7 +1062,7 @@ export function JobMap() {
                       focus(v);
                     }}
                   >
-                    ვაკანსიის ნახვა
+                    {ui('ვაკანსიის ნახვა')}
                   </a>
                 </article>
               ))}

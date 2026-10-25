@@ -1,3 +1,5 @@
+'use client';
+import { useUi } from '@/app/ui-language';
 import { landingLinks, relatedLandings, type Landing } from '@/lib/seo-landing';
 import { Suspense } from 'react';
 import { DirectoryLinks, useSearchDirectory } from './search-directory-context';
@@ -7,14 +9,15 @@ export function SearchDirectoryGroups({
 }: {
   landing?: Landing | null;
 }) {
+  const { ui } = useUi();
   return (
     <div className="search-directory-browse">
-      <h2>მოძებნე ვაკანსია</h2>
+      <h2>{ui('მოძებნე ვაკანსია')}</h2>
       <div className="search-directory-groups">
         {/* Keep the main destinations in the initial HTML even while the
             vacancy-dependent directory is loading or unavailable. */}
         <section className="search-directory-group">
-          <h3>სწრაფი ბმულები</h3>
+          <h3>{ui('სწრაფი ბმულები')}</h3>
           <DirectoryLinks
             links={[
               { path: '/', label: 'ვაკანსიები' },
@@ -49,6 +52,7 @@ const priority = (path: string) => {
 };
 
 function DirectoryGroups({ landing }: { landing?: Landing | null }) {
+  const { ui } = useUi();
   const rows = useSearchDirectory();
   const links = landingLinks(rows);
   // The lists next to this one, as one more column rather than a block above.
@@ -74,7 +78,7 @@ function DirectoryGroups({ landing }: { landing?: Landing | null }) {
     <>
       {related.length > 0 && (
         <section className="search-directory-group">
-          <h3>მსგავსი ძიებები</h3>
+          <h3>{ui('მსგავსი ძიებები')}</h3>
           <DirectoryLinks links={related} limit={3} />
         </section>
       )}
@@ -82,7 +86,7 @@ function DirectoryGroups({ landing }: { landing?: Landing | null }) {
         .filter((group) => group.links.length > 0)
         .map(({ title, key, links: groupLinks }) => (
           <section key={key} className="search-directory-group">
-            <h3>{title}</h3>
+            <h3>{ui(title)}</h3>
             <DirectoryLinks links={groupLinks} limit={3} />
           </section>
         ))}

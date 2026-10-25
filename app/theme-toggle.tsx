@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import { useSyncExternalStore } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { applyTheme, storeTheme, themeChanged } from '@/lib/theme';
@@ -20,6 +21,7 @@ const current = () =>
   document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
 
 export function ThemeToggle() {
+  const { ui } = useUi();
   /* The server renders the light page, which is also what an unchosen browser gets, so the
      first client render agrees with it unless this reader has asked for the dark one. */
   const resolved = useSyncExternalStore(subscribe, current, () => 'light');
@@ -29,9 +31,9 @@ export function ThemeToggle() {
       type="button"
       className="ds-btn ds-btn--secondary ds-btn--icon site-theme"
       aria-label={
-        next === 'dark' ? 'მუქ თემაზე გადართვა' : 'ღია თემაზე გადართვა'
+        next === 'dark' ? ui('მუქ თემაზე გადართვა') : ui('ღია თემაზე გადართვა')
       }
-      title={next === 'dark' ? 'მუქი თემა' : 'ღია თემა'}
+      title={next === 'dark' ? ui('მუქი თემა') : ui('ღია თემა')}
       onClick={() => {
         storeTheme(window.localStorage, next);
         applyTheme(next);

@@ -1,3 +1,5 @@
+import type { LoadArea, LoadFailure, LoadFailureAction } from './public-load';
+
 /* What a reader does on the public pages beyond searching, reading and contacting, as short
    code names. The codes are the whole record: no vacancy, text or visitor goes with them, so
    they say which controls are used and which errors are met, never who used them. The groups
@@ -90,11 +92,11 @@ export const actionGroups = [
     },
   },
   {
-    title: 'Swipe',
+    title: 'CV-ის შერჩევა და გაგზავნა',
     codes: {
-      swipe_open: 'Swipe გახსნა',
+      swipe_open: 'შერჩევის რეჟიმი გახსნა',
       swipe_skip: 'ვაკანსია გამოტოვა',
-      swipe_send: 'CV გაიგზავნა',
+      swipe_send: 'გაგზავნის დასტური გამოჩნდა',
       swipe_failed: 'CV ვერ გაიგზავნა',
       swipe_undo: 'გადაწევა გააუქმა',
       swipe_filter: 'ფილტრი გამოიყენა',
@@ -108,7 +110,31 @@ type Codes<G> = G extends { codes: infer C } ? keyof C : never;
 /* relax_<filter> is the empty-results offer to drop one filter, named by the filter's key. */
 export type ActionCode =
   | Codes<(typeof actionGroups)[number]>
+  | LoadFailureAction
   | `relax_${string}`;
+
+const loadAreas: Record<LoadArea, string> = {
+  results: 'ძებნა',
+  more: 'შემდეგი გვერდი',
+  similar: 'მსგავსი ვაკანსიები',
+};
+const loadReasons: Record<LoadFailure, string> = {
+  network: 'კავშირის წყვეტა',
+  timeout: 'დრო ამოიწურა',
+  server: 'სერვერის შეცდომა',
+  response: 'არასწორი პასუხი',
+  missing: 'გვერდი აღარ არის',
+  limited: 'მოთხოვნების ლიმიტი',
+  request: 'მოთხოვნა უარყოფილია',
+};
+const loadLabels = new Map<string, string>(
+  Object.entries(loadAreas).flatMap(([area, label]) =>
+    Object.entries(loadReasons).map(
+      ([reason, detail]) =>
+        [`${area}_${reason}`, `${label} · ${detail}`] as const,
+    ),
+  ),
+);
 
 export type ActionRow = { code: string; label: string; count: number };
 export type ActionGroup = { title: string; rows: ActionRow[]; total: number };
@@ -142,6 +168,13 @@ export function groupActions(
         }
     return { title: group.title, rows: listed, total: 0 };
   });
+  const errors = groups.find((group) => group.title === 'შეცდომები')!;
+  for (const { value, count } of rows) {
+    const label = loadLabels.get(value);
+    if (!label) continue;
+    claimed.add(value);
+    errors.rows.push({ code: value, label, count });
+  }
   const unknown = rows
     .filter(({ value }) => !claimed.has(value))
     .map(({ value, count }) => ({ code: value, label: value, count }));

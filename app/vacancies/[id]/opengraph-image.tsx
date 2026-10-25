@@ -34,7 +34,13 @@ export default async function Image({
       readFile(join(process.cwd(), 'public/brand/jobx.png')),
     ]);
   const logoSrc = `data:image/png;base64,${logo.toString('base64')}`;
-  const pay = job ? compactSalary(job.salary, job.salaryPeriod) : '';
+  // These ASCII equivalents preserve the salary qualifiers without requesting
+  // unsupported mathematical glyphs from the remote fallback-font service.
+  const pay = job
+    ? compactSalary(job.salary, job.salaryPeriod)
+        .replaceAll('≈', '~')
+        .replaceAll('≤', '<=')
+    : '';
   const facts = job ? [job.city, pay].filter(Boolean) : [];
   return new ImageResponse(
     <div

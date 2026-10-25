@@ -124,14 +124,16 @@ export type EmployerPage = {
   cities: { name: string; count: number }[];
 };
 
+// Stored scalars mirror the published snapshot on every write and avoid repeatedly
+// decompressing it across the catalogue. Only logoUrl still needs the snapshot.
 // Aggregate repeated employer attributes in PostgreSQL; only job IDs repeat on the wire.
 export const employerRowsSql = `SELECT name,logo,city,sources,array_agg(id ORDER BY id) AS ids
-         FROM (SELECT j.id::text AS id, btrim(j.published->>'company') AS name,
-              COALESCE(j.published->>'logoUrl','') AS logo, btrim(COALESCE(j.published->>'city','')) AS city,
+         FROM (SELECT j.id::text AS id, btrim(j.search_company) AS name,
+              COALESCE(j.published->>'logoUrl','') AS logo, btrim(COALESCE(j.search_city,'')) AS city,
               array_agg(DISTINCT si.source_id) AS sources
          FROM jobs j JOIN source_items si ON si.job_id=j.id JOIN sources s ON s.id=si.source_id AND NOT s.retired
-        WHERE j.status='published' AND COALESCE(j.published->>'company','')<>''
-          AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline' >= to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))
+        WHERE j.status='published' AND COALESCE(j.search_company,'')<>''
+          AND (COALESCE(j.search_deadline,'')='' OR j.search_deadline >= to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))
         GROUP BY j.id) visible_employers
         GROUP BY name,logo,city,sources ORDER BY min(id)`;
 

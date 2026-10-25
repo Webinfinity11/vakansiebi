@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import { SiteFooter } from './site-footer';
 import { HeroHeading } from './hero-heading';
 import './board-features.css';
@@ -15,6 +16,7 @@ import {
   savedLimitMessage,
   subscribeSavedVacancies,
 } from '@/lib/saved-vacancies';
+import { englishSearchHeading } from '@/lib/ui-landings';
 import { landingOf, searchHeading } from '@/lib/seo-landing';
 import { nearestCity } from '@/lib/nearest-city';
 import {
@@ -65,6 +67,12 @@ import {
   listPageSize,
 } from '@/lib/search-state';
 import { track, trackAction } from '@/lib/analytics-client';
+import {
+  fetchPublicJson,
+  isJobsPage,
+  loadFailureAction,
+  loadFailureMessage,
+} from '@/lib/public-load';
 import type { ActionCode } from '@/lib/analytics-actions';
 import {
   ChevronDown,
@@ -116,22 +124,25 @@ function isNew(job: { datePosted?: string; createdAt?: string }) {
 
 /* Secondary: the same list, one vacancy at a time, with the CV sent in one tap. */
 function DeckInvite({ href, onClose }: { href: string; onClose: () => void }) {
+  const { ui } = useUi();
   return (
     <aside className="deck-invite" aria-label="Swipe">
       <span className="deck-invite-mark" aria-hidden="true">
         <Layers size={20} />
       </span>
       <div>
-        <strong>გააგრძელე Swipe-ით</strong>
-        <p>ვაკანსია ერთ ეკრანზე — გადაწიე და CV ერთი შეხებით გაეგზავნება.</p>
+        <strong>{ui('გააგრძელე Swipe-ით')}</strong>
+        <p>
+          {ui('ვაკანსია ერთ ეკრანზე — გადაწიე და CV ერთი შეხებით გაეგზავნება.')}
+        </p>
       </div>
       <Link className="ds-btn ds-btn--primary" href={href} prefetch={false}>
-        დაწყება
+        {ui('დაწყება')}
       </Link>
       <button
         type="button"
         className="deck-invite-close"
-        aria-label="დახურვა"
+        aria-label={ui('დახურვა')}
         onClick={onClose}
       >
         <X size={16} aria-hidden="true" />
@@ -160,6 +171,7 @@ const JobCard = memo(function JobCard({
   onToggleSave: (id: string) => void;
   onOpen: (job: Job) => void;
 }) {
+  const { ui, locale } = useUi();
   const swipe = useSwipe({
     onRight: () => onToggleSave(j.id),
   });
@@ -184,7 +196,7 @@ const JobCard = memo(function JobCard({
       data-dir={swipe.dx > 0 ? 'right' : swipe.dx < 0 ? 'left' : undefined}
     >
       <div className="swipe-reveal swipe-reveal-right" aria-hidden="true">
-        <Bookmark size={16} /> {saved ? 'მოხსნა' : 'შენახვა'}
+        <Bookmark size={16} /> {saved ? ui('მოხსნა') : ui('შენახვა')}
       </div>
       <article
         className={`job-card swipe-card${j.placement ? ` placement-${j.placement.tier}` : ''}`}
@@ -199,11 +211,12 @@ const JobCard = memo(function JobCard({
           {/* The words carry it. A gem beside them read as a sticker on a shop
               window rather than as a job worth reading first. */}
           {featured === 'premium' && (
-            <span className="featured-label">პრემიუმ ვაკანსია</span>
+            <span className="featured-label">{ui('პრემიუმ ვაკანსია')}</span>
           )}
           <div className="job-title-row">
             <Link
               className="job-title"
+              lang={/[ა-ჰ]/.test(j.title) ? 'ka' : undefined}
               title={j.title}
               data-vacancy-id={j.id}
               href={openHref}
@@ -221,15 +234,15 @@ const JobCard = memo(function JobCard({
             {j.placement && !j.placement.priority && (
               <span
                 className={`placement-badge placement-badge-${j.placement.tier}`}
-                title="გამორჩეული განთავსება"
+                title={ui('გამორჩეული განთავსება')}
               >
-                {j.placement.tier === 'premium' ? 'პრემიუმი' : 'VIP'}
+                {j.placement.tier === 'premium' ? ui('პრემიუმი') : 'VIP'}
               </span>
             )}
             {featured === 'vip' && (
               <span className="featured-label featured-label-vip">VIP</span>
             )}
-            {isNew(j) && <span className="job-new">ახალი</span>}
+            {isNew(j) && <span className="job-new">{ui('ახალი')}</span>}
           </div>
           <div className="job-company">
             <CompanyIdentity
@@ -249,7 +262,7 @@ const JobCard = memo(function JobCard({
           )}
           <div className="job-meta">
             {j.category !== 'სხვა' && (
-              <span className="category-tag">{j.category}</span>
+              <span className="category-tag">{ui(j.category)}</span>
             )}
             {j.city && (
               <span>
@@ -262,13 +275,13 @@ const JobCard = memo(function JobCard({
             {j.employmentType && (
               <span>
                 <BriefcaseBusiness size={14} />
-                {j.employmentType}
+                {ui(j.employmentType)}
               </span>
             )}
             {j.mode && (
               <span>
                 <Laptop size={14} />
-                {j.mode}
+                {ui(j.mode)}
               </span>
             )}
           </div>
@@ -281,7 +294,8 @@ const JobCard = memo(function JobCard({
           )}
           {j.datePosted && (
             <time className="job-when" dateTime={j.datePosted}>
-              გამოქვეყნდა: {formatDate(j.datePosted)}
+              {ui('გამოქვეყნდა: ')}
+              {formatDate(j.datePosted, locale)}
             </time>
           )}
           {j.deadline && (
@@ -289,7 +303,8 @@ const JobCard = memo(function JobCard({
               className={`job-when${urgent ? ' is-urgent' : ''}`}
               dateTime={j.deadline}
             >
-              ბოლო ვადა: {formatDate(j.deadline)}
+              {ui('ბოლო ვადა: ')}
+              {formatDate(j.deadline, locale)}
             </time>
           )}
         </div>
@@ -300,7 +315,7 @@ const JobCard = memo(function JobCard({
                 className="ds-btn ds-btn--primary featured-cta"
                 href={openHref}
                 prefetch={false}
-                aria-label={`${j.title} — ვაკანსიის ნახვა`}
+                aria-label={ui('{0} — ვაკანსიის ნახვა', [j.title])}
                 onClick={(event) => {
                   if (swipe.suppressClick()) event.preventDefault();
                 }}
@@ -309,15 +324,15 @@ const JobCard = memo(function JobCard({
                   else onOpen(j);
                 }}
               >
-                ვაკანსიის ნახვა
+                {ui('ვაკანსიის ნახვა')}
               </Link>
             )}
             <button
               className={`save-button ${saved ? 'is-saved' : ''}`}
               aria-label={
                 saved
-                  ? `${j.title} — შენახულიდან წაშლა`
-                  : `${j.title} — შენახვა`
+                  ? ui('{0} — შენახულიდან წაშლა', [j.title])
+                  : ui('{0} — შენახვა', [j.title])
               }
               aria-pressed={saved}
               onClick={() => onToggleSave(j.id)}
@@ -350,6 +365,7 @@ export default function JobBoard({
   initial?: BoardInitial;
   pendingInitial?: boolean;
 } = {}) {
+  const { ui, locale } = useUi();
   const params = useSearchParams();
   const demo = params.get('preview') === '1';
   // The admin's preview of the board is not a reader using it.
@@ -461,7 +477,10 @@ export default function JobBoard({
      box down under the reader's thumb. */
   const landing = landingOf(loadedResult.search);
   // Any list is named in full, several conditions too; long names scroll.
-  const heading = searchHeading(loadedResult.search);
+  const heading =
+    locale === 'en'
+      ? englishSearchHeading(loadedResult.search)
+      : searchHeading(loadedResult.search);
   const [searchMeta, setSearchMeta] = useState<SearchMeta | null>(
     seed?.search || null,
   );
@@ -640,12 +659,10 @@ export default function JobBoard({
           setLoading(false);
           return;
         }
-        void fetch('/api/jobs?' + p, { signal: controller.signal })
-          .then(async (r) => {
-            const d = await r.json();
-            if (!r.ok) throw Error(d.error || 'ვაკანსიები ვერ ჩაიტვირთა');
-            return d;
-          })
+        void fetchPublicJson('/api/jobs?' + p, {
+          signal: controller.signal,
+          valid: isJobsPage,
+        })
           .then((d) => {
             if (!controller.signal.aborted) {
               setRestoredSnapshot(false);
@@ -673,9 +690,9 @@ export default function JobBoard({
             }
           })
           .catch((e) => {
-            if (e.name === 'AbortError') return;
-            setError(e.message);
-            act('results_error');
+            if (controller.signal.aborted) return;
+            setError(loadFailureMessage(e));
+            act(loadFailureAction('results', e));
           })
           .finally(() => {
             if (!controller.signal.aborted) setLoading(false);
@@ -726,12 +743,10 @@ export default function JobBoard({
     p.set('summary', '1');
     p.set('preview', demo ? '1' : '0');
     if (savedOnly) p.set('ids', savedFilter);
-    void fetch('/api/jobs?' + p, { signal: controller.signal })
-      .then(async (r) => {
-        const d = await r.json();
-        if (!r.ok) throw Error(d.error || 'ვაკანსიები ვერ ჩაიტვირთა');
-        return d;
-      })
+    void fetchPublicJson('/api/jobs?' + p, {
+      signal: controller.signal,
+      valid: isJobsPage,
+    })
       .then((d) => {
         if (controller.signal.aborted) return;
         setJobs((prev) => {
@@ -754,9 +769,9 @@ export default function JobBoard({
         setAppendPage(null);
       })
       .catch((e) => {
-        if (e.name === 'AbortError') return;
-        setAppendError(e.message);
-        act('more_error');
+        if (controller.signal.aborted) return;
+        setAppendError(loadFailureMessage(e));
+        act(loadFailureAction('more', e));
         setAppendPage(null);
       });
     return () => controller.abort();
@@ -1240,7 +1255,7 @@ export default function JobBoard({
   return (
     <div className="board-shell editorial-board crafted-board refined-board">
       <a className="skip-link" href="#results">
-        ვაკანსიებზე გადასვლა
+        {ui('ვაკანსიებზე გადასვლა')}
       </a>
       <PublicHeader
         savedCount={saved.length}
@@ -1267,9 +1282,9 @@ export default function JobBoard({
         <div className="preview-banner">
           <ShieldCheck size={16} />
           <span>
-            ადმინის წინასწარი ნახვა — გამოუქვეყნებელი ვაკანსიებიც ჩანს
+            {ui('ადმინის წინასწარი ნახვა — გამოუქვეყნებელი ვაკანსიებიც ჩანს')}
           </span>
-          <Link href="/admin">ადმინში დაბრუნება</Link>
+          <Link href="/admin">{ui('ადმინში დაბრუნება')}</Link>
         </div>
       )}
       <main>
@@ -1287,14 +1302,15 @@ export default function JobBoard({
                 <HeroHeading text={heading} />
               ) : (
                 <h1 id="search-heading">
-                  ვაკანსიები <em>საქართველოში</em>
+                  {ui('ვაკანსიები ')}
+                  <em>{ui('საქართველოში')}</em>
                 </h1>
               )}
             </div>
           </div>
           <div className="hero-search-wrap">
             <div className="search-panel">
-              <search aria-label="ვაკანსიის ძებნა">
+              <search aria-label={ui('ვაკანსიის ძებნა')}>
                 <form
                   className="searchbar"
                   onSubmit={(e) => {
@@ -1319,9 +1335,9 @@ export default function JobBoard({
                       autoCapitalize="off"
                       autoCorrect="off"
                       spellCheck={false}
-                      aria-label="მოძებნე ვაკანსია ან კომპანია"
+                      aria-label={ui('მოძებნე ვაკანსია ან კომპანია')}
                       maxLength={200}
-                      placeholder="პოზიცია ან კომპანია"
+                      placeholder={ui('პოზიცია ან კომპანია')}
                       value={query}
                       ref={searchInputRef}
                       aria-autocomplete="list"
@@ -1332,7 +1348,7 @@ export default function JobBoard({
                       <button
                         type="button"
                         className="clear-search"
-                        aria-label="საძიებო ტექსტის გასუფთავება"
+                        aria-label={ui('საძიებო ტექსტის გასუფთავება')}
                         onPointerDown={(event) => event.preventDefault()}
                         onClick={() => {
                           commitQuery('');
@@ -1363,8 +1379,8 @@ export default function JobBoard({
                   <div className="search-city">
                     <MapPin size={16} />
                     <Choice
-                      label="ყველა ქალაქი"
-                      value={city}
+                      label={ui('ყველა ქალაქი')}
+                      value={ui(city)}
                       onChange={setCity}
                       options={cities}
                       onLocate={canLocate ? locate : undefined}
@@ -1374,11 +1390,13 @@ export default function JobBoard({
                   <button
                     className="primary"
                     type="submit"
-                    aria-label="მოძებნე ვაკანსია"
+                    aria-label={ui('მოძებნე ვაკანსია')}
                   >
-                    <span className="search-label-full">მოძებნე ვაკანსია</span>
+                    <span className="search-label-full">
+                      {ui('მოძებნე ვაკანსია')}
+                    </span>
                     <span className="search-label-short" aria-hidden="true">
-                      ძებნა
+                      {ui('ძებნა')}
                     </span>
                   </button>
                 </form>
@@ -1386,7 +1404,10 @@ export default function JobBoard({
             </div>
           </div>
         </section>
-        <section className="discovery-shortcuts" aria-label="სწრაფი არჩევანი">
+        <section
+          className="discovery-shortcuts"
+          aria-label={ui('სწრაფი არჩევანი')}
+        >
           <button
             className="discovery-shortcut"
             aria-pressed={advanced.salaryPeriod === 'day'}
@@ -1400,7 +1421,7 @@ export default function JobBoard({
             }
           >
             <ShortcutMark kind="daily" />
-            <strong>დღიური ანაზღაურება</strong>
+            <strong>{ui('დღიური ანაზღაურება')}</strong>
           </button>
           <button
             className="discovery-shortcut"
@@ -1408,7 +1429,7 @@ export default function JobBoard({
             onClick={() => setRemote(!remote)}
           >
             <ShortcutMark kind="remote" />
-            <strong>დისტანციური</strong>
+            <strong>{ui('დისტანციური')}</strong>
           </button>
           <button
             className="discovery-shortcut"
@@ -1418,7 +1439,7 @@ export default function JobBoard({
             }
           >
             <ShortcutMark kind="entry" />
-            <strong>გამოცდილების გარეშე</strong>
+            <strong>{ui('გამოცდილების გარეშე')}</strong>
           </button>
           <button
             className="discovery-shortcut"
@@ -1426,7 +1447,7 @@ export default function JobBoard({
             onClick={() => setPaid(!paid)}
           >
             <ShortcutMark kind="salary" />
-            <strong>ხელფასი მითითებულია</strong>
+            <strong>{ui('ხელფასი მითითებულია')}</strong>
           </button>
           <button
             className="discovery-shortcut discovery-shortcut-employment"
@@ -1440,7 +1461,7 @@ export default function JobBoard({
             }
           >
             <ShortcutMark kind="part-time" />
-            <strong>ნახევარი განაკვეთი</strong>
+            <strong>{ui('ნახევარი განაკვეთი')}</strong>
           </button>
           <button
             className="discovery-shortcut discovery-shortcut-employment"
@@ -1454,7 +1475,7 @@ export default function JobBoard({
             }
           >
             <ShortcutMark kind="internship" />
-            <strong>სტაჟირება</strong>
+            <strong>{ui('სტაჟირება')}</strong>
           </button>
         </section>
         <div className="page board-page">
@@ -1472,12 +1493,14 @@ export default function JobBoard({
                   <div>
                     <div className="results-title-row">
                       <h2>
-                        {savedOnly ? 'შენახული ვაკანსიები' : 'ვაკანსიები'}
+                        {savedOnly
+                          ? ui('შენახული ვაკანსიები')
+                          : ui('ვაკანსიები')}
                         <span className="result-count">
                           {resultsPending ? (
                             <span
                               className="ds-skeleton result-count-skeleton"
-                              aria-label="იტვირთება"
+                              aria-label={ui('იტვირთება')}
                             />
                           ) : (
                             total
@@ -1505,8 +1528,8 @@ export default function JobBoard({
                         <span>
                           {resultsPending
                             ? visibleJobs.length
-                              ? 'ახლდება…'
-                              : 'იტვირთება…'
+                              ? ui('ახლდება…')
+                              : ui('იტვირთება…')
                             : ''}
                         </span>
                         <span
@@ -1517,12 +1540,12 @@ export default function JobBoard({
                     </div>
                     <p aria-live="polite">
                       {resultsPending
-                        ? 'ვაკანსიებს ვეძებთ…'
+                        ? ui('ვაკანსიებს ვეძებთ…')
                         : savedOnly
-                          ? 'შენახულია ამ ბრაუზერში · აქტიური ვაკანსიები'
+                          ? ui('შენახულია ამ ბრაუზერში · აქტიური ვაკანსიები')
                           : activeCount
-                            ? 'შედეგები შენ მიერ არჩეული პირობებით'
-                            : 'იპოვე პოზიცია, რომელიც შენს გეგმებს ერგება'}
+                            ? ui('შედეგები შენ მიერ არჩეული პირობებით')
+                            : ui('იპოვე პოზიცია, რომელიც შენს გეგმებს ერგება')}
                     </p>
                     {/* A word is looked for in what a vacancy calls itself. The
                         descriptions are one line away, with the number they add. */}
@@ -1534,9 +1557,14 @@ export default function JobBoard({
                         (searchMeta?.wider ?? 0) > total) && (
                         <p className="search-scope">
                           {searchMeta?.corrected ? (
-                            `„${searchMeta.corrected.from}“ ვერ მოიძებნა, ნაჩვენებია „${searchMeta.corrected.to}“.`
+                            ui('„{0}“ ვერ მოიძებნა, ნაჩვენებია „{1}“.', [
+                              searchMeta.corrected.from,
+                              searchMeta.corrected.to,
+                            ])
                           ) : searchMeta?.widened ? (
-                            'სათაურებში ვერ მოიძებნა, ამიტომ ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.'
+                            ui(
+                              'სათაურებში ვერ მოიძებნა, ამიტომ ნაჩვენებია ვაკანსიები, სადაც ეს სიტყვა აღწერაშია ნახსენები.',
+                            )
                           ) : searchMeta?.wider && searchMeta.wider > total ? (
                             <button
                               className="ds-btn ds-btn--ghost ds-btn--sm"
@@ -1544,8 +1572,9 @@ export default function JobBoard({
                                 setAdvanced({ ...advanced, deep: true })
                               }
                             >
-                              კიდევ {searchMeta.wider - total} ვაკანსია
-                              აღწერებში
+                              {ui('კიდევ ')}
+                              {searchMeta.wider - total}
+                              {ui(' ვაკანსია აღწერებში')}
                             </button>
                           ) : null}
                         </p>
@@ -1557,24 +1586,26 @@ export default function JobBoard({
                     href="/map"
                     prefetch={false}
                     className="secondary-button results-map-link"
-                    aria-label="ვაკანსიები რუკაზე"
+                    aria-label={ui('ვაკანსიები რუკაზე')}
                   >
                     <MapPin size={16} aria-hidden="true" />
-                    <span className="results-map-label">რუკაზე</span>
+                    <span className="results-map-label">{ui('რუკაზე')}</span>
                   </Link>
                   {/* Secondary: the same list, one vacancy at a time. */}
                   <Link
                     href={`/swipe${searchParams(currentSearch).size ? '?' + searchParams(currentSearch) : ''}`}
                     prefetch={false}
                     className="secondary-button results-map-link results-swipe-link"
-                    aria-label="Swipe — ვაკანსიები სათითაოდ"
+                    aria-label={ui('Swipe — ვაკანსიები სათითაოდ')}
                   >
                     <Layers size={16} aria-hidden="true" />
                     <span className="results-map-label">Swipe</span>
                   </Link>
                   <button
                     className="mobile-filter-toggle secondary-button"
-                    aria-label={`ფილტრები${activeCount > 0 ? ` — ${activeCount} აქტიური` : ''}`}
+                    aria-label={ui('ფილტრები{0}', [
+                      activeCount > 0 ? ` — ${activeCount} აქტიური` : '',
+                    ])}
                     onClick={() => {
                       setMobileDraft(currentSearch);
                       setFiltersOpen(true);
@@ -1582,14 +1613,14 @@ export default function JobBoard({
                   >
                     <SlidersHorizontal size={20} aria-hidden="true" />
                     <span className="results-tool-label" aria-hidden="true">
-                      ფილტრები
+                      {ui('ფილტრები')}
                     </span>
                     {activeCount > 0 && <b aria-hidden="true">{activeCount}</b>}
                   </button>
                   <div className="results-sort">
                     {/* A sort always has a value, so the list has no "ყველა" row. */}
                     <SelectField
-                      label="დალაგება"
+                      label={ui('დალაგება')}
                       value={sort}
                       onChange={(v) => setSort(v || 'უახლესი')}
                       options={[
@@ -1620,7 +1651,7 @@ export default function JobBoard({
                       data-active="true"
                       onClick={() => setCity('ყველა')}
                     >
-                      {city}
+                      {ui(city)}
                       <X aria-hidden="true" />
                     </button>
                   )}
@@ -1630,7 +1661,7 @@ export default function JobBoard({
                       data-active="true"
                       onClick={() => setCategory('ყველა')}
                     >
-                      {category}
+                      {ui(category)}
                       <X aria-hidden="true" />
                     </button>
                   )}
@@ -1640,7 +1671,7 @@ export default function JobBoard({
                       data-active="true"
                       onClick={() => setSubcategory('')}
                     >
-                      {subcategoryFor(category, subcategory)?.label}
+                      {ui(subcategoryFor(category, subcategory)?.label ?? '')}
                       <X aria-hidden="true" />
                     </button>
                   )}
@@ -1660,7 +1691,7 @@ export default function JobBoard({
                       data-active="true"
                       onClick={() => setPaid(false)}
                     >
-                      ხელფასი მითითებულია
+                      {ui('ხელფასი მითითებულია')}
                       <X aria-hidden="true" />
                     </button>
                   )}
@@ -1670,7 +1701,7 @@ export default function JobBoard({
                       data-active="true"
                       onClick={() => setRemote(false)}
                     >
-                      დისტანციური
+                      {ui('დისტანციური')}
                       <X aria-hidden="true" />
                     </button>
                   )}
@@ -1686,7 +1717,7 @@ export default function JobBoard({
                           show, and "0–∞ ₾ / დღე" named a filter nobody set. */}
                       {advanced.salaryFrom === null &&
                       advanced.salaryTo === null
-                        ? 'დღიური ანაზღაურება'
+                        ? ui('დღიური ანაზღაურება')
                         : `${advanced.salaryFrom !== null && advanced.salaryTo !== null ? `${advanced.salaryFrom}–${advanced.salaryTo} ₾` : advanced.salaryFrom !== null ? `${advanced.salaryFrom} ₾-დან` : `${advanced.salaryTo} ₾-მდე`} / ${advanced.salaryPeriod === 'day' ? 'დღე' : 'თვე'}`}
                       <X aria-hidden="true" />
                     </button>
@@ -1697,7 +1728,7 @@ export default function JobBoard({
                       data-active="true"
                       onClick={() => relaxFilter('employment')}
                     >
-                      {employmentLabels[advanced.employment]}
+                      {ui(employmentLabels[advanced.employment])}
                       <X aria-hidden="true" />
                     </button>
                   )}
@@ -1707,7 +1738,7 @@ export default function JobBoard({
                       data-active="true"
                       onClick={() => relaxFilter('entryLevel')}
                     >
-                      გამოცდილების გარეშე
+                      {ui('გამოცდილების გარეშე')}
                       <X aria-hidden="true" />
                     </button>
                   )}
@@ -1718,8 +1749,8 @@ export default function JobBoard({
                       onClick={() => relaxFilter('postedWithin')}
                     >
                       {advanced.postedWithin === 1
-                        ? 'დღეს'
-                        : `ბოლო ${advanced.postedWithin} დღეში`}
+                        ? ui('დღეს')
+                        : ui('ბოლო {0} დღეში', [advanced.postedWithin])}
                       <X aria-hidden="true" />
                     </button>
                   )}
@@ -1728,7 +1759,7 @@ export default function JobBoard({
                       className="ds-btn ds-btn--ghost ds-btn--sm clear-all-filters"
                       onClick={resetFilters}
                     >
-                      გასუფთავება
+                      {ui('გასუფთავება')}
                     </button>
                   )}
                 </div>
@@ -1739,15 +1770,17 @@ export default function JobBoard({
                 unavailable.length > 0 && (
                   <details className="unavailable-saved" open>
                     <summary>
-                      დასრულებული ან მიუწვდომელი ({unavailable.length})
+                      {ui('დასრულებული ან მიუწვდომელი (')}
+                      {unavailable.length})
                       <ChevronDown
                         className="disclosure-chevron"
                         aria-hidden="true"
                       />
                     </summary>
                     <p>
-                      ეს განცხადებები აქტიურ შედეგებში აღარ ჩანს. შენახულიდან
-                      მხოლოდ შენი სურვილით წაიშლება.
+                      {ui(
+                        'ეს განცხადებები აქტიურ შედეგებში აღარ ჩანს. შენახულიდან მხოლოდ შენი სურვილით წაიშლება.',
+                      )}
                     </p>
                     <ul>
                       {unavailable.map((item) => (
@@ -1757,17 +1790,19 @@ export default function JobBoard({
                             <span>{item.company}</span>
                             <small>
                               {item.expired
-                                ? 'ვადა გასულია'
-                                : 'აღარ არის ხელმისაწვდომი'}
+                                ? ui('ვადა გასულია')
+                                : ui('აღარ არის ხელმისაწვდომი')}
                             </small>
                           </div>
                           <button
                             type="button"
                             className="secondary-button"
                             onClick={() => toggleSave(item.id)}
-                            aria-label={`${item.title} — შენახულიდან წაშლა`}
+                            aria-label={ui('{0} — შენახულიდან წაშლა', [
+                              item.title,
+                            ])}
                           >
-                            წაშლა
+                            {ui('წაშლა')}
                           </button>
                         </li>
                       ))}
@@ -1777,13 +1812,13 @@ export default function JobBoard({
               {error ? (
                 <div className="empty" role="alert">
                   <Globe2 size={20} />
-                  <h3>ვაკანსიები ვერ ჩაიტვირთა</h3>
-                  <p>{error}</p>
+                  <h3>{ui('ვაკანსიები ვერ ჩაიტვირთა')}</h3>
+                  <p>{ui(error)}</p>
                   <button
                     className="secondary-button"
                     onClick={() => setRetry((v) => v + 1)}
                   >
-                    ხელახლა ცდა
+                    {ui('ხელახლა ცდა')}
                   </button>
                 </div>
               ) : (
@@ -1840,19 +1875,25 @@ export default function JobBoard({
                     {savedOnly &&
                     unavailable.length === saved.length &&
                     saved.length > 0
-                      ? 'აქტიური შენახული ვაკანსია აღარ გაქვს'
+                      ? ui('აქტიური შენახული ვაკანსია აღარ გაქვს')
                       : savedOnly && !saved.length
-                        ? 'საინტერესო ვაკანსია შეინახე'
-                        : 'ამ პირობებით ვაკანსია ვერ მოიძებნა'}
+                        ? ui('საინტერესო ვაკანსია შეინახე')
+                        : ui('ამ პირობებით ვაკანსია ვერ მოიძებნა')}
                   </h3>
                   <p>
                     {savedOnly &&
                     unavailable.length === saved.length &&
                     saved.length > 0
-                      ? 'ძველი განცხადებები ზემოთ დარჩა. ახალი შესაძლებლობები ყველა ვაკანსიაში მოძებნე.'
+                      ? ui(
+                          'ძველი განცხადებები ზემოთ დარჩა. ახალი შესაძლებლობები ყველა ვაკანსიაში მოძებნე.',
+                        )
                       : savedOnly && !saved.length
-                        ? 'დააჭირე ბარათზე შენახვის ნიშანს და მოგვიანებით აქ დაბრუნდი.'
-                        : 'შეცვალე საძიებო სიტყვა ან შეამცირე ფილტრების რაოდენობა.'}
+                        ? ui(
+                            'დააჭირე ბარათზე შენახვის ნიშანს და მოგვიანებით აქ დაბრუნდი.',
+                          )
+                        : ui(
+                            'შეცვალე საძიებო სიტყვა ან შეამცირე ფილტრების რაოდენობა.',
+                          )}
                   </p>
                   {searchMeta?.suggestion && (
                     <button
@@ -1863,15 +1904,15 @@ export default function JobBoard({
                       }}
                     >
                       {searchMeta.suggestion.kind === 'fewer-words'
-                        ? 'ვცადოთ '
-                        : 'ხომ არ გულისხმობდი '}
+                        ? ui('ვცადოთ ')
+                        : ui('ხომ არ გულისხმობდი ')}
                       „{searchMeta.suggestion.query}“? (
                       {searchMeta.suggestion.count})
                     </button>
                   )}
                   {!!searchMeta?.relaxations.length && (
                     <div className="search-recovery">
-                      <p>სხვა პირობების შენარჩუნებით:</p>
+                      <p>{ui('სხვა პირობების შენარჩუნებით:')}</p>
                       {searchMeta.relaxations.map((item) => (
                         <button
                           className="secondary-button"
@@ -1881,7 +1922,9 @@ export default function JobBoard({
                             relaxFilter(item.key);
                           }}
                         >
-                          მოხსენი „{item.label}“ — {item.count} შედეგი
+                          {ui('მოხსენი „')}
+                          {item.label}“ — {item.count}
+                          {ui(' შედეგი')}
                         </button>
                       ))}
                     </div>
@@ -1894,7 +1937,7 @@ export default function JobBoard({
                       if (savedOnly) setSavedOnly(false);
                     }}
                   >
-                    ყველა ვაკანსია
+                    {ui('ყველა ვაკანსია')}
                   </button>
                 </div>
               )}
@@ -1906,7 +1949,7 @@ export default function JobBoard({
                           fetched before the reader reaches the end, something
                           has to occupy the space it will land in. */}
                       <output className="sr-only">
-                        შემდეგი ვაკანსიები იტვირთება…
+                        {ui('შემდეგი ვაკანსიები იტვირთება…')}
                       </output>
                       <VacancySkeletons count={2} />
                     </div>
@@ -1939,19 +1982,27 @@ export default function JobBoard({
                     {appending ? (
                       <>
                         <span className="ds-spinner" aria-hidden="true" />
-                        იტვირთება
+                        {ui('იტვირთება')}
                       </>
                     ) : appendError ? (
-                      'ხელახლა ცდა'
+                      ui('ხელახლა ცდა')
                     ) : loadedThrough - page >= 49 ? (
-                      'შემდეგი ვაკანსიების ნახვა'
+                      ui('შემდეგი ვაკანსიების ნახვა')
                     ) : (
-                      `მეტის ჩვენება · კიდევ ${Math.min(listPageSize, Math.max(0, total - (page - 1) * listPageSize - jobs.length))}`
+                      ui('მეტის ჩვენება · კიდევ {0}', [
+                        Math.min(
+                          listPageSize,
+                          Math.max(
+                            0,
+                            total - (page - 1) * listPageSize - jobs.length,
+                          ),
+                        ),
+                      ])
                     )}
                   </a>
                   {appendError && (
                     <p className="load-more-error" role="alert">
-                      {appendError}
+                      {ui(appendError)}
                     </p>
                   )}
                 </div>
@@ -1959,12 +2010,14 @@ export default function JobBoard({
               {!error && !resultsPending && total > 0 && (
                 <div className="results-progress">
                   <output>
-                    ნაჩვენებია {(page - 1) * listPageSize + 1}–
+                    {ui('ნაჩვენებია ')}
+                    {(page - 1) * listPageSize + 1}–
                     {Math.min(
                       (page - 1) * listPageSize + visibleJobs.length,
                       total,
                     )}{' '}
-                    / {total} ვაკანსია
+                    / {total}
+                    {ui(' ვაკანსია')}
                   </output>
                   {page > 1 && (
                     <a
@@ -1989,7 +2042,7 @@ export default function JobBoard({
                         paginate(page - 1);
                       }}
                     >
-                      წინა გვერდი
+                      {ui('წინა გვერდი')}
                     </a>
                   )}
                   {page > 2 && (
@@ -2000,7 +2053,7 @@ export default function JobBoard({
                         paginate(1);
                       }}
                     >
-                      სიის დასაწყისში დაბრუნება
+                      {ui('სიის დასაწყისში დაბრუნება')}
                     </button>
                   )}
                 </div>
@@ -2008,7 +2061,7 @@ export default function JobBoard({
               <div className="results-foot">
                 <ShieldCheck size={16} />
                 <span>
-                  ვაკანსიები დამსაქმებლებისგან და დასაქმების საიტებიდან
+                  {ui('ვაკანსიები დამსაქმებლებისგან და დასაქმების საიტებიდან')}
                 </span>
               </div>
             </section>
@@ -2025,17 +2078,17 @@ export default function JobBoard({
           <output>
             <Check size={16} />
             {saveNotice.wasSaved
-              ? 'შენახულებიდან ამოღებულია'
-              : 'ვაკანსია შენახულია'}
+              ? ui('შენახულებიდან ამოღებულია')
+              : ui('ვაკანსია შენახულია')}
           </output>
           <button
             className="ds-btn ds-btn--ghost ds-btn--sm undo-save"
             onClick={undoSave}
           >
-            გაუქმება
+            {ui('გაუქმება')}
           </button>
           <button
-            aria-label="შეტყობინების დახურვა"
+            aria-label={ui('შეტყობინების დახურვა')}
             onClick={() => setSaveNotice(null)}
           >
             <X size={16} />
@@ -2045,9 +2098,9 @@ export default function JobBoard({
       {feedback && !filtersOpen && (
         <output className="feedback-toast">
           <Check size={16} />
-          {feedback}
+          {ui(feedback)}
           <button
-            aria-label="შეტყობინების დახურვა"
+            aria-label={ui('შეტყობინების დახურვა')}
             onClick={() => setFeedback('')}
           >
             <X size={16} />

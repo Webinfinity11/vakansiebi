@@ -1,0 +1,54 @@
+{
+  "checkedAt": "2026-10-25",
+  "article": "/blog/nakhevari-ganakveti-da-stsavla",
+  "angle": "A student's timetable versus a job's actual shift pattern. Explain why the label part-time alone does not establish compatibility.",
+  "searchEvidence": {
+    "file": "reports/seo-keywords-2026-09-29/gsc-georgia-queries.json",
+    "capturedAt": "2026-09-29",
+    "reportedDataWindow": "2026-09-16 through 2026-09-27",
+    "query": "ვაკანსია ნახევარ განაკვეთზე თბილისი",
+    "clicks": 2,
+    "impressions": 3,
+    "limitation": "A small historical signal, not fresh GSC data, market-wide demand or evidence of an easy ranking opportunity."
+  },
+  "reviewedPages": [
+    {
+      "url": "https://jobs.ss.ge/ka/l/vacancies?workingSchedule=1",
+      "finding": "Search result serves listing/filter intent. The article instead answers how to judge schedule compatibility and links to JOBX's existing part-time list. No vacancy counts or current pay averages copied."
+    },
+    {
+      "url": "https://hrspace.ge/job-type/part-time/",
+      "finding": "Search result exposes a part-time vacancy category, confirming another listing-focused competing page; no rank or traffic claim made."
+    },
+    {
+      "url": "https://epsy.ge/ka/services/8",
+      "finding": "Georgian guidance covers planning and employer communication. Its suggested weekly hour limit was not adopted as a universal rule or represented as research evidence."
+    }
+  ],
+  "verifiedPrimarySources": [
+    {
+      "url": "https://www.tsu.ge/%3B/student-work/single/2825",
+      "title": "თსუ-ს კაფეტერიის მზარეულის ასისტენტი",
+      "applicationWindow": "2025-07-21 through 2025-08-01",
+      "supportedFacts": "The employer described three workdays per week as part-time, with weekday hours 08:00–19:00, and mentioned exam-period flexibility.",
+      "limits": "Expired recruitment example, clearly dated in the article. Not recommended as an active vacancy; no claim about legal compliance or paid hours inferred from the listed attendance window."
+    },
+    {
+      "url": "https://matsne.gov.ge/ka/document/view/1155567",
+      "section": 16,
+      "supportedFacts": "Part-time is defined relative to comparable full-time working time, rather than a universal four-hour workday. Latest consolidated HTML checked."
+    }
+  ],
+  "writingRules": [
+    "Use direct Georgian and concrete scheduling questions; avoid generic motivational introductions and forced keyword repetition.",
+    "Keep the article focused on one decision; do not reproduce the daily-pay article's table/checklist structure automatically.",
+    "Label illustrative availability wording as an example; never invent firsthand experiences, interviewees, wages or research statistics.",
+    "Separate archived evidence from active vacancy links and keep source links beside the claims they support."
+  ],
+  "seo": {
+    "listing": "/?employment=part-time",
+    "connections": "Contextual links between the part-time listing and the guide; existing CV editor linked for the application step.",
+    "metadata": "Self-canonical, distinct title/description, matching cover in Open Graph/Twitter/BlogPosting, static HTML and sitemap inclusion.",
+    "publicationState": "Local preview only; no deployment performed."
+  }
+}

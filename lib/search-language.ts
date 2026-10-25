@@ -32,6 +32,14 @@ const roles = [
   ['მოლარე', 'cashier', 'кассир'],
   ['მიმტან', 'მიმტანი', 'ოფიციანტ', 'waiter', 'waitress', 'официант'],
   ['ბარისტა', 'barista', 'бариста'],
+  // A bare "მრეცხავი" also names car, laundry and industrial washing jobs.
+  [
+    'ჭურჭლის მრეცხავ',
+    'ჭურჭლის მრეცხავი',
+    'dishwasher',
+    'посудомойщик',
+    'посудомойщица',
+  ],
   ['მძღოლ', 'მძღოლი', 'driver', 'водитель'],
   ['კურიერ', 'კურიერი', 'courier', 'курьер'],
   ['მზარეულ', 'მზარეული', 'cook', 'chef', 'повар'],
@@ -125,6 +133,7 @@ export const roleVocabulary = roles.map((group) => {
    The -ებელი suffix is the one that also drops its own vowel: მასწავლებელი →
    მასწავლებლის, never მასწავლებელის. */
 function genitiveOf(word: string) {
+  if (word === 'ექთანი') return 'ექთნის';
   if (word.endsWith('ებელი')) return word.slice(0, -5) + 'ებლის';
   if (word.endsWith('ობელი')) return word.slice(0, -5) + 'ობლის';
   if (word.endsWith('ი') || word.endsWith('ე')) return word.slice(0, -1) + 'ის';
@@ -261,6 +270,24 @@ function aliasFor(forms: string[]) {
   );
 }
 export function searchMatchGroups(query: string): SearchGroup[] {
+  // Keep this reviewed compound occupation together. Splitting it would lose
+  // its title-only scope and would not reach the English/Russian equivalents.
+  const phrase = query
+    .normalize('NFKC')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  const dishwasher = roles.find((group) => group[0] === 'ჭურჭლის მრეცხავ')!;
+  if (
+    phrase.startsWith(dishwasher[0]) &&
+    /^ჭურჭლის მრეცხავ(ი|ის|ები|ების|ს)?$/.test(phrase)
+  )
+    return [
+      {
+        own: [dishwasher[0]],
+        all: withoutCoveredTerms(dishwasher, [dishwasher[0]]),
+      },
+    ];
   // Explicit lists of reviewed occupations match either role; ordinary phrases stay AND.
   const choices = query.split(',').map((part) => part.trim().toLowerCase());
   if (

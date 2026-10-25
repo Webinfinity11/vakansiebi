@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import Link from 'next/link';
 import { trackAction } from '@/lib/analytics-client';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -106,6 +107,7 @@ const deadlineLabel = (deadline: string) => {
 };
 
 export function SwipeDeck() {
+  const { ui } = useUi();
   const opened = useRef(false);
   useEffect(() => {
     if (opened.current) return;
@@ -535,7 +537,7 @@ export function SwipeDeck() {
       setHistory((h) => [...h, { job: current, decision }].slice(-20));
       setQueue((q) => q.slice(1));
     },
-    [current, pending, submit, ready, dismissHint],
+    [current, pending, submit, ready, dismissHint, setEntering],
   );
   const undo = useCallback(() => {
     dismissHint();
@@ -560,7 +562,7 @@ export function SwipeDeck() {
     setHistory((h) => h.slice(0, -1));
     setQueue((q) => [last.job, ...q]);
     setNotice('');
-  }, [history, pending, sending, dismissHint]);
+  }, [history, pending, sending, dismissHint, setEntering]);
 
   // Drag: the top card follows the pointer and is thrown past the threshold.
   const [dx, setDx] = useState(0);
@@ -614,7 +616,7 @@ export function SwipeDeck() {
         setDx(0);
       }, exitDuration);
     },
-    [decide, dismissHint, current, ready],
+    [decide, dismissHint, current, ready, setEntering, setDx],
   );
   const onDown = (e: PointerEvent<HTMLElement>) => {
     dismissHint();
@@ -733,20 +735,21 @@ export function SwipeDeck() {
   };
 
   const attach = askCv ? (
-    <dialog open className="swipe-attach" aria-label="CV-ის მიმაგრება">
+    <dialog open className="swipe-attach" aria-label={ui('CV-ის მიმაგრება')}>
       <div className="swipe-attach-top">
         <div>
-          <h2>მიამაგრე CV და გააგზავნე</h2>
+          <h2>{ui('მიამაგრე CV და გააგზავნე')}</h2>
           <p>
-            ერთხელ — შემდეგ ყოველი მარჯვნივ გადაწევა CV-ს hr@jobx.ge-დან
-            გაუგზავნის კომპანიას, პასუხი კი შენს ელფოსტაზე მოვა.
+            {ui(
+              'ერთხელ — შემდეგ ყოველი მარჯვნივ გადაწევა CV-ს hr@jobx.ge-დან გაუგზავნის კომპანიას, პასუხი კი შენს ელფოსტაზე მოვა.',
+            )}
           </p>
         </div>
         <button
           type="button"
           className="swipe-icon-btn"
           onClick={() => setAskCv(false)}
-          aria-label="დახურვა"
+          aria-label={ui('დახურვა')}
         >
           <X size={20} aria-hidden="true" />
         </button>
@@ -756,8 +759,11 @@ export function SwipeDeck() {
           <div className="swipe-cv swipe-cv-chosen">
             <FileText size={20} aria-hidden="true" />
             <div>
-              <b>{cv.fullName || 'ჩემი CV'}</b>
-              <span>JOBX-ზე შექმნილი{cv.title ? ' · ' + cv.title : ''}</span>
+              <b>{cv.fullName || ui('ჩემი CV')}</b>
+              <span>
+                {ui('JOBX-ზე შექმნილი')}
+                {cv.title ? ' · ' + cv.title : ''}
+              </span>
             </div>
           </div>
         ) : upload ? (
@@ -765,24 +771,25 @@ export function SwipeDeck() {
             <FileText size={20} aria-hidden="true" />
             <div>
               <b>{upload.name}</b>
-              <span>ატვირთული PDF</span>
+              <span>{ui('ატვირთული PDF')}</span>
             </div>
           </div>
         ) : (
           <Link className="swipe-cv" href="/cv" target="_blank" rel="noopener">
             <FileText size={20} aria-hidden="true" />
             <div>
-              <b>CV ჯერ არ გაქვს</b>
+              <b>{ui('CV ჯერ არ გაქვს')}</b>
               <span>
-                შექმენი JOBX-ზე — 3 წუთი; ახალ ჩანართში გაიხსნება და აქ თავისით
-                მიემაგრება
+                {ui(
+                  'შექმენი JOBX-ზე — 3 წუთი; ახალ ჩანართში გაიხსნება და აქ თავისით მიემაგრება',
+                )}
               </span>
             </div>
           </Link>
         )}
         <label className="swipe-upload">
           <Upload size={16} aria-hidden="true" />
-          {upload ? 'სხვა ფაილის არჩევა' : 'CV-ის ატვირთვა (PDF)'}
+          {upload ? ui('სხვა ფაილის არჩევა') : ui('CV-ის ატვირთვა (PDF)')}
           <input
             type="file"
             accept="application/pdf"
@@ -809,17 +816,17 @@ export function SwipeDeck() {
         {uploadError && <p className="swipe-field-error">{uploadError}</p>}
         <div className="swipe-fields">
           <label>
-            <span>სახელი და გვარი</span>
+            <span>{ui('სახელი და გვარი')}</span>
             <input
               value={applicant.name}
               onChange={field('name')}
               autoComplete="name"
               maxLength={120}
-              placeholder="ნინო ბერიძე"
+              placeholder={ui('ნინო ბერიძე')}
             />
           </label>
           <label>
-            <span>ელფოსტა პასუხისთვის</span>
+            <span>{ui('ელფოსტა პასუხისთვის')}</span>
             <input
               type="email"
               inputMode="email"
@@ -831,7 +838,7 @@ export function SwipeDeck() {
             />
           </label>
           <label>
-            <span>ტელეფონი</span>
+            <span>{ui('ტელეფონი')}</span>
             <input
               type="tel"
               inputMode="tel"
@@ -850,12 +857,11 @@ export function SwipeDeck() {
             onChange={(e) => setConsent(e.target.checked)}
           />
           <span>
-            ვეთანხმები, რომ JOBX ჩემი სახელით, hr@jobx.ge-დან, გაუგზავნის ჩემს
-            CV-ს და ზემოთ მითითებულ კონტაქტს იმ კომპანიებს, რომლებზეც მარჯვნივ
-            გადავწევ. კომპანიის პასუხი ჩემს ელფოსტაზე მოვა. CV ინახება JOBX-ზე,
-            რომ გაგზავნის ისტორია შენარჩუნდეს.
+            {ui(
+              'ვეთანხმები, რომ JOBX ჩემი სახელით, hr@jobx.ge-დან, გაუგზავნის ჩემს CV-ს და ზემოთ მითითებულ კონტაქტს იმ კომპანიებს, რომლებზეც მარჯვნივ გადავწევ. კომპანიის პასუხი ჩემს ელფოსტაზე მოვა. CV ინახება JOBX-ზე, რომ გაგზავნის ისტორია შენარჩუნდეს.',
+            )}
             {cv && !upload
-              ? ' JOBX-ზე შექმნილი CV-ის ასლი JOBX-ზე 12 თვემდე ინახება.'
+              ? ui(' JOBX-ზე შექმნილი CV-ის ასლი JOBX-ზე 12 თვემდე ინახება.')
               : ''}
           </span>
         </label>
@@ -880,13 +886,15 @@ export function SwipeDeck() {
             if (current) decide('send');
           }}
         >
-          {current ? 'მიამაგრე და გააგზავნე' : 'შენახვა'}{' '}
+          {current ? ui('მიამაგრე და გააგზავნე') : ui('შენახვა')}{' '}
           <Send size={16} aria-hidden="true" />
         </button>
         {sent.length > 0 && (
-          <section className="swipe-sent" aria-label="გაგზავნილი CV">
+          <section className="swipe-sent" aria-label={ui('გაგზავნილი CV')}>
             <h2>
-              <Check size={16} aria-hidden="true" /> გაგზავნილი — {sent.length}
+              <Check size={16} aria-hidden="true" />
+              {ui(' გაგზავნილი — ')}
+              {sent.length}
             </h2>
             <ul>
               {sent.slice(0, 5).map((item) => (
@@ -908,7 +916,8 @@ export function SwipeDeck() {
     </dialog>
   ) : null;
 
-  if (!started) return <output className="swipe-hint">იტვირთება…</output>;
+  if (!started)
+    return <output className="swipe-hint">{ui('იტვირთება…')}</output>;
 
   return (
     <main className="swipe-main">
@@ -916,7 +925,7 @@ export function SwipeDeck() {
         <Link
           className="swipe-icon-btn"
           href={backHref}
-          aria-label="სიაში დაბრუნება"
+          aria-label={ui('სიაში დაბრუნება')}
         >
           <ArrowLeft size={20} aria-hidden="true" />
         </Link>
@@ -924,20 +933,22 @@ export function SwipeDeck() {
           <h1>Swipe</h1>
           <small>
             {total === null
-              ? 'იტვირთება…'
-              : `გაგზავნილია ${sentCount} · დარჩა ${remaining}`}
+              ? ui('იტვირთება…')
+              : ui('გაგზავნილია {0} · დარჩა {1}', [sentCount, remaining])}
           </small>
         </div>
         <button
           type="button"
           className="mobile-filter-toggle secondary-button swipe-filter-toggle"
-          aria-label={`ფილტრები${activeFilters.length ? ` — ${activeFilters.length} აქტიური` : ''}`}
+          aria-label={ui('ფილტრები{0}', [
+            activeFilters.length ? ` — ${activeFilters.length} აქტიური` : '',
+          ])}
           aria-haspopup="dialog"
           onClick={() => setFilterDraft(filters)}
         >
           <SlidersHorizontal size={16} aria-hidden="true" />
           <span className="results-tool-label" aria-hidden="true">
-            ფილტრები
+            {ui('ფილტრები')}
           </span>
           {activeFilters.length > 0 && (
             <b aria-hidden="true">{activeFilters.length}</b>
@@ -946,7 +957,7 @@ export function SwipeDeck() {
         <button
           type="button"
           className="swipe-cv-chip"
-          aria-label={ready ? 'CV-ის ნახვა' : 'მიამაგრე CV'}
+          aria-label={ready ? ui('CV-ის ნახვა') : ui('მიამაგრე CV')}
           data-ready={ready || undefined}
           onClick={() => setAskCv(true)}
         >
@@ -956,7 +967,7 @@ export function SwipeDeck() {
             <FileText size={16} aria-hidden="true" />
           )}
           <span className="swipe-cv-label">
-            {!ready && <span>მიამაგრე </span>}CV
+            {!ready && <span>{ui('მიამაგრე ')}</span>}CV
           </span>
         </button>
       </header>
@@ -964,7 +975,7 @@ export function SwipeDeck() {
       {activeFilters.length > 0 && (
         <div
           className="active-filters swipe-active-filters"
-          aria-label="აქტიური ფილტრები"
+          aria-label={ui('აქტიური ფილტრები')}
         >
           {activeFilters.map((filter) => (
             <button
@@ -972,7 +983,7 @@ export function SwipeDeck() {
               className="ds-chip"
               data-active="true"
               key={filter.key}
-              aria-label={`${filter.label} — წაშლა`}
+              aria-label={ui('{0} — წაშლა', [filter.label])}
               onClick={() => updateFilters(filter.clear)}
             >
               {filter.label}
@@ -996,11 +1007,11 @@ export function SwipeDeck() {
         className="swipe-filters-sheet"
       >
         <label className="swipe-filter-search">
-          <span>ძებნა</span>
+          <span>{ui('ძებნა')}</span>
           <input
             type="search"
             maxLength={200}
-            placeholder="პოზიცია ან კომპანია"
+            placeholder={ui('პოზიცია ან კომპანია')}
             value={(filterDraft ?? filters).query}
             onChange={(event) =>
               setFilterDraft({
@@ -1064,14 +1075,16 @@ export function SwipeDeck() {
                   style={{ opacity: Math.max(0, Math.min(1, dx / throwAt)) }}
                   aria-hidden="true"
                 >
-                  <Send size={16} /> გაიგზავნება
+                  <Send size={16} />
+                  {ui(' გაიგზავნება')}
                 </span>
                 <span
                   className="swipe-stamp swipe-stamp-left"
                   style={{ opacity: Math.max(0, Math.min(1, -dx / throwAt)) }}
                   aria-hidden="true"
                 >
-                  <X size={16} /> გამოტოვება
+                  <X size={16} />
+                  {ui(' გამოტოვება')}
                 </span>
               </div>
               {/* The whole posting, read by scrolling the card itself; a vertical
@@ -1084,7 +1097,7 @@ export function SwipeDeck() {
                     large
                   />
                   <div>
-                    <b>{current.company || 'კერძო განცხადება'}</b>
+                    <b>{current.company || ui('კერძო განცხადება')}</b>
                     {current.category && <span>{current.category}</span>}
                   </div>
                 </div>
@@ -1135,16 +1148,16 @@ export function SwipeDeck() {
                     className="swipe-start"
                     onClick={() => void loadMore()}
                   >
-                    ხელახლა ცდა
+                    {ui('ხელახლა ცდა')}
                   </button>
                 </>
               ) : loading || total === null ? (
-                <p>ვაკანსიები იტვირთება…</p>
+                <p>{ui('ვაკანსიები იტვირთება…')}</p>
               ) : (
                 <>
-                  <p>ამ ფილტრებით ყველა ვაკანსია ნახე.</p>
+                  <p>{ui('ამ ფილტრებით ყველა ვაკანსია ნახე.')}</p>
                   <Link className="swipe-start" href={backHref}>
-                    სიაში დაბრუნება
+                    {ui('სიაში დაბრუნება')}
                   </Link>
                 </>
               )}
@@ -1159,17 +1172,21 @@ export function SwipeDeck() {
                 <span className="swipe-ring">{pending.left}</span>
                 <div>
                   <b>
-                    CV გაიგზავნება: {pending.job.company || pending.job.title}
+                    {ui('CV გაიგზავნება: ')}
+                    {pending.job.company || pending.job.title}
                   </b>
                   <span>hr@jobx.ge → {applicationEmail(pending.job)}</span>
                 </div>
-                <button onClick={undo}>გაუქმება</button>
+                <button onClick={undo}>{ui('გაუქმება')}</button>
               </>
             ) : sending ? (
               <>
                 <span className="swipe-ring swipe-ring-spin" />
                 <div>
-                  <b>იგზავნება: {sending.company || sending.title}</b>
+                  <b>
+                    {ui('იგზავნება: ')}
+                    {sending.company || sending.title}
+                  </b>
                   <span>hr@jobx.ge → {applicationEmail(sending)}</span>
                 </div>
               </>
@@ -1183,7 +1200,7 @@ export function SwipeDeck() {
 
         <div className="swipe-actions">
           <button
-            aria-label="გამოტოვება"
+            aria-label={ui('გამოტოვება')}
             onClick={() => fling('left', 'skip')}
             disabled={!current}
           >
@@ -1192,7 +1209,7 @@ export function SwipeDeck() {
             </span>
           </button>
           <button
-            aria-label="უკან"
+            aria-label={ui('უკან')}
             onClick={undo}
             disabled={!history.length || history.at(-1)?.decision === 'sent'}
           >
@@ -1201,7 +1218,7 @@ export function SwipeDeck() {
             </span>
           </button>
           <button
-            aria-label="CV-ის გაგზავნა"
+            aria-label={ui('CV-ის გაგზავნა')}
             onClick={() => fling('right', 'send')}
             disabled={!current}
           >
@@ -1215,8 +1232,12 @@ export function SwipeDeck() {
           aria-hidden="true"
           data-show={keys || undefined}
         >
-          <kbd>←</kbd> გამოტოვება · <kbd>→</kbd> გაგზავნა · <kbd>Ctrl</kbd>+
-          <kbd>Z</kbd> უკან
+          <kbd>←</kbd>
+          {ui(' გამოტოვება · ')}
+          <kbd>→</kbd>
+          {ui(' გაგზავნა · ')}
+          <kbd>Ctrl</kbd>+<kbd>Z</kbd>
+          {ui(' უკან')}
         </p>
       </div>
       {attach}

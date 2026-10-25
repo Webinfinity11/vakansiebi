@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from '@/app/ui-language';
 import Link from 'next/link';
 import Image from 'next/image';
 import { invoiceContact, premiumDays, premiumPriceGEL } from '@/lib/billing';
@@ -28,6 +29,7 @@ import {
   X,
 } from 'lucide-react';
 import { ka } from 'date-fns/locale/ka';
+import { enGB } from 'date-fns/locale/en-GB';
 import { SelectField } from '../select-field';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
@@ -114,16 +116,17 @@ function Field({
   children: ReactNode;
   wide?: boolean;
 }) {
+  const { ui } = useUi();
   return (
     <div className={`post-field${wide ? ' post-field-wide' : ''}`}>
-      <label htmlFor={`post-${name}`}>{label}</label>
+      <label htmlFor={`post-${name}`}>{ui(label)}</label>
       {children}
       {(error || hint) && (
         <small
           id={`post-${name}-hint`}
           className={error ? 'post-field-error' : ''}
         >
-          {error || hint}
+          {ui(error || hint || '')}
         </small>
       )}
     </div>
@@ -177,6 +180,7 @@ function DateField({
   describedBy?: string;
   onChange: (value: string) => void;
 }) {
+  const { ui, locale } = useUi();
   const [open, setOpen] = useState(false);
   const selected = toDay(value);
   const from = toDay(min);
@@ -193,16 +197,24 @@ function DateField({
           className="ds-select post-date"
         >
           {selected ? (
-            <span>{longDate(selected)}</span>
+            <span>
+              {locale === 'en'
+                ? selected.toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                : longDate(selected)}
+            </span>
           ) : (
-            <span className="ds-select-placeholder">აირჩიე თარიღი</span>
+            <span className="ds-select-placeholder">{ui('აირჩიე თარიღი')}</span>
           )}
           <CalendarDays aria-hidden="true" />
         </PopoverTrigger>
         <PopoverContent className="ds-select-menu post-date-menu" align="start">
           <Calendar
             mode="single"
-            locale={ka}
+            locale={locale === 'en' ? enGB : ka}
             weekStartsOn={1}
             selected={selected}
             defaultMonth={selected ?? from}
@@ -230,6 +242,7 @@ export function PostJobForm({
 }: {
   initialPlacement?: PlacementTier;
 }) {
+  const { ui } = useUi();
   const [values, setValues] = useState<Values>(() => ({
     ...initial,
     placement: initialPlacement ?? initial.placement,
@@ -469,7 +482,7 @@ export function PostJobForm({
     contact: 'ელფოსტა, ტელეფონი ან განაცხადის ბმული (გამოქვეყნდება საჯაროდ)',
     notificationEmail:
       'გამოქვეყნების შემდეგ აქ მოგივა მოკლე წერილი ვაკანსიის ბმულით. ეს ელფოსტა საჯაროდ არ გამოჩნდება.',
-    description: `${values.description.trim().length.toLocaleString()} / 20 000 · მინიმუმ 30 სიმბოლო`,
+    description: `${values.description.trim().length.toLocaleString()} / 20 000 · ${ui('მინიმუმ 30 სიმბოლო')}`,
   };
   const props = (name: FieldName) => ({
     id: `post-${name}`,
@@ -643,48 +656,59 @@ export function PostJobForm({
       <main className="post-job-main">
         <section className="post-success">
           <CheckCircle2 size={48} aria-hidden="true" />
-          <p className="post-eyebrow">განცხადება მიღებულია</p>
+          <p className="post-eyebrow">{ui('განცხადება მიღებულია')}</p>
           <h1 ref={headingRef} tabIndex={-1}>
-            განცხადება გაგზავნილია
+            {ui('განცხადება გაგზავნილია')}
           </h1>
           <p>
-            „{values.title}“ განსახილველად გაიგზავნა. საიტზე ადმინისტრატორის
-            დამტკიცების შემდეგ გამოჩნდება.
+            „{values.title}
+            {ui(
+              '“ განსახილველად გაიგზავნა. საიტზე ადმინისტრატორის დამტკიცების შემდეგ გამოჩნდება.',
+            )}
           </p>
           <p>
-            გამოქვეყნების შემდეგ მითითებულ ელფოსტაზე მოგივა მოკლე წერილი
-            ვაკანსიის ბმულით.
+            {ui(
+              'გამოქვეყნების შემდეგ მითითებულ ელფოსტაზე მოგივა მოკლე წერილი ვაკანსიის ბმულით.',
+            )}
           </p>
           {alreadyReceived && (
             <p>
-              ეს განცხადება უკვე მიღებული იყო პირველი გაგზავნისას; მას შემდეგ
-              შეტანილი ცვლილებები არ შენახულა.
+              {ui(
+                'ეს განცხადება უკვე მიღებული იყო პირველი გაგზავნისას; მას შემდეგ შეტანილი ცვლილებები არ შენახულა.',
+              )}
             </p>
           )}
           {values.placement === 'vip' && (
             <p>
-              მოთხოვნილია VIP განთავსება. თუ ეს კომპანიის პირველი VIP-ია,{' '}
-              {introductoryDays} დღე უფასო იქნება — ამას ადმინისტრატორი
-              დამტკიცებისას ამოწმებს.
+              {ui(
+                'მოთხოვნილია VIP განთავსება. თუ ეს კომპანიის პირველი VIP-ია,',
+              )}{' '}
+              {introductoryDays}
+              {ui(
+                ' დღე უფასო იქნება — ამას ადმინისტრატორი დამტკიცებისას ამოწმებს.',
+              )}
             </p>
           )}
           {invoiceUrl && (
             <div className="post-invoice-callout">
               <strong>
-                პრემიუმი · {premiumPriceGEL} ₾ / {premiumDays} დღე
+                {ui('პრემიუმი · ')}
+                {premiumPriceGEL} ₾ / {premiumDays}
+                {ui(' დღე')}
               </strong>
               <p>
-                საბანკო რეკვიზიტები და გადარიცხვის დანიშნულება იხილე ინვოისში.
-                განთავსება გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების
-                შემდეგ.
+                {ui(
+                  'საბანკო რეკვიზიტები და გადარიცხვის დანიშნულება იხილე ინვოისში. განთავსება გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ.',
+                )}
               </p>
               <Link className="post-primary" href={invoiceUrl}>
                 <FileText aria-hidden="true" />
-                ინვოისის ნახვა
+                {ui('ინვოისის ნახვა')}
               </Link>
               <p>
-                ინვოისის ასლი ავტომატურად იგზავნება განაცხადში მითითებულ
-                ელფოსტაზე. დახმარებისთვის დარეკე:{' '}
+                {ui(
+                  'ინვოისის ასლი ავტომატურად იგზავნება განაცხადში მითითებულ ელფოსტაზე. დახმარებისთვის დარეკე:',
+                )}{' '}
                 <a href={`tel:${invoiceContact.telephone}`}>
                   {invoiceContact.phone}
                 </a>
@@ -693,11 +717,12 @@ export function PostJobForm({
             </div>
           )}
           <small>
-            განაცხადის ნომერი: <code>{receipt}</code>
+            {ui('განაცხადის ნომერი: ')}
+            <code>{receipt}</code>
           </small>
           <div className="post-actions">
             <Link href="/" className="post-primary">
-              ვაკანსიებზე დაბრუნება
+              {ui('ვაკანსიებზე დაბრუნება')}
             </Link>
             <button
               type="button"
@@ -725,7 +750,7 @@ export function PostJobForm({
               }}
             >
               <Plus aria-hidden="true" />
-              ახალი განცხადების დამატება
+              {ui('ახალი განცხადების დამატება')}
             </button>
           </div>
         </section>
@@ -736,7 +761,7 @@ export function PostJobForm({
     <main className="post-job-main">
       <Link className="post-back" href="/">
         <ChevronLeft aria-hidden="true" />
-        ვაკანსიებზე დაბრუნება
+        {ui('ვაკანსიებზე დაბრუნება')}
       </Link>
       <div className="post-intro">
         <Image
@@ -747,26 +772,26 @@ export function PostJobForm({
           height={56}
         />
         <h1 ref={headingRef} tabIndex={-1}>
-          განცხადების დამატება
+          {ui('განცხადების დამატება')}
         </h1>
-        <p>განცხადება გამოქვეყნდება შემოწმების შემდეგ.</p>
+        <p>{ui('განცხადება გამოქვეყნდება შემოწმების შემდეგ.')}</p>
       </div>
       <div className="post-layout">
         <form
           ref={formRef}
           onSubmit={submit}
           noValidate
-          aria-label="განცხადების დამატება"
+          aria-label={ui('განცხადების დამატება')}
           aria-busy={busy}
         >
           <section className="post-section">
             <p className="post-section-note">
-              სავალდებულო ველები აღნიშნულია *-ით.
+              {ui('სავალდებულო ველები აღნიშნულია *-ით.')}
             </p>
             <div className="post-grid">
               <Field
                 name="title"
-                label="პოზიციის დასახელება *"
+                label={ui('პოზიციის დასახელება *')}
                 error={errors.title}
                 wide
               >
@@ -774,13 +799,13 @@ export function PostJobForm({
                   {...props('title')}
                   required
                   maxLength={120}
-                  placeholder="მაგ. გაყიდვების კონსულტანტი"
+                  placeholder={ui('მაგ. გაყიდვების კონსულტანტი')}
                   autoComplete="off"
                 />
               </Field>
               <Field
                 name="company"
-                label="კომპანიის დასახელება *"
+                label={ui('კომპანიის დასახელება *')}
                 error={errors.company}
               >
                 <input
@@ -790,7 +815,7 @@ export function PostJobForm({
                   autoComplete="organization"
                 />
               </Field>
-              <Field name="city" label="ქალაქი *" error={errors.city}>
+              <Field name="city" label={ui('ქალაქი *')} error={errors.city}>
                 <SelectField
                   {...selectProps('city')}
                   options={[...cities, 'დისტანციური', otherCity]}
@@ -799,7 +824,7 @@ export function PostJobForm({
               {values.city === otherCity && (
                 <Field
                   name="cityOther"
-                  label="დასახლების სახელი *"
+                  label={ui('დასახლების სახელი *')}
                   error={errors.cityOther}
                 >
                   <input
@@ -812,7 +837,7 @@ export function PostJobForm({
               )}
               <Field
                 name="description"
-                label="ვაკანსიის აღწერა *"
+                label={ui('ვაკანსიის აღწერა *')}
                 error={errors.description}
                 hint={hints.description}
                 wide
@@ -823,14 +848,14 @@ export function PostJobForm({
                   minLength={30}
                   maxLength={20000}
                   rows={7}
-                  placeholder={
-                    'რას გააკეთებს გუნდის ახალი წევრი?\n\nმოვალეობები\n• ...\n\nმოთხოვნები\n• ...\n\nგრაფიკი და დამატებითი პირობები\n• ...'
-                  }
+                  placeholder={ui(
+                    'რას გააკეთებს გუნდის ახალი წევრი?\n\nმოვალეობები\n• ...\n\nმოთხოვნები\n• ...\n\nგრაფიკი და დამატებითი პირობები\n• ...',
+                  )}
                 />
               </Field>
               <Field
                 name="contact"
-                label="როგორ მოგმართონ კანდიდატები *"
+                label={ui('როგორ მოგმართონ კანდიდატები *')}
                 error={errors.contact}
                 hint={hints.contact}
                 wide
@@ -847,7 +872,7 @@ export function PostJobForm({
               </Field>
               <Field
                 name="notificationEmail"
-                label="ელფოსტა შეტყობინებისთვის *"
+                label={ui('ელფოსტა შეტყობინებისთვის *')}
                 error={errors.notificationEmail}
                 hint={hints.notificationEmail}
                 wide
@@ -868,11 +893,11 @@ export function PostJobForm({
             open={detailsOpen}
             onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
           >
-            <summary>დამატებითი დეტალები (არასავალდებულო)</summary>
+            <summary>{ui('დამატებითი დეტალები (არასავალდებულო)')}</summary>
             <div className="post-grid">
               <Field
                 name="logo"
-                label="კომპანიის ლოგო"
+                label={ui('კომპანიის ლოგო')}
                 error={errors.logo}
                 hint="PNG, JPEG ან WebP · მაქსიმუმ 10 MB. ლოგო ავტომატურად შემცირდება."
                 wide
@@ -883,7 +908,7 @@ export function PostJobForm({
                     submissionLogoSchema.safeParse(previewLogo).success ? (
                       <Image
                         src={previewLogo}
-                        alt="კომპანიის ლოგოს წინასწარი ნახვა"
+                        alt={ui('კომპანიის ლოგოს წინასწარი ნახვა')}
                         width={64}
                         height={64}
                         unoptimized
@@ -903,10 +928,10 @@ export function PostJobForm({
                         <ImagePlus aria-hidden="true" />
                       )}
                       {logoBusy
-                        ? 'მუშავდება…'
+                        ? ui('მუშავდება…')
                         : values.logo
-                          ? 'სხვა ლოგოს არჩევა'
-                          : 'ლოგოს არჩევა'}
+                          ? ui('სხვა ლოგოს არჩევა')
+                          : ui('ლოგოს არჩევა')}
                       <input
                         id="post-logo"
                         name="logo"
@@ -930,7 +955,7 @@ export function PostJobForm({
                         onClick={() => change('logo', '')}
                       >
                         <X aria-hidden="true" />
-                        ლოგოს მოცილება
+                        {ui('ლოგოს მოცილება')}
                       </button>
                     )}
                   </div>
@@ -938,7 +963,7 @@ export function PostJobForm({
               </Field>
               <Field
                 name="salaryFrom"
-                label="მინიმალური ხელფასი (₾)"
+                label={ui('მინიმალური ხელფასი (₾)')}
                 error={errors.salaryFrom}
                 hint={hints.salaryFrom}
               >
@@ -947,12 +972,12 @@ export function PostJobForm({
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={7}
-                  placeholder="მაგ. 1000"
+                  placeholder={ui('მაგ. 1000')}
                 />
               </Field>
               <Field
                 name="salaryTo"
-                label="მაქსიმალური ხელფასი (₾)"
+                label={ui('მაქსიმალური ხელფასი (₾)')}
                 error={errors.salaryTo}
                 hint={hints.salaryTo}
               >
@@ -961,12 +986,12 @@ export function PostJobForm({
                   inputMode="numeric"
                   pattern="[0-9]*"
                   maxLength={7}
-                  placeholder="მაგ. 1500"
+                  placeholder={ui('მაგ. 1500')}
                 />
               </Field>
               <Field
                 name="salaryPeriod"
-                label="ანაზღაურების სიხშირე"
+                label={ui('ანაზღაურების სიხშირე')}
                 error={errors.salaryPeriod}
               >
                 <SelectField
@@ -979,7 +1004,7 @@ export function PostJobForm({
               </Field>
               <Field
                 name="salaryBasis"
-                label="ანაზღაურების ტიპი"
+                label={ui('ანაზღაურების ტიპი')}
                 error={errors.salaryBasis}
               >
                 <SelectField
@@ -987,7 +1012,11 @@ export function PostJobForm({
                   options={['ხელზე', 'დარიცხული']}
                 />
               </Field>
-              <Field name="mode" label="მუშაობის ფორმატი" error={errors.mode}>
+              <Field
+                name="mode"
+                label={ui('მუშაობის ფორმატი')}
+                error={errors.mode}
+              >
                 <SelectField
                   {...selectProps('mode')}
                   disabled={locked || values.city === 'დისტანციური'}
@@ -996,7 +1025,7 @@ export function PostJobForm({
               </Field>
               <Field
                 name="employmentType"
-                label="დასაქმების ტიპი"
+                label={ui('დასაქმების ტიპი')}
                 error={errors.employmentType}
               >
                 <SelectField
@@ -1006,7 +1035,7 @@ export function PostJobForm({
               </Field>
               <Field
                 name="deadline"
-                label="განაცხადების ბოლო ვადა"
+                label={ui('განაცხადების ბოლო ვადა')}
                 error={errors.deadline}
               >
                 <DateField
@@ -1023,10 +1052,14 @@ export function PostJobForm({
                   onChange={(value) => change('deadline', value)}
                 />
               </Field>
-              <Field name="category" label="კატეგორია" error={errors.category}>
+              <Field
+                name="category"
+                label={ui('კატეგორია')}
+                error={errors.category}
+              >
                 <SelectField
                   {...selectProps('category')}
-                  placeholder="ავტომატურად (სათაურის მიხედვით)"
+                  placeholder={ui('ავტომატურად (სათაურის მიხედვით)')}
                   options={[
                     { value: '', label: 'ავტომატურად (სათაურის მიხედვით)' },
                     ...categories,
@@ -1036,7 +1069,7 @@ export function PostJobForm({
             </div>
           </details>
           <fieldset className="post-section post-plans">
-            <legend>განთავსება</legend>
+            <legend>{ui('განთავსება')}</legend>
             <div className="post-plan-pills">
               {placementTiers.map((t) => (
                 <label
@@ -1056,23 +1089,26 @@ export function PostJobForm({
                     disabled={locked || (t === 'premium' && !premiumAvailable)}
                   />
                   <span>
-                    {placementLabels[t]} ·{' '}
-                    {t === 'premium' ? `${premiumPriceGEL} ₾` : 'უფასო'}
-                    {t === 'premium' && !premiumAvailable ? ' · მალე' : ''}
+                    {ui(placementLabels[t])} ·{' '}
+                    {t === 'premium' ? `${premiumPriceGEL} ₾` : ui('უფასო')}
+                    {t === 'premium' && !premiumAvailable ? ui(' · მალე') : ''}
                   </span>
                 </label>
               ))}
             </div>
             {values.placement === 'vip' && (
               <p className="post-vip-note">
-                პირველი VIP {introductoryDays} დღით უფასოა — ერთხელ თითო
-                კომპანიაზე; ელიგიბელობა შემოწმებისას დადგინდება.
+                {ui('პირველი VIP ')}
+                {introductoryDays}
+                {ui(
+                  ' დღით უფასოა — ერთხელ თითო კომპანიაზე; ელიგიბელობა შემოწმებისას დადგინდება.',
+                )}
               </p>
             )}
             {values.placement === 'premium' && (
               <Field
                 name="billingEmail"
-                label="ინვოისისთვის სხვა ელფოსტა (არასავალდებულო)"
+                label={ui('ინვოისისთვის სხვა ელფოსტა (არასავალდებულო)')}
                 error={errors.billingEmail}
                 hint="ინვოისი შეტყობინებისთვის მითითებულ ელფოსტაზე მოგივა. სხვა მისამართზე მისაღებად შეავსე ეს ველი."
                 wide
@@ -1086,20 +1122,26 @@ export function PostJobForm({
               </Field>
             )}
             <details className="post-plan-note">
-              <summary>შეთავაზების პირობები</summary>
+              <summary>{ui('შეთავაზების პირობები')}</summary>
               <p>
-                პირველი VIP განთავსება {introductoryDays} დღით უფასოა — ერთხელ
-                თითო კომპანიაზე; შემოწმდება დამტკიცებისას. პრემიუმი ღირს{' '}
-                {premiumPriceGEL} ₾ და აქტიურდება ჩარიცხვის დადასტურების შემდეგ.
-                VIP-ის {introductoryDays} დღე და პრემიუმის {premiumDays} დღე
-                ითვლება განთავსების გააქტიურებიდან. ვადის ამოწურვის შემდეგ
-                განცხადება სტანდარტულ რეჟიმში რჩება. თანხა ავტომატურად არ
-                ჩამოიჭრება.
+                {ui('პირველი VIP განთავსება ')}
+                {introductoryDays}
+                {ui(
+                  ' დღით უფასოა — ერთხელ თითო კომპანიაზე; შემოწმდება დამტკიცებისას. პრემიუმი ღირს',
+                )}{' '}
+                {premiumPriceGEL}
+                {ui(' ₾ და აქტიურდება ჩარიცხვის დადასტურების შემდეგ. VIP-ის ')}
+                {introductoryDays}
+                {ui(' დღე და პრემიუმის ')}
+                {premiumDays}
+                {ui(
+                  ' დღე ითვლება განთავსების გააქტიურებიდან. ვადის ამოწურვის შემდეგ განცხადება სტანდარტულ რეჟიმში რჩება. თანხა ავტომატურად არ ჩამოიჭრება.',
+                )}
               </p>
               <p>
-                ნებისმიერი ფილტრისა და დალაგებისას შესაბამისი პრემიუმ
-                განცხადებები ჩანს პირველ, VIP — მათ შემდეგ, თითოეული
-                გამოქვეყნების თარიღის მიხედვით, უახლესი — ზემოთ.
+                {ui(
+                  'ნებისმიერი ფილტრისა და დალაგებისას შესაბამისი პრემიუმ განცხადებები ჩანს პირველ, VIP — მათ შემდეგ, თითოეული გამოქვეყნების თარიღის მიხედვით, უახლესი — ზემოთ.',
+                )}
               </p>
             </details>
           </fieldset>
@@ -1133,8 +1175,9 @@ export function PostJobForm({
                 }}
               />
               <span>
-                ვადასტურებ, რომ უფლებამოსილი ვარ და ვეთანხმები საკონტაქტო
-                მონაცემების საჯარო გამოქვეყნებას.
+                {ui(
+                  'ვადასტურებ, რომ უფლებამოსილი ვარ და ვეთანხმები საკონტაქტო მონაცემების საჯარო გამოქვეყნებას.',
+                )}
               </span>
             </label>
             {errors.consent && (
@@ -1159,15 +1202,15 @@ export function PostJobForm({
                   <Send aria-hidden="true" />
                 )}
                 {busy
-                  ? 'იგზავნება…'
+                  ? ui('იგზავნება…')
                   : sent
-                    ? 'ხელახლა გაგზავნა'
-                    : 'განცხადების გაგზავნა'}
+                    ? ui('ხელახლა გაგზავნა')
+                    : ui('განცხადების გაგზავნა')}
               </button>
             </div>
             <output className="post-draft-note">
               {busy
-                ? 'განცხადება იგზავნება. დაელოდე მიღების დასტურს.'
+                ? ui('განცხადება იგზავნება. დაელოდე მიღების დასტურს.')
                 : draftNote}
             </output>
           </div>

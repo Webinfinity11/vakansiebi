@@ -1,4 +1,5 @@
 'use client';
+import { UiLandingLinkLabel, useUi } from '@/app/ui-language';
 
 import { createContext, useContext, use, type ReactNode } from 'react';
 import Link from 'next/link';
@@ -34,6 +35,7 @@ export function DirectoryLinks({
   links: { path: string; label: string }[];
   limit?: number;
 }) {
+  const { ui } = useUi();
   /* The name alone. A count beside every link turns a short list of places to
      go into a table of numbers to compare, and the number is stale the moment
      a vacancy expires. */
@@ -42,7 +44,7 @@ export function DirectoryLinks({
       {items.map(({ path, label }) => (
         <li key={path}>
           <Link href={path} prefetch={false}>
-            {label}
+            <UiLandingLinkLabel path={path} label={label} />
           </Link>
         </li>
       ))}
@@ -53,7 +55,10 @@ export function DirectoryLinks({
       {list(links.slice(0, limit))}
       {links.length > limit && (
         <details>
-          <summary>მეტის ჩვენება ({links.length - limit})</summary>
+          <summary>
+            {ui('მეტის ჩვენება (')}
+            {links.length - limit})
+          </summary>
           {list(links.slice(limit))}
           <button
             type="button"
@@ -66,7 +71,7 @@ export function DirectoryLinks({
               }
             }}
           >
-            ნაკლების ჩვენება
+            {ui('ნაკლების ჩვენება')}
           </button>
         </details>
       )}

@@ -1,4 +1,6 @@
 import { db } from './db';
+import { analyticsComparison } from './analytics-comparison';
+import type { AnalyticsComparison } from '../analytics-comparison';
 
 /* Usage counts store a kind, a value and a time, without an IP address, cookie, session or
    user agent. Filtering obvious contacts from searches reduces their storage but does not
@@ -98,6 +100,7 @@ export type ActivityPoint = {
   outbound: number;
 };
 export type AnalyticsSummary = {
+  comparison?: AnalyticsComparison;
   swipe?: SwipeSummary;
   days: number;
   period?: 'today' | 'yesterday';
@@ -112,6 +115,8 @@ export type AnalyticsSummary = {
   /** How far the CV builder got, by step name. */
   resume: Ranked[];
   resumeStorage?: { active: number; created: number; updated: number };
+  /** Submissions received by the server, not client-side form clicks. */
+  receivedPosts?: number;
   /** Public controls used and errors met, by code name; every code, not a top list. */
   actions: Ranked[];
   searches: Ranked[];
@@ -137,8 +142,8 @@ export async function analyticsSummary(
   top = 20,
 ): Promise<AnalyticsSummary> {
   const days = typeof period === 'number' ? period : 1;
-  // Daily rollups cannot represent a partial day. Long windows start at local
-  // midnight; calendar days use Tbilisi midnight regardless of server/browser time.
+  // Every window starts at Tbilisi midnight and includes today (except yesterday).
+  // This agrees with posting analytics and avoids partially including a rolled-up day.
   // Resolve both edges once so queries cannot cross into different days mid-report.
   const midnight = `date_trunc('day',instant AT TIME ZONE 'Asia/Tbilisi') AT TIME ZONE 'Asia/Tbilisi'`;
   const since =
@@ -146,9 +151,7 @@ export async function analyticsSummary(
       ? midnight
       : period === 'yesterday'
         ? `(${midnight}) - interval '1 day'`
-        : days > 30
-          ? `date_trunc('day', instant AT TIME ZONE 'Asia/Tbilisi' - (days * interval '1 day')) AT TIME ZONE 'Asia/Tbilisi'`
-          : `instant - (days * interval '1 day')`;
+        : `(${midnight}) - ((days - 1) * interval '1 day')`;
   const until = period === 'yesterday' ? midnight : 'instant';
   const bounds = (
     await db().query(
@@ -243,18 +246,19 @@ export async function analyticsSummary(
       params,
     )
   ).rows[0] as { active: number; created: number; updated: number };
+  const receivedPosts = (
+    await db().query(
+      `SELECT count(*)::int count FROM job_submissions
+       WHERE NOT is_test AND created_at >= $1::timestamptz AND created_at < $2::timestamptz`,
+      params,
+    )
+  ).rows[0].count as number;
   return {
     days,
     ...(typeof period === 'string' ? { period } : {}),
     unit,
-    from:
-      typeof period === 'string'
-        ? bounds.local_from
-        : (activity[0]?.bucket ?? ''),
-    to:
-      typeof period === 'string'
-        ? bounds.local_to
-        : (activity.at(-1)?.bucket ?? ''),
+    from: bounds.local_from,
+    to: bounds.local_to,
     totals: byKind,
     activity,
     filters: ranked('filter'),
@@ -262,6 +266,8 @@ export async function analyticsSummary(
     steps: ranked('post'),
     resume: ranked('resume'),
     resumeStorage,
+    receivedPosts,
+    comparison: await analyticsComparison(params, period),
     swipe: await swipeSummary(params, ranked('action')),
     actions: ranked('action'),
     searches: ranked('search'),

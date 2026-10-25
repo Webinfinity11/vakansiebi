@@ -8,6 +8,7 @@ import { GET as categoriesGET } from '../app/sitemap-categories.xml/route';
 import { GET as companiesGET } from '../app/sitemap-companies.xml/route';
 import { GET as jobsGET } from '../app/sitemap-jobs.xml/route';
 import robots from '../app/robots';
+import { blogPosts } from '../lib/blog';
 import {
   createSitemapHandler,
   sitemapCacheControl,
@@ -65,6 +66,21 @@ void test('sitemap-pages.xml has no database dependency', async () => {
       'noindex form is excluded',
     );
     assert.ok(body.includes('<loc>https://jobx.ge/cv</loc>'));
+    assert.ok(body.includes('<loc>https://jobx.ge/blog</loc>'));
+    const articles = [
+      ...body.matchAll(/<loc>https:\/\/jobx\.ge\/blog\/([^<]+)<\/loc>/g),
+    ].map((match) => match[1]);
+    assert.deepEqual(
+      articles.sort(),
+      blogPosts.map((post) => post.slug).sort(),
+    );
+    for (const retired of [
+      'rogor-shevadaro-vakansiebi',
+      'cv-konkretuli-vakansiistvis',
+      'pirveli-samsakhuri-gamocdilebis-gareshe',
+    ]) {
+      assert.ok(!body.includes(`/blog/${retired}`));
+    }
   });
 });
 
@@ -158,6 +174,8 @@ void test('an oversized catalogue is truncated to 50000 URLs', async () => {
 
 void test('categories sitemap reads stored counts and uses curated fallback for stale, empty or thin snapshots', async (t) => {
   const { db } = await import('../lib/server/db');
+  const { clearLandingCountsCache } =
+    await import('../lib/server/sitemap-data');
   const { landingLinks } = await import('../lib/seo-landing');
   const previous = process.env.DATABASE_URL;
   process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
@@ -173,12 +191,14 @@ void test('categories sitemap reads stored counts and uses curated fallback for 
   let rows = [row];
   t.mock.method(db(), 'query', async () => ({ rows }));
   try {
+    clearLandingCountsCache();
     const fresh = await categoriesGET();
     const body = await fresh.text();
     assert.equal(fresh.headers.get('Cache-Control'), sitemapCacheControl);
     assert.equal(body.match(/<loc>/g)?.length, 1);
     assert.doesNotMatch(body, /<lastmod>/);
     rows = [{ ...row, computed_at: new Date() }];
+    clearLandingCountsCache();
     assert.equal(
       await (await categoriesGET()).text(),
       body,
@@ -190,6 +210,7 @@ void test('categories sitemap reads stored counts and uses curated fallback for 
       [{ ...row, computed_at: new Date(Date.now() - 86_400_001) }],
     ]) {
       rows = unavailable;
+      clearLandingCountsCache();
       const response = await categoriesGET();
       assert.equal(response.headers.get('Cache-Control'), 'no-store');
       assert.equal(
@@ -198,11 +219,13 @@ void test('categories sitemap reads stored counts and uses curated fallback for 
       );
     }
     rows = [row];
+    clearLandingCountsCache();
     assert.equal(
       (await categoriesGET()).headers.get('Cache-Control'),
       sitemapCacheControl,
     );
   } finally {
+    clearLandingCountsCache();
     if (previous === undefined) delete process.env.DATABASE_URL;
     else process.env.DATABASE_URL = previous;
   }

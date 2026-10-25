@@ -1,4 +1,5 @@
 'use client';
+import { useUi } from './ui-language';
 import {
   Select,
   SelectContent,
@@ -45,6 +46,7 @@ export function SelectField({
   /** The id of the hint or error text that belongs to this field. */
   describedBy?: string;
 }) {
+  const { ui } = useUi();
   const list = options.map((o) =>
     typeof o === 'string' ? { value: o, label: o } : o,
   );
@@ -58,16 +60,16 @@ export function SelectField({
       >
         <SelectTrigger
           id={id}
-          aria-label={label}
+          aria-label={label ? ui(label) : undefined}
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
           className="ds-select"
         >
           <SelectValue>
             {current ? (
-              current.label
+              ui(current.label)
             ) : (
-              <span className="ds-select-placeholder">{placeholder}</span>
+              <span className="ds-select-placeholder">{ui(placeholder)}</span>
             )}
           </SelectValue>
         </SelectTrigger>
@@ -79,7 +81,7 @@ export function SelectField({
         >
           {list.map((o) => (
             <SelectItem key={o.value} value={o.value} className={itemClass}>
-              {o.label}
+              {ui(o.label)}
             </SelectItem>
           ))}
         </SelectContent>

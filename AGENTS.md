@@ -18,3 +18,40 @@ Vercel's automatic Git deployments: that creates duplicate builds.
 Environment-only changes require an explicit Vercel redeploy. Keep the
 project-specific deploy hook in GitHub Secrets.
 Scraper/database updates are independent and do not require website builds.
+
+## Typography and natural text flow
+
+User preference: do not squeeze text or force a heading into an artificially
+narrow column while useful space remains beside it.
+
+- Let page headings and introductory text use the available content width.
+  Do not add arbitrary narrow `max-width` values or manual line breaks just to
+  create a stacked heading.
+- Do not compress text with negative letter spacing, horizontal scaling or a
+  smaller font merely to force it onto one line. Preserve readable typography.
+- Let text wrap naturally when the viewport requires it, especially on phones.
+  Do not replace natural wrapping with `white-space: nowrap`, clipping or
+  ellipsis on page headings.
+- A readable line length for long article paragraphs is appropriate; do not
+  automatically impose that same narrow width on a page's introductory heading.
+- Check changed headings in Georgian and English on desktop and mobile for
+  unnecessary wrapping and horizontal overflow.
+
+## Georgian wording and terminology
+
+Natural Georgian is an explicit user priority. Write Georgian interface copy
+directly; do not translate English marketing slogans word for word or invent
+unnatural phrases to fill a heading or add SEO keywords.
+
+- Name the page, subject or action plainly: for example, `ბლოგი`, `წაკითხვა`,
+  `ვაკანსიების ნახვა` and `რეზიუმეს შექმნა`.
+- Do not reuse the rejected heading `სამსახურის ძიება, უფრო გარკვევით` or
+  similarly vague slogans such as an unspecified "next step".
+- Keep terminology consistent between the header, menu, footer and article
+  actions. Prefer `რეზიუმე` for the document; use `CV` where the abbreviation
+  helps, without changing the document's content or language.
+- For unfamiliar wording, check how Georgian employment services use the term.
+  Peer usage is evidence, not a reason to copy an awkward phrase or reproduce
+  another site's article. Prefer a short established label when in doubt.
+- Read new titles, descriptions and calls to action as Georgian sentences:
+  check meaning, grammar, register and whether they describe the actual content.

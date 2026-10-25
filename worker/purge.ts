@@ -9,7 +9,7 @@ import { db, transaction } from '../lib/server/db';
    the seven days.
 
    An editor's own archive or rejection waits a month before it goes (the archive must not
-   grow without end); JOBX submissions and invoiced records are never deleted.
+   grow without end); JOBX submissions, invoices and application history are retained.
 
    The source item is retained after clearing its job link. Its ID and raw snapshot
    prevent the new-only worker from importing it again, even if a listing repeats it.
@@ -24,6 +24,7 @@ const windows = {
   // An editor's archive or rejection, kept a month in case it is wanted back.
   editor: '30 days',
 } as const;
+export const purgeBatchSize = 200;
 
 export type PurgeResult = {
   expired: number;
@@ -35,10 +36,11 @@ export type PurgeResult = {
   applied: boolean;
 };
 
-/* JOBX's own submissions and anything with an invoice are business records and
-   are never deleted; their foreign keys would refuse it anyway. */
+/* Applications have an ON DELETE CASCADE foreign key: explicitly protect them
+   too, including failed attempts. Cleanup must not erase delivery history. */
 const keep = `NOT EXISTS (SELECT 1 FROM job_submissions s WHERE s.job_id=j.id)
-    AND NOT EXISTS (SELECT 1 FROM job_invoices i WHERE i.job_id=j.id)`;
+    AND NOT EXISTS (SELECT 1 FROM job_invoices i WHERE i.job_id=j.id)
+    AND NOT EXISTS (SELECT 1 FROM swipe_applications a WHERE a.job_id=j.id)`;
 const candidates = `SELECT id, CASE
     WHEN automation_managed AND NOT automation_paused AND automation_reason IN ('expired','removed','unverified') THEN automation_reason
     ELSE 'editor' END AS kind FROM jobs j
@@ -59,22 +61,37 @@ const count = (rows: { kind: string }[], kind: string) =>
 
 export async function purgeEnded({
   apply = false,
-}: { apply?: boolean } = {}): Promise<PurgeResult> {
+  batchSize = purgeBatchSize,
+}: { apply?: boolean; batchSize?: number } = {}): Promise<PurgeResult> {
+  if (
+    !Number.isInteger(batchSize) ||
+    batchSize < 1 ||
+    batchSize > purgeBatchSize
+  )
+    throw new Error(`Purge batch size must be between 1 and ${purgeBatchSize}`);
   if (!apply) {
-    const rows = (await db().query(candidates)).rows;
+    const rows = (
+      await db().query<{ kind: string; count: number }>(
+        `SELECT kind,count(*)::int AS count FROM (${candidates}) eligible GROUP BY kind`,
+      )
+    ).rows;
+    const total = (kind: string) =>
+      rows.find((row) => row.kind === kind)?.count ?? 0;
     const archived = (
       await db().query(`SELECT count(*)::int n ${expiredManual}`)
     ).rows[0].n;
     return {
-      expired: count(rows, 'expired'),
-      removed: count(rows, 'removed'),
-      unverified: count(rows, 'unverified'),
-      editor: count(rows, 'editor'),
+      expired: total('expired'),
+      removed: total('removed'),
+      unverified: total('unverified'),
+      editor: total('editor'),
       archived,
       applied: false,
     };
   }
   return transaction(async (c) => {
+    await c.query("SET LOCAL statement_timeout='15s'");
+    await c.query("SET LOCAL lock_timeout='2s'");
     // Several scraper jobs run at once; only one of them purges, the rest skip.
     const locked = (
       await c.query('SELECT pg_try_advisory_xact_lock(917410) ok')
@@ -92,10 +109,31 @@ export async function purgeEnded({
       await c.query(
         `UPDATE jobs SET status='archived',automation_reason='expired',needs_review=false,
           published=NULL,version=version+1,updated_at=now()
-         WHERE id IN (SELECT id ${expiredManual})`,
+         WHERE id IN (SELECT id ${expiredManual} ORDER BY updated_at,id LIMIT $1 FOR UPDATE OF j SKIP LOCKED)`,
+        [batchSize],
       )
     ).rowCount;
-    const rows = (await c.query(candidates + ' FOR UPDATE')).rows;
+    // Oldest eligible records first; keep each transaction small and leave
+    // anything being edited to the next pass. The dry run still reports all.
+    const lockedRows = (
+      await c.query(
+        candidates +
+          ' ORDER BY updated_at,id LIMIT $1 FOR UPDATE OF j SKIP LOCKED',
+        [batchSize],
+      )
+    ).rows;
+    // Use a new snapshot after acquiring the job locks. A submission/invoice/
+    // application that committed just before those locks must still protect it.
+    const protectedCheck = lockedRows.length
+      ? (
+          await c.query(
+            `SELECT j.id FROM jobs j WHERE j.id=ANY($1::uuid[]) AND ${keep}`,
+            [lockedRows.map((r) => r.id)],
+          )
+        ).rows
+      : [];
+    const deletable = new Set(protectedCheck.map((r) => r.id));
+    const rows = lockedRows.filter((r) => deletable.has(r.id));
     const ids = rows.map((r) => r.id);
     if (ids.length) {
       await c.query(
