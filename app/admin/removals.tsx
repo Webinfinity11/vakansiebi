@@ -1,5 +1,9 @@
 'use client';
 import { useEffect, useState, type SubmitEvent } from 'react';
+import {
+  removalCompanyNames,
+  type RemovalPreview,
+} from '@/lib/employer-removal-input';
 import { adminTime } from '@/lib/admin-format';
 import { SkeletonRows } from '../skeleton';
 import './removals.css';
@@ -46,6 +50,44 @@ export function RemovalsPanel() {
   const [email, setEmail] = useState(''),
     [names, setNames] = useState(''),
     [reason, setReason] = useState('დამსაქმებლის მოთხოვნით');
+  const [preview, setPreview] = useState<{
+    key: string;
+    data?: RemovalPreview;
+    error?: string;
+  } | null>(null);
+  const previewKey = JSON.stringify([names, email]);
+  const currentPreview = preview?.key === previewKey ? preview : null;
+  useEffect(() => {
+    const abort = new AbortController();
+    if (!names.trim() && !email.trim()) return;
+    const timer = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ preview: '1' });
+        for (const name of removalCompanyNames(names))
+          params.append('companyName', name);
+        if (email.trim()) params.set('email', email.trim());
+        const response = await fetch(`/api/admin/removals?${params}`, {
+          cache: 'no-store',
+          signal: abort.signal,
+        });
+        const body = await response.json();
+        if (!response.ok)
+          throw Error(body.error || 'წინასწარი ნახვა ვერ ჩაიტვირთა');
+        if (!abort.signal.aborted) setPreview({ key: previewKey, data: body });
+      } catch (e) {
+        if (!abort.signal.aborted)
+          setPreview({
+            key: previewKey,
+            error:
+              e instanceof Error ? e.message : 'წინასწარი ნახვა ვერ ჩაიტვირთა',
+          });
+      }
+    }, 350);
+    return () => {
+      clearTimeout(timer);
+      abort.abort();
+    };
+  }, [names, email, previewKey, version]);
   useEffect(() => {
     const abort = new AbortController();
     fetch(`/api/admin/removals?page=${page}`, {
@@ -96,13 +138,11 @@ export function RemovalsPanel() {
   }
   async function submit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!currentPreview?.data || busy) return;
     if (
       await act('block', {
         ...(email.trim() ? { email: email.trim() } : {}),
-        companyNames: names
-          .split(/[,\n]/)
-          .map((v) => v.trim())
-          .filter(Boolean),
+        companyNames: removalCompanyNames(names),
         reason,
       })
     ) {
@@ -126,7 +166,7 @@ export function RemovalsPanel() {
         <summary>კომპანიის ბლოკირება და ვაკანსიების ამოღება</summary>
         <form onSubmit={submit}>
           <label>
-            კომპანიის საკონტაქტო მეილი
+            კომპანიის მეილი (არასავალდებულო)
             <input
               type="email"
               value={email}
@@ -135,7 +175,7 @@ export function RemovalsPanel() {
             />
           </label>
           <label>
-            კომპანიის ზუსტი სახელები
+            კომპანიის სახელი
             <textarea
               value={names}
               onChange={(e) => setNames(e.target.value)}
@@ -153,14 +193,54 @@ export function RemovalsPanel() {
             />
           </label>
           <p>
-            დაიბლოკება ამ მეილთან ან სახელთან დაკავშირებული ვაკანსიები. ცნობილ
-            დამსაქმებელს დადასტურებაც გაეგზავნება.
+            თითო სახელი ახალ ხაზზე ჩაწერე. ამ კომპანიების ვაკანსიები საიტიდან
+            მოიხსნება და სკრაპერი მათ აღარ გამოაქვეყნებს. მეილის მითითებისას
+            დამსაქმებელს ამოღების დადასტურება გაეგზავნება; მეილის გარეშე არაფერი
+            იგზავნება.
           </p>
+          {(names.trim() || email.trim()) && (
+            <div aria-live="polite" aria-busy={!currentPreview}>
+              {!currentPreview ? (
+                <p>ვაკანსიების რაოდენობა ითვლება…</p>
+              ) : currentPreview.error ? (
+                <p role="alert">{currentPreview.error}</p>
+              ) : (
+                currentPreview.data && (
+                  <>
+                    <p>
+                      გამოქვეყნებული: {currentPreview.data.published} · სულ:{' '}
+                      {currentPreview.data.total}
+                    </p>
+                    {currentPreview.data.companies.length ? (
+                      <ul>
+                        {currentPreview.data.companies.map((company) => (
+                          <li key={company.name}>
+                            {company.name} — გამოქვეყნებული: {company.published}{' '}
+                            · სულ: {company.total}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>
+                        ამჟამად შესაბამისი ვაკანსია არ არის. მომავალი განთავსება
+                        მაინც დაიბლოკება.
+                      </p>
+                    )}
+                  </>
+                )
+              )}
+            </div>
+          )}
           <button
             className="ds-btn ds-btn--primary"
-            disabled={busy || (!email.trim() && !names.trim())}
+            disabled={
+              busy || !currentPreview?.data || (!email.trim() && !names.trim())
+            }
           >
-            ბლოკირება და ამოღება
+            ბლოკირება
+            {currentPreview?.data
+              ? ` · ${currentPreview.data.published} გამოქვეყნებული / ${currentPreview.data.total} სულ`
+              : ''}
           </button>
         </form>
       </details>

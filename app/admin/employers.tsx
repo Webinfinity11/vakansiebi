@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { ChevronDown, CheckCircle2, Search } from 'lucide-react';
+import { Ban, ChevronDown, CheckCircle2, Search } from 'lucide-react';
 import { SkeletonRows } from '../skeleton';
+import type { RemovalPreview } from '@/lib/employer-removal-input';
 import type { EmployerCandidate, EmployerName } from '@/lib/server/employers';
 
 type EmployerPageSummary = { slug: string; name: string; count: number };
@@ -16,6 +17,7 @@ export function EmployersPanel() {
   const [pages, setPages] = useState<EmployerPageSummary[]>([]);
   const [busy, setBusy] = useState('');
   const [query, setQuery] = useState('');
+  const [message, setMessage] = useState('');
   useEffect(() => {
     const controller = new AbortController();
     void fetch('/api/admin/employers', { signal: controller.signal })
@@ -31,6 +33,52 @@ export function EmployersPanel() {
       });
     return () => controller.abort();
   }, []);
+  const block = async (company: EmployerPageSummary) => {
+    setBusy(company.slug);
+    setMessage('');
+    try {
+      const params = new URLSearchParams({
+        preview: '1',
+        companyName: company.name,
+      });
+      const previewResponse = await fetch(`/api/admin/removals?${params}`, {
+        cache: 'no-store',
+      });
+      const preview = (await previewResponse.json()) as RemovalPreview & {
+        error?: string;
+      };
+      if (!previewResponse.ok)
+        throw Error(preview.error || 'წინასწარი ნახვა ვერ ჩაიტვირთა');
+      if (
+        !window.confirm(
+          `${company.name}: დაიბლოკოს განთავსება? გამოქვეყნებული ვაკანსია: ${preview.published}, სულ: ${preview.total}. მეილი არ გაიგზავნება.`,
+        )
+      )
+        return;
+      const response = await fetch('/api/admin/removals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'block',
+          companyNames: [company.name],
+          reason: 'ადმინის გადაწყვეტილებით',
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw Error(body.error || 'კომპანია ვერ დაიბლოკა');
+      setPages((rows) => rows.filter((p) => p.slug !== company.slug));
+      setMessage(
+        `${company.name}: განთავსება დაბლოკილია. დამუშავებული ვაკანსიები: ${body.removed}.`,
+      );
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        error: e instanceof Error ? e.message : String(e),
+      }));
+    } finally {
+      setBusy('');
+    }
+  };
   const decide = async (
     row: EmployerCandidate,
     decision: 'merge' | 'separate',
@@ -68,6 +116,7 @@ export function EmployersPanel() {
           {state.error}
         </p>
       )}
+      {message && <p role="status">{message}</p>}
       {!!pages.length && (
         <details className="raw-details">
           <summary>
@@ -85,6 +134,15 @@ export function EmployersPanel() {
                   {p.name}
                 </a>
                 <b>{p.count}</b>
+                <button
+                  type="button"
+                  className="ds-btn ds-btn--secondary ds-btn--sm"
+                  disabled={Boolean(busy)}
+                  onClick={() => void block(p)}
+                >
+                  <Ban size={14} aria-hidden="true" />
+                  აღარ გამოქვეყნდეს
+                </button>
               </li>
             ))}
           </ol>

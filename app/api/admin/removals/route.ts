@@ -13,6 +13,7 @@ import {
   requireAdmin,
 } from '@/lib/server/auth';
 import {
+  previewEmployerRemoval,
   releaseEmployer,
   removedVacancies,
   suppressEmployer,
@@ -22,6 +23,16 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     await requireAdmin();
+    const params = new URL(request.url).searchParams;
+    if (params.get('preview') === '1') {
+      return Response.json(
+        await previewEmployerRemoval({
+          companyNames: params.getAll('companyName'),
+          ...(params.get('email') ? { email: params.get('email') } : {}),
+        }),
+        { headers: { 'Cache-Control': 'private, no-store' } },
+      );
+    }
     return Response.json(
       await removedVacancies(
         Number(new URL(request.url).searchParams.get('page')),

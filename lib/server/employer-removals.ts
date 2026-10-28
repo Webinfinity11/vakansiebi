@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
-import { employerKey } from '../employer-identity';
-import { genericCompanyKeys } from '../company-logo-identity';
+import {
+  removalCompanyKeys,
+  type RemovalPreview,
+} from '../employer-removal-input';
 import { db, transaction } from './db';
 import { ApiError } from './auth';
 import { clearPublicJobsCache } from './jobs';
@@ -21,37 +23,61 @@ export const removalInput = z.object({
   evidence: z.string().max(4000).default(''),
 });
 
+// Match the target rule first; avoid evaluating every active suppression for every job.
+// CASE skips the costly email regexp entirely for name-only blocks.
+const matchesRemoval = (value: 'draft' | 'published') => `(
+  employer_removal_key(${value}->>'company')=ANY($1::text[])
+  OR ${value}->>'url'=ANY($3::text[])
+  OR CASE WHEN $2::text IS NOT NULL THEN $2 IN (
+    SELECT lower(m[1]) FROM regexp_matches(${value}::text,
+      '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+[.][A-Za-z]{2,}', 'g') m
+  ) ELSE false END
+)`;
+const matchingJobs = `(${matchesRemoval('draft')} OR ${matchesRemoval('published')})`;
+
+export async function previewEmployerRemoval(
+  input: unknown,
+): Promise<RemovalPreview> {
+  const data = removalInput.omit({ reason: true, evidence: true }).parse(input);
+  const keys = removalCompanyKeys(data.companyNames);
+  // An email block merges into the existing rule, including when reactivating it.
+  const prior = data.email
+    ? (
+        await db().query(
+          'SELECT company_keys,source_urls FROM employer_suppressions WHERE email=$1',
+          [data.email],
+        )
+      ).rows[0]
+    : undefined;
+  const rows = (
+    await db().query(
+      `
+    SELECT coalesce(published->>'company',draft->>'company','') name,
+      count(*)::int total,
+      count(*) FILTER (WHERE status='published' AND published IS NOT NULL)::int published
+    FROM jobs WHERE ${matchingJobs}
+    GROUP BY 1 ORDER BY 1`,
+      [
+        [...keys, ...(prior?.company_keys || [])],
+        data.email || null,
+        [...data.sourceUrls, ...(prior?.source_urls || [])],
+      ],
+    )
+  ).rows as RemovalPreview['companies'];
+  return {
+    companies: rows,
+    total: rows.reduce((n, r) => n + r.total, 0),
+    published: rows.reduce((n, r) => n + r.published, 0),
+  };
+}
+
 export async function suppressEmployer(
   input: unknown,
   actor = 'admin',
   connection?: PoolClient,
 ) {
   const data = removalInput.parse(input);
-  const baseKeys = [...new Set(data.companyNames.map(employerKey))].filter(
-    (key) => key.length >= 3 && !genericCompanyKeys.has(key),
-  );
-  const legalForms = [
-    'შპს',
-    'სს',
-    'სსიპ',
-    'ააიპ',
-    'იმ',
-    'llc',
-    'ltd',
-    'jsc',
-    'inc',
-  ];
-  const companyKeys = [
-    ...new Set(
-      baseKeys.flatMap((key) => [
-        key,
-        ...legalForms.flatMap((form) => [
-          (form + key).slice(0, 300),
-          (key + form).slice(0, 300),
-        ]),
-      ]),
-    ),
-  ];
+  const companyKeys = removalCompanyKeys(data.companyNames);
   if (!data.email && !companyKeys.length && !data.sourceUrls.length)
     throw new ApiError(
       'მიუთითე კომპანიის მეილი, ზუსტი სახელი ან ვაკანსიის წყაროს ბმული',
@@ -69,7 +95,7 @@ export async function suppressEmployer(
          company_names=ARRAY(SELECT DISTINCT unnest(employer_suppressions.company_names||excluded.company_names)),
          company_keys=ARRAY(SELECT DISTINCT unnest(employer_suppressions.company_keys||excluded.company_keys)),
          source_urls=ARRAY(SELECT DISTINCT unnest(employer_suppressions.source_urls||excluded.source_urls)),updated_at=now()
-       RETURNING id`,
+       RETURNING id,email,company_keys,source_urls`,
         [
           randomUUID(),
           data.email || null,
@@ -84,10 +110,16 @@ export async function suppressEmployer(
     ).rows[0];
     const jobs = (
       await c.query(
-        `SELECT id,draft,status,published FROM jobs
-       WHERE employer_suppression_id=$1 OR employer_suppression_for(draft)=$1 OR employer_suppression_for(published)=$1
-       ORDER BY id FOR UPDATE`,
-        [rule.id],
+        `WITH candidates AS MATERIALIZED (
+          SELECT id,draft,published,employer_suppression_id FROM jobs
+          WHERE employer_suppression_id=$4 OR ${matchingJobs}
+        ), matched AS MATERIALIZED (
+          SELECT id FROM candidates
+          WHERE employer_suppression_id=$4 OR employer_suppression_for(draft)=$4 OR employer_suppression_for(published)=$4
+        )
+        SELECT j.id,j.draft,j.status,j.published FROM jobs j JOIN matched m ON m.id=j.id
+        ORDER BY j.id FOR UPDATE OF j`,
+        [rule.company_keys, rule.email, rule.source_urls, rule.id],
       )
     ).rows;
     if (jobs.length)

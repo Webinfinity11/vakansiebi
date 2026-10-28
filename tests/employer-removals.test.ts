@@ -10,6 +10,23 @@ import {
   verifyRemovalWebhook,
 } from '../lib/employer-opt-out';
 
+import {
+  removalCompanyNames,
+  removalCompanyKeys,
+} from '../lib/employer-removal-input';
+
+void test('company removal preserves commas and only separates new lines', () => {
+  assert.deepEqual(
+    removalCompanyNames('  ლიბერთი, ბაზისბანკ ჯგუფი\r\n\n სხვა კომპანია  '),
+    ['ლიბერთი, ბაზისბანკ ჯგუფი', 'სხვა კომპანია'],
+  );
+  assert.deepEqual(
+    removalCompanyKeys(['შ.პ.ს. Example']),
+    removalCompanyKeys(['Example']),
+  );
+  assert.deepEqual(removalCompanyKeys(['ა']), []);
+});
+
 void test('an address inside a display name cannot impersonate the real sender', () => {
   assert.equal(
     removalSender('Company <OWNER@example.com>'),
@@ -110,11 +127,12 @@ void test(
     const { db } = await import('../lib/server/db');
     const { recordRemovalRequest, deliverRemovalConfirmations } =
       await import('../lib/server/removal-requests');
-    const { releaseEmployer } = await import('../lib/server/employer-removals');
+    const { releaseEmployer, previewEmployerRemoval } =
+      await import('../lib/server/employer-removals');
     const { mutateJob } = await import('../lib/server/jobs');
     const tag = randomUUID();
     const email = `remove-${tag}@example.com`;
-    const company = `Removal Test ${tag}`;
+    const company = `Removal Test, ${tag}`;
     const jobs: string[] = [];
     let requestId: string | undefined;
     let ruleId: string | undefined;
@@ -142,6 +160,42 @@ void test(
       const a = await add();
       const b = await add(company, 'other@example.com');
       const safe = await add(`Unrelated ${tag}`, `${email}.evil`);
+      const legal = await add(`შ.პ.ს ${company}`, 'legal@example.com');
+      const draftOnly = await add(company, 'draft@example.com');
+      await db().query(
+        "UPDATE jobs SET published=NULL,status='pending' WHERE id=$1",
+        [draftOnly],
+      );
+      const publishedOnly = await add(company, 'published@example.com');
+      await db().query(
+        "UPDATE jobs SET draft=jsonb_set(draft,'{company}',to_jsonb($2::text)) WHERE id=$1",
+        [publishedOnly, `Different ${tag}`],
+      );
+      const preview = await previewEmployerRemoval({
+        companyNames: removalCompanyNames(company),
+      });
+      assert.equal(preview.total, 5);
+      assert.equal(preview.published, 4);
+      assert.deepEqual(
+        preview.companies.map((r) => r.name).sort(),
+        [company, `შ.პ.ს ${company}`].sort(),
+      );
+      assert.equal(
+        (await previewEmployerRemoval({ companyNames: [`No match ${tag}`] }))
+          .total,
+        0,
+      );
+      assert.equal(
+        (await previewEmployerRemoval({ email })).total,
+        1,
+        'email suffix must not match in preview',
+      );
+      assert.equal(
+        (await db().query('SELECT status FROM jobs WHERE id=$1', [a])).rows[0]
+          .status,
+        'published',
+        'preview is read-only',
+      );
       const sourceId = `test:${tag}`;
       const input = {
         sourceId,
@@ -155,10 +209,10 @@ void test(
       const rows = (
         await db().query(
           'SELECT id,status,published,automation_paused,employer_suppression_id FROM jobs WHERE id=ANY($1)',
-          [[a, b, safe]],
+          [[a, b, safe, legal, draftOnly, publishedOnly]],
         )
       ).rows;
-      for (const id of [a, b]) {
+      for (const id of [a, b, legal, draftOnly, publishedOnly]) {
         const row = rows.find((r) => r.id === id);
         assert.equal(row.status, 'rejected');
         assert.equal(row.published, null);

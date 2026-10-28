@@ -33,3 +33,17 @@ RUN_DB_TESTS=1 DATABASE_URL=postgresql://localhost/ertad_test pnpm exec tsx --te
 ```
 
 Tests cover signed links, expiry, header forgery, replayed webhooks, quoted/negated requests, persistent import blocking, actual removal and one acknowledgement per request. Never point these database tests at production.
+
+## Admin preview
+
+Enter one company name per line; commas remain part of a name. The authenticated
+`GET /api/admin/removals?preview=1&companyName=...` returns matching company names,
+published counts and total matching records (including unpublished records). Repeat
+`companyName` for aliases; an optional `email` also previews contact matches and aliases
+from its existing rule. The form debounces requests and discards stale responses.
+The companies tab also previews counts before confirming a name-only block; it sends no email.
+
+Preview and block share `removalCompanyKeys` and the SQL candidate predicate. Blocking
+materializes candidates before checking existing rule precedence, avoiding full-table
+per-rule matching for name-only requests. No new migration is required; the database
+trigger still protects every importer. Counts are a snapshot and can change before submission.
