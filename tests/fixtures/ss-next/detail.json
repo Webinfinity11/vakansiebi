@@ -1,0 +1,24 @@
+{
+  "pageProps": {
+    "detailsInitData": {
+      "id": 123,
+      "jobsDealType": 1,
+      "status": 0,
+      "title": { "ka": "დიზაინერი" },
+      "publisherName": "ტესტის სტუდია",
+      "description": {
+        "ka": "<p>კომპანია ეძებს გამოცდილ დიზაინერს საინტერესო პროექტებში სამუშაოდ.</p>"
+      },
+      "startDate": "2026-10-28T12:00:00+04:00",
+      "endDate": "2026-11-28T12:00:00+04:00",
+      "address": { "cityTitle": { "ka": "თბილისი" } },
+      "currencyId": 1,
+      "salaryFrom": 1500,
+      "monthOrDayType": 0,
+      "phones": [{ "applicationId": 123, "phoneNumber": "555123456" }],
+      "email": "test@example.com",
+      "userInfo": { "email": "private@example.com" }
+    }
+  },
+  "__N_SSP": true
+}

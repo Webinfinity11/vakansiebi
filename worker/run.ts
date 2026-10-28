@@ -37,7 +37,12 @@ import {
   UnpublishableVacancy,
   type ListedLink,
 } from './adapters';
-import { sourceFetch, SourceHttpError, deferredSourceFailure } from './http';
+import {
+  sourceFetch,
+  SourceHttpError,
+  deferredSourceFailure,
+  takeSourceHttpDiagnostic,
+} from './http';
 import { discoverItems, stageVacancy } from './importer';
 import {
   acquireSourceLease,
@@ -106,6 +111,7 @@ export async function runSource(
   try {
     locked = await acquireSourceLease(source, owner, ttlMs);
     if (!locked) return { skipped: true };
+    takeSourceHttpDiagnostic(source);
     heartbeat = startLeaseHeartbeat(source, owner, ttlMs);
     const config = (
       await db().query('SELECT * FROM sources WHERE id=$1', [source])
@@ -394,6 +400,7 @@ export async function runSource(
     removalSweep = await sweepRemovals(source);
     const warning =
       [
+        takeSourceHttpDiagnostic(source),
         discoveryWarning,
         removalSweep && !removalSweep.complete
           ? `Removal check incomplete (${removalSweep.seen} listed)`
@@ -523,6 +530,7 @@ export async function runSource(
     }
     return { source, error, deferred, consecutiveFailures };
   } finally {
+    if (locked) takeSourceHttpDiagnostic(source);
     clearInterval(heartbeat);
     if (locked) await releaseSourceLease(source, owner);
   }

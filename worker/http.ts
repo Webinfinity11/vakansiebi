@@ -2,6 +2,8 @@ import robotsParser from 'robots-parser';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { SourceId } from '../lib/types';
 import { getSourceConfig, maxResponseBytes } from './adapters';
+import { SsNextFallback } from './adapters/ss-next';
+import { httpDiagnostic } from './http-diagnostics';
 /** Government hosts are unreachable from some networks (GitHub runners); that is a network fact, not a source failure. */
 /**
  * The request never got an answer: it timed out, the connection was refused or reset, or a
@@ -43,10 +45,22 @@ export function failureNeedsPerson(
   return true;
 }
 export class SourceHttpError extends Error {
-  constructor(public status: number) {
-    super(`Source returned HTTP ${status}`);
+  constructor(
+    public status: number,
+    diagnostic = '',
+  ) {
+    super(`Source returned HTTP ${status}${diagnostic}`);
   }
 }
+// Source leases serialize each source's run. Keep just its first HTTP diagnostic,
+// including a recovered 403, for source_runs.error; never cache response headers/body.
+const sourceDiagnostics = new Map<SourceId, string>();
+export function takeSourceHttpDiagnostic(source: SourceId) {
+  const diagnostic = sourceDiagnostics.get(source) || null;
+  sourceDiagnostics.delete(source);
+  return diagnostic;
+}
+const ssNext = new SsNextFallback();
 const agent = 'ErtadVacancyBot/0.1';
 const robotsCache = new Map<
   string,
@@ -106,7 +120,7 @@ async function rawFetch(
   value: string,
   gapMs: number,
   redirects = 0,
-): Promise<{ status: number; text: string }> {
+): Promise<{ status: number; text: string; diagnostic: string }> {
   const url = validateUrl(source, value);
   // A board occasionally bounces through www/locale hops before answering; five is plenty and
   // still stops a loop quickly.
@@ -158,13 +172,20 @@ async function rawFetch(
         chunks.push(value);
       }
     }
-    return { status: r.status, text: Buffer.concat(chunks).toString('utf8') };
+    const text = Buffer.concat(chunks).toString('utf8');
+    const diagnostic = httpDiagnostic(r.status, r.headers, text);
+    if (diagnostic && !sourceDiagnostics.has(source))
+      sourceDiagnostics.set(
+        source,
+        `Source returned HTTP ${r.status}${diagnostic}`,
+      );
+    return { status: r.status, text, diagnostic };
   } finally {
     clearTimeout(timer);
   }
 }
 const robotsLoading = new Map<string, Promise<void>>();
-export async function sourceFetch(source: SourceId, value: string) {
+async function allowedFetch(source: SourceId, value: string) {
   const url = validateUrl(source, value);
   const gapMs = sourceDelayMs(source);
   let cached = robotsCache.get(url.origin);
@@ -177,7 +198,9 @@ export async function sourceFetch(source: SourceId, value: string) {
         const r = await rawFetch(source, robotsUrl, gapMs);
         // RFC 9309: a 4xx robots.txt means no restrictions; a 5xx means do not crawl yet.
         if (r.status >= 500 || (r.status >= 300 && r.status < 400))
-          throw Error(`robots.txt unavailable (HTTP ${r.status})`);
+          throw Error(
+            `robots.txt unavailable (HTTP ${r.status})${r.diagnostic}`,
+          );
         robotsCache.set(url.origin, {
           at: Date.now(),
           rules: robotsParser(robotsUrl, r.status === 200 ? r.text : ''),
@@ -200,7 +223,33 @@ export async function sourceFetch(source: SourceId, value: string) {
     url.href,
     Math.max(gapMs, (crawlDelay || 0) * 1000),
   );
-  if (result.status < 200 || result.status >= 300)
-    throw new SourceHttpError(result.status);
-  return result.text;
+  return result;
+}
+
+export async function sourceFetch(
+  source: SourceId,
+  value: string,
+): Promise<string> {
+  const result = await allowedFetch(source, value);
+  if (result.status >= 200 && result.status < 300) {
+    if (source === 'ss') ssNext.observe(result.text);
+    return result.text;
+  }
+  const error = new SourceHttpError(result.status, result.diagnostic);
+  if (source === 'ss' && result.status === 403) {
+    try {
+      return await ssNext.fetch(value, async (url) => {
+        // Same allowlist, robots rules, timeout, response size and host delay.
+        // No recursion: only the original HTML 403 can initiate a fallback.
+        const response = await allowedFetch('ss', url);
+        if (response.status < 200 || response.status >= 300)
+          throw new SourceHttpError(response.status, response.diagnostic);
+        return response.text;
+      });
+    } catch {
+      // A JSON route's 404 can mean a stale build ID. Keep the HTML 403 so no
+      // caller mistakes a failed fallback for a removed vacancy.
+    }
+  }
+  throw error;
 }

@@ -27,17 +27,24 @@ type Detail = {
   country?: { city?: Titled | null } | null;
   experience_levels?: { experience_level?: unknown }[] | null;
   work_experiences?:
-    { experience_from?: unknown; experience_to?: unknown }[] | null;
+    | { experience_from?: unknown; experience_to?: unknown }[]
+    | null;
   languages?: { language_id?: unknown; level?: unknown }[] | null;
   education_levels?: unknown[] | null;
   benefits?: (Titled | string)[] | null;
 };
+// `/vacancies/v2` is what the board itself reads: newest first, with the paginator's fields at the
+// top level. The older `/vacancies` list (paginator under `meta`) stopped ordering by date in
+// October 2026 and scattered new postings over hundreds of pages; its shape is still accepted.
 type Listing = {
   data?: Detail[];
+  total?: unknown;
+  last_page?: unknown;
   meta?: { total?: unknown; last_page?: unknown };
 };
 
 const API = 'https://api.myjobs.ge/api/ka/public/vacancies';
+const LISTING = `${API}/v2`;
 const MODES: Record<string, string> = {
   on_site: 'ადგილზე',
   hybrid: 'ჰიბრიდული',
@@ -225,7 +232,7 @@ function salary(d: Detail) {
 export const myjobs: SourceModule = {
   config: {
     origin: 'https://myjobs.ge',
-    list: `${API}?page=1`,
+    list: `${LISTING}?page=1`,
     sitemap: null,
     hosts: ['myjobs.ge', 'www.myjobs.ge', 'api.myjobs.ge'],
   },
@@ -240,14 +247,14 @@ export const myjobs: SourceModule = {
     if (!id) throw Error('Invalid myjobs vacancy URL');
     return `${API}/${id}`;
   },
-  listingUrl: (page) => `${API}?page=${page}`,
+  listingUrl: (page) => `${LISTING}?page=${page}`,
   listingInfo(text): ListingInfo {
     const page = parseListing(text);
     const size = Array.isArray(page?.data) ? page.data.length : 0;
     return {
-      reportedTotal: posInt(page?.meta?.total, 1000000),
+      reportedTotal: posInt(page?.total ?? page?.meta?.total, 1000000),
       pageSize: size > 0 ? size : null,
-      totalPages: posInt(page?.meta?.last_page, 1000),
+      totalPages: posInt(page?.last_page ?? page?.meta?.last_page, 1000),
     };
   },
   listLinks(text): ListedLink[] {

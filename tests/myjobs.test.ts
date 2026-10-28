@@ -54,7 +54,7 @@ void test('myjobs public URLs map to the API detail request', () => {
   assert.throws(() => myjobs.detailRequestUrl('not a url'));
   assert.equal(
     myjobs.listingUrl(3),
-    'https://api.myjobs.ge/api/ka/public/vacancies?page=3',
+    'https://api.myjobs.ge/api/ka/public/vacancies/v2?page=3',
   );
 });
 void test('myjobs listing yields active numeric ids once, with city and salary hints', () => {
@@ -84,6 +84,17 @@ void test('myjobs listing info is bounded and tolerates garbage', () => {
       JSON.stringify({ data: [], meta: { total: 5000000, last_page: 99999 } }),
     ),
     empty,
+  );
+  // The v2 list the board reads keeps the paginator at the top level.
+  assert.deepEqual(
+    myjobs.listingInfo(
+      JSON.stringify({
+        data: [{ id: 30834, status: 'active' }],
+        total: 4503,
+        last_page: 301,
+      }),
+    ),
+    { reportedTotal: 4503, pageSize: 1, totalPages: 301 },
   );
 });
 void test('myjobs API JSON and the SSR page parse to the same vacancy', () => {

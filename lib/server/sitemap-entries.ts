@@ -3,6 +3,7 @@ import { blogPosts } from '../blog';
 import { eligibleLandings, landingFor, landingPath } from '../seo-landing';
 import { vacancyPath } from '../vacancy-navigation';
 import { employerPages } from './employers';
+import { publicRead, searchPlan } from './search-plan';
 import { readLandingSnapshot, publicVacancyDates } from './sitemap-data';
 
 export function pagesEntries() {
@@ -47,7 +48,16 @@ export async function companiesEntries() {
   const employers = await employerPages();
   // The newest remaining job misses removals and company profile edits. Omit lastmod
   // until a timestamp tracks all meaningful changes to the company page.
-  return [...employers.bySlug.values()].slice(0, 4999).map((page) => ({
-    url: `${siteUrl}/companies/${encodeURIComponent(page.slug)}`,
-  }));
+  const plan = searchPlan(new URLSearchParams());
+  const active = await publicRead(
+    `${plan.cte} SELECT j.id::text AS id FROM searchable j WHERE ${plan.where}`,
+    plan.args,
+  );
+  const ids = new Set(active.rows.map((row) => row.id));
+  return [...employers.bySlug.values()]
+    .filter((page) => page.jobIds.some((id) => ids.has(id)))
+    .slice(0, 4999)
+    .map((page) => ({
+      url: `${siteUrl}/companies/${encodeURIComponent(page.slug)}`,
+    }));
 }

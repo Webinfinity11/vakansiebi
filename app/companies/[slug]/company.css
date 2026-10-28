@@ -109,6 +109,14 @@
   background: var(--ds-surface);
   list-style: none;
 }
+:root .board-shell.company-page .company-jobs:empty {
+  display: none;
+}
+:root .board-shell.company-page .company-jobs-empty {
+  display: block;
+  margin-bottom: 24px;
+  color: var(--ds-ink-2);
+}
 :root .board-shell.company-page .company-jobs li + li {
   border-top: 1px solid var(--ds-line);
 }

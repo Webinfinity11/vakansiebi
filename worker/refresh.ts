@@ -8,7 +8,7 @@ import {
 } from './adapters';
 import { stageVacancy, audit } from './importer';
 import { completeDescription } from './linked-description';
-import { sourceFetch, SourceHttpError } from './http';
+import { sourceFetch, SourceHttpError, takeSourceHttpDiagnostic } from './http';
 import { reconcileJob } from './automation';
 import {
   publishIndexingNotifications,
@@ -57,6 +57,7 @@ export async function refreshDescriptions(
         removed,
         remaining: 0,
       };
+    takeSourceHttpDiagnostic(source);
     heartbeat = startLeaseHeartbeat(source, owner, ttlMs);
     const config = (
       await db().query(
@@ -169,17 +170,23 @@ export async function refreshDescriptions(
         )
       ).rows[0].count,
     );
+    const httpDiagnostic = takeSourceHttpDiagnostic(source);
     if (runStarted)
       await db().query(
         'UPDATE source_runs SET status=$2,finished_at=now(),changed=$3,failed=$4,error=$5,imported=$6,metrics=$7 WHERE id=$1',
         [
           runId,
-          failed || held ? 'partial' : 'success',
+          failed || held || httpDiagnostic ? 'partial' : 'success',
           changed,
           failed,
-          failed || held
-            ? `Description refresh: ${held} held, ${failed} failed, ${remaining} remaining`
-            : null,
+          [
+            httpDiagnostic,
+            failed || held
+              ? `Description refresh: ${held} held, ${failed} failed, ${remaining} remaining`
+              : null,
+          ]
+            .filter(Boolean)
+            .join('; ') || null,
           imported,
           {
             new_attempts: newAttempts,
@@ -193,6 +200,7 @@ export async function refreshDescriptions(
       );
     return { source, refreshed, held, failed, removed, remaining };
   } finally {
+    if (locked) takeSourceHttpDiagnostic(source);
     clearInterval(heartbeat);
     if (locked) await releaseSourceLease(source, owner);
   }

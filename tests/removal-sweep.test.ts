@@ -66,6 +66,8 @@ void test(
       }
       let listed = ['100', '200', '300'];
       let reported = 3;
+      let omitPageCount = false;
+      let emptyLaterPage = false;
       globalThis.fetch = (async (input: string | URL) => {
         const u = new URL(String(input));
         if (u.pathname === '/robots.txt')
@@ -82,9 +84,13 @@ void test(
             },
           },
         };
+        if (emptyLaterPage && u.searchParams.get('pg') !== '1')
+          return new Response('');
         return new Response(
           listed.map((id) => `<a href="/announcement/${id}/x">x</a>`).join('') +
-            `<script id="ng-state" type="application/json">${JSON.stringify(state)}</script>`,
+            (omitPageCount
+              ? ''
+              : `<script id="ng-state" type="application/json">${JSON.stringify(state)}</script>`),
         );
       }) as typeof fetch;
       const status = async (external: string) =>
@@ -123,6 +129,37 @@ void test(
       assert.equal(await status('200'), 'archived');
       assert.equal(await status('300'), 'published');
       assert.equal(await status('100'), 'published');
+      // A nearly complete first page must not hide missing pagination, a repeated
+      // second page, an empty second page, or a walk beyond the hard page cap.
+      // Missing metadata or an early end would otherwise pass count tolerance.
+      listed = [
+        '100',
+        ...Array.from({ length: 19 }, (_, i) => String(400 + i)),
+      ];
+      reported = 20;
+      await ago();
+      omitPageCount = true;
+      assert.equal((await sweepRemovals('hr'))?.complete, false);
+      omitPageCount = false;
+      reported = 21;
+      assert.match((await sweepRemovals('hr'))?.error || '', /repeated page 2/);
+      emptyLaterPage = true;
+      assert.match((await sweepRemovals('hr'))?.error || '', /empty page 2/);
+      emptyLaterPage = false;
+      reported = 8001;
+      assert.match(
+        (await sweepRemovals('hr'))?.error || '',
+        /exceeds walk limit/,
+      );
+      assert.equal(
+        (
+          await db().query(
+            "SELECT missing_since FROM source_items WHERE external_id='300'",
+          )
+        ).rows[0].missing_since,
+        null,
+      );
+      assert.equal(await status('300'), 'published');
       // A short walk changes nothing.
       listed = [];
       reported = 3;

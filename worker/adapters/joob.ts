@@ -4,16 +4,17 @@ import { telephoneNumber } from '../../lib/vacancy-details';
 import { visibleFields } from '../visible-fields';
 import { cleanText, tbilisiDate } from './index';
 import type { ListedLink, ListingInfo, SourceModule } from './module';
+import { IMPORT_WINDOW_DAYS } from '../new-only';
 
 // joob.ge is a WordPress (Elementor + JetEngine) board of private job advertisements; its
 // REST API is closed to anonymous readers, so the public pages are read. Every card carries
 // the WordPress post id (`data-post-id`), and `/?p=<id>` redirects to the post's address,
-// which is what identifies a record. The home page holds the newest 82 posts; WordPress day
-// archives (`/YYYY/MM/DD/`) hold every post of one day on one page, so today, yesterday and
-// the day before cover the whole import window even on a busy day.
+// which is what identifies a record. The home page holds 82 posts, including pinned older
+// ones; WordPress day archives (`/YYYY/MM/DD/`) hold every post of one day on one page.
+// Plan every day in the import window so missed runs can still be recovered.
 const ORIGIN = 'https://joob.ge';
-// Home page, then today's archive, yesterday's and the day before's.
-const PAGES = 4;
+// Home page plus every calendar day accepted by the importer (including today).
+const PAGES = IMPORT_WINDOW_DAYS + 2;
 const LABELS = ['ანაზღაურება', 'საკონტაქტო', 'მისამართი', 'სამუშაოს ტიპი'];
 
 const text = (v: string | undefined) => (v || '').replace(/\s+/g, ' ').trim();

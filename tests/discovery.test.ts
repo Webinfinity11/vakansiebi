@@ -11,7 +11,21 @@ import {
 } from '../worker/discovery';
 import { jobsCategories } from '../worker/categories';
 import { listLinks } from '../worker/adapters';
-import { importDateReason, importWindowStart } from '../worker/new-only';
+import {
+  IMPORT_WINDOW_DAYS,
+  importDateReason,
+  importWindowStart,
+} from '../worker/new-only';
+void test('joob archives cover every day accepted by the importer', () => {
+  const info = readDiscoveryInfo('joob', '');
+  assert.equal(info.totalPages, IMPORT_WINDOW_DAYS + 2);
+  const plan = planDiscoveryPages('joob', info, 0, 20);
+  assert.equal(plan.urls.length, IMPORT_WINDOW_DAYS + 1);
+  assert.equal(
+    plan.urls.at(-1),
+    `https://joob.ge/${importWindowStart().replaceAll('-', '/')}/`,
+  );
+});
 void test('HR search SSR count produces35pages; homepage and malformed JSON cannot silently become a complete catalog', () => {
   const html = `<script id="ng-state">${JSON.stringify({ request: { b: { data: { announcements: { items: Array(100).fill({}), totalCount: 3443 } } } } })}</script>`;
   assert.deepEqual(readDiscoveryInfo('hr', html), {

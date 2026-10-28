@@ -1,7 +1,11 @@
 import { db } from '../lib/server/db';
 import type { SourceId } from '../lib/types';
 import { listLinks } from './adapters';
-import { readDiscoveryInfo, type DiscoverySource } from './discovery';
+import {
+  DiscoveryPageGuard,
+  readDiscoveryInfo,
+  type DiscoverySource,
+} from './discovery';
 import { reconcileAndNotify } from './automation';
 import { sourceFetch } from './http';
 
@@ -48,12 +52,19 @@ async function walk(source: SweepSource) {
   const ids = new Set<string>();
   const first = await sourceFetch(source, sweepListingUrl(source, 1));
   const info = readDiscoveryInfo(source as DiscoverySource, first);
-  const pages = Math.min(MAX_PAGES, info.totalPages || 1);
+  // A missing pager is not evidence of a one-page board. Never archive from a
+  // truncated walk, even when its partial count happens to pass the tolerance.
+  if (!info.totalPages || info.totalPages > MAX_PAGES)
+    throw Error('Removal listing page count unavailable or exceeds walk limit');
+  const pages = info.totalPages;
+  const guard = new DiscoveryPageGuard();
   for (let page = 1; page <= pages; page++) {
     const url = sweepListingUrl(source, page);
     const html = page === 1 ? first : await sourceFetch(source, url);
     const links = listLinks(source, html, url);
-    if (!links.length) break;
+    const accepted = guard.accept(links);
+    if (accepted !== 'accepted')
+      throw Error(`Removal listing returned ${accepted} page ${page}`);
     for (const link of links) ids.add(link.externalId);
   }
   return { ids, reported: info.reportedTotal };

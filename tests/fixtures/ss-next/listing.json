@@ -1,0 +1,27 @@
+{
+  "pageProps": {
+    "searchInitData": {
+      "result": {
+        "totalCount": 26,
+        "items": [
+          {
+            "id": 123,
+            "jobsDealType": 1,
+            "seoTitle": "dizaineri",
+            "title": { "ka": "დიზაინერი" },
+            "startDate": "2026-10-28T12:00:00+04:00",
+            "vipStatus": 3
+          },
+          {
+            "id": 124,
+            "jobsDealType": 1,
+            "seoTitle": "programisti",
+            "startDate": "2026-10-27T12:00:00+04:00",
+            "vipStatus": 1
+          }
+        ]
+      }
+    }
+  },
+  "__N_SSP": true
+}

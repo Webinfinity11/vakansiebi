@@ -23,10 +23,7 @@ import {
   resumeLabels,
 } from '@/lib/analytics-funnel';
 import { groupActions } from '@/lib/analytics-actions';
-import {
-  comparisonChange,
-  type AnalyticsComparison,
-} from '@/lib/analytics-comparison';
+import { comparisonIndicator } from '@/lib/analytics-comparison';
 import type {
   ActivityPoint,
   AnalyticsSummary,
@@ -219,8 +216,8 @@ type Section = {
 const reportGroups = [
   ['overview', 'მიმოხილვა'],
   ['search', 'ძებნა'],
-  ['cv', 'CV-ები'],
-  ['post', 'განცხადებები'],
+  ['post', 'ვაკანსიები'],
+  ['cv', 'CV და Swipe'],
 ] as const;
 type ReportGroup = (typeof reportGroups)[number][0];
 
@@ -292,14 +289,14 @@ function Report({
   );
   const sections: Section[] = [
     {
-      title: 'CV-ის გაგზავნები',
+      title: 'Swipe-ით გაგზავნილი რეზიუმეები',
       group: 'cv',
       wide: true,
       node: data.swipe && <SwipeAnalytics summary={data.swipe} />,
     },
     {
       title: 'საკონტაქტო მოქმედებები',
-      group: 'overview',
+      group: 'post',
       node: <Contacts totals={totals} />,
     },
     {
@@ -348,7 +345,7 @@ function Report({
     },
     {
       title: 'ყველაზე ნანახი ვაკანსიები',
-      group: 'overview',
+      group: 'post',
       node: data.views.length > 0 && (
         <Card title="ყველაზე ნანახი ვაკანსიები">
           <Rows rows={vacancyRows(data.views)} unit="ნახვა" />
@@ -357,7 +354,7 @@ function Report({
     },
     {
       title: 'პირველწყაროზე გადასვლები',
-      group: 'overview',
+      group: 'post',
       node: data.outbound.length > 0 && (
         <Card title="პირველწყაროზე გადასვლები">
           <Rows rows={vacancyRows(data.outbound)} unit="გადასვლა" />
@@ -372,7 +369,7 @@ function Report({
           <Rows
             rows={plainRows(
               data.filters,
-              (value) => filterNames[value] || value,
+              (value) => filterNames[value] || 'სხვა ფილტრი',
             )}
             unit="გამოყენება"
           />
@@ -394,19 +391,19 @@ function Report({
       ),
     },
     {
-      title: 'CV-ის შექმნის მოქმედებები',
+      title: 'რეზიუმეს შექმნის მოქმედებები',
       group: 'cv',
       wide: true,
       empty: 'კონსტრუქტორი არ გაუხსნიათ',
       node: resumeTold && (
         <Funnel
-          title="CV-ის შექმნის მოქმედებები"
+          title="რეზიუმეს შექმნის მოქმედებები"
           report={resume}
           extras={
             <>
               {data.resumeStorage && (
                 <p className="aa-hint">
-                  ამ პერიოდში ბოლოს შენახული CV:{' '}
+                  ამ პერიოდში განახლებული რეზიუმეები:{' '}
                   {whole.format(data.resumeStorage.updated)} — ახალი ჩანაწერების
                   ჩათვლით. ბეჭდვის დაჭერა PDF-ის შენახვას არ ადასტურებს.
                 </p>
@@ -438,24 +435,23 @@ function Report({
       </fieldset>
       {group === 'overview' && (
         <>
-          <MetricCards
-            items={[
-              ['CV-ის გაგზავნა', data.swipe?.sends, 'ელფოსტის სერვისმა მიიღო'],
-              [
-                'გამგზავნი კანდიდატები',
-                data.swipe?.candidates,
-                'განსხვავებული ელფოსტებით',
-              ],
-              [
-                'შემოსული განცხადებები',
-                data.receivedPosts,
-                'ფორმიდან მიღებული ჩანაწერები',
-              ],
-            ]}
-          />
+          <OverviewMetrics data={data} />
+          <h3 className="aa-subhead">ტრაფიკი</h3>
+          <p className="aa-hint">
+            მოქმედებების რაოდენობა დროში — განმეორებითი ნახვებისა და დაჭერების
+            ჩათვლით.
+          </p>
           <Activity data={data} />
-          {data.comparison && <PeriodComparison comparison={data.comparison} />}
         </>
+      )}
+      {group !== 'overview' && (
+        <p className="aa-hint">
+          {group === 'search'
+            ? 'არჩეულ პერიოდში შეყვანილი საძიებო სიტყვები, უშედეგო ძებნები და ფილტრების გამოყენება.'
+            : group === 'post'
+              ? 'არჩეულ პერიოდში ვაკანსიების ნახვები, დაკავშირების მცდელობები და ვაკანსიის გამოქვეყნების ფორმის გამოყენება.'
+              : 'არჩეულ პერიოდში რეზიუმეს შექმნა და Swipe-ით გაგზავნა. გაგზავნები ელფოსტის სერვისის დასტურით ითვლება.'}
+        </p>
       )}
       {group === 'search' && (
         <MetricCards
@@ -479,7 +475,7 @@ function Report({
           <MetricCards
             items={[
               [
-                'ამ პერიოდში შექმნილი CV',
+                'ამ პერიოდში შექმნილი რეზიუმეები',
                 data.resumeStorage.created,
                 'ბაზაში დარჩენილი ჩანაწერები',
               ],
@@ -489,14 +485,14 @@ function Report({
                 'განმეორებითი შენახვის ჩათვლით',
               ],
               [
-                'აქტიური CV ახლა',
+                'შენახული რეზიუმეები ახლა',
                 data.resumeStorage.active,
                 'მიმდინარე მარაგი, ყველა პერიოდიდან',
               ],
             ]}
           />
           <p className="aa-hint">
-            შექმნილი CV-ების რაოდენობა არ მოიცავს უკვე წაშლილ ჩანაწერებს.
+            შექმნილი რეზიუმეების რაოდენობა არ მოიცავს უკვე წაშლილ ჩანაწერებს.
           </p>
         </>
       )}
@@ -504,7 +500,7 @@ function Report({
         <MetricCards
           items={[
             [
-              'შემოსული განცხადებები',
+              'ფორმით გამოგზავნილი ვაკანსიები',
               data.receivedPosts,
               'ფორმიდან მიღებული ჩანაწერები',
             ],
@@ -556,15 +552,16 @@ function Report({
 function MetricCards({
   items,
 }: {
-  items: [string, number | undefined, string][];
+  items: [string, number | undefined, string, ReactNode?][];
 }) {
   return (
     <dl className="aa-metrics">
-      {items.map(([label, value, note]) => (
+      {items.map(([label, value, note, change]) => (
         <div key={label}>
           <dt>{label}</dt>
           <dd>
             {value === undefined ? '—' : whole.format(value)}
+            {change && <span>{change}</span>}
             <span>{note}</span>
           </dd>
         </div>
@@ -573,73 +570,104 @@ function MetricCards({
   );
 }
 
-function PeriodComparison({ comparison }: { comparison: AnalyticsComparison }) {
-  const rows = [
-    ['search', 'სიტყვით ძებნა'],
-    ['view', 'ვაკანსიის ნახვა'],
-    ['outbound', 'პირველწყაროზე გადასვლა'],
-    ['sends', 'CV-ის გაგზავნა'],
-    ['receivedPosts', 'შემოსული განცხადებები'],
-  ] as const;
+/** Totals cover the selected period; changes explicitly name their comparison window. */
+function OverviewMetrics({ data }: { data: AnalyticsSummary }) {
+  const comparison = data.comparison;
+  const change = (
+    key: 'view' | 'search' | 'contacts' | 'sends' | 'receivedPosts',
+  ) => {
+    if (!comparison?.available) return 'შედარება ჯერ მიუწვდომელია';
+    const current =
+      key === 'contacts'
+        ? comparison.contactCounts.current
+        : comparison.current[key];
+    const previous =
+      key === 'contacts'
+        ? comparison.contactCounts.previous
+        : comparison.previous[key];
+    const indicator = comparisonIndicator(current, previous);
+    const periodLabel =
+      comparison.mode === 'completed-days'
+        ? `წინა ${whole.format(data.days)} დღესთან`
+        : comparison.mode === 'same-time'
+          ? 'გუშინდელთან'
+          : 'წინა დღესთან';
+    const detail = `მიმდინარე: ${whole.format(current)}; წინა: ${whole.format(previous)}${comparison.mode === 'completed-days' ? '; დღევანდელი დღის გარეშე' : ''}`;
+    return (
+      <>
+        <b
+          className={`ds-badge${indicator.tone === 'neutral' ? '' : ` ds-badge--${indicator.tone}`}`}
+          title={detail}
+          aria-label={`${indicator.label}. ${detail}`}
+        >
+          {indicator.label}
+        </b>
+        {previous > 0 && ` ${periodLabel}`}
+      </>
+    );
+  };
   const date = (value: string) =>
     `${bucketLabel(value, 'day')} ${value.slice(0, 4)}, ${value.slice(11)}`;
   return (
-    <Card
-      title="წინა პერიოდთან შედარება"
-      hint={
-        comparison.mode === 'completed-days'
-          ? 'შედარება დღევანდელი დღის გარეშეა; ორივე მონაკვეთი თანაბარი ხანგრძლივობისაა.'
-          : comparison.mode === 'same-time'
-            ? 'გუშინდელ დღეს ზუსტად იმავე საათამდე ვადარებთ.'
-            : 'ორ სრულ კალენდარულ დღეს ვადარებთ.'
-      }
-    >
-      {!comparison.available ? (
-        <p className="aa-hint">
-          შედარებისთვის წინა პერიოდის საკმარისი ისტორია ჯერ არ გვაქვს.
-        </p>
-      ) : (
-        <>
-          <div className="aa-comparison-dates">
-            <p>
-              მიმდინარე: {date(comparison.from)} — {date(comparison.to)}-მდე
-            </p>
-            <p>
-              წინა: {date(comparison.previousFrom)} —{' '}
-              {date(comparison.previousTo)}-მდე
-            </p>
-          </div>
-          <table className="aa-comparison-table">
-            <caption className="sr-only">
-              მითითებულ თანაბარ პერიოდებში დაფიქსირებული რაოდენობები და ცვლილება
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">მაჩვენებელი</th>
-                <th scope="col">მიმდინარე</th>
-                <th scope="col">წინა</th>
-                <th scope="col">ცვლილება</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(([key, label]) => (
-                <tr key={key}>
-                  <th scope="row">{label}</th>
-                  <td>{whole.format(comparison.current[key])}</td>
-                  <td>{whole.format(comparison.previous[key])}</td>
-                  <td>
-                    {comparisonChange(
-                      comparison.current[key],
-                      comparison.previous[key],
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
+    <>
+      <h3 className="aa-subhead">არჩეული პერიოდის შეჯამება</h3>
+      <MetricCards
+        items={[
+          [
+            'ვაკანსიის ნახვები',
+            data.totals.view,
+            'გვერდის გახსნა',
+            change('view'),
+          ],
+          ['ძებნები', data.totals.search, 'სიტყვით ძებნა', change('search')],
+          [
+            'საკონტაქტო მოქმედებები',
+            contacts(data.totals),
+            'დაკავშირების მცდელობები',
+            change('contacts'),
+          ],
+          [
+            'Swipe-ით გაგზავნილი CV-ები',
+            data.swipe?.sends,
+            'ელფოსტის სერვისმა მიიღო',
+            change('sends'),
+          ],
+          [
+            'ფორმით გამოგზავნილი ვაკანსიები',
+            data.receivedPosts,
+            'სატესტო ჩანაწერების გარეშე',
+            change('receivedPosts'),
+          ],
+        ]}
+      />
+      {comparison && (
+        <details className="aa-details">
+          <summary>
+            შედარების პერიოდები
+            {comparison.mode === 'completed-days'
+              ? ' — დღევანდელი დღის გარეშე'
+              : ''}
+          </summary>
+          <p className="aa-hint">
+            {comparison.mode === 'completed-days'
+              ? 'დიდი რიცხვები მოიცავს დღევანდელ დღესაც. ცვლილება ითვლება მხოლოდ დასრულებული დღეებით; წინა მონაკვეთიც იმავე სიგრძისაა.'
+              : comparison.mode === 'same-time'
+                ? 'დღეს და გუშინ ერთსა და იმავე საათამდე ვადარებთ.'
+                : 'ორ სრულ კალენდარულ დღეს ვადარებთ.'}{' '}
+            ზუსტი რაოდენობები ცვლილების ნიშნულის მინიშნებაშია. წინა პერიოდში
+            ნულოვანი რაოდენობის შემთხვევაში პროცენტი არ ითვლება. ±1%-ის
+            ფარგლებში ცვლილება ნეიტრალურადაა მონიშნული.
+          </p>
+          <p className="aa-hint">
+            მიმდინარე: {date(comparison.from)} — {date(comparison.to)}-მდე.
+          </p>
+          <p className="aa-hint">
+            წინა: {date(comparison.previousFrom)} —{' '}
+            {date(comparison.previousTo)}-მდე. თბილისის დრო.
+          </p>
+        </details>
       )}
-    </Card>
+    </>
   );
 }
 
@@ -808,7 +836,7 @@ function ceiling(highest: number) {
    a phone and on a wide screen alike. */
 function Activity({ data }: { data: AnalyticsSummary }) {
   const { activity: points, unit, totals } = data;
-  const [selected, setSelected] = useState<Measure['key']>('search');
+  const [selected, setSelected] = useState<Measure['key']>('view');
   const measure = measures.find((m) => m.key === selected)!;
   const notes: Record<Measure['key'], string> = {
     search: totals.search
@@ -1113,7 +1141,10 @@ function Funnel({
           <p className="aa-hint">
             გვერდის დატოვებისას ბოლო ნაბიჯი:{' '}
             {report.left
-              .map((step) => `${step.label} — ${whole.format(step.count)}`)
+              .map(
+                (step) =>
+                  `${step.label === step.name ? 'სხვა ნაბიჯი' : step.label} — ${whole.format(step.count)}`,
+              )
               .join(' · ')}
           </p>
         )}
@@ -1123,7 +1154,7 @@ function Funnel({
             {report.refused
               .map(
                 (step) =>
-                  `${fieldLabels[step.name] ?? step.name} — ${whole.format(step.count)}`,
+                  `${fieldLabels[step.name] ?? 'სხვა ველი'} — ${whole.format(step.count)}`,
               )
               .join(' · ')}
           </p>
@@ -1169,7 +1200,7 @@ function ResumeExtras({ rows }: { rows: Ranked[] }) {
     items
       .map(
         ({ value, count }) =>
-          `${resumeLabels[value] ?? value} — ${whole.format(count)}`,
+          `${resumeLabels[value] ?? 'სხვა პარამეტრი'} — ${whole.format(count)}`,
       )
       .join(' · ');
   return (
@@ -1190,7 +1221,8 @@ function ResumeExtras({ rows }: { rows: Ranked[] }) {
 function Diagnostics({ rows }: { rows: Ranked[] }) {
   const groups = groupActions(
     rows,
-    (filter) => `ფილტრის მოხსნა უშედეგოდან: ${filterNames[filter] ?? filter}`,
+    (filter) =>
+      `ფილტრის მოხსნა უშედეგოდან: ${filterNames[filter] ?? 'სხვა ფილტრი'}`,
   );
   const errors = groups.find((group) => group.title === 'შეცდომები');
   const notFound =
@@ -1246,8 +1278,14 @@ function Diagnostics({ rows }: { rows: Ranked[] }) {
                   tone={isErrors ? 'danger' : undefined}
                   rows={active.map((row) => ({
                     key: row.code,
-                    label: row.label,
-                    title: row.label,
+                    label:
+                      row.label === row.code
+                        ? 'სხვა მოქმედება (სახელი დასაზუსტებელია)'
+                        : row.label,
+                    title:
+                      row.label === row.code
+                        ? 'სხვა მოქმედება (სახელი დასაზუსტებელია)'
+                        : row.label,
                     bar: row.count / highest,
                     value: whole.format(row.count),
                   }))}

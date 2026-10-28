@@ -6,6 +6,8 @@ import { ApiError } from './auth';
 import {
   candidatePairs,
   employerIdentity,
+  employerSlug,
+  legacyEmployerSlug,
   employerUrlSlugs,
   mergedIdentities,
 } from '../employer-identity';
@@ -113,29 +115,63 @@ export async function decideEmployers(input: unknown) {
   return { a, b, decision: data.decision };
 }
 
-/* A page of its own is worth making when it holds more than the single vacancy it would repeat. */
-export const employerPageMinimum = 2;
+/* One published vacancy establishes a company page, even after that vacancy ends. */
+export const employerPageMinimum = 1;
 export type EmployerPage = {
   slug: string;
   name: string;
   logoUrl: string;
   names: string[];
   jobIds: string[];
+  example: { title: string; category: string; city: string };
   cities: { name: string; count: number }[];
 };
 
 // Stored scalars mirror the published snapshot on every write and avoid repeatedly
 // decompressing it across the catalogue. Only logoUrl still needs the snapshot.
 // Aggregate repeated employer attributes in PostgreSQL; only job IDs repeat on the wire.
-export const employerRowsSql = `SELECT name,logo,city,sources,array_agg(id ORDER BY id) AS ids
-         FROM (SELECT j.id::text AS id, btrim(j.search_company) AS name,
-              COALESCE(j.published->>'logoUrl','') AS logo, btrim(COALESCE(j.search_city,'')) AS city,
-              array_agg(DISTINCT si.source_id) AS sources
-         FROM jobs j JOIN source_items si ON si.job_id=j.id JOIN sources s ON s.id=si.source_id AND NOT s.retired
-        WHERE j.status='published' AND COALESCE(j.search_company,'')<>''
-          AND (COALESCE(j.search_deadline,'')='' OR j.search_deadline >= to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))
-        GROUP BY j.id) visible_employers
-        GROUP BY name,logo,city,sources ORDER BY min(id)`;
+export const employerRowsSql = `WITH evidence AS (
+  SELECT j.id, CASE WHEN j.status='published' THEN jsonb_build_object(
+           'company',j.search_company,'city',j.search_city,'title',j.search_title,
+           'category',j.search_category,'logoUrl',j.published->>'logoUrl')
+         ELSE coalesce(j.published,j.draft) END AS snapshot,
+         array_agg(DISTINCT si.source_id ORDER BY si.source_id) AS sources
+    FROM jobs j JOIN source_items si ON si.job_id=j.id
+   WHERE (j.status='published' OR (j.status='archived' AND j.published_at IS NOT NULL))
+     AND j.employer_suppression_id IS NULL
+     AND (j.status='published' OR NOT EXISTS (SELECT 1 FROM employer_page_history h WHERE h.job_id=j.id))
+   GROUP BY j.id
+  UNION ALL
+  SELECT h.job_id,h.snapshot,h.sources FROM employer_page_history h
+   WHERE NOT EXISTS (SELECT 1 FROM jobs j WHERE j.id=h.job_id AND j.status='published')
+), visible AS (
+  SELECT id::text, btrim(snapshot->>'company') AS name,
+         coalesce(snapshot->>'logoUrl','') AS logo,
+         btrim(coalesce(snapshot->>'city','')) AS city,
+         coalesce(snapshot->>'title','') AS title,
+         coalesce(snapshot->>'category','') AS category,sources
+    FROM evidence WHERE coalesce(snapshot->>'company','')<>''
+      AND employer_suppression_for(snapshot) IS NULL
+)
+SELECT name,logo,city,sources,min(title) AS title,min(category) AS category,array_agg(id ORDER BY id) AS ids
+  FROM visible GROUP BY name,logo,city,sources ORDER BY min(id)`;
+
+/** Checked outside the identity cache: a removal must hide an already cached page too. */
+export async function employerPageSuppressed(employer: EmployerPage) {
+  const { rows } = await publicRead(
+    `SELECT EXISTS (
+       SELECT 1 FROM employer_suppressions s WHERE s.active AND (
+         EXISTS (SELECT 1 FROM unnest($1::text[]) n WHERE employer_removal_key(n)=ANY(s.company_keys))
+         OR EXISTS (SELECT 1 FROM removed_vacancies r WHERE r.suppression_id=s.id AND r.job_id=ANY($2::uuid[]))
+       )
+     ) OR EXISTS (
+       SELECT 1 FROM employer_page_history h WHERE h.job_id=ANY($2::uuid[])
+         AND employer_suppression_for(h.snapshot) IS NOT NULL
+     ) AS suppressed`,
+    [employer.names, employer.jobIds],
+  );
+  return Boolean(rows[0].suppressed);
+}
 
 async function buildEmployerPages() {
   const [{ rows }, decisions] = await Promise.all([
@@ -155,6 +191,7 @@ async function buildEmployerPages() {
     names: Map<string, number>;
     cities: Map<string, number>;
     logo: string;
+    example: EmployerPage['example'];
   };
   const groups = new Map<string, Group>();
   for (const r of rows) {
@@ -166,6 +203,7 @@ async function buildEmployerPages() {
       names: new Map(),
       cities: new Map(),
       logo: '',
+      example: { title: r.title, category: r.category, city: r.city },
     };
     g.ids.push(...r.ids);
     g.names.set(r.name, (g.names.get(r.name) || 0) + r.ids.length);
@@ -211,11 +249,19 @@ async function buildEmployerPages() {
       logoUrl: g.logo,
       names: names.map((x) => x.name),
       jobIds: g.ids,
+      example: g.example,
       // Filters need every location; each display chooses its own short list.
       cities: ranked(g.cities),
     });
-    if (g.ids.length >= 3) {
-      for (const id of g.ids) byJob.set(id, slug);
+    for (const id of g.ids) byJob.set(id, slug);
+  }
+  // Keep every known spelling reachable when a different spelling becomes most common.
+  for (const page of bySlug.values()) {
+    for (const name of page.names) {
+      for (const old of [employerSlug(name), legacyEmployerSlug(name)]) {
+        if (old !== page.slug && !bySlug.has(old) && !aliases.has(old))
+          aliases.set(old, page.slug);
+      }
     }
   }
   return { bySlug, byJob, aliases };

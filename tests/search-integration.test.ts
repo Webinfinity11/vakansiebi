@@ -238,10 +238,11 @@ void test(
       );
       const links = (await linksResponse.json()).links;
       assert.ok(links[ids[0]]?.startsWith('/companies/'));
+      // Company pages outlive their vacancies, so an ended one still links to its employer.
       assert.equal(
         links[ids[7]],
-        null,
-        'expired IDs never receive employer links',
+        links[ids[0]],
+        'expired IDs keep their employer link',
       );
       const summary = await search({ summary: '1' });
       assert.ok(

@@ -18,7 +18,9 @@ import { TrackOnce } from '../../track-once';
 import { formatDate } from '../../vacancy-text';
 import { db } from '@/lib/server/db';
 import { publicJobs } from '@/lib/server/jobs';
-import { employerPages } from '@/lib/server/employers';
+import { employerPages, employerPageSuppressed } from '@/lib/server/employers';
+import { similarVacancies } from '@/lib/server/similar-vacancies';
+import type { PublicJob } from '@/lib/types';
 import { verifiedCompanyInfo } from '@/lib/server/verified-company-info';
 import { resolveCompanyLogos } from '@/lib/server/company-logos';
 import { companyKey } from '@/lib/company-key';
@@ -74,7 +76,7 @@ const load = cache(async (rawSlug: string, rawQuery: string) => {
     );
   }
   const employer = directory.bySlug.get(slug);
-  if (!employer) notFound();
+  if (!employer || (await employerPageSuppressed(employer))) notFound();
   const [result, profile] = await Promise.all([
     publicJobs(
       new URLSearchParams({
@@ -116,9 +118,23 @@ const load = cache(async (rawSlug: string, rawQuery: string) => {
         };
       }),
   ]);
-  // Vacancies can end between directory rebuilds; an employer with nothing left has no page.
-  if ((!filtered && !result.total) || (page > 1 && page > result.pages))
-    notFound();
+  if (page > 1 && page > result.pages) notFound();
+  // A filtered empty result is not evidence that the company stopped hiring.
+  const activeTotal = filtered
+    ? (
+        await publicJobs(new URLSearchParams({ summary: '1' }), false, {
+          jobIds: employer.jobIds,
+        })
+      ).total
+    : result.total;
+  const similar =
+    activeTotal === 0
+      ? await similarVacancies({
+          ...employer.example,
+          description: '',
+          id: employer.jobIds[0],
+        } as PublicJob)
+      : [];
   // Same priority as a vacancy card: an admin's own logo first, then one a source embedded on a
   // current vacancy, then one shared from another spelling of this employer. Only the last of
   // these needs its own query, and only when the first two found nothing.
@@ -141,6 +157,8 @@ const load = cache(async (rawSlug: string, rawQuery: string) => {
   return {
     employer,
     result,
+    activeTotal,
+    similar,
     page,
     filters,
     filtered,
@@ -169,7 +187,7 @@ async function read(props: Props) {
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { employer, result, page, filtered } = await read(props);
+  const { employer, result, page, filtered, activeTotal } = await read(props);
   const heading = companyVacancyTitle(employer.name);
   const title = `${heading}${page > 1 ? ` — გვერდი ${page}` : ''} | JOBX`;
   const description = [
@@ -188,7 +206,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title,
     description,
     alternates: { canonical },
-    robots: { index: !filtered, follow: true },
+    robots: { index: !filtered && activeTotal > 0, follow: true },
     openGraph: {
       images: [shareImage],
       title,
@@ -210,8 +228,18 @@ function daysFrom(later: string, earlier: string) {
 }
 
 export default async function CompanyPage(props: Props) {
-  const { employer, result, page, filters, filtered, profile, logoUrl, today } =
-    await read(props);
+  const {
+    employer,
+    result,
+    page,
+    filters,
+    filtered,
+    profile,
+    logoUrl,
+    today,
+    activeTotal,
+    similar,
+  } = await read(props);
   const path = `/companies/${encodeURIComponent(employer.slug)}`;
   const here = companyResultsPath(path, filters);
   const website = profile?.website ? safeExternalUrl(profile.website) : '';
@@ -317,118 +345,120 @@ export default async function CompanyPage(props: Props) {
           )}
         </section>
         <section className="similar-vacancies" aria-labelledby="company-jobs">
-          <search aria-label="კომპანიის ვაკანსიების ძიება">
-            <form
-              action={path + '#company-jobs'}
-              method="get"
-              className="company-filters"
-              key={here}
-            >
-              <label
-                className="company-filter-query"
-                aria-label="ვაკანსიის ძიება"
+          {activeTotal > 0 && (
+            <search aria-label="კომპანიის ვაკანსიების ძიება">
+              <form
+                action={path + '#company-jobs'}
+                method="get"
+                className="company-filters"
+                key={here}
               >
-                <span>
-                  <UiText>{'ვაკანსიის ძიება'}</UiText>
-                </span>
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={filters.query}
-                  maxLength={200}
-                  placeholder="მაგ. მოლარე, მენეჯერი"
-                />
-              </label>
-              <label>
-                <span id="company-city-label">
-                  <UiText>{'ქალაქი'}</UiText>
-                </span>
-                <select
-                  name="city"
-                  aria-labelledby="company-city-label"
-                  defaultValue={filters.city}
+                <label
+                  className="company-filter-query"
+                  aria-label="ვაკანსიის ძიება"
                 >
-                  <option value="">
-                    <UiText>{'ყველა ქალაქი'}</UiText>
-                  </option>
-                  {filters.city &&
-                    !employer.cities.some((c) => c.name === filters.city) && (
-                      <option value={filters.city}>{filters.city}</option>
-                    )}
-                  {employer.cities.map((city) => (
-                    <option key={city.name} value={city.name}>
-                      {city.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span id="company-category-label">
-                  <UiText>{'მიმართულება'}</UiText>
-                </span>
-                <select
-                  name="category"
-                  aria-labelledby="company-category-label"
-                  defaultValue={filters.category}
-                >
-                  <option value="">
-                    <UiText>{'ყველა მიმართულება'}</UiText>
-                  </option>
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      <UiText>{category}</UiText>
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span id="company-sort-label">
-                  <UiText>{'დალაგება'}</UiText>
-                </span>
-                <select
-                  name="sort"
-                  aria-labelledby="company-sort-label"
-                  defaultValue={filters.sort}
-                >
-                  <option value="new">
-                    <UiText>{'უახლესი'}</UiText>
-                  </option>
-                  <option value="salary">
-                    <UiText>{'მაღალი ხელფასი'}</UiText>
-                  </option>
-                  <option value="deadline">
-                    <UiText>{'ვადა იწურება'}</UiText>
-                  </option>
-                  <option value="relevance">
-                    <UiText>{'შესაბამისობა'}</UiText>
-                  </option>
-                </select>
-              </label>
-              <div className="company-filter-actions">
-                <label className="company-filter-paid">
+                  <span>
+                    <UiText>{'ვაკანსიის ძიება'}</UiText>
+                  </span>
                   <input
-                    type="checkbox"
-                    name="paid"
-                    value="true"
-                    defaultChecked={filters.paid}
+                    type="search"
+                    name="q"
+                    defaultValue={filters.query}
+                    maxLength={200}
+                    placeholder="მაგ. მოლარე, მენეჯერი"
                   />
-                  <UiText>{'ხელფასი მითითებულია'}</UiText>
                 </label>
-                <button type="submit" className="ds-btn ds-btn--primary">
-                  <UiText>{'ძებნა'}</UiText>
-                </button>
-                {filtered && (
-                  <Link
-                    href={path}
-                    prefetch={false}
-                    className="ds-btn ds-btn--secondary"
+                <label>
+                  <span id="company-city-label">
+                    <UiText>{'ქალაქი'}</UiText>
+                  </span>
+                  <select
+                    name="city"
+                    aria-labelledby="company-city-label"
+                    defaultValue={filters.city}
                   >
-                    <UiText>{'გასუფთავება'}</UiText>
-                  </Link>
-                )}
-              </div>
-            </form>
-          </search>
+                    <option value="">
+                      <UiText>{'ყველა ქალაქი'}</UiText>
+                    </option>
+                    {filters.city &&
+                      !employer.cities.some((c) => c.name === filters.city) && (
+                        <option value={filters.city}>{filters.city}</option>
+                      )}
+                    {employer.cities.map((city) => (
+                      <option key={city.name} value={city.name}>
+                        {city.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span id="company-category-label">
+                    <UiText>{'მიმართულება'}</UiText>
+                  </span>
+                  <select
+                    name="category"
+                    aria-labelledby="company-category-label"
+                    defaultValue={filters.category}
+                  >
+                    <option value="">
+                      <UiText>{'ყველა მიმართულება'}</UiText>
+                    </option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        <UiText>{category}</UiText>
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span id="company-sort-label">
+                    <UiText>{'დალაგება'}</UiText>
+                  </span>
+                  <select
+                    name="sort"
+                    aria-labelledby="company-sort-label"
+                    defaultValue={filters.sort}
+                  >
+                    <option value="new">
+                      <UiText>{'უახლესი'}</UiText>
+                    </option>
+                    <option value="salary">
+                      <UiText>{'მაღალი ხელფასი'}</UiText>
+                    </option>
+                    <option value="deadline">
+                      <UiText>{'ვადა იწურება'}</UiText>
+                    </option>
+                    <option value="relevance">
+                      <UiText>{'შესაბამისობა'}</UiText>
+                    </option>
+                  </select>
+                </label>
+                <div className="company-filter-actions">
+                  <label className="company-filter-paid">
+                    <input
+                      type="checkbox"
+                      name="paid"
+                      value="true"
+                      defaultChecked={filters.paid}
+                    />
+                    <UiText>{'ხელფასი მითითებულია'}</UiText>
+                  </label>
+                  <button type="submit" className="ds-btn ds-btn--primary">
+                    <UiText>{'ძებნა'}</UiText>
+                  </button>
+                  {filtered && (
+                    <Link
+                      href={path}
+                      prefetch={false}
+                      className="ds-btn ds-btn--secondary"
+                    >
+                      <UiText>{'გასუფთავება'}</UiText>
+                    </Link>
+                  )}
+                </div>
+              </form>
+            </search>
+          )}
           <h2 id="company-jobs">
             {filtered ? (
               <UiText>ძიების შედეგები</UiText>
@@ -440,11 +470,11 @@ export default async function CompanyPage(props: Props) {
             </span>
           </h2>
           {!result.total && (
-            <output>
+            <output className="company-jobs-empty">
               <UiText>
-                {
-                  'ამ ფილტრებით ვაკანსია ვერ მოიძებნა. შეცვალე ძიება ან გაასუფთავე ფილტრები.'
-                }
+                {activeTotal === 0
+                  ? 'კომპანიას ახლა აქტიური ვაკანსია არ აქვს.'
+                  : 'ამ ფილტრებით ვაკანსია ვერ მოიძებნა. შეცვალე ძიება ან გაასუფთავე ფილტრები.'}
               </UiText>
             </output>
           )}
@@ -540,6 +570,48 @@ export default async function CompanyPage(props: Props) {
             </nav>
           )}
         </section>
+        {activeTotal === 0 && (
+          <section
+            className="similar-vacancies"
+            aria-labelledby="similar-title"
+          >
+            <h2 id="similar-title">
+              <UiText>მსგავსი ვაკანსიები</UiText>
+            </h2>
+            {similar.length ? (
+              <div className="similar-grid">
+                {similar.map(({ job, reasons }) => (
+                  <ListHopLink
+                    key={job.id}
+                    href={vacancyPath(job, { from: here })}
+                    from={here}
+                    event="open_similar"
+                    className="similar-card"
+                  >
+                    <div className="similar-company">
+                      <CompanyLogo company={job.company} url={job.logoUrl} />
+                      <span>{job.company}</span>
+                    </div>
+                    <h3>{vacancyCardTitle(job.title, job.source)}</h3>
+                    <p>{reasons.join(' · ')}</p>
+                    <span className="similar-open">
+                      <UiText>ვაკანსიის ნახვა</UiText>
+                    </span>
+                  </ListHopLink>
+                ))}
+              </div>
+            ) : (
+              <p>
+                <UiText>
+                  ამ ეტაპზე მსგავსი აქტიური ვაკანსია ვერ მოიძებნა.
+                </UiText>
+              </p>
+            )}
+            <Link href="/" prefetch={false}>
+              <UiText>ვაკანსიების ნახვა</UiText>
+            </Link>
+          </section>
+        )}
       </main>
       <ServerSiteFooter />
     </div>

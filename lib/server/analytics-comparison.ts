@@ -1,4 +1,5 @@
 import { db } from './db';
+import { contactKinds } from '../vacancy-analytics';
 import type {
   AnalyticsComparison,
   ComparisonMetrics,
@@ -26,12 +27,12 @@ export async function analyticsComparison(
     ), counted AS (
       SELECT w.period,e.kind,count(*)::bigint n
         FROM windows w JOIN analytics_events e ON e.created_at >= w.starts_at AND e.created_at < w.ends_at
-        WHERE e.kind IN ('search','view','outbound') GROUP BY 1,2
+        WHERE e.kind IN ('search','view','outbound','apply','call','cv','email') GROUP BY 1,2
       UNION ALL
       SELECT w.period,d.kind,sum(d.count)::bigint
         FROM windows w JOIN analytics_daily d ON d.day >= (w.starts_at AT TIME ZONE 'Asia/Tbilisi')::date
           AND (d.day::timestamp AT TIME ZONE 'Asia/Tbilisi') < w.ends_at
-        WHERE d.kind IN ('search','view','outbound') GROUP BY 1,2
+        WHERE d.kind IN ('search','view','outbound','apply','call','cv','email') GROUP BY 1,2
     ), history AS (
       SELECT min(first_day) AS first_day FROM (
         SELECT (min(created_at) AT TIME ZONE 'Asia/Tbilisi')::date AS first_day FROM analytics_events WHERE kind='search'
@@ -45,10 +46,11 @@ export async function analyticsComparison(
       COALESCE((SELECT sum(n) FROM counted WHERE period=w.period AND kind='search'),0)::int search,
       COALESCE((SELECT sum(n) FROM counted WHERE period=w.period AND kind='view'),0)::int view,
       COALESCE((SELECT sum(n) FROM counted WHERE period=w.period AND kind='outbound'),0)::int outbound,
+      COALESCE((SELECT sum(n) FROM counted WHERE period=w.period AND kind = ANY($5::text[])),0)::int contacts,
       (SELECT count(*)::int FROM swipe_applications WHERE status='sent' AND sent_at >= w.starts_at AND sent_at < w.ends_at) sends,
       (SELECT count(*)::int FROM job_submissions WHERE NOT is_test AND created_at >= w.starts_at AND created_at < w.ends_at) AS "receivedPosts"
     FROM windows w ORDER BY w.period`,
-      [...params, days, completedDays],
+      [...params, days, completedDays, contactKinds],
     )
   ).rows;
   const current = rows.find((row) => row.period === 'current')!;
@@ -71,6 +73,7 @@ export async function analyticsComparison(
         ? 'full-day'
         : 'same-time',
     available: previous.covered && current.duration,
+    contactCounts: { current: current.contacts, previous: previous.contacts },
     current: metrics(current),
     previous: metrics(previous),
   };

@@ -1,5 +1,22 @@
 # Source quality regression checks
 
+## Current new-only policy (verified 2026-10-28)
+
+`stageVacancy` leaves existing `job_id`/`raw` snapshots unchanged. Structural invalidity on a
+new item is recorded as a terminal error with `next_check_at=infinity`; it is not retried
+automatically. New items require a real source publication date within today plus the four
+preceding Tbilisi days. Missing titles/required employers fail validation; the employerless
+boards explicitly allow an empty employer. A missing deadline is not invented.
+
+The candidate-confirmation rules below remain implemented by `assessVacancy` and covered by
+unit tests, but are historical refresh behavior, not a promise that the current new-only
+importer refreshes old snapshots. `refreshDescriptions` cannot bypass that importer guard.
+Removal checks apply only to hr/jobs/ss and require a fully traversed, non-repeated listing
+within the page cap before count tolerance is considered. Coverage-count warnings do not
+remove vacancies. See `SOURCES.md` for the dated live audit and unresolved renewal/coverage gaps.
+
+## Historical refresh quality rules
+
 Source snapshots are never filled with invented fallback values. `quality_candidate` keeps an unaccepted parsed candidate separate from the last good `raw`, `content_hash` and `last_verified_at`. A held import sets a human-readable `quality_warning`, marks manually managed or paused jobs for review (automatic jobs surface the warning in source quality metrics), and retries after30minutes. Network `error` remains separate.
 
 New valid vacancies may have unknown salary, location, logo, employment, or dates. Normal description/title/employer edits proceed. A previously known optional field disappearing is checked again after at least30minutes; two matching observations permit a legitimate removal. Description loss over75% (previous text at least400characters), both title and employer changing, missing closing date, or three missing optional fields require at least three matching observations spanning24hours. A new candidate resets confirmation. Invalid required fields/missing employer never pass automatic confirmation.
