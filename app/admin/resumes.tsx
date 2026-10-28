@@ -1,13 +1,24 @@
 'use client';
-import { Download, Eye, FileText, RefreshCw, Trash2, X } from 'lucide-react';
+import {
+  ChevronDown,
+  Download,
+  Eye,
+  FileText,
+  RefreshCw,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { SwipeApplications } from './swipe-applications';
 import { SkeletonRows } from '../skeleton';
 import { adminTime } from '@/lib/admin-format';
 import { useEffect, useRef, useState } from 'react';
-import { cvText, downloadCv, type Cv, type CvTemplate } from '@/lib/cv';
+import { downloadCv, type Cv } from '@/lib/cv';
 import { CvSheet } from '../cv/cv-builder';
 import '../cv.css';
 import './admin-records.css';
+import './swipe-applications.css';
+import { CvSummaryLine, personKey, type CvSummary } from './cv-summary';
 
 type Resume = {
   id: string;
@@ -15,12 +26,11 @@ type Resume = {
   updatedAt: string;
   expiresAt: string;
   fullName: string;
+  email: string;
+  phone: string;
   /** How many of our vacancies this CV's holder reached. */
   contacted: number;
   title: string;
-  language: string;
-  template: string;
-  completeness: number;
 };
 
 type Activity = {
@@ -36,9 +46,61 @@ const actionNames: Record<Activity['kind'], string> = {
   call: 'დარეკვა',
   apply: 'განაცხადი',
 };
-
+/** The CV tab: saved resumes and CVs sent through Swipe, one at a time, with one search. */
 export function ResumesPanel() {
+  const [view, setView] = useState<'saved' | 'swipe'>('saved');
+  const [input, setInput] = useState('');
+  const [q, setQ] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(input.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [input]);
+  return (
+    <div className="cv-admin">
+      <div className="cv-admin-bar">
+        <fieldset className="admin-chips">
+          <legend className="sr-only">CV-ების სია</legend>
+          <button
+            type="button"
+            className="ds-chip"
+            aria-pressed={view === 'saved'}
+            onClick={() => setView('saved')}
+          >
+            შენახული CV-ები
+          </button>
+          <button
+            type="button"
+            className="ds-chip"
+            aria-pressed={view === 'swipe'}
+            onClick={() => setView('swipe')}
+          >
+            Swipe-ით გაგზავნილი
+          </button>
+        </fieldset>
+        <label className="cv-admin-search">
+          <Search size={16} aria-hidden="true" />
+          <input
+            className="ds-input"
+            type="search"
+            aria-label="ძებნა სახელით, ელფოსტით ან ტელეფონით"
+            placeholder="სახელი, ელფოსტა ან ტელეფონი"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
+        </label>
+      </div>
+      {view === 'saved' ? (
+        <SavedResumes key={q} q={q} />
+      ) : (
+        <SwipeApplications key={q} q={q} />
+      )}
+    </div>
+  );
+}
+
+function SavedResumes({ q }: { q: string }) {
   const [rows, setRows] = useState<Resume[]>([]);
+  const [summary, setSummary] = useState<CvSummary | null>(null);
   const [page, setPage] = useState(0);
   const [more, setMore] = useState(false);
   const [version, setVersion] = useState(0);
@@ -52,8 +114,8 @@ export function ResumesPanel() {
   const [busy, setBusy] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const preview = useRef<HTMLDivElement>(null);
-  /* The resume opens under the whole list and its pages, out of sight; the
-     page goes to it, and closing it comes back to the row it was opened from. */
+  /* The resume opens under the list, out of sight; the page goes to it, and closing it
+     comes back to the row it was opened from. */
   const motion = () =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
       ? 'auto'
@@ -77,7 +139,9 @@ export function ResumesPanel() {
   }
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(`/api/admin/resumes?page=${page}`, {
+    const params = new URLSearchParams({ page: String(page) });
+    if (q) params.set('q', q);
+    void fetch(`/api/admin/resumes?${params}`, {
       signal: controller.signal,
       cache: 'no-store',
     })
@@ -86,6 +150,7 @@ export function ResumesPanel() {
         if (!response.ok) throw Error(data.error || 'რეზიუმეები ვერ ჩაიტვირთა');
         setRows(data.resumes);
         setMore(data.more);
+        if (data.summary) setSummary(data.summary);
         setError('');
         setLoading(false);
       })
@@ -96,7 +161,7 @@ export function ResumesPanel() {
         }
       });
     return () => controller.abort();
-  }, [page, version]);
+  }, [page, version, q]);
   async function open(id: string) {
     setBusy(true);
     setOpening(id);
@@ -116,22 +181,27 @@ export function ResumesPanel() {
       setOpening(null);
     }
   }
-  async function remove(id: string) {
-    if (!window.confirm('წაიშალოს შენახული რეზიუმე და ფოტო?')) return;
+  async function remove(row: Resume) {
+    if (
+      !window.confirm(
+        `წაიშალოს ${row.fullName || 'ეს'} რეზიუმე და მისი ფოტო? ამას ვეღარ დააბრუნებ.`,
+      )
+    )
+      return;
     setBusy(true);
     setError('');
     try {
       const response = await fetch('/api/admin/resumes', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: row.id }),
       });
       if (!response.ok)
         throw Error(
           (await response.json().catch(() => ({}))).error ||
             'წაშლა ვერ შესრულდა',
         );
-      if (selected?.id === id) setSelected(null);
+      if (selected?.id === row.id) setSelected(null);
       setVersion((n) => n + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'წაშლა ვერ შესრულდა');
@@ -139,10 +209,50 @@ export function ResumesPanel() {
       setBusy(false);
     }
   }
+  // One person's versions together, newest first, in the order their newest was saved.
+  const people = new Map<string, Resume[]>();
+  for (const row of rows) {
+    const key = personKey(row.id, row.email, row.phone);
+    people.set(key, [...(people.get(key) ?? []), row]);
+  }
+  const actions = (row: Resume) => (
+    <div className="reports-actions">
+      <button
+        type="button"
+        className="ds-btn ds-btn--secondary ds-btn--sm resume-open"
+        disabled={busy}
+        aria-pressed={selected?.id === row.id}
+        onClick={() =>
+          selected?.id === row.id
+            ? preview.current?.scrollIntoView({
+                behavior: motion(),
+                block: 'start',
+              })
+            : void open(row.id)
+        }
+      >
+        <Eye size={16} aria-hidden="true" />
+        {opening === row.id ? 'იტვირთება…' : 'ნახვა'}
+      </button>
+      <button
+        type="button"
+        className="ds-btn ds-btn--ghost ds-btn--sm cv-remove"
+        disabled={busy}
+        title="წაშლა"
+        aria-label={`წაშლა — ${row.fullName || 'უსახელო რეზიუმე'}`}
+        onClick={() => void remove(row)}
+      >
+        <Trash2 size={16} aria-hidden="true" />
+      </button>
+    </div>
+  );
   return (
-    <section className="reports-section" aria-label="შენახული რეზიუმეები">
+    <section className="reports-section" aria-label="შენახული CV-ები">
       <div className="reports-heading">
-        <h2>შენახული რეზიუმეები</h2>
+        <CvSummaryLine
+          summary={q ? null : summary}
+          items={['შენახული CV', 'განსხვავებული ადამიანი']}
+        />
         <button
           type="button"
           className="ds-btn ds-btn--secondary ds-btn--sm"
@@ -178,13 +288,17 @@ export function ResumesPanel() {
       {!loading && !rows.length && !error && (
         <div className="empty">
           <FileText size={20} aria-hidden="true" />
-          <h3>შენახული რეზიუმე არ არის</h3>
-          <p>CV-ის ბილდერში PDF-ის ღილაკზე დაჭერისას რეზიუმე აქ შეინახება.</p>
+          <h3>{q ? 'ვერაფერი მოიძებნა' : 'შენახული რეზიუმე არ არის'}</h3>
+          <p>
+            {q
+              ? 'სცადე სხვა სახელი, ელფოსტა ან ტელეფონი.'
+              : 'CV-ის ბილდერში PDF-ის ღილაკზე დაჭერისას რეზიუმე აქ შეინახება.'}
+          </p>
         </div>
       )}
       {!loading && !!rows.length && (
-        <ul className="reports-list resumes-list ds-appear-list">
-          {rows.map((row) => (
+        <ul className="reports-list resumes-list">
+          {[...people.values()].map(([row, ...older]) => (
             <li key={row.id} className="reports-item" data-resume={row.id}>
               <div className="reports-details">
                 <p className="resumes-who">
@@ -192,56 +306,43 @@ export function ResumesPanel() {
                   {row.title && <span>{row.title}</span>}
                 </p>
                 <div className="reports-meta">
+                  {(row.email || row.phone) && (
+                    <span>
+                      {[row.email, row.phone].filter(Boolean).join(' · ')}
+                    </span>
+                  )}
                   <time dateTime={row.createdAt}>
                     {adminTime(row.createdAt)}
                   </time>
-                  <span className="ds-badge">
-                    {row.language === 'ka' ? 'ქართული' : 'ინგლისური'}
-                  </span>
-                  <span>
-                    შაბლონი:{' '}
-                    {cvText.ka.templates[row.template as CvTemplate]?.name ??
-                      row.template}
-                  </span>
-                  <span className="resumes-complete">
-                    სისრულე: {row.completeness}%
-                  </span>
                   {row.contacted > 0 && (
                     <span className="ds-badge ds-badge--violet">
                       დაუკავშირდა {row.contacted} ვაკანსიას
                     </span>
                   )}
                 </div>
+                {!!older.length && (
+                  <details className="cv-versions">
+                    <summary>
+                      <ChevronDown size={14} aria-hidden="true" />
+                      კიდევ {older.length} ძველი ვერსია
+                    </summary>
+                    <ul>
+                      {older.map((old) => (
+                        <li key={old.id} data-resume={old.id}>
+                          <span>
+                            {old.title || 'უსათაურო'} ·{' '}
+                            <time dateTime={old.createdAt}>
+                              {adminTime(old.createdAt)}
+                            </time>
+                          </span>
+                          {actions(old)}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               </div>
-              <div className="reports-actions">
-                <button
-                  type="button"
-                  className="ds-btn ds-btn--secondary ds-btn--sm resume-open"
-                  disabled={busy}
-                  aria-pressed={selected?.id === row.id}
-                  onClick={() =>
-                    selected?.id === row.id
-                      ? preview.current?.scrollIntoView({
-                          behavior: motion(),
-                          block: 'start',
-                        })
-                      : void open(row.id)
-                  }
-                >
-                  <Eye size={16} aria-hidden="true" />
-                  {opening === row.id ? 'იტვირთება…' : 'ნახვა'}
-                </button>
-                <button
-                  type="button"
-                  className="ds-btn ds-btn--ghost ds-btn--sm records-danger"
-                  disabled={busy}
-                  aria-label={`წაშლა — ${row.fullName || 'უსახელო რეზიუმე'}`}
-                  onClick={() => void remove(row.id)}
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                  წაშლა
-                </button>
-              </div>
+              {actions(row)}
             </li>
           ))}
         </ul>
@@ -271,7 +372,6 @@ export function ResumesPanel() {
           შემდეგი
         </button>
       </div>
-      <SwipeApplications />
       {selected && (
         <div
           className="resumes-preview ds-appear"

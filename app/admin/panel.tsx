@@ -1757,7 +1757,7 @@ export default function AdminPanel() {
         {tab === 'resumes' && (
           <section className="admin-panel">
             <SectionHeading title="CV-ები">
-              PDF-ის ღილაკით შენახული რეზიუმეები.
+              შენახული რეზიუმეები და Swipe-ით გაგზავნილი CV-ები.
             </SectionHeading>
             {tab === 'resumes' && <ResumesPanel />}
           </section>
