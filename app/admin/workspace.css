@@ -1,0 +1,279 @@
+.admin-shell .admin-side {
+  gap: 18px;
+  padding: 20px 12px 12px;
+}
+.admin-shell .admin-side nav {
+  gap: 20px;
+}
+.admin-shell .admin-nav-group {
+  gap: 3px;
+}
+.admin-shell .admin-nav-group h2 {
+  font-size: 11px;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+.admin-nav-group a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+  text-decoration: none;
+  color: var(--ds-ink-2);
+}
+.admin-nav-group a > svg {
+  flex: none;
+  color: var(--ds-ink-3);
+}
+.admin-nav-group a > span {
+  flex: 1;
+}
+.admin-nav-group a:hover {
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink);
+}
+.admin-nav-group a[aria-current='page'] {
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent-ink);
+  font-weight: 600;
+}
+.admin-nav-group a[aria-current='page'] svg {
+  color: var(--ds-accent);
+}
+.admin-nav-group a:focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
+}
+.admin-menu-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--ds-line);
+  border-radius: 8px;
+  color: var(--ds-ink-3);
+}
+.admin-menu-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ds-ink);
+  font-size: 12px;
+}
+.admin-menu-search:focus-within {
+  border-color: var(--ds-accent);
+}
+.admin-menu-empty {
+  font-size: 12px;
+  color: var(--ds-ink-3);
+  padding: 10px;
+}
+.admin-shell .admin-page-head {
+  margin-bottom: 22px;
+}
+.admin-shell .admin-page-head h1 {
+  font-size: 26px;
+  line-height: 1.5;
+  font-weight: 600;
+  letter-spacing: normal;
+}
+.admin-shell .admin-page-head p {
+  font-size: 13px;
+  line-height: 1.8;
+  margin-top: 6px;
+  max-width: none;
+}
+.admin-section-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  border-bottom: 1px solid var(--ds-line);
+  margin-bottom: 24px;
+}
+.admin-section-tabs a {
+  padding: 10px 2px 13px;
+  color: var(--ds-ink-2);
+  text-decoration: none;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+}
+.admin-section-tabs a[aria-current='page'] {
+  color: var(--ds-accent);
+  border-color: var(--ds-accent);
+  font-weight: 600;
+}
+.admin-related-link {
+  display: inline-flex;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--ds-accent);
+}
+.admin-shell .admin-panel > .reports-section:first-of-type {
+  margin-top: 0;
+}
+@media (max-width: 760px) {
+  .admin-shell .admin-page-head h1 {
+    font-size: 23px;
+  }
+  .admin-section-tabs {
+    gap: 4px 16px;
+  }
+  .admin-nav-group a {
+    min-height: 44px;
+    font-size: 13px;
+  }
+}
+.performance-toolbar,
+.performance-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.performance-filters {
+  justify-content: flex-start;
+  margin: 22px 0 16px;
+}
+.performance-filters > label:first-child {
+  flex: 1 1 220px;
+  max-width: 420px;
+}
+.performance-filters > label:last-child {
+  width: 190px;
+}
+.performance-scope {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--ds-ink-3);
+  margin: 12px 0 20px;
+}
+.admin-shell .performance-clear {
+  border-top: 0;
+  padding-top: 0;
+}
+.performance-clear .vacancy-performance-kpis {
+  gap: 0;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  background: var(--ds-surface);
+  overflow: hidden;
+}
+.performance-clear .vacancy-performance-kpis > div {
+  border: 0;
+  border-right: 1px solid var(--ds-line);
+  border-radius: 0;
+  padding: 18px 20px;
+}
+.performance-clear .vacancy-performance-kpis > div:last-child {
+  border-right: 0;
+}
+.performance-clear .vacancy-performance-kpis dt {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.performance-clear .vacancy-performance-kpis dd {
+  font-size: 28px;
+  font-weight: 600;
+}
+.performance-clear .vacancy-performance-scroll {
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  background: var(--ds-surface);
+}
+.performance-clear table {
+  min-width: 0;
+  table-layout: auto;
+}
+.performance-clear table :is(th, td) {
+  padding: 16px;
+  vertical-align: middle;
+}
+.performance-clear table thead th {
+  font-size: 12px;
+  background: var(--ds-surface-muted);
+  white-space: normal;
+}
+.performance-clear table thead th:first-child {
+  width: 48%;
+}
+.performance-clear tbody th .text-button {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.7;
+  text-align: start;
+}
+.performance-clear tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.performance-clear td.num {
+  font-size: 14px;
+}
+.performance-clear .vacancy-row-meta {
+  margin-top: 7px;
+}
+.performance-clear .vacancy-row-meta :is(small, .status, .ds-badge) {
+  font-size: 11px;
+}
+.performance-contact-details {
+  margin-top: 20px;
+  border-top: 1px solid var(--ds-line);
+  padding-top: 16px;
+}
+.performance-contact-details > summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  list-style: none;
+  cursor: pointer;
+  font-size: 13px;
+}
+.performance-contact-details[open] > summary {
+  margin-bottom: 18px;
+}
+.performance-contact-details[open] > summary svg {
+  transform: rotate(180deg);
+}
+.performance-contact-details > p {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--ds-ink-3);
+  margin-top: 14px;
+}
+@media (max-width: 760px) {
+  .performance-clear .vacancy-performance-kpis > div {
+    padding: 14px;
+    border-bottom: 1px solid var(--ds-line);
+  }
+  .performance-clear .vacancy-performance-kpis > div:nth-child(2n) {
+    border-right: 0;
+  }
+  .performance-clear .vacancy-performance-kpis > div:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+  .performance-clear tbody tr {
+    padding: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .performance-clear table :is(th, td) {
+    padding: 0;
+  }
+  .performance-clear .performance-details {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .performance-clear .performance-details::before {
+    content: none;
+  }
+  .performance-clear td.num {
+    padding: 8px 0;
+  }
+}

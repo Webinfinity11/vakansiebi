@@ -15,7 +15,7 @@ import {
   type IndexingNotification,
 } from '../lib/server/google-indexing';
 import { assessVacancy } from './quality';
-import { importDateReason } from './new-only';
+import { importDateReason, importVacancyDateReason } from './new-only';
 export function hashVacancy(v: Vacancy) {
   return createHash('sha256').update(JSON.stringify(v)).digest('hex');
 }
@@ -71,7 +71,7 @@ export async function stageVacancy(itemId: string, v: Vacancy, _hours = 6) {
     const skipReason =
       v.deadline && v.deadline < tbilisiDate()
         ? 'expired'
-        : importDateReason(v.datePosted);
+        : importVacancyDateReason(v);
     if (skipReason) {
       await c.query(
         `UPDATE source_items SET raw=CASE WHEN raw IS DISTINCT FROM $2::jsonb THEN $2::jsonb ELSE raw END,

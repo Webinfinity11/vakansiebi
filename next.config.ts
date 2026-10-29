@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next';
 const config: NextConfig = {
+  // An isolated local editorial preview can run against a test database beside the public preview.
+  distDir: process.env.JOBX_LOCAL_BUILD_DIR || '.next',
   output: 'standalone',
   poweredByHeader: false,
   // The swipe letter draws a JOBX-built CV as PDF on the server in FiraGO.

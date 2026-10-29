@@ -1,25 +1,29 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, ArrowUpRight } from 'lucide-react';
-import { blogPost, blogPosts, blogReadingMinutes } from '@/lib/blog';
-import { breadcrumbs, jsonLd, siteUrl } from '@/lib/seo';
-import { UiText } from '@/app/ui-language';
-import { BlogCover } from '../blog-cover';
+import { siteName } from '@/lib/site-brand';
+import { siteUrl, shareImage } from '@/lib/seo';
+import { publicBlogPost } from '@/lib/server/blog';
+import { BlogArticleView } from '../article-view';
 
-export const dynamicParams = false;
-export function generateStaticParams() {
-  return blogPosts.map(({ slug }) => ({ slug }));
-}
+// Database publication must become visible without a website build.
+export const dynamic = 'force-dynamic';
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const post = blogPost((await params).slug);
+  const post = await publicBlogPost((await params).slug);
   if (!post) notFound();
+  const image = post.cover
+    ? {
+        url: post.cover.src,
+        width: post.cover.width,
+        height: post.cover.height,
+        alt: post.cover.alt,
+      }
+    : shareImage;
   return {
-    title: `${post.title} | JOBX`,
+    title: `${post.title} | ${siteName}`,
     description: post.description,
     alternates: { canonical: `${siteUrl}/blog/${post.slug}` },
     openGraph: {
@@ -28,20 +32,16 @@ export async function generateMetadata({
       url: `${siteUrl}/blog/${post.slug}`,
       type: 'article',
       locale: 'ka_GE',
-      images: [
-        {
-          url: post.cover.src,
-          width: post.cover.width,
-          height: post.cover.height,
-          alt: post.cover.alt,
-        },
-      ],
+      siteName,
+      images: [image],
+      publishedTime: post.publishedAt,
+      modifiedTime: post.updatedAt ?? post.publishedAt,
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: post.description,
-      images: [{ url: post.cover.src, alt: post.cover.alt }],
+      images: [image],
     },
   };
 }
@@ -50,121 +50,7 @@ export default async function BlogArticle({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const post = blogPost((await params).slug);
+  const post = await publicBlogPost((await params).slug);
   if (!post) notFound();
-  return (
-    <main className="blog-article-main">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: jsonLd(
-            breadcrumbs([
-              { name: 'JOBX', path: '/' },
-              { name: 'ბლოგი', path: '/blog' },
-              { name: post.title, path: `/blog/${post.slug}` },
-            ]),
-          ),
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: jsonLd({
-            '@context': 'https://schema.org',
-            '@type': 'BlogPosting',
-            headline: post.title,
-            description: post.description,
-            inLanguage: 'ka',
-            mainEntityOfPage: `${siteUrl}/blog/${post.slug}`,
-            author: { '@type': 'Organization', name: 'JOBX', url: siteUrl },
-            image: `${siteUrl}${post.cover.src}`,
-          }),
-        }}
-      />
-      <Link className="blog-back" href="/blog" prefetch={false}>
-        <ArrowLeft size={16} aria-hidden="true" />
-        <UiText>ბლოგზე დაბრუნება</UiText>
-      </Link>
-      <article lang="ka" className="blog-article">
-        <div className="blog-article-cover">
-          <BlogCover cover={post.cover} eager />
-        </div>
-        <header>
-          <span className="blog-category">
-            {post.category} · {blogReadingMinutes(post)} წთ
-          </span>
-          <h1>{post.title}</h1>
-          <p className="blog-deck">{post.description}</p>
-        </header>
-        <p className="blog-takeaway">{post.takeaway}</p>
-        <nav className="blog-contents" aria-label="სტატიის სარჩევი">
-          <h2>სარჩევი</h2>
-          <ol>
-            {post.sections.map((section) => (
-              <li key={section.id}>
-                <a href={`#${section.id}`}>{section.title}</a>
-              </li>
-            ))}
-          </ol>
-        </nav>
-        <div className="blog-article-body">
-          {post.sections.map((section) => (
-            <section key={section.id} id={section.id}>
-              <h2>{section.title}</h2>
-              {section.paragraphs.map(({ text }) => (
-                <p key={text}>{text}</p>
-              ))}
-              {section.table && (
-                <div className="blog-comparison">
-                  <table>
-                    <caption>{section.table.caption}</caption>
-                    <thead>
-                      <tr>
-                        {section.table.columns.map((column) => (
-                          <th key={column} scope="col">
-                            {column}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {section.table.rows.map(([label, ...values]) => (
-                        <tr key={label}>
-                          <th scope="row">{label}</th>
-                          {values.map((value, index) => (
-                            <td key={index}>{value}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <p>{section.table.note}</p>
-                </div>
-              )}
-              {section.checklist && (
-                <ol className="blog-checklist">
-                  {section.checklist.map((question) => (
-                    <li key={question}>{question}</li>
-                  ))}
-                </ol>
-              )}
-            </section>
-          ))}
-        </div>
-      </article>
-      <nav className="blog-next" aria-label="სასარგებლო ბმულები">
-        {post.links.map((link) => (
-          <Link
-            className="ds-btn ds-btn--secondary"
-            key={link.href}
-            href={link.href}
-            prefetch={false}
-          >
-            <UiText>{link.label}</UiText>
-            <ArrowUpRight size={16} aria-hidden="true" />
-          </Link>
-        ))}
-      </nav>
-    </main>
-  );
+  return <BlogArticleView post={post} />;
 }

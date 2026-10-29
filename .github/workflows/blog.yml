@@ -1,0 +1,39 @@
+name: Blog drafts
+on:
+  schedule:
+    # 10:00 Asia/Tbilisi. The script skips Tuesday when weekly count is 3.
+    - cron: '0 6 * * 1,2,4,6'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: blog-editorial-production
+  cancel-in-progress: false
+jobs:
+  draft:
+    if: github.repository == 'Webinfinity11/vakansiebi' && github.ref == 'refs/heads/main' && vars.BLOG_AUTOMATION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BLOG_AUTOMATION_ENABLED: 'true'
+      BLOG_WEEKLY_POSTS: ${{ vars.BLOG_WEEKLY_POSTS || '4' }}
+      BLOG_AI_MODEL: ${{ vars.BLOG_AI_MODEL }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsx scripts/blog-generate.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blog-editorial-evidence-${{ github.run_id }}
+          path: docs/blog-automation/*.json
+          if-no-files-found: ignore
+          retention-days: 90

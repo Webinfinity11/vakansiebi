@@ -1,4 +1,5 @@
 import { siteUrl, shareImage, homeTitle, homeDescription } from '@/lib/seo';
+import { siteName } from '@/lib/site-brand';
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { SiteTracking } from './site-tracking';
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: homeTitle,
     description: homeDescription,
-    siteName: 'JOBX',
+    siteName,
     locale: 'ka_GE',
     type: 'website',
     images: [shareImage],
@@ -44,9 +45,9 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', images: [shareImage.url] },
   title: homeTitle,
   description: homeDescription,
-  applicationName: 'JOBX',
+  applicationName: siteName,
   manifest: '/manifest.webmanifest',
-  appleWebApp: { capable: true, title: 'JOBX', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: siteName, statusBarStyle: 'default' },
 };
 export default function RootLayout({
   children,

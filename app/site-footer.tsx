@@ -15,6 +15,8 @@ import { Brand } from './brand';
 import { TopGeCounter } from './top-ge-counter';
 import { SearchDirectoryGroups } from './search-directory-groups';
 import { InstallAppAction } from './install-app';
+import { LocalText } from './local-text';
+import { siteName } from '@/lib/site-brand';
 
 export function SiteFooter({
   landing,
@@ -81,12 +83,22 @@ export function SiteFooter({
               <BookOpen size={16} aria-hidden="true" />
               {ui('ბლოგი')}
             </Link>
+            {[
+              ['/about', 'ჩვენ შესახებ', 'About'],
+              ['/help', 'დახმარება', 'Help'],
+              ['/contact', 'კონტაქტი', 'Contact'],
+              ['/salaries', 'ხელფასები', 'Salaries'],
+            ].map(([href, ka, en]) => (
+              <Link key={href} href={href} prefetch={false}>
+                <LocalText ka={ka} en={en} />
+              </Link>
+            ))}
           </nav>
         </div>
         <details id="how-it-works" className="footer-help">
           <summary>
             <CircleHelp size={16} aria-hidden="true" />
-            {ui(' როგორ მუშაობს JOBX?')}
+            {ui(' როგორ მუშაობს ჯობიქსი?')}
           </summary>
           <p>
             {ui(
@@ -103,12 +115,12 @@ export function SiteFooter({
           </p>
         </details>
         <div className="footer-meta">
-          <span>{ui('ვაკანსიები სხვადასხვა წყაროდან')}</span>
+          <span>{ui('ჯობიქსი (JOBX) — ვაკანსიები საქართველოში')}</span>
           <div className="footer-copyright">
-            © {new Date().getFullYear()} JOBX
+            © {new Date().getFullYear()} {ui(siteName)}
             <a
               className="footer-credit"
-              href="https://infinity.ge"
+              href="https://infinity.ge/services/saitis-damzadeba/"
               target="_blank"
               rel="noopener noreferrer"
             >

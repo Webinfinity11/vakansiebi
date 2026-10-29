@@ -50,6 +50,7 @@ import {
   type CSSProperties,
 } from 'react';
 import { PublicHeader } from './public-header';
+import { JobAlertSignup } from './job-alert-signup';
 export { Brand } from './brand';
 import { formatDate } from './vacancy-text';
 import {
@@ -1583,7 +1584,7 @@ export default function JobBoard({
                 </div>
                 <div className="results-tools">
                   <Link
-                    href="/map"
+                    href={`/map${query.trim() ? '?' + new URLSearchParams({ q: query.trim() }) : ''}`}
                     prefetch={false}
                     className="secondary-button results-map-link"
                     aria-label={ui('ვაკანსიები რუკაზე')}
@@ -1633,6 +1634,9 @@ export default function JobBoard({
                   </div>
                 </div>
               </div>
+              {!savedOnly && !demo && (
+                <JobAlertSignup filters={currentSearch} />
+              )}
               {!!activeCount && (
                 <div className="active-filters">
                   {query && (

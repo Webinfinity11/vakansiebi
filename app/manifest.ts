@@ -1,11 +1,12 @@
 import type { MetadataRoute } from 'next';
 import { homeDescription } from '@/lib/seo';
+import { siteName } from '@/lib/site-brand';
 /* Served at /manifest.webmanifest. Makes the site installable from the browser menu
    ("მთავარ ეკრანზე დამატება") and opens it without browser chrome afterwards. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'JOBX — ვაკანსიები',
-    short_name: 'JOBX',
+    name: `${siteName} — ვაკანსიები`,
+    short_name: siteName,
     description: homeDescription,
     start_url: '/',
     display: 'standalone',

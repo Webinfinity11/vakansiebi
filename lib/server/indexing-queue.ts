@@ -40,7 +40,8 @@ export async function enqueueIndexingNotifications(
          status='pending',attempts=0,available_at=now(),lease_token=NULL,locked_until=NULL,
          last_http_status=NULL,last_error=NULL,sent_at=NULL,updated_at=now()
        WHERE google_indexing_queue.type IS DISTINCT FROM excluded.type
-          OR google_indexing_queue.content_hash IS DISTINCT FROM excluded.content_hash`,
+          OR google_indexing_queue.content_hash IS DISTINCT FROM excluded.content_hash
+          OR google_indexing_queue.status='cancelled'`,
       [event.url, jobId, event.type, event.contentHash || event.url],
     );
   }
@@ -48,6 +49,43 @@ export async function enqueueIndexingNotifications(
 
 export function indexingRetrySeconds(attempts: number) {
   return Math.min(21600, 60 * 2 ** Math.min(9, Math.max(0, attempts - 1)));
+}
+
+/** Local queue housekeeping uses no Google quota, even when today's budget is exhausted. */
+export async function pruneIndexingQueue({
+  connection = db(),
+  apply = false,
+  limit = 2000,
+  urls,
+}: {
+  connection?: Connection;
+  apply?: boolean;
+  limit?: number;
+  urls?: string[];
+} = {}) {
+  const candidates = `SELECT q.url FROM google_indexing_queue q
+    WHERE q.status='pending' AND q.type='URL_UPDATED'
+      AND (q.locked_until IS NULL OR q.locked_until<now())
+      AND ($2::text[] IS NULL OR q.url=ANY($2))
+      AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.id=q.job_id
+        AND j.status='published' AND j.published IS NOT NULL
+        AND (COALESCE(j.published->>'deadline','')='' OR j.published->>'deadline'>=(now() AT TIME ZONE 'Asia/Tbilisi')::date::text)
+        AND NOT EXISTS (SELECT 1 FROM job_submissions s WHERE s.job_id=j.id AND s.is_test))
+    ORDER BY q.created_at,q.url LIMIT $1`;
+  const args = [Math.max(1, Math.min(10000, limit)), urls || null];
+  if (!apply)
+    return {
+      matched: (await connection.query(candidates, args)).rowCount || 0,
+      cancelled: 0,
+    };
+  const result = await connection.query(
+    `WITH unavailable AS (${candidates} FOR UPDATE OF q SKIP LOCKED)
+    UPDATE google_indexing_queue q SET status='cancelled',last_error='page-unavailable',
+      lease_token=NULL,locked_until=NULL,updated_at=now()
+    FROM unavailable u WHERE q.url=u.url RETURNING q.url`,
+    args,
+  );
+  return { matched: result.rowCount || 0, cancelled: result.rowCount || 0 };
 }
 
 export async function drainIndexingQueue({
@@ -74,6 +112,10 @@ export async function drainIndexingQueue({
     deferred: 0,
     disabled: false,
   };
+  const c = connection || db();
+  result.cancelled = (
+    await pruneIndexingQueue({ connection: c, apply: true, urls })
+  ).cancelled;
   if (
     !settings.GOOGLE_INDEXING_CLIENT_EMAIL?.trim() ||
     !settings.GOOGLE_INDEXING_PRIVATE_KEY?.trim() ||
@@ -82,7 +124,6 @@ export async function drainIndexingQueue({
     result.disabled = true;
     return result;
   }
-  const c = connection || db();
   for (let n = 0; n < Math.max(0, Math.min(200, limit)); n++) {
     const token = randomUUID();
     const row = (
@@ -92,10 +133,11 @@ export async function drainIndexingQueue({
          WHERE status='pending' AND available_at<=now()
            AND (locked_until IS NULL OR locked_until<now())
            AND ($2::text[] IS NULL OR url=ANY($2))
-         ORDER BY created_at DESC,url FOR UPDATE SKIP LOCKED LIMIT 1
+         -- Four recent notices to one oldest notice: old, still-open jobs cannot starve forever.
+         ORDER BY CASE WHEN $3 THEN created_at END ASC,created_at DESC,url FOR UPDATE SKIP LOCKED LIMIT 1
        ) UPDATE google_indexing_queue q SET lease_token=$1,locked_until=now()+interval '2 minutes'
          FROM next WHERE q.url=next.url RETURNING q.*`,
-        [token, urls || null],
+        [token, urls || null, n % 5 === 0],
       )
     ).rows[0] as Queued | undefined;
     if (!row) break;

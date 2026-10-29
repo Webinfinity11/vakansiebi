@@ -8,7 +8,7 @@ import { GET as categoriesGET } from '../app/sitemap-categories.xml/route';
 import { GET as companiesGET } from '../app/sitemap-companies.xml/route';
 import { GET as jobsGET } from '../app/sitemap-jobs.xml/route';
 import robots from '../app/robots';
-import { blogPosts } from '../lib/blog';
+import { GET as contentGET } from '../app/sitemap-content.xml/route';
 import {
   createSitemapHandler,
   sitemapCacheControl,
@@ -43,8 +43,14 @@ void test('the sitemap indexes list all leaves even when the network and databas
       const body = await response.text();
       assert.match(body, /<sitemapindex /);
       assert.doesNotMatch(body, /<lastmod>/);
-      assert.equal(body.match(/<sitemap>/g)?.length, 4);
-      for (const name of ['pages', 'categories', 'companies', 'jobs']) {
+      assert.equal(body.match(/<sitemap>/g)?.length, 5);
+      for (const name of [
+        'pages',
+        'categories',
+        'companies',
+        'jobs',
+        'content',
+      ]) {
         assert.ok(
           body.includes(`<loc>https://jobx.ge/sitemap-${name}.xml</loc>`),
         );
@@ -71,9 +77,12 @@ void test('sitemap-pages.xml has no database dependency', async () => {
       ...body.matchAll(/<loc>https:\/\/jobx\.ge\/blog\/([^<]+)<\/loc>/g),
     ].map((match) => match[1]);
     assert.deepEqual(
-      articles.sort(),
-      blogPosts.map((post) => post.slug).sort(),
+      articles,
+      [],
+      'articles live in the independently refreshed content sitemap',
     );
+    for (const path of ['about', 'help', 'contact', 'salaries'])
+      assert.ok(body.includes(`<loc>https://jobx.ge/${path}</loc>`));
     for (const retired of [
       'rogor-shevadaro-vakansiebi',
       'cv-konkretuli-vakansiistvis',
@@ -86,7 +95,7 @@ void test('sitemap-pages.xml has no database dependency', async () => {
 
 void test('sitemap-categories.xml, sitemap-companies.xml and sitemap-jobs.xml retry soon when the database fails', async () => {
   await withoutDatabase(async () => {
-    for (const get of [categoriesGET, companiesGET, jobsGET]) {
+    for (const get of [categoriesGET, companiesGET, jobsGET, contentGET]) {
       const response = await get();
       assert.equal(response.headers.get('Cache-Control'), 'no-store');
       const body = await response.text();
@@ -111,6 +120,7 @@ void test('sitemapLeaves points every leaf at the site origin', () => {
       'https://jobx.ge/sitemap-categories.xml',
       'https://jobx.ge/sitemap-companies.xml',
       'https://jobx.ge/sitemap-jobs.xml',
+      'https://jobx.ge/sitemap-content.xml',
     ],
   );
 });

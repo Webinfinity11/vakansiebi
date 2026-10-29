@@ -69,12 +69,14 @@ const sitemapIndexStart =
 const sitemapXml = (entry: SitemapEntry) =>
   `<sitemap><loc>${xmlEscape(entry.url)}</loc>${lastmod(entry.lastModified)}</sitemap>\n`;
 
-/** The four leaf sitemaps every index address points at: split so a crawler can revisit
+/** The leaf sitemaps every index address points at: split so a crawler can revisit
  * the highly perishable job list on its own schedule, separately from the stable ones. */
 export function sitemapLeaves(base: string) {
-  return ['pages', 'categories', 'companies', 'jobs'].map((name) => ({
-    url: `${base}/sitemap-${name}.xml`,
-  }));
+  return ['pages', 'categories', 'companies', 'jobs', 'content'].map(
+    (name) => ({
+      url: `${base}/sitemap-${name}.xml`,
+    }),
+  );
 }
 
 /** An index lastModified, if provided, must be the sitemap file's modification time. */

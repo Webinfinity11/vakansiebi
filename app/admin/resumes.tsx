@@ -1,20 +1,18 @@
 'use client';
 import {
   ChevronDown,
-  Download,
   Eye,
   FileText,
   RefreshCw,
   Search,
   Trash2,
-  X,
 } from 'lucide-react';
 import { SwipeApplications } from './swipe-applications';
 import { SkeletonRows } from '../skeleton';
 import { adminTime } from '@/lib/admin-format';
 import { useEffect, useRef, useState } from 'react';
-import { downloadCv, type Cv } from '@/lib/cv';
-import { CvSheet } from '../cv/cv-builder';
+import { type Cv } from '@/lib/cv';
+import { CvDialog } from './cv-dialog';
 import '../cv.css';
 import './admin-records.css';
 import './swipe-applications.css';
@@ -113,30 +111,7 @@ function SavedResumes({ q }: { q: string }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
-  const preview = useRef<HTMLDivElement>(null);
-  /* The resume opens under the list, out of sight; the page goes to it, and closing it
-     comes back to the row it was opened from. */
-  const motion = () =>
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ? 'auto'
-      : 'smooth';
-  const shownId = selected?.id;
-  useEffect(() => {
-    if (!shownId) return;
-    preview.current?.scrollIntoView({ behavior: motion(), block: 'start' });
-    preview.current?.focus({ preventScroll: true });
-  }, [shownId]);
-  function close() {
-    const id = selected?.id;
-    setSelected(null);
-    const row = id
-      ? document.querySelector<HTMLButtonElement>(
-          `[data-resume="${CSS.escape(id)}"] .resume-open`,
-        )
-      : null;
-    row?.scrollIntoView({ behavior: motion(), block: 'center' });
-    row?.focus({ preventScroll: true });
-  }
+  const previewRequest = useRef(0);
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ page: String(page) });
@@ -163,6 +138,7 @@ function SavedResumes({ q }: { q: string }) {
     return () => controller.abort();
   }, [page, version, q]);
   async function open(id: string) {
+    const request = ++previewRequest.current;
     setBusy(true);
     setOpening(id);
     setSelected(null);
@@ -173,7 +149,8 @@ function SavedResumes({ q }: { q: string }) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw Error(data.error || 'რეზიუმე ვერ ჩაიტვირთა');
-      setSelected({ id, cv: data.cv, activity: data.activity ?? [] });
+      if (request === previewRequest.current)
+        setSelected({ id, cv: data.cv, activity: data.activity ?? [] });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'ოპერაცია ვერ შესრულდა');
     } finally {
@@ -222,14 +199,7 @@ function SavedResumes({ q }: { q: string }) {
         className="ds-btn ds-btn--secondary ds-btn--sm resume-open"
         disabled={busy}
         aria-pressed={selected?.id === row.id}
-        onClick={() =>
-          selected?.id === row.id
-            ? preview.current?.scrollIntoView({
-                behavior: motion(),
-                block: 'start',
-              })
-            : void open(row.id)
-        }
+        onClick={() => void open(row.id)}
       >
         <Eye size={16} aria-hidden="true" />
         {opening === row.id ? 'იტვირთება…' : 'ნახვა'}
@@ -372,59 +342,43 @@ function SavedResumes({ q }: { q: string }) {
           შემდეგი
         </button>
       </div>
-      {selected && (
-        <div
-          className="resumes-preview ds-appear"
-          ref={preview}
-          tabIndex={-1}
-          aria-label={`რეზიუმე: ${selected.cv.fullName || 'უსახელო'}`}
-        >
-          <div className="resumes-preview-actions">
-            <button
-              type="button"
-              className="ds-btn ds-btn--primary ds-btn--sm"
-              onClick={() => downloadCv(selected.cv.fullName)}
-            >
-              <Download size={16} aria-hidden="true" />
-              PDF-ად ჩამოტვირთვა
-            </button>
-            <button
-              type="button"
-              className="ds-btn ds-btn--secondary ds-btn--sm"
-              onClick={close}
-            >
-              <X size={16} aria-hidden="true" />
-              დახურვა
-            </button>
-          </div>
-          <section className="resume-activity" aria-label="რა გააკეთა">
-            <h3>რა გააკეთა ჩვენს ვაკანსიებზე</h3>
-            {!selected.activity.length ? (
-              <p>
-                ჯერ არაფერი: ამ CV-ით JOBX-ზე დამატებულ ვაკანსიას არ
-                დაკავშირებია.
-              </p>
-            ) : (
-              <ul>
-                {selected.activity.map((a) => (
-                  <li key={a.jobId + a.kind}>
-                    <strong>{actionNames[a.kind]}</strong>
-                    {a.presses > 1 && <span> ×{a.presses}</span>}
-                    <span>
-                      {a.title || 'ვაკანსია'}
-                      {a.company && ` · ${a.company}`}
-                    </span>
-                    <time dateTime={a.lastAt}>{adminTime(a.lastAt)}</time>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-          <div className="resumes-sheet">
-            <CvSheet cv={selected.cv} />
-          </div>
-        </div>
-      )}
+      <CvDialog
+        open={!!opening || !!selected}
+        onClose={() => {
+          previewRequest.current++;
+          setSelected(null);
+          setOpening(null);
+        }}
+        cv={selected?.cv}
+      >
+        {selected && (
+          <>
+            <section className="resume-activity" aria-label="რა გააკეთა">
+              <h3>რა გააკეთა ჩვენს ვაკანსიებზე</h3>
+              {!selected.activity.length ? (
+                <p>
+                  ჯერ არაფერი: ამ CV-ით JOBX-ზე დამატებულ ვაკანსიას არ
+                  დაკავშირებია.
+                </p>
+              ) : (
+                <ul>
+                  {selected.activity.map((a) => (
+                    <li key={a.jobId + a.kind}>
+                      <strong>{actionNames[a.kind]}</strong>
+                      {a.presses > 1 && <span> ×{a.presses}</span>}
+                      <span>
+                        {a.title || 'ვაკანსია'}
+                        {a.company && ` · ${a.company}`}
+                      </span>
+                      <time dateTime={a.lastAt}>{adminTime(a.lastAt)}</time>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
+      </CvDialog>
     </section>
   );
 }

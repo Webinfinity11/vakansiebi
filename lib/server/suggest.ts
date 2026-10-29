@@ -1,5 +1,6 @@
 import { db } from './db';
 import { searchPlan } from './search-plan';
+import { suggestionPrefixes } from '../search-language';
 
 export type Suggestion = {
   value: string;
@@ -37,8 +38,13 @@ export async function suggestTerms(
     args.push(value);
     return `$${args.length}`;
   };
-  const start = bind(likePattern(prefix) + '%');
-  const word = bind('% ' + likePattern(prefix) + '%');
+  const patterns = suggestionPrefixes(prefix).flatMap((value) => [
+    likePattern(value) + '%',
+    '% ' + likePattern(value) + '%',
+  ]);
+  const matches = patterns
+    .map((value) => `norm LIKE ${bind(value)} ESCAPE '\\'`)
+    .join(' OR ');
   const n = bind(Math.max(1, Math.min(20, limit)));
   const norm = (sql: string) =>
     `lower(CASE WHEN ${sql} IS NFKC NORMALIZED THEN ${sql} ELSE normalize(${sql},NFKC) END)`;
@@ -51,7 +57,7 @@ export async function suggestTerms(
      ),
      ranked AS (
        SELECT min(value) AS value,kind,count(*)::int AS count FROM candidates
-       WHERE norm LIKE ${start} ESCAPE '\\' OR norm LIKE ${word} ESCAPE '\\'
+       WHERE ${matches}
        GROUP BY norm,kind
      )
      SELECT value,kind,count FROM ranked

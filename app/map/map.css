@@ -1030,3 +1030,11 @@
     transform: none;
   }
 }
+
+.job-map-location-note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--ds-ink-3);
+  font-size: var(--ds-text-xs);
+  line-height: 1.5;
+}

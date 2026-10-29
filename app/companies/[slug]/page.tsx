@@ -1,6 +1,7 @@
 import { UiText } from '@/app/ui-language';
 import { ServerSiteFooter } from '../../server-site-footer';
 import type { Metadata } from 'next';
+import { siteName } from '@/lib/site-brand';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { cache } from 'react';
@@ -189,7 +190,7 @@ async function read(props: Props) {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { employer, result, page, filtered, activeTotal } = await read(props);
   const heading = companyVacancyTitle(employer.name);
-  const title = `${heading}${page > 1 ? ` — გვერდი ${page}` : ''} | JOBX`;
+  const title = `${heading}${page > 1 ? ` — გვერდი ${page}` : ''} | ${siteName}`;
   const description = [
     `${heading}: ${result.total} აქტიური განცხადება`,
     employer.cities
@@ -214,6 +215,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       url: canonical,
       type: 'website',
       locale: 'ka_GE',
+      siteName,
     },
   };
 }

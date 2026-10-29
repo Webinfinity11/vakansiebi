@@ -63,3 +63,10 @@ source-review labels on public blog pages. Do not add competitor mentions or
 links to those pages. Keep research evidence and review dates in the editorial
 documents under `docs/`; factual claims still require verification. Label
 hypothetical examples clearly rather than presenting them as real vacancies.
+
+## Blog cover artwork
+
+Before creating or replacing blog cover images, read `docs/blog-cover-style.md`
+and inspect its linked approved covers. Keep the matte blue 3D illustration
+series consistent; do not replace topic-specific artwork with repeated outline
+icons. Exact generation prompts live in `docs/blog-cover-art-direction.json`.

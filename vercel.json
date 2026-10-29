@@ -7,6 +7,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/job-alerts",
+      "schedule": "17 3-19 * * *"
+    },
+    {
       "path": "/api/cron/invoice-email",
       "schedule": "17 3-19 * * *"
     },

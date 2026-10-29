@@ -1,5 +1,6 @@
 import { UiText } from '@/app/ui-language';
 import type { Metadata } from 'next';
+import { siteName } from '@/lib/site-brand';
 import Link from 'next/link';
 import { cache } from 'react';
 import { Building2, ChevronLeft } from 'lucide-react';
@@ -35,7 +36,7 @@ const canonical = `${siteUrl}/companies`;
 
 export async function generateMetadata(): Promise<Metadata> {
   const companies = await read();
-  const title = 'კომპანიები და მათი აქტიური ვაკანსიები | JOBX';
+  const title = `კომპანიები და მათი აქტიური ვაკანსიები | ${siteName}`;
   const description = companies?.length
     ? `${companies.length} კომპანია, რომელიც ახლა ასაქმებს: ნახე თითოეულის აქტიური ვაკანსიები ერთ გვერდზე — ${companies
         .slice(0, 3)
@@ -53,6 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
       url: canonical,
       type: 'website',
       locale: 'ka_GE',
+      siteName,
     },
   };
 }

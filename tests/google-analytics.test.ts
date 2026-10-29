@@ -12,11 +12,11 @@ void test('GA page titles preserve SEO identity without exposing a typed search'
   const page = analyticsPage('https://jobx.ge/?q=private@example.com')!;
   assert.equal(
     analyticsTitle(page, '„private@example.com“ — ვაკანსიები | JOBX'),
-    'ვაკანსიები საქართველოში — სამსახურის ძებნა | JOBX',
+    'ჯობიქსი — ვაკანსიები საქართველოში',
   );
   assert.equal(
     analyticsTitle('https://jobx.ge/?salaryPeriod=day', 'old browser title'),
-    'ვაკანსიები დღიური ანაზღაურებით | JOBX',
+    'ვაკანსიები დღიური ანაზღაურებით | ჯობიქსი',
   );
   assert.equal(
     analyticsTitle(
@@ -30,18 +30,18 @@ void test('GA page titles preserve SEO identity without exposing a typed search'
 void test('unfinished route metadata stays pending and timeout titles contain no private data', () => {
   const page = 'https://jobx.ge/vacancies/example-123';
   assert.equal(analyticsTitle(page, '  '), '');
-  assert.equal(analyticsFallbackTitle(page), 'ვაკანსია | JOBX');
+  assert.equal(analyticsFallbackTitle(page), 'ვაკანსია | ჯობიქსი');
   assert.equal(
     analyticsFallbackTitle('https://jobx.ge/companies/tibisi'),
-    'კომპანიის ვაკანსიები | JOBX',
+    'კომპანიის ვაკანსიები | ჯობიქსი',
   );
   assert.equal(
     analyticsFallbackTitle('https://jobx.ge/cv'),
-    'CV-ის შექმნა | JOBX',
+    'CV-ის შექმნა | ჯობიქსი',
   );
   assert.equal(
     analyticsFallbackTitle('https://jobx.ge/?q=private@example.com'),
-    'ვაკანსიები საქართველოში — სამსახურის ძებნა | JOBX',
+    'ჯობიქსი — ვაკანსიები საქართველოში',
   );
 });
 
@@ -195,4 +195,23 @@ void test('company directory and slug-based vacancy URLs are public analytics pa
     'https://jobx.ge/vacancies/example-123',
   );
   assert.equal(analyticsPage('https://jobx.ge/cv/private-token'), null);
+});
+
+void test('editorial public pages are tracked without private query data; admin and previews stay excluded', () => {
+  for (const path of [
+    '/blog',
+    '/blog/reziume-gamotsdilebis-gareshe',
+    '/salaries',
+    '/salaries/molare',
+    '/about',
+    '/contact',
+    '/help',
+  ]) {
+    assert.equal(
+      analyticsPage('https://jobx.ge' + path + '?email=private@example.com'),
+      'https://jobx.ge' + path,
+    );
+    assert.equal(analyticsPage('https://jobx.ge' + path + '?preview=1'), null);
+  }
+  assert.equal(analyticsPage('https://jobx.ge/admin/blog'), null);
 });

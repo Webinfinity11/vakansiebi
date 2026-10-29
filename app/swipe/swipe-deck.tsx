@@ -2,6 +2,7 @@
 import { useUi } from '@/app/ui-language';
 import Link from 'next/link';
 import { trackAction } from '@/lib/analytics-client';
+import { SwipeWheelGesture, wheelIdleMs } from '@/lib/swipe-gesture';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   useCallback,
@@ -12,7 +13,6 @@ import {
   type ChangeEvent,
   type CSSProperties,
   type PointerEvent,
-  type WheelEvent,
 } from 'react';
 import {
   SlidersHorizontal,
@@ -512,6 +512,30 @@ export function SwipeDeck() {
     },
     [],
   );
+  // Drag: the top card follows the pointer and is thrown past the threshold.
+  const [dx, setDx] = useState(0);
+  const [leaving, setLeaving] = useState<'left' | 'right' | null>(null);
+  const drag = useRef<{
+    x: number;
+    y: number;
+    id: number;
+    locked?: boolean;
+    dx: number;
+  } | null>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const wheel = useRef(new SwipeWheelGesture());
+  const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopGesture = useCallback(() => {
+    wheel.current.stop(performance.now());
+    if (wheelTimer.current) clearTimeout(wheelTimer.current);
+    drag.current = null;
+  }, []);
+  useEffect(
+    () => () => {
+      if (wheelTimer.current) clearTimeout(wheelTimer.current);
+    },
+    [],
+  );
   const ready =
     consent &&
     (!!cv || !!upload) &&
@@ -553,6 +577,8 @@ export function SwipeDeck() {
       );
       return;
     }
+    stopGesture();
+    setDx(0);
     trackAction('swipe_undo');
     if (last.decision === 'send' && pending?.job.id === last.job.id)
       setPending(null);
@@ -562,20 +588,12 @@ export function SwipeDeck() {
     setHistory((h) => h.slice(0, -1));
     setQueue((q) => [last.job, ...q]);
     setNotice('');
-  }, [history, pending, sending, dismissHint, setEntering]);
+  }, [history, pending, sending, dismissHint, setEntering, stopGesture, setDx]);
 
-  // Drag: the top card follows the pointer and is thrown past the threshold.
-  const [dx, setDx] = useState(0);
-  const [leaving, setLeaving] = useState<'left' | 'right' | null>(null);
-  const drag = useRef<{
-    x: number;
-    y: number;
-    id: number;
-    locked?: boolean;
-  } | null>(null);
   useEffect(() => {
     if (loadedKey === requestKey) return;
     generation.current += 1;
+    stopGesture();
     if (flight.current) clearTimeout(flight.current);
     flight.current = null;
     seen.current.clear();
@@ -595,16 +613,20 @@ export function SwipeDeck() {
       setLoadedKey(requestKey);
     }, 0);
     return () => clearTimeout(timer);
-  }, [requestKey, loadedKey, pending?.job.id]);
+  }, [requestKey, loadedKey, pending?.job.id, stopGesture]);
 
   const fling = useCallback(
     (side: 'left' | 'right', decision: Decision) => {
       dismissHint();
       if (!current || flight.current) return;
+      stopGesture();
+      setDx(0);
       setEntering(null);
       // The CV sheet keeps this card in place until sending is possible.
       if (reducedMotion() || (decision === 'send' && !ready)) {
-        setDx(0);
+        flight.current = setTimeout(() => {
+          flight.current = null;
+        }, exitDuration);
         decide(decision);
         return;
       }
@@ -616,13 +638,19 @@ export function SwipeDeck() {
         setDx(0);
       }, exitDuration);
     },
-    [decide, dismissHint, current, ready, setEntering, setDx],
+    [decide, dismissHint, current, ready, setEntering, stopGesture, setDx],
   );
   const onDown = (e: PointerEvent<HTMLElement>) => {
     dismissHint();
-    if (flight.current || (e.target as HTMLElement).closest('a,button')) return;
+    if (
+      flight.current ||
+      !e.isPrimary ||
+      e.button !== 0 ||
+      (e.target as HTMLElement).closest('a,button,input,textarea,select')
+    )
+      return;
     setEntering(null);
-    drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    drag.current = { x: e.clientX, y: e.clientY, id: e.pointerId, dx: 0 };
   };
   const onMove = (e: PointerEvent<HTMLElement>) => {
     const d = drag.current;
@@ -641,6 +669,7 @@ export function SwipeDeck() {
         e.currentTarget.setPointerCapture(e.pointerId);
       } catch {}
     }
+    d.dx = mx;
     setDx(mx);
   };
   // Once a finger is throwing the card sideways, iOS must not also scroll
@@ -652,53 +681,46 @@ export function SwipeDeck() {
     document.addEventListener('touchmove', hold, { passive: false });
     return () => document.removeEventListener('touchmove', hold);
   }, []);
-  /* A trackpad's sideways two-finger scroll moves the card the way a finger
-     does on a phone; an up-down scroll still reads the text. The card snaps
-     back when the gesture stops short of the throw. */
-  const wheel = useRef({
-    vertical: 0,
-    x: 0,
-    timer: 0 as unknown as ReturnType<typeof setTimeout>,
-  });
-  const onWheel = (e: WheelEvent<HTMLElement>) => {
-    dismissHint();
-    const w = wheel.current;
-    const now = performance.now();
-    // While the text is being scrolled, the small sideways drift a trackpad
-    // reports along with it must not nudge the card.
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      w.vertical = now;
-      return;
-    }
-    if (
-      leaving ||
-      now - w.vertical < 350 ||
-      Math.abs(e.deltaX) < 2 * Math.abs(e.deltaY) ||
-      Math.abs(e.deltaX) < 3
-    )
-      return;
-    clearTimeout(w.timer);
-    w.x -= e.deltaX;
-    if (Math.abs(w.x) > throwAt) {
-      const side = w.x > 0 ? 'right' : 'left';
-      w.x = 0;
-      fling(side, side === 'right' ? 'send' : 'skip');
-      return;
-    }
-    setDx(w.x);
-    w.timer = setTimeout(() => {
-      w.x = 0;
-      setDx(0);
-    }, 180);
-  };
+  // A non-passive listener lets horizontal swipes cancel native scrolling.
+  // Vertical reading keeps its axis for the entire gesture, including inertia.
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) return; // pinch to zoom belongs to the browser
+      dismissHint();
+      const unit =
+        e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? card.clientWidth : 1;
+      const motion = wheel.current.move(
+        e.deltaX * unit,
+        e.deltaY * unit,
+        performance.now(),
+        throwAt,
+      );
+      if (!motion.prevent) return;
+      if (e.cancelable) e.preventDefault();
+      if (wheelTimer.current) clearTimeout(wheelTimer.current);
+      if (flight.current) return;
+      setEntering(null);
+      if (motion.side) {
+        fling(motion.side, motion.side === 'right' ? 'send' : 'skip');
+      } else {
+        setDx(motion.x);
+        wheelTimer.current = setTimeout(() => setDx(0), wheelIdleMs);
+      }
+    };
+    card.addEventListener('wheel', onWheel, { passive: false });
+    return () => card.removeEventListener('wheel', onWheel);
+  }, [current?.id, fling, dismissHint]);
   const onUp = () => {
     if (!drag.current?.locked) {
       drag.current = null;
       return;
     }
+    const offset = drag.current.dx;
     drag.current = null;
-    if (dx > throwAt) fling('right', 'send');
-    else if (dx < -throwAt) fling('left', 'skip');
+    if (offset > throwAt) fling('right', 'send');
+    else if (offset < -throwAt) fling('left', 'skip');
     else setDx(0);
   };
 
@@ -1044,6 +1066,7 @@ export function SwipeDeck() {
           {current ? (
             <article
               key={current.id}
+              ref={cardRef}
               className="quick-card"
               data-hint={hint || undefined}
               data-entering={entering || undefined}
@@ -1067,7 +1090,6 @@ export function SwipeDeck() {
                 drag.current = null;
                 setDx(0);
               }}
-              onWheel={onWheel}
             >
               <div className="swipe-stamp-slot" aria-hidden="true">
                 <span

@@ -42,6 +42,7 @@ export async function priorSubmission(
 export async function submitJob(
   input: unknown,
   client: string,
+  owner?: { accountId: string; companyKey: string },
 ): Promise<{
   id: string;
   received: true;
@@ -62,12 +63,17 @@ export async function submitJob(
     .update(JSON.stringify(data))
     .digest('hex');
   return transaction(async (c) => {
+    if (owner) {
+      const account = (await c.query('SELECT p.name FROM company_accounts a JOIN company_profiles p USING(company_key) WHERE a.id=$1 AND a.company_key=$2 AND a.enabled AND NOT a.must_change_password FOR SHARE OF a', [owner.accountId, owner.companyKey])).rows[0];
+      if (!account || data.company !== account.name) throw new ApiError('კომპანიის ანგარიშზე წვდომა შეზღუდულია.', 403);
+    }
     // Serialize retries first, then the per-client quota. Both locks live only for this transaction.
     await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
       `submission:${data.requestId}`,
     ]);
     const prior = await priorSubmission(data.requestId, c);
     if (prior) {
+      if (owner && !(await c.query('SELECT 1 FROM company_job_ownership WHERE job_id=$1 AND company_key=$2', [prior.id, owner.companyKey])).rowCount) throw new ApiError('განაცხადის კოდი უკვე გამოყენებულია.', 409);
       // Submitted jobs cannot be edited: keep the first accepted version and silently
       // discard retry changes. The client explains this through alreadyReceived.
       return prior;
@@ -117,6 +123,7 @@ export async function submitJob(
       "INSERT INTO audit_log(job_id,action,actor,after_data) VALUES($1,'submission.received','employer',$2)",
       [id, { consent: true, policy: 'public-contact-v1' }],
     );
+    if (owner) await c.query('INSERT INTO company_job_ownership(job_id,company_key) VALUES($1,$2)', [id,owner.companyKey]);
     const invoiceUrl =
       data.placement === 'premium'
         ? await createInvoice(c, {

@@ -1,0 +1,14 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-29",
+  "assets": [
+    {
+      "path": "public/blog/first-cv-cover.webp",
+      "prompt": "Use case: stylized-concept. Create a finished 2:1 wide editorial banner for the JOBX blog matching a coherent existing cover series. Softly beveled 3D objects with tactile matte paper texture, not flat icons or glossy plastic. Palette cobalt blue #2457e6, dark navy #17233f, ivory white paper and small cyan #16b7ef accents. Quiet pale blue background, a single broad very faint diagonal translucent blue band behind the objects. Soft studio lighting, short gentle grounded shadows. A calm connected group centered in the middle 65% of the canvas with generous edge margins, all objects fully visible. No words, letters, numbers, logos, people, watermark, border, button, UI mockup or floating decorations. Actual artwork for a web banner. Topic: writing a first CV without work experience. Dominant ivory resume sheet resting diagonally on a cobalt-blue document folder. The sheet has a small abstract blue profile circle and a few restrained embossed blue bars suggesting sections, absolutely no legible writing. Beside it, one small cobalt pencil with ivory tip and one subtle cyan check marker. Three-dimensional matte paper and ceramic-like forms; recognizable document at thumbnail size. Landscape 2:1."
+    },
+    {
+      "path": "public/blog/interview-preparation-cover.webp",
+      "prompt": "Use case: stylized-concept. Create a finished 2:1 wide editorial banner for the JOBX blog matching a coherent existing cover series. Softly beveled 3D objects with tactile matte paper texture, not flat icons or glossy plastic. Palette cobalt blue #2457e6, dark navy #17233f, ivory white paper and small cyan #16b7ef accents. Quiet pale blue background, a single broad very faint diagonal translucent blue band behind the objects. Soft studio lighting, short gentle grounded shadows. A calm connected group centered in the middle 65% of the canvas with generous edge margins, all objects fully visible. No words, letters, numbers, logos, people, watermark, border, button, UI mockup or floating decorations. Actual artwork for a web banner. Topic: preparing for a job interview. Two freestanding softly rounded three-dimensional speech bubbles, one cobalt blue dominant and one smaller ivory with a cyan inset, facing each other to suggest a conversation. Beside them in the lower foreground, a small open ivory notebook with cobalt cover and a few abstract blue line marks, no writing. Only these three objects. Same tactile matte paper-and-clay material, precise silhouettes and quiet pale blue background with one broad faint diagonal band. Distinctive calm grouped composition readable at thumbnail size. Landscape 2:1."
+    }
+  ]
+}

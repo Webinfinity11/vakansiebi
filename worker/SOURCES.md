@@ -16,6 +16,21 @@ Active read-only public HTML adapters, verified with live probes on 2026-09-07:
 | jobtl        | https://job.tl/?ajax=jobs&page=1&city=All (JSON with an HTML fragment)                      | schema.org JobPosting whose URL carries the same id + `.description` block                            | First page + rotating pages; disabled by default                         |
 | joob         | https://joob.ge/ + WordPress day archives `/YYYY/MM/DD/`                                    | Body `postid-N` must equal the requested `?p=N`; BlogPosting date/section + labelled Elementor fields | Home page, then today, yesterday and the day before; disabled by default |
 | unijobs      | https://unijobs.ge/wp-json/wp/v2/job_listing (public WordPress REST)                        | Same API by id; only `publish`, not filled                                                            | One page of 100, newest first; disabled by default                       |
+| liberty      | https://www.libertybank.ge/ka/kariera/mimdinare-vakansiebi                                  | Matching canonical ID; official description, region, schedule and deadline                            | One inline JSON list; disabled by default                               |
+
+Liberty Bank (2026-10-29): the public Georgian careers page supplies 60 vacancy IDs in
+`window.vacancies` JSON. The adapter parses that data without executing JavaScript and
+fetches details only on the bank's own two hostnames. Both the listing ID and the detail
+canonical must match. The full description and application contact are retained; no
+third-party employer attachment is fetched, including during manual refreshes. Robots
+allows these public pages; the shared request delay and response limits apply.
+
+The source provides a deadline, but no publication date. Its source-specific import rule
+accepts an otherwise verified official vacancy with a valid, unexpired deadline and keeps
+`datePosted` empty. It does not treat discovery as publication or relax the five-day rule
+for other sources. Existing IDs remain immutable under the current new-only policy;
+deadline extensions on the same ID require a separate refresh. Migration 065 adds the
+source with discovery and publication disabled. No production activation is implied.
 
 `www.hr.gov.ge` redirects to the home page even for detail URLs. The public-service adapter uses the canonical `vacancy.hr.gov.ge` host directly. Myjobs was investigated but its vacancy listing did not expose usable server-rendered vacancy links; it is not advertised as a supported source.
 

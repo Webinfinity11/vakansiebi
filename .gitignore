@@ -41,5 +41,8 @@ next-env.d.ts
 *.tsbuildinfo
 /docs/prototype-config/
 /.next-production/
+/.next-editorial/
 /.claude/settings.local.json
 /public/vendor/maplibre/
+
+.next-release/

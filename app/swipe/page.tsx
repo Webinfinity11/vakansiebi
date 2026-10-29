@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { siteName } from '@/lib/site-brand';
 import { Suspense } from 'react';
 import { PublicHeader } from '../public-header';
 import { SwipeDeck } from './swipe-deck';
@@ -6,7 +7,7 @@ import './swipe.css';
 
 // A personal way through the same list; the list itself is what search engines index.
 export const metadata: Metadata = {
-  title: 'Swipe — JOBX',
+  title: `ვაკანსიების არჩევა Swipe-ით — ${siteName}`,
   robots: { index: false, follow: true },
 };
 

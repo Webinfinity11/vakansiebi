@@ -3,6 +3,12 @@
   margin: 0 auto;
   padding: 60px 28px;
 }
+.blog-date {
+  display: block;
+  margin: 12px 0;
+  color: var(--ds-ink-3);
+  font-size: 13px;
+}
 .blog-intro {
   margin-bottom: 36px;
 }

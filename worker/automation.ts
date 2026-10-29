@@ -9,7 +9,7 @@ import {
 import { externalId, fingerprint, tbilisiDate } from './adapters';
 import { auditChange } from './importer';
 import { db, transaction } from '../lib/server/db';
-import { importDateReason } from './new-only';
+import { importVacancyDateReason } from './new-only';
 import { safeLogoUrl } from '../lib/vacancy-media';
 import {
   indexingTransition,
@@ -129,7 +129,7 @@ export async function reconcileJob(
   const candidate = fresh
     .map((i) => publishable(i.raw, i.source_id, i.url))
     .find(
-      (v) => v && (job.status !== 'pending' || !importDateReason(v.datePosted)),
+      (v) => v && (job.status !== 'pending' || !importVacancyDateReason(v)),
     );
   let status = job.status;
   let reason: string | null = null;

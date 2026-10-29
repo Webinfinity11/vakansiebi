@@ -116,7 +116,7 @@ export function EmployersPanel() {
           {state.error}
         </p>
       )}
-      {message && <p role="status">{message}</p>}
+      {message && <output>{message}</output>}
       {!!pages.length && (
         <details className="raw-details">
           <summary>

@@ -1,3 +1,6 @@
+import { libertyVacancyId } from './liberty-url';
+import type { Vacancy } from '../lib/types';
+
 /* Days before today that still count as new. A posting can wait a few days when runs are
    missed (GitHub delays or drops scheduled runs), so the window covers more than one gap. */
 export const IMPORT_WINDOW_DAYS = 4;
@@ -31,6 +34,27 @@ export function importDateReason(
     return 'undated';
   const age = (Date.parse(today + 'T00:00:00Z') - at) / 86400000;
   return age >= 0 && age <= IMPORT_WINDOW_DAYS ? null : 'outside_window';
+}
+
+/** Liberty publishes deadlines but no publication dates. Its current official vacancies
+ * may enter once with an unexpired, valid deadline; the date remains honestly unknown.
+ * Every dated posting and every other source retains the existing five-day import rule. */
+export function importVacancyDateReason(
+  vacancy: Pick<Vacancy, 'datePosted' | 'deadline' | 'source' | 'url'>,
+  today = tbilisiToday(),
+) {
+  if (
+    !vacancy.datePosted &&
+    vacancy.source === 'libertybank.ge' &&
+    libertyVacancyId(vacancy.url) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(vacancy.deadline) &&
+    Number.isFinite(Date.parse(vacancy.deadline + 'T00:00:00Z')) &&
+    new Date(vacancy.deadline + 'T00:00:00Z').toISOString().slice(0, 10) ===
+      vacancy.deadline &&
+    vacancy.deadline >= today
+  )
+    return null;
+  return importDateReason(vacancy.datePosted, today);
 }
 
 const windowStartDateSql = `((now() AT TIME ZONE 'Asia/Tbilisi')::date - ${IMPORT_WINDOW_DAYS})`;

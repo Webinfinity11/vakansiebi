@@ -1,0 +1,99 @@
+/* Same disclosure treatment as the business page, using the shared type/spacing scale. */
+.help-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+.help-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 48px;
+  align-items: start;
+}
+.help-item {
+  padding: 0;
+  border-bottom: 1px solid var(--ds-line);
+}
+.help-item:first-child {
+  border-top: 1px solid var(--ds-line);
+}
+.help-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  list-style: none;
+  padding: 20px 0;
+  font-size: var(--ds-text-md);
+  font-weight: 600;
+  line-height: 1.7;
+  cursor: pointer;
+}
+.help-item summary::-webkit-details-marker {
+  display: none;
+}
+.help-item summary::marker {
+  content: '';
+}
+.help-item summary svg {
+  flex: none;
+  color: var(--ds-ink-3);
+  transition: transform 160ms ease;
+}
+.help-item[open] summary svg {
+  transform: rotate(180deg);
+}
+.help-item p {
+  margin: 0;
+  padding: 0 28px 22px 0;
+  font-size: var(--ds-text-md);
+  line-height: 1.9;
+  color: var(--ds-ink-2);
+}
+.help-guides {
+  padding-top: 4px;
+}
+.help-guides h2 {
+  margin: 0 0 16px;
+  font-size: var(--ds-text-section);
+  line-height: 1.7;
+  font-weight: 600;
+}
+.help-guides p {
+  margin: 0;
+}
+.help-guides a {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 0;
+  font-size: var(--ds-text-sm);
+  line-height: 1.8;
+  text-decoration: none;
+}
+.help-guides svg {
+  flex: none;
+  margin-top: 4px;
+}
+@media (max-width: 800px) {
+  .help-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .help-actions {
+    margin-bottom: 24px;
+  }
+  .help-item summary {
+    padding-block: 18px;
+  }
+  .help-item p {
+    padding-right: 0;
+  }
+  .help-guides {
+    border-top: 1px solid var(--ds-line);
+    padding-top: 24px;
+  }
+}

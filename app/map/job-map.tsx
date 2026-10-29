@@ -17,6 +17,7 @@ import {
   Search,
   TrainFront,
   Footprints,
+  LocateFixed,
   X,
 } from 'lucide-react';
 import { trackAction } from '@/lib/analytics-client';
@@ -33,6 +34,7 @@ import {
   type MetroStation,
 } from '@/lib/tbilisi-metro';
 import { distanceMeters, formatWalk, walkMinutes } from '@/lib/geo';
+import { filterMapVacancies, type NearbyPoint } from '@/lib/map-search';
 import { nearestMetro, vacanciesNearStation } from '@/lib/map-metro';
 import {
   addMetroLines,
@@ -137,7 +139,12 @@ export function JobMap() {
   const [all, setAll] = useState<MapVacancy[] | null>(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [query, setQuery] = useState('');
+  const query = params.get('q') || '';
+  const area = params.get('place') || '';
+  const [near, setNear] = useState<NearbyPoint | null>(null);
+  const [radius, setRadius] = useState(1000);
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState('');
   const [category, setCategory] = useState('');
   const [paid, setPaid] = useState(false);
   const [bounds, setBounds] = useState<Bounds>(null);
@@ -165,12 +172,22 @@ export function JobMap() {
     y: number;
     id: string;
   } | null>(null);
+  const changeSearch = (key: 'q' | 'place', value: string) => {
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set(key, value.slice(0, 120));
+    else url.searchParams.delete(key);
+    window.history.replaceState(null, '', url.pathname + url.search);
+    setGroup(null);
+    setActive(null);
+    setDetail(null);
+  };
   useEffect(() => {
     list.current?.scrollTo({ top: 0 });
   }, [group, station]);
   const pickStation = useCallback((slug: string) => {
     const url = new URL(window.location.href);
     if (stationBySlug(slug)) {
+      setNear(null);
       url.searchParams.set('station', slug);
       trackAction('metro_station');
     } else {
@@ -213,15 +230,16 @@ export function JobMap() {
   }, [attempt]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const matches = (all ?? []).filter(
-      (v) =>
-        (!q || `${v.title} ${v.company}`.toLowerCase().includes(q)) &&
-        (!category || v.category === category) &&
-        (!paid || !!v.salary),
-    );
+    const matches = filterMapVacancies(all ?? [], {
+      query,
+      area,
+      category,
+      paid,
+      near,
+      radius,
+    });
     return station ? vacanciesNearStation(matches, station, walk) : matches;
-  }, [all, query, category, paid, station, walk]);
+  }, [all, query, area, category, paid, near, radius, station, walk]);
   const categories = useMemo(() => {
     const count = new Map<string, number>();
     for (const v of all ?? [])
@@ -355,7 +373,12 @@ export function JobMap() {
       const locate = new maplibre.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
       });
-      locate.on('geolocate', () => trackAction('map_locate'));
+      locate.on('geolocate', (event) => {
+        pickStation('');
+        setNear({ lat: event.coords.latitude, lon: event.coords.longitude });
+        setLocationError('');
+        trackAction('map_locate');
+      });
       m.addControl(locate, 'bottom-right');
       m.on('load', () => {
         // Street and place names in Georgian where OpenStreetMap has them.
@@ -628,6 +651,45 @@ export function JobMap() {
   }, [ready, station, walk]);
 
   useEffect(() => {
+    if (!ready || !map.current || !near) return;
+    const lat = radius / 111195;
+    const lon = lat / Math.cos((near.lat * Math.PI) / 180);
+    map.current.fitBounds(
+      [
+        [near.lon - lon, near.lat - lat],
+        [near.lon + lon, near.lat + lat],
+      ],
+      { padding: 45, maxZoom: 16 },
+    );
+  }, [ready, near, radius]);
+
+  useEffect(() => {
+    if (
+      !ready ||
+      !map.current ||
+      !area.trim() ||
+      near ||
+      station ||
+      !filtered.length
+    )
+      return;
+    const points = filtered.flatMap((v) => v.places);
+    map.current.fitBounds(
+      [
+        [
+          Math.min(...points.map((p) => p[1])),
+          Math.min(...points.map((p) => p[0])),
+        ],
+        [
+          Math.max(...points.map((p) => p[1])),
+          Math.max(...points.map((p) => p[0])),
+        ],
+      ],
+      { padding: 45, maxZoom: 16 },
+    );
+  }, [ready, area, filtered, near, station]);
+
+  useEffect(() => {
     if (!ready) return;
     void (map.current?.getSource('jobs') as GeoJSONSource | undefined)?.setData(
       features(filtered),
@@ -683,12 +745,54 @@ export function JobMap() {
   const total = filtered.length;
   // A changed area/filter starts a fresh list; opening a detail preserves pagination.
   const shownLimit = pagination?.list === listed ? pagination.limit : listLimit;
-  const hasFilters = !!(query.trim() || category || paid || station || group);
+  const hasFilters = !!(
+    query.trim() ||
+    area.trim() ||
+    near ||
+    category ||
+    paid ||
+    station ||
+    group
+  );
   const clearFilters = () => {
-    setQuery('');
+    changeSearch('q', '');
+    changeSearch('place', '');
+    setNear(null);
+    setLocationError('');
     setCategory('');
     setPaid(false);
     pickStation('');
+  };
+  const locateNearby = () => {
+    if (near) {
+      setNear(null);
+      return;
+    }
+    if (locating) return;
+    if (!navigator.geolocation) {
+      setLocationError('მდებარეობა მიუწვდომელია. ჩაწერე უბანი ან მისამართი.');
+      return;
+    }
+    setLocating(true);
+    setLocationError('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        pickStation('');
+        setNear({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        });
+        setLocating(false);
+        trackAction('map_locate');
+      },
+      () => {
+        setLocating(false);
+        setLocationError(
+          'მდებარეობა ვერ განისაზღვრა. დაუშვი მდებარეობაზე წვდომა ან ჩაწერე მისამართი.',
+        );
+      },
+      { timeout: 10000, maximumAge: 60000 },
+    );
   };
   return (
     <div className="job-map" data-detail={!!opened}>
@@ -714,14 +818,51 @@ export function JobMap() {
             aria-label={ui('პოზიცია ან კომპანია')}
             value={query}
             placeholder={ui('პოზიცია ან კომპანია')}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => changeSearch('q', e.target.value)}
             // Counted once a search is left behind, not on every keystroke.
             onBlur={(e) => {
               if (e.target.value.trim()) trackAction('map_search');
             }}
           />
         </label>
+        <label className="job-map-search">
+          <MapPin size={16} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label={ui('უბანი ან მისამართი')}
+            placeholder={ui('უბანი ან მისამართი')}
+            value={area}
+            onChange={(e) => changeSearch('place', e.target.value)}
+          />
+        </label>
         <fieldset className="job-map-chips" aria-label={ui('ფილტრები')}>
+          <button
+            type="button"
+            className="ds-chip"
+            aria-pressed={!!near}
+            disabled={locating}
+            onClick={locateNearby}
+          >
+            <LocateFixed aria-hidden="true" />
+            {ui(locating ? 'მდებარეობა იძებნება…' : 'ჩემთან ახლოს')}
+          </button>
+          {near &&
+            [500, 1000, 3000].map((meters) => (
+              <button
+                key={meters}
+                type="button"
+                className="ds-chip"
+                aria-pressed={radius === meters}
+                onClick={() => {
+                  setGroup(null);
+                  setRadius(meters);
+                }}
+              >
+                {ui(
+                  meters === 500 ? '500 მ' : meters === 1000 ? '1 კმ' : '3 კმ',
+                )}
+              </button>
+            ))}
           {hasFilters && (
             <button type="button" className="ds-chip" onClick={clearFilters}>
               <X aria-hidden="true" />
@@ -757,6 +898,7 @@ export function JobMap() {
               aria-pressed={city === name}
               onClick={() => {
                 pickStation('');
+                setNear(null);
                 setCity(name);
                 trackAction('map_city');
                 map.current?.easeTo({ center, zoom });
@@ -767,6 +909,16 @@ export function JobMap() {
             </button>
           ))}
         </fieldset>
+        {near && (
+          <small className="job-map-location-note">
+            {ui('მანძილი პირდაპირი ხაზითაა დათვლილი.')}
+          </small>
+        )}
+        {locationError && (
+          <p className="job-map-location-note" role="alert">
+            {ui(locationError)}
+          </p>
+        )}
       </div>
 
       <div className="job-map-body">

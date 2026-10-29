@@ -1,4 +1,5 @@
 import { db } from './db';
+import { workplaceDistricts } from '../map-address';
 
 export type MapVacancy = {
   id: string;
@@ -13,13 +14,15 @@ export type MapVacancy = {
   datePosted: string;
   /** One or more precise workplaces: [lat, lon, label]. */
   places: [number, number, string][];
+  /** Districts explicitly supplied alongside a workplace, keyed by its address. */
+  placeDistricts?: Record<string, string>;
 };
 
 /* Every published vacancy with at least one precisely placed workplace. Small enough to send
    whole — a few thousand rows — so the map clusters and filters in the browser without a
    request per pan. Merged duplicates are left out: the canonical record carries the pin. */
 export async function mapVacancies(): Promise<MapVacancy[]> {
-  const { rows } = await db().query<MapVacancy>(
+  const { rows } = await db().query<MapVacancy & { addressText: string }>(
     `SELECT j.id::text AS id,
        j.published->>'title' AS title,
        coalesce(j.published->>'company', '') AS company,
@@ -28,6 +31,7 @@ export async function mapVacancies(): Promise<MapVacancy[]> {
        coalesce(j.published->>'logoUrl', '') AS "logoUrl",
        coalesce(j.published->>'category', '') AS category,
        coalesce(j.published->>'city', '') AS city,
+       coalesce((SELECT c.source FROM job_place_checks c WHERE c.job_id=j.id), '') AS "addressText",
        (j.placement_tier <> 'standard' AND j.placement_expires_at > now()) AS premium,
        coalesce(j.published->>'datePosted', j.published_at::date::text, '') AS "datePosted",
        json_agg(json_build_array(p.lat, p.lon, p.label) ORDER BY p.query) AS places
@@ -43,5 +47,8 @@ export async function mapVacancies(): Promise<MapVacancy[]> {
      ORDER BY premium DESC, j.published_at DESC NULLS LAST
      LIMIT 5000`,
   );
-  return rows;
+  return rows.map(({ addressText, ...vacancy }) => ({
+    ...vacancy,
+    placeDistricts: workplaceDistricts(addressText, vacancy.city),
+  }));
 }

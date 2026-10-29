@@ -1,18 +1,10 @@
 'use client';
-import {
-  ChevronDown,
-  Download,
-  FileText,
-  Mail,
-  Phone,
-  RefreshCw,
-  X,
-} from 'lucide-react';
+import { ChevronDown, FileText, Mail, Phone, RefreshCw } from 'lucide-react';
 import { SkeletonRows } from '../skeleton';
 import { useEffect, useState } from 'react';
 import { adminTime } from '@/lib/admin-format';
-import { downloadCv, type Cv } from '@/lib/cv';
-import { CvSheet } from '../cv/cv-builder';
+import { type Cv } from '@/lib/cv';
+import { CvDialog } from './cv-dialog';
 import '../cv.css';
 import { placementLabels, type PlacementTier } from '@/lib/placement';
 import {
@@ -140,20 +132,6 @@ export function ContactMix({
 }
 
 /* A week against the week before it, written out with its sign so it never rests on colour. */
-function WeekChange({ now, before }: { now: number; before: number }) {
-  const diff = now - before;
-  return (
-    <small className="week-change">
-      7 დღე: {whole.format(now)}
-      {diff !== 0 && (
-        <span className={diff > 0 ? 'is-up' : 'is-down'}>
-          {diff > 0 ? '+' : '−'}
-          {whole.format(Math.abs(diff))}
-        </span>
-      )}
-    </small>
-  );
-}
 const pressNames: Record<ResumeContact['kinds'][number]['kind'], string> = {
   cv: 'CV-ის ღილაკი',
   call: 'დარეკვა',
@@ -176,12 +154,18 @@ function ResumeContacts({ people }: { people: ResumeContact[] }) {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw Error(body.error || 'რეზიუმე ვერ ჩაიტვირთა');
-      setOpen({ id, cv: body.cv });
+      setOpen((current) =>
+        current?.id === id ? { id, cv: body.cv } : current,
+      );
     } catch (e) {
-      setOpen({
-        id,
-        error: e instanceof Error ? e.message : 'რეზიუმე ვერ ჩაიტვირთა',
-      });
+      setOpen((current) =>
+        current?.id === id
+          ? {
+              id,
+              error: e instanceof Error ? e.message : 'რეზიუმე ვერ ჩაიტვირთა',
+            }
+          : current,
+      );
     }
   }
   return (
@@ -248,39 +232,12 @@ function ResumeContacts({ people }: { people: ResumeContact[] }) {
           ))}
         </ul>
       )}
-      {open && (
-        <div className="resumes-preview ds-appear">
-          <div className="resumes-preview-actions">
-            {open.cv && (
-              <button
-                type="button"
-                className="ds-btn ds-btn--primary ds-btn--sm"
-                onClick={() => open.cv && downloadCv(open.cv.fullName)}
-              >
-                <Download size={16} aria-hidden="true" />
-                PDF-ად ჩამოტვირთვა
-              </button>
-            )}
-            <button
-              type="button"
-              className="ds-btn ds-btn--secondary ds-btn--sm"
-              onClick={() => setOpen(null)}
-            >
-              <X size={16} aria-hidden="true" />
-              დახურვა
-            </button>
-          </div>
-          {open.error ? (
-            <p role="alert">{open.error}</p>
-          ) : !open.cv ? (
-            <SkeletonRows rows={4} block label="რეზიუმე იტვირთება" />
-          ) : (
-            <div className="resumes-sheet">
-              <CvSheet cv={open.cv} />
-            </div>
-          )}
-        </div>
-      )}
+      <CvDialog
+        open={!!open}
+        onClose={() => setOpen(null)}
+        cv={open?.cv}
+        error={open?.error}
+      />
     </div>
   );
 }
@@ -530,45 +487,11 @@ const statusNames: Record<string, string> = {
   merged: 'გაერთიანებული',
 };
 
-function Sparkline({ days }: { days: VacancyDay[] }) {
-  const values = days.map((d) => d.view);
-  const top = Math.max(1, ...values);
-  if (!values.some(Boolean)) return <span className="muted">—</span>;
-  const points = values
-    .map(
-      (v, i) =>
-        `${((i / (values.length - 1)) * 72).toFixed(1)},${(19 - (v / top) * 17).toFixed(1)}`,
-    )
-    .join(' ');
-  return (
-    <svg
-      className="vacancy-spark"
-      viewBox="0 0 72 20"
-      width="72"
-      height="20"
-      /* The totals beside it are the readable form; the line only shows the shape. */
-      aria-hidden="true"
-    >
-      <polyline
-        points={points}
-        fill="none"
-        style={{ stroke: 'var(--ds-accent)' }}
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-const week = (days: VacancyDay[], pick: (d: VacancyDay) => number) => ({
-  now: sum(days.slice(-7), pick),
-  before: sum(days.slice(-14, -7), pick),
-});
 type SortKey = 'view' | 'contact' | 'rate';
 const sortNames: Record<SortKey, string> = {
   view: 'ნახვები',
-  contact: 'კონტაქტი',
-  rate: 'კონვერსია',
+  contact: 'დაჭერები',
+  rate: 'დაჭერა / ნახვა',
 };
 const rateOf = (r: Performance) =>
   r.total.view >= enoughViews ? contacts(r.total) / r.total.view : -1;
@@ -613,6 +536,11 @@ export function SubmissionPerformance({
   const [error, setError] = useState('');
   const [version, setVersion] = useState(0);
   const [sortBy, setSortBy] = useState<SortKey>('view');
+  const [period, setPeriod] = useState<'all' | '7' | '30'>('30');
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState('all');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     const controller = new AbortController();
     void fetch('/api/admin/analytics/submissions', {
@@ -624,9 +552,13 @@ export function SubmissionPerformance({
         if (!response.ok) throw Error(body.error || 'სტატისტიკა ვერ ჩაიტვირთა');
         setRows(body.vacancies);
         setError('');
+        setLoading(false);
       })
       .catch((e) => {
-        if (e.name !== 'AbortError') setError(e.message);
+        if (e.name !== 'AbortError') {
+          setError(e.message);
+          setLoading(false);
+        }
       });
     return () => controller.abort();
   }, [version]);
@@ -635,230 +567,283 @@ export function SubmissionPerformance({
     contact: (r: Performance) => contacts(r.total),
     rate: rateOf,
   }[sortBy];
-  const sorted = [...(rows ?? [])].sort(
-    (a, b) =>
-      Number(b.status === 'published') - Number(a.status === 'published') ||
-      pick(b) - pick(a) ||
-      b.total.view - a.total.view,
-  );
-  /* The headline numbers are sums of the rows below, so the two always agree. */
+  const sorted = (rows ?? [])
+    .filter(
+      (row) =>
+        (status === 'all' || row.status === status) &&
+        `${row.title} ${row.company}`
+          .toLocaleLowerCase()
+          .includes(query.trim().toLocaleLowerCase()),
+    )
+    .map((row) => ({
+      ...row,
+      total:
+        period === 'all'
+          ? row.total
+          : (Object.fromEntries(
+              (['view', 'save', ...contactKinds] as const).map((kind) => [
+                kind,
+                row.series
+                  .slice(-Number(period))
+                  .reduce((n, day) => n + day[kind], 0),
+              ]),
+            ) as Record<VacancyEventKind, number>),
+    }))
+    .sort((a, b) => pick(b) - pick(a) || b.total.view - a.total.view);
   const totals = Object.fromEntries(
     (['view', 'save', ...contactKinds] as const).map((kind) => [
       kind,
-      sorted.reduce((total, r) => total + r.total[kind], 0),
+      sorted.reduce((n, row) => n + row.total[kind], 0),
     ]),
   ) as Record<VacancyEventKind, number>;
   const reached = contacts(totals);
-  const active = sorted.filter((r) => r.status === 'published').length;
-  const weekOf = (fn: (d: VacancyDay) => number) =>
-    sorted.reduce(
-      (acc, r) => {
-        const w = week(r.series, fn);
-        return { now: acc.now + w.now, before: acc.before + w.before };
-      },
-      { now: 0, before: 0 },
-    );
-  const viewWeek = weekOf((d) => d.view);
-  const contactWeek = weekOf((d) => contacts(d));
-  const people = sorted.reduce((total, r) => total + r.people, 0);
+  const pages = Math.max(1, Math.ceil(sorted.length / 20));
+  const visiblePage = Math.min(page, pages);
+  const showing = sorted.slice((visiblePage - 1) * 20, visiblePage * 20);
   return (
     <section
-      className="reports-section vacancy-performance"
-      aria-label="ჩვენი ვაკანსიების ეფექტურობა"
+      className="reports-section vacancy-performance performance-clear"
+      aria-label="ვაკანსიების შედეგები"
     >
-      <div className="reports-heading">
-        <h2>ეფექტურობა</h2>
-        <span className="vacancy-performance-note">
-          მხოლოდ ნამდვილი, საიტზე გამოქვეყნებული განცხადებები; ტესტები არ
-          ითვლება
-        </span>
+      <div className="performance-toolbar">
+        <fieldset className="admin-chips">
+          <legend className="sr-only">სტატისტიკის პერიოდი</legend>
+          {(
+            [
+              ['7', '7 დღე'],
+              ['30', '30 დღე'],
+              ['all', 'მთელი პერიოდი'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              type="button"
+              key={value}
+              className="ds-chip"
+              aria-pressed={period === value}
+              onClick={() => {
+                setPeriod(value);
+                setPage(1);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </fieldset>
         <button
           type="button"
-          className="ds-btn ds-btn--secondary"
-          onClick={() => setVersion((n) => n + 1)}
+          className="ds-btn ds-btn--secondary ds-btn--sm"
+          disabled={loading}
+          onClick={() => {
+            setLoading(true);
+            setVersion((n) => n + 1);
+          }}
         >
-          <RefreshCw aria-hidden="true" />
+          <RefreshCw size={15} />
           განახლება
         </button>
       </div>
+      <p className="performance-scope">
+        JOBX-ზე დამატებული და ერთხელ მაინც გამოქვეყნებული ბოლო 200 განცხადება.
+        ტესტები გამორიცხულია.{' '}
+        {period === 'all'
+          ? 'მონაცემები ტრეკინგის დაწყებიდან.'
+          : 'თბილისის კალენდარული დღეები, დღევანდელის ჩათვლით.'}
+      </p>
       {error && <p role="alert">{error}</p>}
-      {!rows && !error && (
-        <SkeletonRows rows={2} block label="სტატისტიკა იტვირთება" />
+      {loading && !rows && (
+        <SkeletonRows rows={4} block label="შედეგები იტვირთება" />
       )}
-      {rows && !rows.length && <p>ფორმით გაგზავნილი ვაკანსია ჯერ არ არის.</p>}
-      {!!sorted.length && (
+      {rows && (
         <>
           <dl className="vacancy-performance-kpis">
             <div>
-              <dt>აქტიური ახლა</dt>
-              <dd>{whole.format(active)}</dd>
-              <small>სულ {whole.format(sorted.length)} ვაკანსია</small>
+              <dt>ვაკანსიები</dt>
+              <dd>{whole.format(sorted.length)}</dd>
+              <small>
+                {sorted.filter((r) => r.status === 'published').length}{' '}
+                გამოქვეყნებულია
+              </small>
             </div>
             <div>
               <dt>ნახვები</dt>
               <dd>{whole.format(totals.view)}</dd>
-              <WeekChange {...viewWeek} />
+              <small>არჩეულ პერიოდში</small>
             </div>
             <div>
-              <dt>კონტაქტის მცდელობა</dt>
+              <dt>დაკავშირების ღილაკზე დაჭერა</dt>
               <dd>{whole.format(reached)}</dd>
-              <WeekChange {...contactWeek} />
+              <small>გაგზავნილ განაცხადს არ ნიშნავს</small>
             </div>
             <div>
-              <dt>კონვერსია</dt>
-              <dd>{conversion(totals.view, reached) ?? '—'}</dd>
-              <small>
-                {conversion(totals.view, reached)
-                  ? `შენახვა: ${whole.format(totals.save)} · JOBX CV: ${whole.format(people)}`
-                  : `${enoughViews} ნახვამდე არ ითვლება`}
-              </small>
+              <dt>შენახვა</dt>
+              <dd>{whole.format(totals.save)}</dd>
+              <small>ვაკანსიის შენახვის მოქმედებები</small>
             </div>
           </dl>
-          {reached > 0 && (
-            <section className="contact-mix-panel" aria-label="კონტაქტის გზები">
-              <h3>როგორ დაუკავშირდნენ</h3>
-              <ContactMix counts={totals} legend />
-            </section>
-          )}
-          <div className="vacancy-performance-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">ვაკანსია</th>
-                  <SortHeader by="view" sortBy={sortBy} onSort={setSortBy} />
-                  <th scope="col" className="spark-col">
-                    30 დღე
-                  </th>
-                  <SortHeader
-                    by="contact"
-                    sortBy={sortBy}
-                    onSort={setSortBy}
-                    className="mix-col"
-                  />
-                  <SortHeader by="rate" sortBy={sortBy} onSort={setSortBy} />
-                  <th scope="col" className="num">
-                    შენახვა
-                  </th>
-                  <th
-                    scope="col"
-                    className="num"
-                    title="JOBX-ზე შექმნილი CV-ით დაკავშირებული ადამიანები"
-                  >
-                    JOBX CV
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((r) => {
-                  const reach = contacts(r.total);
-                  const rate = conversion(r.total.view, reach);
-                  const views = week(r.series, (d) => d.view);
-                  return (
-                    <tr key={r.id}>
+          <div className="performance-filters">
+            <label>
+              <span className="sr-only">ვაკანსიის ან კომპანიის ძიება</span>
+              <input
+                className="ds-input"
+                type="search"
+                placeholder="ვაკანსია ან კომპანია"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </label>
+            <label>
+              <span className="sr-only">სტატუსი</span>
+              <select
+                className="ds-input"
+                value={status}
+                onChange={(e) => {
+                  setStatus(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="all">ყველა სტატუსი</option>
+                <option value="published">გამოქვეყნებული</option>
+                <option value="archived">არქივში</option>
+              </select>
+            </label>
+          </div>
+          {sorted.length ? (
+            <div className="vacancy-performance-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">ვაკანსია</th>
+                    <SortHeader by="view" sortBy={sortBy} onSort={setSortBy} />
+                    <SortHeader
+                      by="contact"
+                      sortBy={sortBy}
+                      onSort={setSortBy}
+                    />
+                    <SortHeader by="rate" sortBy={sortBy} onSort={setSortBy} />
+                    <th scope="col" className="num">
+                      შენახვა
+                    </th>
+                    <th scope="col">
+                      <span className="sr-only">დეტალები</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {showing.map((row) => (
+                    <tr key={row.id}>
                       <th scope="row">
                         <button
                           type="button"
                           className="text-button"
-                          onClick={() => onOpen(r.id)}
+                          onClick={() => onOpen(row.id)}
                         >
-                          {r.title || 'ვაკანსია'}
+                          {row.title || 'ვაკანსია'}
                         </button>
                         <span className="vacancy-row-meta">
-                          {r.company && <small>{r.company}</small>}
-                          <span className={`status status-${r.status}`}>
-                            {statusNames[r.status] ?? r.status}
+                          <small>{row.company}</small>
+                          <span className={`status status-${row.status}`}>
+                            {statusNames[row.status] ?? row.status}
                           </span>
-                          {r.status === 'published' &&
-                            r.tier !== 'standard' && (
+                          {row.status === 'published' &&
+                            row.tier !== 'standard' && (
                               <span className="ds-badge ds-badge--violet">
-                                {placementLabels[r.tier]}
+                                {placementLabels[row.tier]}
                               </span>
                             )}
                         </span>
                       </th>
                       <td data-label="ნახვები" className="num">
-                        <strong>{whole.format(r.total.view)}</strong>
-                        <WeekChange {...views} />
+                        {whole.format(row.total.view)}
                       </td>
-                      <td data-label="30 დღე" className="spark-col">
-                        <Sparkline days={r.series} />
-                      </td>
-                      <td data-label="კონტაქტი" className="mix-col">
-                        {reach ? (
-                          <>
-                            <span className="mix-head">
-                              <strong>{whole.format(reach)}</strong>
-                              <ContactMix counts={r.total} />
-                            </span>
-                            <span className="mix-counts">
-                              {contactColumns
-                                .filter(([kind]) => r.total[kind] > 0)
-                                .map(([kind, name]) => (
-                                  <span key={kind}>
-                                    <i
-                                      className={`contact-swatch viz-${kind}`}
-                                      aria-hidden="true"
-                                    />
-                                    {name} {whole.format(r.total[kind])}
-                                  </span>
-                                ))}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="mix-head">
-                            <strong className="muted">0</strong>
-                          </span>
-                        )}
+                      <td data-label="დაჭერები" className="num">
+                        {whole.format(contacts(row.total))}
                       </td>
                       <td
-                        data-label="კონვერსია"
-                        className={`num${rate ? '' : ' muted'}`}
-                        title={
-                          rate
-                            ? undefined
-                            : `${enoughViews} ნახვამდე პროცენტი ჯერ არაფერს ამბობს`
-                        }
+                        data-label="დაჭერა / ნახვა"
+                        className="num"
+                        title={`დაკავშირების ღილაკებზე დაჭერები / ნახვები × 100. მინიმუმ ${enoughViews} ნახვა.`}
                       >
-                        {rate ?? '—'}
+                        {conversion(row.total.view, contacts(row.total)) ?? '—'}
                       </td>
                       <td data-label="შენახვა" className="num">
-                        {whole.format(r.total.save)}
+                        {whole.format(row.total.save)}
                       </td>
-                      <td data-label="JOBX CV" className="num">
-                        {whole.format(r.people)}
+                      <td className="performance-details">
+                        <button
+                          type="button"
+                          className="ds-btn ds-btn--ghost ds-btn--sm"
+                          onClick={() => onOpen(row.id)}
+                          aria-label={`${row.title} — დეტალები`}
+                        >
+                          ნახვა
+                        </button>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row">სულ</th>
-                  <td data-label="ნახვები" className="num">
-                    {whole.format(totals.view)}
-                  </td>
-                  <td className="spark-col" aria-hidden="true" />
-                  <td data-label="კონტაქტი" className="mix-col">
-                    {whole.format(reached)}
-                  </td>
-                  <td data-label="კონვერსია" className="num">
-                    {conversion(totals.view, reached) ?? '—'}
-                  </td>
-                  <td data-label="შენახვა" className="num">
-                    {whole.format(totals.save)}
-                  </td>
-                  <td data-label="JOBX CV" className="num">
-                    {whole.format(people)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <p className="admin-analytics-note">
-            ღილაკზე დაჭერა ითვლება, გაგზავნა ან ზარი — არა: ფოსტა და ტელეფონი
-            მომხმარებლის მოწყობილობაზე იხსნება. „JOBX CV“ არის ის, ვისაც CV
-            JOBX-ზე აქვს შექმნილი და დაკავშირების ღილაკს დააჭირა.
-          </p>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty">
+              <h3>
+                {query || status !== 'all'
+                  ? 'შედეგი ვერ მოიძებნა'
+                  : 'ჯერ მონაცემი არ არის'}
+              </h3>
+              <p>
+                შედეგები გამოქვეყნებული ვაკანსიების ნახვის შემდეგ გამოჩნდება.
+              </p>
+            </div>
+          )}
+          {sorted.length > 20 && (
+            <div className="admin-pagination">
+              <span>
+                {(visiblePage - 1) * 20 + 1}–
+                {Math.min(visiblePage * 20, sorted.length)} / {sorted.length}
+              </span>
+              <button
+                type="button"
+                className="ds-btn ds-btn--secondary ds-btn--sm"
+                disabled={visiblePage === 1}
+                onClick={() => setPage(visiblePage - 1)}
+              >
+                წინა
+              </button>
+              <span>
+                {visiblePage} / {pages}
+              </span>
+              <button
+                type="button"
+                className="ds-btn ds-btn--secondary ds-btn--sm"
+                disabled={visiblePage === pages}
+                onClick={() => setPage(visiblePage + 1)}
+              >
+                შემდეგი
+              </button>
+            </div>
+          )}
+          <details className="performance-contact-details">
+            <summary>
+              <ChevronDown size={17} />
+              დაკავშირების გზები და მაჩვენებლების განმარტება
+            </summary>
+            {reached > 0 && <ContactMix counts={totals} legend />}
+            <p>
+              დაჭერა არის ტელეფონის, ელფოსტის, რეზიუმეს, განაცხადის ან
+              პირველწყაროს ბმულის გახსნა. დასრულებულ ზარსა და გაგზავნილ წერილს
+              აქ ვერ ვადასტურებთ. „დაჭერა / ნახვა“ ამ მოქმედებების რაოდენობისა
+              და ნახვების შეფარდებაა; ერთმა ადამიანმა შეიძლება რამდენჯერმე
+              დააჭიროს. უნიკალური ადამიანები და დასაქმების შედეგი ამ რიცხვებით
+              არ იზომება.
+            </p>
+            <p>
+              ვაკანსიის „ნახვა“ ხსნის მის დეტალებს, სადაც ხელმისაწვდომია სრული
+              ისტორია, ყოველდღიური ნახვები და დაკავშირების გზები.
+            </p>
+          </details>
         </>
       )}
     </section>

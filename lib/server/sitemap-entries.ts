@@ -1,5 +1,4 @@
 import { siteUrl } from '../seo';
-import { blogPosts } from '../blog';
 import { eligibleLandings, landingFor, landingPath } from '../seo-landing';
 import { vacancyPath } from '../vacancy-navigation';
 import { employerPages } from './employers';
@@ -14,7 +13,10 @@ export function pagesEntries() {
     '/map',
     '/business',
     '/blog',
-    ...blogPosts.map((post) => `/blog/${post.slug}`),
+    '/about',
+    '/help',
+    '/contact',
+    '/salaries',
   ].map((path) => ({
     url: `${siteUrl}${path}`,
   }));

@@ -827,68 +827,18 @@
 .board-shell.editorial-board.crafted-board.refined-board .discovery-hero h1 em {
   color: #90efff;
 }
-.refined-board .hero-heading > .hero-heading-track {
-  color: inherit;
+.board-shell.editorial-board.crafted-board.refined-board
+  .hero-copy:has(.hero-heading) {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
 }
-.refined-board .hero-heading-copy {
-  display: none;
-}
-/* Below 415px the home heading wraps to two lines while a list's name keeps one;
-   the name reserves the second line so the search box does not move under the
-   reader's finger as a typed search renames the list. */
-@media (max-width: 414px) {
-  .board-shell.editorial-board.crafted-board.refined-board
-    .discovery-hero
-    .hero-heading {
-    padding-top: 1.3em;
-  }
-}
-/* A list's name is one line on every screen, phones included: a heading of
-   several conditions wrapped to five lines there and pushed the search box off
-   the first screen. What does not fit scrolls (below). */
-@media all {
-  .board-shell.editorial-board.crafted-board.refined-board
-    .hero-copy:has(.hero-heading) {
-    min-width: 0;
-    max-width: 100%;
-  }
-  .board-shell.editorial-board.crafted-board.refined-board
-    .discovery-hero
-    .hero-heading {
-    max-width: 100%;
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: thin;
-  }
-  .refined-board .hero-heading-track {
-    display: flex;
-    width: max-content;
-    column-gap: var(--jobx-space-48px);
-  }
-  .refined-board .hero-heading-text {
-    flex-shrink: 0;
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .board-shell.editorial-board.crafted-board.refined-board
-    .discovery-hero
-    .hero-heading[data-overflow] {
-    overflow: hidden;
-  }
-  .refined-board .hero-heading[data-overflow] .hero-heading-track {
-    animation: hero-heading-scroll-right var(--heading-duration) linear infinite;
-  }
-  .refined-board .hero-heading[data-overflow] .hero-heading-copy {
-    display: block;
-  }
-}
-@keyframes hero-heading-scroll-right {
-  from {
-    transform: translateX(calc(-50% - var(--jobx-space-48px) / 2));
-  }
-  to {
-    transform: translateX(0);
-  }
+.board-shell.editorial-board.crafted-board.refined-board
+  .discovery-hero
+  .hero-heading {
+  max-width: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .refined-board .hero-brand-art {
   position: absolute;

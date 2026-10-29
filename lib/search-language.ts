@@ -332,6 +332,29 @@ export function searchMatchGroups(query: string): SearchGroup[] {
 export function searchGroups(query: string): string[][] {
   return searchMatchGroups(query).map((group) => group.all);
 }
+
+/** Literal prefix plus reviewed Latin/Georgian readings, without replacing an English name. */
+export function suggestionPrefixes(query: string): string[] {
+  const prefix = query
+    .normalize('NFKC')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  if (prefix.length < 2) return [];
+  const prefixes = new Set([prefix]);
+  if (/^[a-z ]+$/.test(prefix)) {
+    prefixes.add(georgianFromLatin(prefix));
+    const reading = latinGeorgianSearch(prefix);
+    if (reading) prefixes.add(reading);
+    if (prefix.length >= 3)
+      for (const group of roles)
+        if (
+          group.some((word) => /^[a-z]+$/.test(word) && word.startsWith(prefix))
+        )
+          prefixes.add(group[0]);
+  }
+  return [...prefixes];
+}
 // Bounded Damerau–Levenshtein: adjacent transpositions count as one edit.
 function distance(a: string, b: string) {
   const rows = Array.from({ length: a.length + 1 }, () =>

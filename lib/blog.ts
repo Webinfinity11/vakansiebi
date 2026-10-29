@@ -1,13 +1,17 @@
+import { blogGuides } from './blog-guides';
+
 export type BlogParagraph = {
   text: string;
 };
 export type BlogPost = {
+  publishedAt: string;
+  updatedAt?: string;
   slug: string;
   category: string;
   title: string;
   description: string;
   takeaway: string;
-  cover: { src: string; width: number; height: number; alt: string };
+  cover?: { src: string; width: number; height: number; alt: string };
   sections: {
     id: string;
     title: string;
@@ -25,8 +29,10 @@ export type BlogPost = {
 
 /** Static article content; editorial research records stay in docs/. */
 export const blogPosts: readonly BlogPost[] = [
+  ...blogGuides,
   {
     slug: 'dghiuri-anazghaureba-ra-gadaamotsmo',
+    publishedAt: '2026-10-25',
     category: 'ანაზღაურება და სამუშაო პირობები',
     title: 'სამუშაო დღიური ანაზღაურებით: რა გადაამოწმო დაწყებამდე',
     description:
@@ -131,6 +137,7 @@ export const blogPosts: readonly BlogPost[] = [
   },
   {
     slug: 'nakhevari-ganakveti-da-stsavla',
+    publishedAt: '2026-10-25',
     category: 'სამსახური და სწავლა',
     title: 'სამსახური ნახევარ განაკვეთზე: როგორ შეუთავსო სწავლას',
     description:

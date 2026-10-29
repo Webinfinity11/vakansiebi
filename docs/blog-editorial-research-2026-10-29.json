@@ -1,0 +1,102 @@
+{
+  "reviewedAt": "2026-10-29",
+  "scope": "Competitor blog formats and original Georgian career guides; no keyword-volume or ranking claims",
+  "competitors": [
+    {
+      "url": "https://www.blog.hr.ge/",
+      "observed": "Three visible recent article cards; dates, expert interview and employer-focused problem-led titles; job/company links.",
+      "apply": "Question-led titles, clear audience, relevant internal navigation. Interviews only with a real approved interview."
+    },
+    {
+      "url": "https://www.blog.hr.ge/tinatin-bonney-proactive-recruitment/",
+      "observed": "Named expert interview in Q&A format.",
+      "apply": "Format evidence only; no quotes or fabricated interview in JOBX."
+    },
+    {
+      "url": "https://www.insource.ge/ge/blog",
+      "observed": "Large dated archive of practical numbered articles about CVs, interviews, job search, negotiation and workplace skills.",
+      "apply": "Build useful topic clusters and checklists. Do not copy text, old trend claims or year-based predictions."
+    },
+    {
+      "url": "https://www.insource.ge/ge/node/893",
+      "observed": "Article link found in archive; full page timed out.",
+      "apply": "Not used as factual evidence."
+    },
+    {
+      "url": "https://awork.ge/blog",
+      "observed": "Not accessible during this review.",
+      "apply": "No claims about its blog functionality."
+    }
+  ],
+  "primaryEvidence": [
+    {
+      "url": "https://nationalcareers.service.gov.uk/careers-advice/cv-sections",
+      "supports": [
+        "Tailor CV to a role",
+        "Education, projects and volunteering for first jobs",
+        "Check contact information and grammar"
+      ],
+      "article": "reziume-gamotsdilebis-gareshe"
+    },
+    {
+      "url": "https://nationalcareers.service.gov.uk/careers-advice/interview-advice",
+      "supports": [
+        "Review job description, employer website and application",
+        "Prepare examples and questions",
+        "Confirm format and check online equipment"
+      ],
+      "article": "gasaubrebistvis-momzadeba"
+    },
+    {
+      "url": "https://developers.google.com/search/docs/appearance/structured-data/article",
+      "supports": [
+        "Accurate publication and modification dates in article structured data"
+      ]
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/tools-web-search",
+      "supports": [
+        "Responses API web_search, allowed_domains and action.sources"
+      ]
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/structured-outputs",
+      "supports": [
+        "Strict structured output via text.format and JSON schema"
+      ]
+    }
+  ],
+  "editorialDecisions": {
+    "language": "Natural Georgian; consistent რეზიუმე, no translated marketing slogans",
+    "publicSources": false,
+    "hypotheticalExamples": "Explicitly labelled პირობითი მაგალითი",
+    "publication": "Four weekly drafts by default; authenticated human review before publishing",
+    "noPromises": [
+      "No Google ranking guarantees",
+      "No invented salary or hiring statistics",
+      "No fabricated experts, interviews, quotes or vacancies"
+    ]
+  },
+  "implementation": [
+    "Original CV and interview guides",
+    "Dates in article metadata and public time elements",
+    "Private source evidence and editable drafts",
+    "About, Contact and Help pages",
+    "Salary comparisons with minimum eight comparable listings",
+    "Draft schedule and duplicate/lease protections"
+  ],
+  "publicationHistory": {
+    "existingArticles": "First publication confirmed by repository commit 8335211 on 2026-10-25; no exact time asserted",
+    "newStaticGuides": "Prepared locally on 2026-10-29. Confirm publication date on actual release if release is later."
+  },
+  "topics": [
+    "რეზიუმე გამოცდილების გარეშე",
+    "გასაუბრებისთვის მომზადება",
+    "რეზიუმეში უნარების აღწერა",
+    "პირველი სამსახური",
+    "სამუშაო შეთავაზებების შედარება",
+    "კარიერის შეცვლა",
+    "ონლაინ გასაუბრება",
+    "სტაჟირებისთვის განაცხადი"
+  ]
+}

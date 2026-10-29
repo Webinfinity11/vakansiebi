@@ -8,11 +8,13 @@ import { companyVacancyTitle } from './company-vacancy-title';
 import { vacancySegment } from './vacancy-navigation';
 import { salaryFacts } from './salary-summary';
 import { vacancySummary } from './vacancy-summary';
+import { siteName, siteAlternateNames } from './site-brand';
+import { invoiceContact } from './billing';
 
 export const siteUrl = 'https://jobx.ge';
-export const homeTitle = 'ვაკანსიები საქართველოში — სამსახურის ძებნა | JOBX';
+export const homeTitle = `${siteName} — ვაკანსიები საქართველოში`;
 export const homeDescription =
-  'ვაკანსიები თბილისში, ბათუმში, ქუთაისსა და სხვა ქალაქებში. მოძებნე სამსახური პროფესიის, ხელფასისა და გრაფიკის მიხედვით, დისტანციურადაც.';
+  'ვაკანსიები თბილისში, ბათუმში, ქუთაისსა და სხვა ქალაქებში. ჯობიქსზე მოძებნე სამსახური პროფესიის, ხელფასისა და გრაფიკის მიხედვით, დისტანციურადაც.';
 /* The picture a messenger shows for any page of the site, built by
    scripts/build-og-image.ts. Every page that writes its own openGraph block has
    to name it: a page-level block replaces the layout's, images and all, which is
@@ -382,8 +384,8 @@ export function siteIdentity() {
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
-      name: 'JOBX',
-      alternateName: 'jobx.ge',
+      name: siteName,
+      alternateName: siteAlternateNames,
       url: siteUrl + '/',
       inLanguage: 'ka-GE',
       potentialAction: {
@@ -398,10 +400,25 @@ export function siteIdentity() {
     {
       '@context': 'https://schema.org',
       '@type': 'Organization',
-      name: 'JOBX',
+      name: siteName,
+      alternateName: siteAlternateNames,
       url: siteUrl + '/',
       logo: siteUrl + '/brand/jobx-mark.png',
       areaServed: { '@type': 'Country', name: 'Georgia' },
+      contactPoint: [
+        {
+          '@type': 'ContactPoint',
+          telephone: invoiceContact.telephone,
+          contactType: 'sales',
+          availableLanguage: ['Georgian'],
+        },
+        {
+          '@type': 'ContactPoint',
+          email: invoiceContact.email,
+          contactType: 'billing support',
+          availableLanguage: ['Georgian'],
+        },
+      ],
     },
   ];
 }

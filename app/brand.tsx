@@ -22,11 +22,11 @@ export function Brand({ priority = false }: { priority?: boolean }) {
         )
           clearSearchPosition();
       }}
-      aria-label={ui('JOBX — მთავარი გვერდი')}
+      aria-label={ui('ჯობიქსი — მთავარი გვერდი')}
     >
       <Image
         src="/brand/jobx.png"
-        alt="JOBX"
+        alt={ui('ჯობიქსი (JOBX)')}
         width={180}
         height={60}
         sizes="(max-width: 360px) 132px, (max-width: 760px) 144px, 180px"

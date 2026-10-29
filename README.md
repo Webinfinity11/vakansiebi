@@ -158,11 +158,19 @@ The admin scraper limits control new-item batch size, run duration and additiona
 New-only collection replaces the earlier economical/full recheck modes. Migration
 `033_new_only_scraping.sql` retires the pre-switch backlog while retaining source IDs.
 Each new ID is downloaded once; only source publication dates within today and the
-previous two Tbilisi calendar days can create jobs. Completed IDs are not fetched again,
+previous four Tbilisi calendar days can create jobs. Completed IDs are not fetched again,
 including after expired jobs are purged. Retries for failed first imports are bounded.
 Stored deadlines control expiry without network rechecks. Scheduled description repairs
 and seven-day unverified archival are disabled. See `docs/new-only-scraping.md` for rollout
 and coverage limitations.
+
+The official Liberty Bank adapter reads only `libertybank.ge` / `www.libertybank.ge`
+Georgian careers pages. This board has no publication dates: a verified vacancy with a
+valid, unexpired deadline may be imported once while `datePosted` remains empty.
+Other sources keep the dated import window. Migration 065 registers Liberty disabled
+(`enabled`, `auto_enabled`, `auto_publish` are false); activation is a separate operation.
+`pnpm source:probe -- --source=liberty` checks the public list and one detail without
+database writes. The scraper workflow includes the source when it is subsequently enabled.
 
 The two government hosts are not in the matrix: `vacancy.hr.gov.ge` and `worknet.moh.gov.ge` both time out from every GitHub-hosted runner. They are collected from this Mac by `npm run worker:gov` (a terminal tab; one pass every 3 hours over hrgov and worknet, advisory locks keep it from overlapping the workflow). `scripts/install-local-gov-sources.sh` registers the same pass as a launchd agent, but macOS privacy protection blocks a launchd agent from reading a project under `~/Desktop`: either grant Full Disk Access to `/bin/zsh` or move the project, otherwise use the terminal tab. The install script checks this and says which applies. Overlapping workflows queue, and database locks also protect against a local worker. Three consecutive detail failures stop that source's batch, retaining the remaining queue. A job fails only when the source itself needs attention: the run threw, the listing shape or reported coverage changed, three consecutive detail failures aborted the batch, or at least three pages and half the batch failed. Individual transient page failures and quality holds are posted as Actions warnings, keep the job green and still advance the source's last successful check, because the backoff retries them on its own. Every result remains visible in the admin history and the step summary. Sources with auto_publish enabled validate, publish, update and archive automatically. Invalid records wait for source recovery without a manual-review flag. The scraper never sends messages.
 
@@ -340,6 +348,16 @@ References: [Resend idempotency](https://resend.com/docs/dashboard/emails/idempo
 
 English-dominant descriptions offer an explicitly labelled external Google Translate website link. Original text remains available; this is not an in-site or human-verified Georgian translation. No private CV data is sent to translation services.
 
+## Vacancy email subscriptions
+
+Apply `064_job_alerts.sql` before enabling `JOB_ALERTS_ENABLED=true` on the website. Alerts use the existing verified Resend sender, `RESEND_API_KEY`, `SESSION_SECRET` (at least 32 characters), `APP_URL=https://jobx.ge`, and `CRON_SECRET`. The form is hidden when sending is not configured. Run migrations before the single normal website release; environment-only changes require a redeploy.
+
+A reader explicitly requests alerts for the current search and confirms ownership of the email address. Confirmation links expire after 24 hours and require a button press; opening them does not activate a subscription. Signed unsubscribe links and mail-client one-click POSTs cancel the subscription and pending messages. Repeated confirmation requests are limited per address and per client.
+
+`/api/cron/job-alerts` runs at the existing daytime :17 schedule without a website build. Each confirmed search is checked at most daily, using the public search plan and its visibility, salary, city and duplicate-group rules. Each email contains up to 20 newly published matching jobs and a link to all results. Group keys already included in a digest are not included again. Empty digests are not sent. Preparing and sending use bounded batches and time budgets; monitor the age of due subscriptions and pending deliveries as adoption grows.
+
+`job_alert_deliveries` stores an immutable payload, a lease and an idempotency key. Retries reuse the same payload/key and stop after six attempts or a 23-hour delivery window. `sent` means the provider accepted the message, not inbox delivery. Inspect only aggregate statuses and error codes in routine monitoring; payloads contain private email addresses and signed links. Local integration tests use a mocked provider and an isolated test database.
+
 ## Automatic lifecycle
 
 See [automation rules](docs/automation.md). Migration 007 adds opt-in source publication and per-job automation state. Existing editorial overrides are preserved.
@@ -371,3 +389,50 @@ For immediate admin-to-GitHub dispatch, set server-only `GITHUB_ACTIONS_TOKEN` i
 Known city, category and profession filters use Latin query values (for example `?city=tbilisi` and `?q=mdzgholi`). The UI and database filters stay Georgian; arbitrary search text is preserved. Old Georgian filter URLs permanently redirect to the equivalent Latin URL, preserving pagination and other parameters. Employer URLs reserve old names before assigning transliterated slugs so a collision cannot take over another employer's old address. Vacancy identifiers remain unchanged; their existing canonical redirect resolves old titles to the new spelling.
 
 Automatic pagination requires a fresh downward user scroll near the end of the list. It adds one page at a time with at least 1.2 seconds between automatic requests; layout shifts and component rerenders do not request more pages. The load-more button remains available for manual loading and retries. Loading indicators do not insert temporary skeleton rows, and the footer is excluded from scroll anchoring.
+
+## Blog editorial automation
+
+The local implementation adds `/about`, `/contact`, `/help`, `/salaries` and
+profession salary pages, plus `/admin/blog` for reviewing generated drafts.
+Public articles do not expose research evidence or competitor links. The static
+articles remain available without the database feature being enabled.
+
+Before activation, apply migration `066_blog_editorial.sql`, configure the website
+with `BLOG_STORAGE_ENABLED=true`, and configure the separate `Blog drafts` workflow:
+repository variables `BLOG_AUTOMATION_ENABLED=true`, `BLOG_WEEKLY_POSTS=3` or `4`,
+`BLOG_AI_MODEL`; secrets `OPENAI_API_KEY` and `SCRAPER_DATABASE_URL`. The model must
+support Responses API web search and strict structured outputs. No model or key is
+silently selected. Generation makes at most three model requests per attempt;
+model token usage is retained with private research evidence. A slot permits at
+most two attempts (manual retry after failure), so retries can incur extra API cost.
+
+`pnpm exec tsx scripts/blog-generate.ts --dry-run` prints the schedule and boolean
+configuration checks without network calls or writes. Four slots run Monday,
+Tuesday, Thursday and Saturday at 10:00 Asia/Tbilisi; three slots omit Tuesday.
+Delayed runs are accepted only on the same local calendar day. Workflow dispatch
+observes the same schedule and cannot bypass the weekly limit. The database lease
+prevents duplicate or overlapping work for a slot; stale leases expire after
+30 minutes. Neither the script nor workflow publishes articles. The authenticated
+editor must review the sources and current text, tick the review box and publish.
+An automated editorial rejection is advisory and remains a draft for human review.
+
+Research uses allowlisted primary career services, then writing and editorial
+review run separately. Articles use rotating topic tracks, recent-title context
+and duplicate checks; a failed quality check skips the article rather than filling
+a quota. These checks reduce errors; human review remains necessary for Georgian
+wording, factual accuracy and duplication of ideas. Do not use this job for legal,
+medical, current salary or labour-market statistical claims.
+
+Evidence is private in `blog_articles.evidence` and exported to
+`docs/blog-automation/YYYY-MM-DD.json` (workflow artifact, 90-day retention).
+Do not copy these research notes into public pages. Published articles are served
+from the database without Git commits or website builds. `/sitemap-content.xml`
+refreshes hourly and lists published articles and sufficiently sampled salary pages.
+Unpublishing removes the article immediately from public routes; cached sitemap
+entries may remain until refresh. The first activation still requires the normal
+approved deployment and database migration. No production activation was performed
+while preparing this change.
+
+### Company workspace
+
+`/company` provides administrator-issued company access; `/admin/company-accounts` provisions accounts and assigns specific vacancies. Apply migration `067_company_portal.sql` and set `COMPANY_PORTAL_ENABLED=true` only when ready. Default is disabled. Temporary passwords must be changed on first login; password changes/reset and disabling revoke sessions. Accounts can edit their profile, submit and edit their own vacancies for moderation, and close them immediately. Existing scraped vacancies require explicit admin assignment; names alone never confer access. Imported pay/classification is preserved and remains editable by the admin. Sessions expire after 12 hours or two idle hours. No account emails are sent automatically.

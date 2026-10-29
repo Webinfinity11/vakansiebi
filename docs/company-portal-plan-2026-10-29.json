@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-29",
+  "status": "implementation planned after the SEO/blog batch passed checks",
+  "entrypoints": {
+    "company": "/company",
+    "admin": "/admin/company-accounts"
+  },
+  "accountProvisioning": "Admin creates a username for one explicitly selected company; one-time random temporary password; first sign-in must replace it. No self-registration.",
+  "access": "Server-side ownership checks on every profile/job read and write. Never infer ownership from a matching name, email or domain. Existing jobs require explicit admin assignment.",
+  "jobs": "Create through existing moderated submission pipeline. Edit a draft without replacing its currently published version until moderation. Close owned vacancies immediately; reopening returns them to moderation. No access to placement/payment controls or other companies.",
+  "profile": "Editable website, description and safe logo URL; company identity is fixed by the administrator.",
+  "sessions": "Opaque random session tokens; only token digests stored; secure HTTP-only SameSite cookies; reset/deactivation/password change invalidate sessions. Persistent per-network and per-username login limits.",
+  "verification": [
+    "Two-company isolation tests with guessed job IDs",
+    "First-login password gate",
+    "Reset and deactivation revoke existing sessions",
+    "CSRF/origin rejection",
+    "Concurrent revision conflicts",
+    "New submission idempotency and atomic ownership",
+    "Company edits remain subject to moderation",
+    "Desktop/mobile usability"
+  ],
+  "rollout": "Local only, migration 067 plus COMPANY_PORTAL_ENABLED; no production activation or deploy in this task.",
+  "references": [
+    "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html",
+    "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html"
+  ]
+}

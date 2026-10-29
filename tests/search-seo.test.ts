@@ -55,7 +55,7 @@ void test('reviewed profession conditions have distinct titles and canonical URL
   for (const [query, heading] of cases) {
     const seo = searchSeo(new URLSearchParams(query));
     assert.equal(seo.index, true);
-    assert.equal(seo.title, heading + ' | JOBX');
+    assert.equal(seo.title, heading + ' | ჯობიქსი');
     assert.equal(
       searchSeo(new URLSearchParams(seo.path.slice(2))).path,
       seo.path,

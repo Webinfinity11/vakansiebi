@@ -1,5 +1,6 @@
 import { UiText } from '@/app/ui-language';
 import type { Metadata } from 'next';
+import { siteName } from '@/lib/site-brand';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -20,9 +21,9 @@ import './business.css';
 
 export const dynamic = 'force-dynamic';
 
-const title = 'უფასო ვაკანსიის განთავსება — ბიზნესისთვის | JOBX';
+const title = `უფასო ვაკანსიის განთავსება — ბიზნესისთვის | ${siteName}`;
 const description =
-  'უფასო ვაკანსიის განთავსება JOBX-ზე რეგისტრაციის გარეშე. გამოაქვეყნე განცხადება, გააცანი შენი კომპანია კანდიდატებს და შეადარე სტანდარტული, VIP და პრემიუმ პირობები.';
+  'უფასო ვაკანსიის განთავსება ჯობიქსზე რეგისტრაციის გარეშე. გამოაქვეყნე განცხადება, გააცანი შენი კომპანია კანდიდატებს და შეადარე სტანდარტული, VIP და პრემიუმ პირობები.';
 export const metadata: Metadata = {
   title,
   description,
@@ -33,6 +34,7 @@ export const metadata: Metadata = {
     description,
     url: `${siteUrl}/business`,
     locale: 'ka_GE',
+    siteName,
     type: 'website',
     images: [shareImage],
   },
@@ -125,7 +127,7 @@ export default async function BusinessPage() {
         dangerouslySetInnerHTML={{
           __html: jsonLd(
             breadcrumbs([
-              { name: 'JOBX', path: '/' },
+              { name: siteName, path: '/' },
               { name: 'ბიზნესისთვის', path: '/business' },
             ]),
           ),

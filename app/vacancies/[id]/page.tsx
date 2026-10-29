@@ -2,6 +2,7 @@ import { ServerSiteFooter } from '../../server-site-footer';
 import { compactSalary } from '@/lib/vacancy-presentation';
 import { breadcrumbs, jobPosting, jsonLd, vacancyUrl } from '@/lib/seo';
 import type { Metadata } from 'next';
+import { siteName } from '@/lib/site-brand';
 import { notFound } from 'next/navigation';
 import { isAdmin } from '@/lib/server/auth';
 import { getVacancyPage } from '@/lib/server/vacancy-page';
@@ -40,7 +41,7 @@ async function load({ params, searchParams }: Props) {
 }
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { job, preview } = await load(props);
-  const title = `${job.title} — ${job.company} | JOBX`;
+  const title = `${job.title} — ${job.company} | ${siteName}`;
   /* The snippet names the position, then its facts, then the posting's own
      opening words up to ~160 characters. Facts alone ("company · city · pay")
      were the same for every opening one employer had in one city. */
@@ -75,7 +76,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       url: canonical,
       type: 'website',
       locale: 'ka_GE',
-      siteName: 'JOBX',
+      siteName,
     },
     twitter: { card: 'summary_large_image', title, description },
   };

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { jsonLd, shareImage, siteIdentity, siteUrl } from '@/lib/seo';
+import { siteName } from '@/lib/site-brand';
 import { searchSeo } from '@/lib/search-seo';
 import { cache, Suspense } from 'react';
 import { notFound, redirect, permanentRedirect } from 'next/navigation';
@@ -129,7 +130,7 @@ export async function generateMetadata({
       title,
       description,
       url: siteUrl + path,
-      siteName: 'JOBX',
+      siteName,
       locale: 'ka_GE',
       type: 'website',
       images: [shareImage],

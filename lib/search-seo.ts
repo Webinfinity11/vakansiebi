@@ -1,4 +1,5 @@
 import { homeDescription, homeTitle } from './seo';
+import { siteName } from './site-brand';
 import {
   landingDescription,
   landingFor,
@@ -28,12 +29,14 @@ export function searchSeo(params: URLSearchParams) {
   const named = landing
     ? landingHeading(landing)
     : searchHeading(readSearch(base));
-  const title = named ? `${named} | JOBX` : homeTitle;
+  const pageLabel = page > 1 ? ` — გვერდი ${page}` : '';
+  const title = named
+    ? `${named}${pageLabel} | ${siteName}`
+    : `${homeTitle}${pageLabel}`;
   return {
     path: '/' + (canonical.size ? '?' + canonical : ''),
     index: !base.size || !!landing,
-    title:
-      page > 1 ? title.replace(' | JOBX', ` — გვერდი ${page} | JOBX`) : title,
+    title,
     description: landing ? landingDescription(landing) : homeDescription,
   };
 }

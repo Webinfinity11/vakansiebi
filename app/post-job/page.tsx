@@ -1,12 +1,13 @@
 import { ServerSiteFooter } from '../server-site-footer';
 import type { Metadata } from 'next';
 import { shareImage } from '../../lib/seo';
+import { siteName } from '@/lib/site-brand';
 import { PublicHeader } from '../public-header';
 import { PostJobForm } from './post-job-form';
 import { placementTiers, type PlacementTier } from '@/lib/placement';
-const title = 'განცხადების დამატება — JOBX';
+const title = `განცხადების დამატება — ${siteName}`;
 const description =
-  'დაამატე ვაკანსია JOBX-ზე და იპოვე შენი გუნდის ახალი წევრი.';
+  'დაამატე ვაკანსია ჯობიქსზე და იპოვე შენი გუნდის ახალი წევრი.';
 // Not indexed, but employers share this link, so a messenger should name the page.
 export const metadata: Metadata = {
   title,
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
     title,
     description,
     url: 'https://jobx.ge/post-job',
-    siteName: 'JOBX',
+    siteName,
     locale: 'ka_GE',
     type: 'website',
     images: [shareImage],

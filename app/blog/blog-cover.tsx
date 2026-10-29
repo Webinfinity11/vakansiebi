@@ -11,6 +11,7 @@ export function BlogCover({
   decorative?: boolean;
   eager?: boolean;
 }) {
+  if (!cover) return null;
   return (
     <Image
       className="blog-cover-image"

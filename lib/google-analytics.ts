@@ -1,5 +1,6 @@
 import { landingFor, landingHeading } from './seo-landing';
 import { homeTitle } from './seo';
+import { siteName } from './site-brand';
 
 /** GA only measures public pages on the canonical production site. */
 export function analyticsPage(url: string, { includeCv = false } = {}) {
@@ -13,6 +14,8 @@ export function analyticsPage(url: string, { includeCv = false } = {}) {
       path !== '/companies' &&
       path !== '/business' &&
       path !== '/map' &&
+      !['/blog', '/about', '/help', '/contact', '/salaries'].includes(path) &&
+      !/^\/(blog|salaries)\/[a-z0-9-]+$/.test(path) &&
       !(includeCv && path === '/cv') &&
       !/^\/vacancies\/[^/]+$/.test(path) &&
       !/^\/companies\/[^/]+$/.test(path)
@@ -51,22 +54,23 @@ export function analyticsTitle(page: string, documentTitle: string) {
   const url = new URL(page);
   if (url.pathname !== '/') return documentTitle.trim();
   const landing = landingFor(url.searchParams);
-  return landing ? `${landingHeading(landing)} | JOBX` : homeTitle;
+  return landing ? `${landingHeading(landing)} | ${siteName}` : homeTitle;
 }
 
 /** Only used if a visit ends or metadata fails to arrive within five seconds. */
 export function analyticsFallbackTitle(page: string) {
   const path = new URL(page).pathname;
-  if (path.startsWith('/vacancies/')) return 'ვაკანსია | JOBX';
-  if (path.startsWith('/companies/')) return 'კომპანიის ვაკანსიები | JOBX';
+  if (path.startsWith('/vacancies/')) return `ვაკანსია | ${siteName}`;
+  if (path.startsWith('/companies/'))
+    return `კომპანიის ვაკანსიები | ${siteName}`;
   const titles: Record<string, string> = {
-    '/companies': 'კომპანიები და მათი აქტიური ვაკანსიები | JOBX',
-    '/post-job': 'განცხადების დამატება — JOBX',
-    '/business': 'უფასო ვაკანსიის განთავსება — ბიზნესისთვის | JOBX',
-    '/map': 'ვაკანსიები რუკაზე — JOBX',
-    '/cv': 'CV-ის შექმნა | JOBX',
+    '/companies': `კომპანიები და მათი აქტიური ვაკანსიები | ${siteName}`,
+    '/post-job': `განცხადების დამატება — ${siteName}`,
+    '/business': `უფასო ვაკანსიის განთავსება — ბიზნესისთვის | ${siteName}`,
+    '/map': `ვაკანსიები რუკაზე — ${siteName}`,
+    '/cv': `CV-ის შექმნა | ${siteName}`,
   };
-  return titles[path] ?? analyticsTitle(page, 'JOBX');
+  return titles[path] ?? analyticsTitle(page, siteName);
 }
 
 /** Contact clicks are intent, not confirmed calls or delivered applications. */

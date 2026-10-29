@@ -554,7 +554,11 @@ export async function bulkPublishJobs(input: unknown) {
   return { results };
 }
 
-export async function mutateJob(input: unknown) {
+export async function mutateJob(
+  input: unknown,
+  owner?: { accountId: string; companyKey: string },
+) {
+  const actor = owner ? 'company:' + owner.accountId : 'admin';
   const data = z
     .object({
       id: z.uuid(),
@@ -589,6 +593,17 @@ export async function mutateJob(input: unknown) {
   // after its held copy expires.
   const notifications: IndexingNotification[] = [];
   const result = await transaction(async (c) => {
+    if (
+      owner &&
+      !(
+        await c.query(
+          'SELECT 1 FROM company_accounts WHERE id=$1 AND company_key=$2 AND enabled AND NOT must_change_password FOR SHARE',
+          [owner.accountId, owner.companyKey],
+        )
+      ).rowCount
+    )
+      throw new ApiError('კომპანიის ანგარიშზე წვდომა შეზღუდულია.', 403);
+
     // Consistent ordering prevents deadlocks for concurrent opposite-direction merges.
     const ids = [data.id, ...(data.targetId ? [data.targetId] : [])].sort();
     const rows = (
@@ -599,6 +614,41 @@ export async function mutateJob(input: unknown) {
     ).rows;
     const job = rows.find((r) => r.id === data.id);
     if (!job) throw new ApiError('ვაკანსია ვერ მოიძებნა', 404);
+    if (owner) {
+      const allowed = await c.query(
+        'SELECT 1 FROM company_job_ownership WHERE job_id=$1 AND company_key=$2',
+        [job.id, owner.companyKey],
+      );
+      if (!allowed.rowCount) throw new ApiError('ვაკანსია ვერ მოიძებნა', 404);
+      if (
+        !['save', 'archive', 'restore'].includes(data.action) ||
+        data.placement ||
+        data.targetId ||
+        data.itemId ||
+        data.notificationEmail
+      )
+        throw new ApiError('მოქმედება დაუშვებელია.', 403);
+      if (
+        data.draft &&
+        (companyKey(data.draft.company) !== owner.companyKey ||
+          data.draft.url !== job.draft.url ||
+          data.draft.source !== job.draft.source ||
+          data.draft.datePosted !== job.draft.datePosted)
+      )
+        throw new ApiError(
+          'ვაკანსიის მფლობელისა და წყაროს შეცვლა დაუშვებელია.',
+          403,
+        );
+      if (
+        data.action === 'restore' &&
+        !['archived', 'rejected'].includes(job.status)
+      )
+        throw new ApiError(
+          'მხოლოდ დახურული ვაკანსია ბრუნდება შესამოწმებლად.',
+          409,
+        );
+    }
+
     if (
       job.employer_suppression_id &&
       ['publish', 'restore', 'resume-automation', 'apply-source'].includes(
@@ -671,7 +721,7 @@ export async function mutateJob(input: unknown) {
         c,
         job.id,
         'automation.resumed',
-        'admin',
+        actor,
         {
           automation_managed: job.automation_managed,
           automation_paused: job.automation_paused,
@@ -786,7 +836,7 @@ export async function mutateJob(input: unknown) {
         job.id,
         target.id,
       ]);
-      await audit(c, target.id, 'merge.received', 'admin', null, {
+      await audit(c, target.id, 'merge.received', actor, null, {
         from: job.id,
       });
     }
@@ -827,7 +877,7 @@ export async function mutateJob(input: unknown) {
       c,
       job.id,
       data.action,
-      'admin',
+      actor,
       { draft: job.draft, published: job.published, status: job.status },
       { draft, published, status },
     );

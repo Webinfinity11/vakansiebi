@@ -1,5 +1,5 @@
 import { load } from 'cheerio';
-import type { Vacancy } from '../lib/types';
+import { sourceNames, type Vacancy } from '../lib/types';
 import {
   cleanText,
   externalId,
@@ -296,6 +296,8 @@ export async function completeDescription(
   failures = 0,
   options: { reuseVerified?: boolean } = {},
 ): Promise<Vacancy> {
+  // This source is explicitly limited to the bank's official page, including refreshes.
+  if (job.source === sourceNames.liberty) return job;
   const links = job.applicationLinks || [];
   const candidates = links
     .map((l) => ({ url: l.url, provider: linkedProvider(l.url) }))

@@ -1,0 +1,133 @@
+[data-slot='dialog-content'].admin-cv-dialog {
+  width: min(900px, calc(100vw - 32px));
+  max-width: none;
+  height: min(960px, calc(100dvh - 48px));
+  padding: 0;
+  gap: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--ds-ink);
+  background: var(--ds-surface);
+}
+.admin-cv-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--ds-line);
+  flex: none;
+}
+.admin-cv-dialog-head > div:first-child {
+  min-width: 0;
+}
+.admin-cv-dialog-head [data-slot='dialog-title'] {
+  font-size: 18px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.admin-cv-dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.admin-cv-dialog-body {
+  overflow: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+  min-height: 0;
+  padding: 24px;
+  background: var(--ds-page);
+}
+.admin-cv-dialog .resumes-sheet {
+  width: 100%;
+  max-width: 794px;
+  margin: auto;
+  overflow: hidden;
+  background: white;
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--ds-shadow-sm);
+}
+.admin-cv-dialog .resumes-sheet .cv-page {
+  margin: 0;
+}
+.admin-cv-dialog-body iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.admin-cv-activity {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+}
+.admin-cv-activity summary {
+  cursor: pointer;
+  font-size: 14px;
+}
+@media (max-width: 600px) {
+  [data-slot='dialog-content'].admin-cv-dialog {
+    width: calc(100vw - 16px);
+    height: calc(100dvh - 24px);
+  }
+  .admin-cv-dialog-head {
+    padding: 14px 12px;
+  }
+  .admin-cv-dialog-body {
+    padding: 12px;
+  }
+}
+@media print {
+  body:has(.admin-cv-dialog) {
+    overflow: visible !important;
+    position: static !important;
+  }
+  body:has(.admin-cv-dialog) * {
+    visibility: hidden;
+  }
+  .admin-cv-dialog .resumes-sheet,
+  .admin-cv-dialog .resumes-sheet * {
+    visibility: visible !important;
+  }
+  [data-slot='dialog-content'].admin-cv-dialog,
+  .admin-cv-dialog-body,
+  .admin-cv-dialog .resumes-sheet,
+  .admin-cv-dialog .resumes-sheet > div {
+    position: static !important;
+    display: block !important;
+    transform: none !important;
+    zoom: 1 !important;
+    width: 210mm !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  .admin-cv-dialog-head,
+  .admin-cv-activity {
+    display: none !important;
+  }
+  .admin-cv-dialog .cv-page {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+@media print {
+  [data-slot='dialog-content'].admin-cv-dialog {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
+  body:has(.admin-cv-dialog) > :not(:has(.admin-cv-dialog)) {
+    display: none !important;
+  }
+}

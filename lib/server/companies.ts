@@ -34,11 +34,26 @@ export async function getCompany(name: string) {
       }
     : { name, logoUrl: '', website: '', description: '', version: 0 };
 }
-export async function saveCompany(input: unknown) {
+export async function saveCompany(
+  input: unknown,
+  owner?: { accountId: string; companyKey: string },
+) {
   const data = companySchema.parse(input),
     key = companyKey(data.name);
   if (!key) throw new ApiError('მიუთითე კომპანიის სახელი');
+  if (owner && key !== owner.companyKey)
+    throw new ApiError('კომპანიის შეცვლა დაუშვებელია.', 403);
   return transaction(async (c) => {
+    if (
+      owner &&
+      !(
+        await c.query(
+          'SELECT 1 FROM company_accounts WHERE id=$1 AND company_key=$2 AND enabled AND NOT must_change_password FOR SHARE',
+          [owner.accountId, owner.companyKey],
+        )
+      ).rowCount
+    )
+      throw new ApiError('კომპანიის ანგარიშზე წვდომა შეზღუდულია.', 403);
     await c.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
       'company:' + key,
     ]);
@@ -71,7 +86,12 @@ export async function saveCompany(input: unknown) {
     );
     await c.query(
       'INSERT INTO audit_log(action,actor,before_data,after_data) VALUES($1,$2,$3,$4)',
-      ['company.save', 'admin', current || null, data],
+      [
+        'company.save',
+        owner ? 'company:' + owner.accountId : 'admin',
+        current || null,
+        data,
+      ],
     );
     return { ...data, version: data.version + 1 };
   });

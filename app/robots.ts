@@ -32,7 +32,7 @@ export default function robots(): MetadataRoute.Robots {
       '/api/logos/',
       '/api/tracking$',
     ],
-    disallow: ['/admin', '/api/'],
+    disallow: ['/admin', '/company', '/api/'],
   };
   return {
     rules: [

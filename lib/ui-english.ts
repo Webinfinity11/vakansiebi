@@ -1,5 +1,45 @@
 /** Reviewed interface copy; source listings are intentionally not translated. */
 export const englishUi: Readonly<Record<string, string>> = {
+  'უბანი ან მისამართი': 'District or address',
+  'მდებარეობა იძებნება…': 'Finding your location…',
+  '500 მ': '500 m',
+  '1 კმ': '1 km',
+  '3 კმ': '3 km',
+  'მანძილი პირდაპირი ხაზითაა დათვლილი.':
+    'Distances are measured in a straight line.',
+  'მდებარეობა მიუწვდომელია. ჩაწერე უბანი ან მისამართი.':
+    'Location is unavailable. Enter a district or address.',
+  'მდებარეობა ვერ განისაზღვრა. დაუშვი მდებარეობაზე წვდომა ან ჩაწერე მისამართი.':
+    'Could not find your location. Allow location access or enter an address.',
+  'ახალი ვაკანსიების გამოწერა': 'Get new job alerts',
+  'არჩეული საძიებო პირობებით ახალ ვაკანსიებს ყოველდღე მიიღებ. გამოწერის გაუქმება ნებისმიერ დროს შეგიძლია.':
+    'Receive new jobs matching your current search every day. You can unsubscribe at any time.',
+  ელფოსტა: 'Email',
+  გამოწერა: 'Subscribe',
+  'გამოწერა დროებით მიუწვდომელია. სცადე მოგვიანებით.':
+    'Job alerts are temporarily unavailable. Please try later.',
+  'მოთხოვნა უკვე მიღებულია. სცადე მოგვიანებით.':
+    'Your request has been received. Please try later.',
+  'მოთხოვნა მიღებულია. თუ გამოწერა ჯერ არ დაგიდასტურებია, ელფოსტაზე მოსულ ბმულს მიჰყევი. შეამოწმე სპამის საქაღალდეც.':
+    'Request received. If you have not confirmed this subscription, follow the link in your email. Check your spam folder too.',
+  'ვაკანსიების გამოწერა': 'Job alerts',
+  'გამოწერის გაუქმება': 'Unsubscribe',
+  'გამოწერის დადასტურება': 'Confirm subscription',
+  'გამოწერა დადასტურებულია. ახალ ვაკანსიებს ელფოსტაზე ყოველდღიურად მიიღებ.':
+    'Subscription confirmed. New matching jobs will arrive in a daily email.',
+  'გამოწერა გაუქმებულია. ამ პირობებით ვაკანსიებს აღარ გამოგიგზავნით.':
+    'Unsubscribed. You will no longer receive jobs matching this search.',
+  'დაადასტურე, რომ გსურს არჩეული პირობებით ახალი ვაკანსიების მიღება.':
+    'Confirm that you want to receive new jobs matching your selected search.',
+  'ამ პირობებით ახალი ვაკანსიების მიღება აღარ გსურს?':
+    'Would you like to stop receiving jobs matching this search?',
+  'ბმული არასწორია ან ვადა გაუვიდა. გამოწერა ხელახლა მოითხოვე.':
+    'This link is invalid or expired. Please request a new subscription.',
+  ჯობიქსი: 'JOBX',
+  'ჯობიქსი (JOBX)': 'JOBX',
+  'ჯობიქსი — მთავარი გვერდი': 'JOBX — Home',
+  'ჯობიქსი (JOBX) — ვაკანსიები საქართველოში': 'JOBX — jobs in Georgia',
+  'როგორ მუშაობს ჯობიქსი?': 'How does JOBX work?',
   'მთავარი ნავიგაცია': 'Main navigation',
   ვაკანსიები: 'Jobs',
   რუკა: 'Map',

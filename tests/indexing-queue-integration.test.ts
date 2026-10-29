@@ -7,6 +7,7 @@ import { indexingTransition } from '../lib/server/google-indexing';
 import {
   drainIndexingQueue,
   enqueueIndexingNotifications,
+  pruneIndexingQueue,
 } from '../lib/server/indexing-queue';
 import type { Vacancy } from '../lib/types';
 
@@ -272,6 +273,95 @@ void test(
             assert.equal(result.cancelled, 1);
             assert.equal((await queue()).attempts, 0);
           }
+        },
+      );
+      await t.test(
+        'cleanup works with no sending credentials, ignores leases, and retains deleted-page notices',
+        async () => {
+          await reset();
+          await pool.query("UPDATE jobs SET status='archived'");
+          await pool.query(
+            "UPDATE google_indexing_queue SET available_at=now()+interval '1 day'",
+          );
+          assert.deepEqual(await pruneIndexingQueue({ connection: pool }), {
+            matched: 1,
+            cancelled: 0,
+          });
+          await pool.query(
+            "UPDATE google_indexing_queue SET locked_until=now()+interval '1 hour'",
+          );
+          assert.equal(
+            (await pruneIndexingQueue({ connection: pool, apply: true }))
+              .cancelled,
+            0,
+          );
+          await pool.query(
+            'UPDATE google_indexing_queue SET locked_until=NULL',
+          );
+          const cleaned = await drainIndexingQueue({
+            connection: pool,
+            settings: {},
+            send: async () => assert.fail('no delivery'),
+          });
+          assert.equal(cleaned.cancelled, 1);
+          assert.equal(cleaned.disabled, true);
+          await pool.query("UPDATE jobs SET status='published'");
+          await enqueueIndexingNotifications(events, pool);
+          assert.equal(
+            (await queue()).status,
+            'pending',
+            'a reopened job can requeue the same content',
+          );
+          await pool.query(
+            "UPDATE google_indexing_queue SET type='URL_DELETED'",
+          );
+          await pool.query("UPDATE jobs SET status='archived'");
+          assert.equal(
+            (await pruneIndexingQueue({ connection: pool, apply: true }))
+              .cancelled,
+            0,
+          );
+        },
+      );
+      await t.test(
+        'recent deliveries reserve every fifth slot for the oldest waiting job',
+        async () => {
+          await reset();
+          await pool.query('TRUNCATE google_indexing_queue');
+          const ids = Array.from({ length: 7 }, () => randomUUID());
+          for (let i = 0; i < ids.length; i++) {
+            await pool.query(
+              "INSERT INTO jobs(id,status,published) VALUES($1,'published',$2)",
+              [ids[i], vacancy],
+            );
+            await enqueueIndexingNotifications(
+              indexingTransition(
+                ids[i],
+                { status: 'pending', published: null },
+                { status: 'published', published: vacancy },
+              ),
+              pool,
+            );
+            await pool.query(
+              'UPDATE google_indexing_queue SET created_at=now()-make_interval(days=>$2) WHERE job_id=$1',
+              [ids[i], 7 - i],
+            );
+          }
+          const delivered: string[] = [];
+          await drainIndexingQueue({
+            connection: pool,
+            settings,
+            limit: 5,
+            send: async (url) => {
+              delivered.push(url);
+              return { status: 'sent' };
+            },
+          });
+          assert.ok(delivered[0].includes(ids[0]));
+          assert.ok(delivered[1].includes(ids[6]));
+          assert.equal(delivered.length, 5);
+          await pool.query('TRUNCATE google_indexing_queue');
+          await pool.query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [ids]);
         },
       );
       await t.test(

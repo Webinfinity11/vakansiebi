@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { shareImage } from '@/lib/seo';
+import { siteName } from '@/lib/site-brand';
 import { PublicHeader } from '../public-header';
 import { JobMap } from './job-map';
 import './map.css';
 
-const title = 'ვაკანსიები რუკაზე — JOBX';
+const title = `ვაკანსიები რუკაზე — ${siteName}`;
 const description =
   'იპოვე სამსახური სახლთან ან მეტროსთან ახლოს: ვაკანსიები რუკაზე, ზუსტი მისამართით, თბილისში, ბათუმსა და ქუთაისში.';
 // A page-level openGraph block replaces the layout's, so it names everything it needs.
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
     title,
     description,
     url: 'https://jobx.ge/map',
-    siteName: 'JOBX',
+    siteName,
     locale: 'ka_GE',
     type: 'website',
     images: [shareImage],

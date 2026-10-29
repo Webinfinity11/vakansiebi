@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { CvDialog } from './cv-dialog';
 import { ChevronDown, Eye, RefreshCw, Send } from 'lucide-react';
 import { adminTime } from '@/lib/admin-format';
 import { vacancyPath } from '@/lib/vacancy-navigation';
@@ -35,21 +36,28 @@ const statusNames = {
 
 /** One link to the CV that went out; the browser's own viewer saves it as a PDF. */
 function CvLink({ application }: { application: Application }) {
+  const [open, setOpen] = useState(false);
   if (
     !application.hasFile &&
     !(application.cvKind === 'jobx' && application.resumeId)
   )
     return <span className="application-cv-missing">CV-ის ასლი არ არის</span>;
   return (
-    <a
-      className="ds-btn ds-btn--secondary ds-btn--sm"
-      href={`/api/admin/swipe/download?id=${application.id}&view=1`}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <Eye size={16} aria-hidden="true" />
-      CV
-    </a>
+    <>
+      <button
+        type="button"
+        className="ds-btn ds-btn--secondary ds-btn--sm"
+        onClick={() => setOpen(true)}
+      >
+        <Eye size={16} aria-hidden="true" />
+        CV
+      </button>
+      <CvDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        pdf={`/api/admin/swipe/download?id=${application.id}`}
+      />
+    </>
   );
 }
 

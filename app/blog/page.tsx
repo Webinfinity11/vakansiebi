@@ -1,12 +1,14 @@
+import { publicBlogPosts } from '@/lib/server/blog';
 import type { Metadata } from 'next';
+import { siteName } from '@/lib/site-brand';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
-import { blogPosts, blogReadingMinutes } from '@/lib/blog';
+import { blogReadingMinutes } from '@/lib/blog';
 import { siteUrl, shareImage } from '@/lib/seo';
 import { UiText } from '../ui-language';
 import { BlogCover } from './blog-cover';
 
-const title = 'ბლოგი — სამსახურის ძიება და სამუშაო პირობები | JOBX';
+const title = `ბლოგი — სამსახურის ძიება და სამუშაო პირობები | ${siteName}`;
 const description =
   'სტატიები სამსახურის ძიების, დღიური ანაზღაურებისა და ნახევარ განაკვეთზე მუშაობის შესახებ. სამუშაო პირობების განმარტებები და პრაქტიკული რჩევები.';
 export const metadata: Metadata = {
@@ -20,10 +22,13 @@ export const metadata: Metadata = {
     type: 'website',
     images: [shareImage],
     locale: 'ka_GE',
+    siteName,
   },
 };
 
-export default function BlogPage() {
+export const dynamic = 'force-dynamic';
+export default async function BlogPage() {
+  const blogPosts = await publicBlogPosts();
   return (
     <main className="blog-main">
       <header className="blog-intro">
