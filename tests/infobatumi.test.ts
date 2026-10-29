@@ -151,3 +151,27 @@ void test('Infobatumi rejects closed, mismatched and offsite vacancy identities'
     /fields missing/,
   );
 });
+
+void test('Infobatumi reads an employer linked in its own opening paragraph when the name field is empty', () => {
+  const html = fixture('inline-employer');
+  const job = parseDetail(
+    'infobatumi',
+    html,
+    'https://www.infobatumi.ge/?p=31101',
+  );
+  assert.equal(job.company, 'სენატი');
+  assert.equal(importVacancyDateReason(job), 'outside_window');
+  const bad = load(html);
+  bad('[data-id="9694e27"] a')
+    .first()
+    .attr('href', 'https://evil.test/places/senate/');
+  assert.throws(
+    () =>
+      parseDetail(
+        'infobatumi',
+        bad.html(),
+        'https://www.infobatumi.ge/?p=31101',
+      ),
+    /fields missing/,
+  );
+});

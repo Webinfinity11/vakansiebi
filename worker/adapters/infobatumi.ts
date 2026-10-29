@@ -115,8 +115,21 @@ export const infobatumi: SourceModule = {
     const root = $('[data-elementor-id="15116"]').first();
     const field = (key: string) => root.find(`[data-id="${key}"]`).first();
     const title = compact(field('06d28bc').text());
-    const company = compact(field('0792b85').text());
     const body = field('9694e27');
+    // Some employers leave the standalone name empty but name and link their
+    // business in the opening paragraph. Never borrow a related card's company.
+    const employerLink = body
+      .find('p')
+      .filter((_, e) => !!compact($(e).text()))
+      .first()
+      .find('a[href]')
+      .first();
+    const employerUrl = new URL(employerLink.attr('href') || '/', origin);
+    const company =
+      compact(field('0792b85').text()) ||
+      (official(employerUrl) && /^\/places\/[^/]+\/$/.test(employerUrl.pathname)
+        ? compact(employerLink.text())
+        : '');
     const pay = compact(field('c0b4051').text());
     if (!root.length || !title || !company || !body.length)
       throw Error('Infobatumi vacancy fields missing');
