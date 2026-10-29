@@ -133,7 +133,8 @@ export type EmployerPage = {
 export const employerRowsSql = `WITH evidence AS (
   SELECT j.id, CASE WHEN j.status='published' THEN jsonb_build_object(
            'company',j.search_company,'city',j.search_city,'title',j.search_title,
-           'category',j.search_category,'logoUrl',j.published->>'logoUrl')
+           'category',j.search_category,'logoUrl',j.published->>'logoUrl',
+           'source',j.published->>'source','url',j.published->>'url')
          ELSE coalesce(j.published,j.draft) END AS snapshot,
          array_agg(DISTINCT si.source_id ORDER BY si.source_id) AS sources
     FROM jobs j JOIN source_items si ON si.job_id=j.id
@@ -163,10 +164,16 @@ export async function employerPageSuppressed(employer: EmployerPage) {
        SELECT 1 FROM employer_suppressions s WHERE s.active AND (
          EXISTS (SELECT 1 FROM unnest($1::text[]) n WHERE employer_removal_key(n)=ANY(s.company_keys))
          OR EXISTS (SELECT 1 FROM removed_vacancies r WHERE r.suppression_id=s.id AND r.job_id=ANY($2::uuid[]))
+         OR EXISTS (SELECT 1 FROM employer_page_history h WHERE h.job_id=ANY($2::uuid[])
+           AND employer_suppression_for(h.snapshot)=s.id)
+       ) AND NOT EXISTS (
+         SELECT 1 FROM jobs j WHERE j.id=ANY($2::uuid[]) AND j.employer_suppression_id IS NULL
+           AND (j.status='published' OR (j.status='archived' AND j.published_at IS NOT NULL))
+           AND employer_source_allowed(coalesce(j.published,j.draft),s.allowed_source_hosts)
+         UNION ALL
+         SELECT 1 FROM employer_page_history h WHERE h.job_id=ANY($2::uuid[])
+           AND employer_source_allowed(h.snapshot,s.allowed_source_hosts)
        )
-     ) OR EXISTS (
-       SELECT 1 FROM employer_page_history h WHERE h.job_id=ANY($2::uuid[])
-         AND employer_suppression_for(h.snapshot) IS NOT NULL
      ) AS suppressed`,
     [employer.names, employer.jobIds],
   );

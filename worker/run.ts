@@ -44,6 +44,7 @@ import {
   takeSourceHttpDiagnostic,
 } from './http';
 import { discoverItems, stageVacancy } from './importer';
+import { refreshEmployerBoard } from './employer-board';
 import {
   acquireSourceLease,
   releaseSourceLease,
@@ -150,6 +151,14 @@ export async function runSource(
       : activeConfig.list;
     const html = await sourceFetch(source, listUrl);
     const links: ListedLink[] = listLinks(source, html, listUrl);
+    const listingVacancies = modules[source]?.listingSnapshot
+      ? new Map(
+          links.map((link) => [
+            link.url,
+            parseDetail(source, html, link.url, link.hints),
+          ]),
+        )
+      : null;
     const firstObserved = links.length
       ? links
       : (modules[source]?.closedListingIds?.(html) || []).map((externalId) => ({
@@ -189,6 +198,13 @@ export async function runSource(
       );
     };
     await rememberPage(listUrl, links, firstObserved);
+    if (listingVacancies) {
+      const refreshed = await refreshEmployerBoard(source, [
+        ...listingVacancies.values(),
+      ]);
+      changed += refreshed.changed;
+      removed += refreshed.removed;
+    }
     const countQuality = info
       ? assessReportedTotal(config.reported_total, info.reportedTotal, {
           value: config.reported_total_candidate,
@@ -307,12 +323,14 @@ export async function runSource(
     let halt = false;
     const processItem = async (item: (typeof queue)[number]) => {
       try {
-        const parsed = parseDetail(
-          source,
-          await sourceFetch(source, detailRequestUrl(source, item.url)),
-          item.url,
-          item.listing_hints,
-        );
+        const parsed =
+          listingVacancies?.get(item.url) ??
+          parseDetail(
+            source,
+            await sourceFetch(source, detailRequestUrl(source, item.url)),
+            item.url,
+            item.listing_hints,
+          );
         // Do not fetch employer attachments for an old/undated vacancy.
         const data = importDateReason(parsed.datePosted)
           ? parsed

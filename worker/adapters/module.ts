@@ -57,6 +57,8 @@ export type SourceConfig = {
  */
 export type SourceModule = {
   config: SourceConfig;
+  /** Complete current employer board: one fetch contains every role and its details. */
+  listingSnapshot?: boolean;
   /** Vacancy id from a public vacancy URL on an allowed host, or null. */
   externalId(url: URL): string | null;
   publicUrl(id: string): string;

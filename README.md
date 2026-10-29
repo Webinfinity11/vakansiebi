@@ -172,6 +172,22 @@ Other sources keep the dated import window. Migration 065 registers Liberty disa
 `pnpm source:probe -- --source=liberty` checks the public list and one detail without
 database writes. The scraper workflow includes the source when it is subsequently enabled.
 
+Mushebi.ge is a direct employer source with three roles on one public careers page.
+Migration 068 registers it disabled until first validation/activation. The adapter reads
+each role's own daily GEL range and the shared conditions/contact, leaving unknown posting
+dates and deadlines empty. Source URLs use browser text fragments for the actual headings.
+Each scheduled check fetches the complete page once: confirmed changes update automated
+records and missing roles are archived, while malformed pages retain the last good data.
+Other sources keep their existing new-only behaviour. `pnpm source:probe -- --source=mushebi`
+validates the page without database writes.
+
+Migration 069 permits an explicit admin-approved official-source exception to an employer
+restriction. Both the snapshot source and its HTTPS URL host must match the allowed hosts;
+other sources, unrelated employers and existing editor pauses remain protected. On
+2026-10-29 the admin's earlier Liberty restriction was given this exception at the user's
+request for imports exclusively from the bank's own site; third-party Liberty postings
+remain restricted. Source activation/exception changes are recorded in `audit_log`.
+
 The two government hosts are not in the matrix: `vacancy.hr.gov.ge` and `worknet.moh.gov.ge` both time out from every GitHub-hosted runner. They are collected from this Mac by `npm run worker:gov` (a terminal tab; one pass every 3 hours over hrgov and worknet, advisory locks keep it from overlapping the workflow). `scripts/install-local-gov-sources.sh` registers the same pass as a launchd agent, but macOS privacy protection blocks a launchd agent from reading a project under `~/Desktop`: either grant Full Disk Access to `/bin/zsh` or move the project, otherwise use the terminal tab. The install script checks this and says which applies. Overlapping workflows queue, and database locks also protect against a local worker. Three consecutive detail failures stop that source's batch, retaining the remaining queue. A job fails only when the source itself needs attention: the run threw, the listing shape or reported coverage changed, three consecutive detail failures aborted the batch, or at least three pages and half the batch failed. Individual transient page failures and quality holds are posted as Actions warnings, keep the job green and still advance the source's last successful check, because the backoff retries them on its own. Every result remains visible in the admin history and the step summary. Sources with auto_publish enabled validate, publish, update and archive automatically. Invalid records wait for source recovery without a manual-review flag. The scraper never sends messages.
 
 GitHub schedules may be delayed. In public repositories, schedules disable after 60 days without repository activity and must be re-enabled. Standard GitHub-hosted runners are free for this public repository; Neon usage is separate.

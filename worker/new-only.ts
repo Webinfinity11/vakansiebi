@@ -1,4 +1,5 @@
 import { libertyVacancyId } from './liberty-url';
+import { mushebiVacancyId } from './mushebi-url';
 import type { Vacancy } from '../lib/types';
 
 /* Days before today that still count as new. A posting can wait a few days when runs are
@@ -38,11 +39,21 @@ export function importDateReason(
 
 /** Liberty publishes deadlines but no publication dates. Its current official vacancies
  * may enter once with an unexpired, valid deadline; the date remains honestly unknown.
- * Every dated posting and every other source retains the existing five-day import rule. */
+ * Mushebi's complete current board is rechecked on every run. Other sources and
+ * dated postings retain the existing five-day import rule. */
 export function importVacancyDateReason(
   vacancy: Pick<Vacancy, 'datePosted' | 'deadline' | 'source' | 'url'>,
   today = tbilisiToday(),
 ) {
+  // The employer's complete current board is verified on every collection. It
+  // supplies neither posting dates nor deadlines; never invent either date.
+  if (
+    !vacancy.datePosted &&
+    !vacancy.deadline &&
+    vacancy.source === 'mushebi.ge' &&
+    mushebiVacancyId(vacancy.url)
+  )
+    return null;
   if (
     !vacancy.datePosted &&
     vacancy.source === 'libertybank.ge' &&
