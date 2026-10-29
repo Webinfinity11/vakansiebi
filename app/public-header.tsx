@@ -14,6 +14,7 @@ import {
   BriefcaseBusiness,
   BookOpen,
   ChevronRight,
+  Banknote,
 } from 'lucide-react';
 import {
   Sheet,
@@ -53,6 +54,7 @@ function localAction(
 export function PublicHeader({
   savedCount,
   savedOnly = false,
+  dailyOnly = false,
   showSearch = true,
   onVacancies,
   onSaved,
@@ -60,6 +62,7 @@ export function PublicHeader({
 }: {
   savedCount?: number;
   savedOnly?: boolean;
+  dailyOnly?: boolean;
   /* The board carries the search field itself, so the masthead does not repeat it. */
   showSearch?: boolean;
   onVacancies?: () => void;
@@ -96,7 +99,9 @@ export function PublicHeader({
   const current = savedOnly
     ? 'saved'
     : pathname === '/'
-      ? 'all'
+      ? dailyOnly
+        ? 'daily'
+        : 'all'
       : pathname === '/map'
         ? 'map'
         : pathname === '/companies'
@@ -232,6 +237,12 @@ export function PublicHeader({
               place: 'all',
               icon: BriefcaseBusiness,
               action: onVacancies,
+            },
+            {
+              href: '/?salaryPeriod=day',
+              label: 'დღიური ანაზღაურება',
+              place: 'daily',
+              icon: Banknote,
             },
             { href: '/map', label: 'რუკა', place: 'map', icon: Map },
             {

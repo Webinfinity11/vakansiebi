@@ -736,6 +736,8 @@ export const englishUi: Readonly<Record<string, string>> = {
   'სრულად წაკითხვა': 'Read more',
   ვებსაიტი: 'Website',
   'ვაკანსიის ძიება': 'Job search',
+  'კომპანიის ვაკანსიების ძიება': 'Search this company’s jobs',
+  'მაგ. მოლარე, მენეჯერი': 'e.g. cashier, manager',
   'ძიების შედეგები': 'Search results',
   'აქტიური ვაკანსიები': 'Active jobs',
   'ამ ფილტრებით ვაკანსია ვერ მოიძებნა. შეცვალე ძიება ან გაასუფთავე ფილტრები.':

@@ -1259,6 +1259,7 @@ export default function JobBoard({
         {ui('ვაკანსიებზე გადასვლა')}
       </a>
       <PublicHeader
+        dailyOnly={advanced.salaryPeriod === 'day'}
         savedCount={saved.length}
         savedOnly={savedOnly}
         /* The field is right below the masthead here; two searches on one

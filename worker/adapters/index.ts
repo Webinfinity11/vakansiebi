@@ -29,6 +29,7 @@ import { joob } from './joob';
 import { unijobs } from './unijobs';
 import { liberty } from './liberty';
 import { mushebi } from './mushebi';
+import { infobatumi } from './infobatumi';
 export type { ListedLink, ListingHints } from './module';
 /** JSON-backed boards live in their own modules; the HTML boards below share this file. */
 export const modules: Partial<Record<SourceId, SourceModule>> = {
@@ -41,6 +42,7 @@ export const modules: Partial<Record<SourceId, SourceModule>> = {
   unijobs,
   liberty,
   mushebi,
+  infobatumi,
 };
 
 type HrAnnouncement = {
@@ -143,6 +145,7 @@ const legacyConfigs = {
   unijobs: unijobs.config,
   liberty: liberty.config,
   mushebi: mushebi.config,
+  infobatumi: infobatumi.config,
 };
 // Legacy parsing remains for existing audit records; no retired source can be fetched.
 export const configs = {
@@ -160,6 +163,7 @@ export const configs = {
   unijobs: legacyConfigs.unijobs,
   liberty: legacyConfigs.liberty,
   mushebi: legacyConfigs.mushebi,
+  infobatumi: legacyConfigs.infobatumi,
 };
 /** The document fetched for a public vacancy URL; JSON boards read their public API instead. */
 export function detailRequestUrl(source: SourceId, url: string) {
@@ -1368,6 +1372,7 @@ export const sourceLockIds: Record<SourceId, number> = {
   unijobs: 917422,
   liberty: 917423,
   mushebi: 917424,
+  infobatumi: 917425,
 };
 
 // Georgian listings omit the year; compare against their local calendar date, including around midnight/New Year.

@@ -12,6 +12,7 @@ const logoHosts = new Set([
   'unijobs.ge',
   'www.libertybank.ge',
   'libertybank.ge',
+  'www.infobatumi.ge',
 ]);
 
 export function isLocalLogoUrl(value: unknown): value is string {

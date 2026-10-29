@@ -1,0 +1,372 @@
+<span class="result-count">3 სულ</span><div data-per-page="90" class="   elementor-element elementor-element-0354c20 elementor-widget elementor-widget-ts-post-feed" data-paginate="load_more" data-id="0354c20" data-element_type="widget" data-e-type="widget" data-widget_type="ts-post-feed.default">
+					
+	<div class="post-feed-header">
+		<span class="result-count ">
+			74 სულ		</span>
+	</div>
+
+<link rel="stylesheet" id="elementor-post-398-css" href="https://www.infobatumi.ge/wp-content/uploads/elementor/css/post-398.css?ver=1787207101" media="all">
+
+<div class="post-feed-grid ts-feed-grid-default 		vx-opacity sf-post-feed " data-auto-slide="0">
+
+	
+	<div class="ts-preview" data-post-id="25917">		<div data-elementor-type="container" data-elementor-id="398" class="elementor elementor-398">
+				<div class="elementor-element elementor-element-3c98b09 e-con-full e-flex e-con e-parent" data-id="3c98b09" data-element_type="container" data-e-type="container">
+				<div class="elementor-element elementor-element-34c930b elementor-widget__width-auto elementor-widget elementor-widget-image" data-id="34c930b" data-element_type="widget" data-e-type="widget" data-widget_type="image.default">
+																<a href="https://www.infobatumi.ge/vakansiebi/magaziis-menejeris-asistenti-midea/">
+															</a>
+															</div>
+				<div class="elementor-element elementor-element-3cdc6ff elementor-widget elementor-widget-ts-advanced-list" data-id="3cdc6ff" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+							<li class="elementor-repeater-item-e863acc flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>ბოლოს განახლდა 27 ოქტომბერი			</div>
+			</li>			</ul>
+				</div>
+				<div class="elementor-element elementor-element-35a333f elementor-widget elementor-widget-heading" data-id="35a333f" data-element_type="widget" data-e-type="widget" data-widget_type="heading.default">
+					<h3 class="elementor-heading-title elementor-size-default"><a href="https://www.infobatumi.ge/vakansiebi/magaziis-menejeris-asistenti-midea/">მაღაზიის მენეჯერის ასისტენტი</a></h3>				</div>
+				<div class="elementor-element elementor-element-00d7c58 elementor-widget elementor-widget-ts-advanced-list" data-id="00d7c58" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+							<li class="elementor-repeater-item-d405577 flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>ემტექნიკსი			</div>
+			</li>			
+							<li class="elementor-repeater-item-a488ff1 flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>ლეხ და მარია კაჩინსკების 1			</div>
+			</li>			</ul>
+				</div>
+				<div class="elementor-element elementor-element-bf9ecdb elementor-widget elementor-widget-ts-advanced-list" data-id="bf9ecdb" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	</ul>
+				</div>
+				<div class="elementor-element elementor-element-e0a6e86 elementor-widget__width-inherit elementor-widget elementor-widget-ts-advanced-list" data-id="e0a6e86" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+					<li class="elementor-repeater-item-5abf3a3 flexify ts-action ">
+	<div class="ts-action-wrap ts-collections" data-post-id="25917">
+		<a href="#" ref="target" class="ts-action-con " role="button" @click.prevent="" @mousedown="open" aria-label="შენახვა">
+			<span class="ts-initial">
+				<div class="ts-action-icon"></div>
+				შენახვა			</span>
+			<span class="ts-reveal">
+				<div class="ts-action-icon"></div>
+				Action			</span>
+		</a>
+		<teleport to="body" class="hidden">
+			<transition name="form-popup">
+				<popup class="md-width" :show-save="false" :show-clear="false" v-if="active" ref="popup" @blur="active = false" :target="$refs.target">
+					<div v-if="screen !== 'create'" class="ts-popup-head ts-sticky-top flexify hide-d">
+						<div class="ts-popup-name flexify">
+														<span>პოსტის შენახვა</span>
+						</div>
+						<ul class="flexify simplify-ul">
+							<li class="flexify ts-popup-close">
+								<a role="button" @click.prevent="$root.active = false" href="#" class="ts-icon-btn">
+																	</a>
+							</li>
+						</ul>
+					</div>
+					<template v-if="screen === 'create'">
+						<div class="ts-create-collection" :class="{'vx-pending': create.loading}">
+							<div class="uib b-bottom ts-name-col">
+								<input type="text" ref="input" class="border-none" v-model="create.title" placeholder="სახელების კოლექცია" @keyup.enter="createCollection">
+							</div>
+						</div>
+						<div class="ts-popup-controller create-controller">
+							<ul class="flexify simplify-ul">
+								<li class="flexify"><a href="#" @click.prevent="screen = 'main'" class="ts-btn ts-btn-1">გაუქმება</a></li>
+								<li class="flexify"><a href="#" @click.prevent="createCollection" class="ts-btn ts-btn-2">შექმნა</a></li>
+							</ul>
+						</div>
+					</template>
+					<template v-else="">
+						<div v-if="items.loading" class="ts-empty-user-tab">
+							<div class="ts-loader"></div>
+						</div>
+						<div v-else="" class="ts-term-dropdown ts-md-group">
+							<ul class="simplify-ul ts-term-dropdown-list" :class="{'vx-pending': toggling}">
+								<li class="ts-term-centered">
+									<a href="#" @click.prevent="showCreateScreen" class="flexify">
+										<div class="ts-term-icon">
+																					</div>
+										<span>შექმენით რჩეულები</span>
+									</a>
+								</li>
+								<li v-for="item in items.list" :class="{'ts-selected': item.selected}">
+									<a href="#" class="flexify" @click.prevent="toggleItem( item )">
+										<div class="ts-checkbox-container">
+											<label class="container-checkbox">
+												<input type="checkbox" :checked="item.selected" disabled="" hidden="">
+												<span class="checkmark"></span>
+											</label>
+										</div>
+										<span>{{ item.title }}</span>
+									</a>
+								</li>
+								<div class="n-load-more" v-if="items.hasMore">
+									<a href="#" @click.prevent="loadMore" class="ts-btn ts-btn-4" :class="{'vx-pending': items.loadingMore}">
+																				კიდე მაჩვენე									</a>
+								</div>
+							</ul>
+						</div>
+					</template>
+				</popup>
+			</transition>
+		</teleport>
+	</div>
+</li>
+			</ul>
+				</div>
+				<div class="elementor-element elementor-element-de4a4b2 elementor-widget__width-auto elementor-absolute elementor-widget elementor-widget-ts-advanced-list" data-id="de4a4b2" data-element_type="widget" data-e-type="widget" data-settings="{&quot;_position&quot;:&quot;absolute&quot;}" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+							<li class="elementor-repeater-item-71e7d35 flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>VIP			</div>
+			</li>			</ul>
+				</div>
+				</div>
+				</div>
+		<div class="ts-marker-wrapper hidden"><div class="map-marker marker-type-icon mi-static" data-post-id="25917" data-post-link="https://www.infobatumi.ge/vakansiebi/magaziis-menejeris-asistenti-midea/" data-position="41.62762,41.60222"></div></div></div><div class="ts-preview" data-post-id="19524">		<div data-elementor-type="container" data-elementor-id="398" class="elementor elementor-398">
+				<div class="elementor-element elementor-element-3c98b09 e-con-full e-flex e-con e-parent" data-id="3c98b09" data-element_type="container" data-e-type="container">
+				<div class="elementor-element elementor-element-34c930b elementor-widget__width-auto elementor-widget elementor-widget-image" data-id="34c930b" data-element_type="widget" data-e-type="widget" data-widget_type="image.default">
+																<a href="https://www.infobatumi.ge/vakansiebi/social-media-manager-rogantini/">
+															</a>
+															</div>
+				<div class="elementor-element elementor-element-3cdc6ff elementor-widget elementor-widget-ts-advanced-list" data-id="3cdc6ff" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+							<li class="elementor-repeater-item-e863acc flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>ბოლოს განახლდა 26 ოქტომბერი			</div>
+			</li>			</ul>
+				</div>
+				<div class="elementor-element elementor-element-35a333f elementor-widget elementor-widget-heading" data-id="35a333f" data-element_type="widget" data-e-type="widget" data-widget_type="heading.default">
+					<h3 class="elementor-heading-title elementor-size-default"><a href="https://www.infobatumi.ge/vakansiebi/social-media-manager-rogantini/">სოციალური მედიის მენეჯერი</a></h3>				</div>
+				<div class="elementor-element elementor-element-00d7c58 elementor-widget elementor-widget-ts-advanced-list" data-id="00d7c58" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+							<li class="elementor-repeater-item-d405577 flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>როგანტინი			</div>
+			</li>			
+							<li class="elementor-repeater-item-a488ff1 flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>რუსთაველის 15			</div>
+			</li>			</ul>
+				</div>
+				<div class="elementor-element elementor-element-bf9ecdb elementor-widget elementor-widget-ts-advanced-list" data-id="bf9ecdb" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	</ul>
+				</div>
+				<div class="elementor-element elementor-element-e0a6e86 elementor-widget__width-inherit elementor-widget elementor-widget-ts-advanced-list" data-id="e0a6e86" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+					<li class="elementor-repeater-item-5abf3a3 flexify ts-action ">
+	<div class="ts-action-wrap ts-collections" data-post-id="19524">
+		<a href="#" ref="target" class="ts-action-con " role="button" @click.prevent="" @mousedown="open" aria-label="შენახვა">
+			<span class="ts-initial">
+				<div class="ts-action-icon"></div>
+				შენახვა			</span>
+			<span class="ts-reveal">
+				<div class="ts-action-icon"></div>
+				Action			</span>
+		</a>
+		<teleport to="body" class="hidden">
+			<transition name="form-popup">
+				<popup class="md-width" :show-save="false" :show-clear="false" v-if="active" ref="popup" @blur="active = false" :target="$refs.target">
+					<div v-if="screen !== 'create'" class="ts-popup-head ts-sticky-top flexify hide-d">
+						<div class="ts-popup-name flexify">
+														<span>პოსტის შენახვა</span>
+						</div>
+						<ul class="flexify simplify-ul">
+							<li class="flexify ts-popup-close">
+								<a role="button" @click.prevent="$root.active = false" href="#" class="ts-icon-btn">
+																	</a>
+							</li>
+						</ul>
+					</div>
+					<template v-if="screen === 'create'">
+						<div class="ts-create-collection" :class="{'vx-pending': create.loading}">
+							<div class="uib b-bottom ts-name-col">
+								<input type="text" ref="input" class="border-none" v-model="create.title" placeholder="სახელების კოლექცია" @keyup.enter="createCollection">
+							</div>
+						</div>
+						<div class="ts-popup-controller create-controller">
+							<ul class="flexify simplify-ul">
+								<li class="flexify"><a href="#" @click.prevent="screen = 'main'" class="ts-btn ts-btn-1">გაუქმება</a></li>
+								<li class="flexify"><a href="#" @click.prevent="createCollection" class="ts-btn ts-btn-2">შექმნა</a></li>
+							</ul>
+						</div>
+					</template>
+					<template v-else="">
+						<div v-if="items.loading" class="ts-empty-user-tab">
+							<div class="ts-loader"></div>
+						</div>
+						<div v-else="" class="ts-term-dropdown ts-md-group">
+							<ul class="simplify-ul ts-term-dropdown-list" :class="{'vx-pending': toggling}">
+								<li class="ts-term-centered">
+									<a href="#" @click.prevent="showCreateScreen" class="flexify">
+										<div class="ts-term-icon">
+																					</div>
+										<span>შექმენით რჩეულები</span>
+									</a>
+								</li>
+								<li v-for="item in items.list" :class="{'ts-selected': item.selected}">
+									<a href="#" class="flexify" @click.prevent="toggleItem( item )">
+										<div class="ts-checkbox-container">
+											<label class="container-checkbox">
+												<input type="checkbox" :checked="item.selected" disabled="" hidden="">
+												<span class="checkmark"></span>
+											</label>
+										</div>
+										<span>{{ item.title }}</span>
+									</a>
+								</li>
+								<div class="n-load-more" v-if="items.hasMore">
+									<a href="#" @click.prevent="loadMore" class="ts-btn ts-btn-4" :class="{'vx-pending': items.loadingMore}">
+																				კიდე მაჩვენე									</a>
+								</div>
+							</ul>
+						</div>
+					</template>
+				</popup>
+			</transition>
+		</teleport>
+	</div>
+</li>
+			</ul>
+				</div>
+				<div class="elementor-element elementor-element-de4a4b2 elementor-widget__width-auto elementor-absolute elementor-widget elementor-widget-ts-advanced-list" data-id="de4a4b2" data-element_type="widget" data-e-type="widget" data-settings="{&quot;_position&quot;:&quot;absolute&quot;}" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+							<li class="elementor-repeater-item-71e7d35 flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>VIP			</div>
+			</li>			</ul>
+				</div>
+				</div>
+				</div>
+		<div class="ts-marker-wrapper hidden"><div class="map-marker marker-type-icon mi-static" data-post-id="19524" data-post-link="https://www.infobatumi.ge/vakansiebi/social-media-manager-rogantini/" data-position="41.65165,41.63446"></div></div></div><div class="ts-preview" data-post-id="33217">		<div data-elementor-type="container" data-elementor-id="398" class="elementor elementor-398">
+				<div class="elementor-element elementor-element-3c98b09 e-con-full e-flex e-con e-parent" data-id="3c98b09" data-element_type="container" data-e-type="container">
+				<div class="elementor-element elementor-element-34c930b elementor-widget__width-auto elementor-widget elementor-widget-image" data-id="34c930b" data-element_type="widget" data-e-type="widget" data-widget_type="image.default">
+																<a href="https://www.infobatumi.ge/vakansiebi/gakidvebis-menejeri-korter/">
+															</a>
+															</div>
+				<div class="elementor-element elementor-element-3cdc6ff elementor-widget elementor-widget-ts-advanced-list" data-id="3cdc6ff" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+							<li class="elementor-repeater-item-e863acc flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>ბოლოს განახლდა 26 ოქტომბერი			</div>
+			</li>			</ul>
+				</div>
+				<div class="elementor-element elementor-element-35a333f elementor-widget elementor-widget-heading" data-id="35a333f" data-element_type="widget" data-e-type="widget" data-widget_type="heading.default">
+					<h3 class="elementor-heading-title elementor-size-default"><a href="https://www.infobatumi.ge/vakansiebi/gakidvebis-menejeri-korter/">გაყიდვების მენეჯერი</a></h3>				</div>
+				<div class="elementor-element elementor-element-00d7c58 elementor-widget elementor-widget-ts-advanced-list" data-id="00d7c58" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+							<li class="elementor-repeater-item-d405577 flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>Korter			</div>
+			</li>			
+							<li class="elementor-repeater-item-a488ff1 flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>ბათუმი			</div>
+			</li>			</ul>
+				</div>
+				<div class="elementor-element elementor-element-bf9ecdb elementor-widget elementor-widget-ts-advanced-list" data-id="bf9ecdb" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	</ul>
+				</div>
+				<div class="elementor-element elementor-element-e0a6e86 elementor-widget__width-inherit elementor-widget elementor-widget-ts-advanced-list" data-id="e0a6e86" data-element_type="widget" data-e-type="widget" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+					<li class="elementor-repeater-item-5abf3a3 flexify ts-action ">
+	<div class="ts-action-wrap ts-collections" data-post-id="33217">
+		<a href="#" ref="target" class="ts-action-con " role="button" @click.prevent="" @mousedown="open" aria-label="შენახვა">
+			<span class="ts-initial">
+				<div class="ts-action-icon"></div>
+				შენახვა			</span>
+			<span class="ts-reveal">
+				<div class="ts-action-icon"></div>
+				Action			</span>
+		</a>
+		<teleport to="body" class="hidden">
+			<transition name="form-popup">
+				<popup class="md-width" :show-save="false" :show-clear="false" v-if="active" ref="popup" @blur="active = false" :target="$refs.target">
+					<div v-if="screen !== 'create'" class="ts-popup-head ts-sticky-top flexify hide-d">
+						<div class="ts-popup-name flexify">
+														<span>პოსტის შენახვა</span>
+						</div>
+						<ul class="flexify simplify-ul">
+							<li class="flexify ts-popup-close">
+								<a role="button" @click.prevent="$root.active = false" href="#" class="ts-icon-btn">
+																	</a>
+							</li>
+						</ul>
+					</div>
+					<template v-if="screen === 'create'">
+						<div class="ts-create-collection" :class="{'vx-pending': create.loading}">
+							<div class="uib b-bottom ts-name-col">
+								<input type="text" ref="input" class="border-none" v-model="create.title" placeholder="სახელების კოლექცია" @keyup.enter="createCollection">
+							</div>
+						</div>
+						<div class="ts-popup-controller create-controller">
+							<ul class="flexify simplify-ul">
+								<li class="flexify"><a href="#" @click.prevent="screen = 'main'" class="ts-btn ts-btn-1">გაუქმება</a></li>
+								<li class="flexify"><a href="#" @click.prevent="createCollection" class="ts-btn ts-btn-2">შექმნა</a></li>
+							</ul>
+						</div>
+					</template>
+					<template v-else="">
+						<div v-if="items.loading" class="ts-empty-user-tab">
+							<div class="ts-loader"></div>
+						</div>
+						<div v-else="" class="ts-term-dropdown ts-md-group">
+							<ul class="simplify-ul ts-term-dropdown-list" :class="{'vx-pending': toggling}">
+								<li class="ts-term-centered">
+									<a href="#" @click.prevent="showCreateScreen" class="flexify">
+										<div class="ts-term-icon">
+																					</div>
+										<span>შექმენით რჩეულები</span>
+									</a>
+								</li>
+								<li v-for="item in items.list" :class="{'ts-selected': item.selected}">
+									<a href="#" class="flexify" @click.prevent="toggleItem( item )">
+										<div class="ts-checkbox-container">
+											<label class="container-checkbox">
+												<input type="checkbox" :checked="item.selected" disabled="" hidden="">
+												<span class="checkmark"></span>
+											</label>
+										</div>
+										<span>{{ item.title }}</span>
+									</a>
+								</li>
+								<div class="n-load-more" v-if="items.hasMore">
+									<a href="#" @click.prevent="loadMore" class="ts-btn ts-btn-4" :class="{'vx-pending': items.loadingMore}">
+																				კიდე მაჩვენე									</a>
+								</div>
+							</ul>
+						</div>
+					</template>
+				</popup>
+			</transition>
+		</teleport>
+	</div>
+</li>
+			</ul>
+				</div>
+				<div class="elementor-element elementor-element-de4a4b2 elementor-widget__width-auto elementor-absolute elementor-widget elementor-widget-ts-advanced-list" data-id="de4a4b2" data-element_type="widget" data-e-type="widget" data-settings="{&quot;_position&quot;:&quot;absolute&quot;}" data-widget_type="ts-advanced-list.default">
+					<ul class="flexify simplify-ul ts-advanced-list">
+	
+							<li class="elementor-repeater-item-71e7d35 flexify ts-action">			<div class="ts-action-con">
+				<div class="ts-action-icon"></div>VIP			</div>
+			</li>			</ul>
+				</div>
+				</div>
+				</div>
+		<div class="ts-marker-wrapper hidden"><div class="map-marker marker-type-icon mi-static" data-post-id="33217" data-post-link="https://www.infobatumi.ge/vakansiebi/gakidvebis-menejeri-korter/" data-position="41.6461,41.64049"></div></div></div></div>
+<div class="ts-no-posts hidden">
+		<p>არაფერი არ მოიძებნა				<a href="#" class="ts-feed-reset">
+			ფილტრების გადაყენება?		</a>
+			</p>
+	
+</div>
+			<div class="feed-pagination flexify">
+			<a href="#" class="ts-btn ts-btn-1 ts-btn-large ts-load-more hidden">
+								კიდე მაჩვენე			</a>
+		</div>
+					</div><div class="ts-preview" data-post-id="999"><h3><a href="https://www.infobatumi.ge/vakansiebi/unrelated/">Unrelated</a></h3></div>
