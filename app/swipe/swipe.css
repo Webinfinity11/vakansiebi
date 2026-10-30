@@ -10,6 +10,10 @@ body:has(.swipe-page) {
   text-align: center;
   color: var(--ds-ink-3);
 }
+.swipe-hint svg {
+  display: block;
+  margin-inline: auto;
+}
 .swipe-icon-btn {
   width: var(--ds-control-touch);
   height: var(--ds-control-touch);
@@ -477,10 +481,6 @@ body:has(.swipe-page) {
   user-select: text;
 }
 
-.swipe-keys {
-  display: none;
-}
-
 /* A desktop has room and a keyboard: the form sits beside its explanation,
    and the two choices sit on the card's own sides, where a mouse expects them. */
 @media (min-width: 900px) {
@@ -527,46 +527,6 @@ body:has(.swipe-page) {
   .swipe-stage .swipe-actions button:nth-child(3) {
     grid-area: send;
     justify-self: start;
-  }
-  /* A passing legend, not a row: it floats over the deck's foot for a few
-     seconds on the first visits and takes no room in the layout. */
-  .swipe-keys {
-    position: absolute;
-    left: 50%;
-    bottom: 76px;
-    z-index: 5;
-    display: block;
-    margin: 0;
-    padding: 8px 14px;
-    border: 1px solid var(--ds-line);
-    border-radius: 999px;
-    background: var(--ds-surface);
-    box-shadow: 0 8px 24px rgb(16 24 40 / 0.12);
-    white-space: nowrap;
-    font-size: var(--ds-text-xs);
-    color: var(--ds-ink-3);
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(-50%, 8px);
-    transition:
-      opacity 0.35s ease,
-      transform 0.35s ease;
-  }
-  .swipe-keys[data-show] {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-  .swipe-keys kbd {
-    display: inline-block;
-    min-width: 22px;
-    padding: 1px 6px;
-    border: 1px solid var(--ds-line-strong);
-    border-bottom-width: 2px;
-    border-radius: 6px;
-    background: var(--ds-surface);
-    font: inherit;
-    color: var(--ds-ink-2);
-    text-align: center;
   }
 }
 
@@ -822,7 +782,6 @@ body:has(.swipe-page) {
 .swipe-page .swipe-company span,
 .swipe-page .swipe-actions button,
 .swipe-page .swipe-from,
-.swipe-page .swipe-keys,
 .swipe-attach .swipe-fields span,
 .swipe-attach .swipe-cv span {
   color: var(--ds-ink-2);
@@ -857,13 +816,6 @@ body:has(.swipe-page) {
   }
   .swipe-page .swipe-actions {
     padding-top: var(--ds-space-2);
-  }
-}
-
-@media (min-width: 900px) and (prefers-reduced-motion: reduce) {
-  .swipe-keys {
-    transform: translate(-50%, 0);
-    transition: opacity 0.2s linear;
   }
 }
 
@@ -962,39 +914,135 @@ body:has(.swipe-page) {
     right: calc(-1 * var(--ds-space-1));
   }
 }
-/* Board sheets normally open only on phones; the deck uses one on desktop too. */
+/* The desktop filter dialog uses the available width; phones keep the bottom sheet. */
 @media (min-width: 761px) {
   .swipe-filters-sheet[data-slot='sheet-content'] {
-    width: min(100%, 540px);
+    width: min(820px, calc(100vw - 48px)) !important;
+    max-width: none;
     margin-inline: auto;
-    max-height: 90dvh;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    max-height: calc(100dvh - 48px);
     overflow: hidden;
+    padding: 0 !important;
     gap: 0;
-    border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-lg);
     background: var(--ds-surface);
     color: var(--ds-ink);
   }
   .swipe-filters-sheet [data-slot='sheet-header'] {
-    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 16px;
+    padding: 18px 24px 14px;
     flex-shrink: 0;
-    padding-right: var(--ds-space-6);
+    border-bottom: 1px solid var(--ds-line);
+  }
+  .swipe-filters-sheet [data-slot='sheet-title'] {
+    font-size: 20px;
   }
   .swipe-filters-sheet .mobile-filters-clear {
-    align-self: flex-start;
+    position: static;
+    grid-column: 2;
+    grid-row: 1;
+    margin-right: 32px;
+  }
+  .swipe-filters-sheet [data-slot='sheet-description'] {
+    grid-column: 1/-1;
+    font-size: 13px;
+    line-height: 1.5;
   }
   .swipe-filters-sheet .filters {
-    display: block;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'search search'
+      'city salary'
+      'category salary'
+      'subcategory salary'
+      'conditions employment'
+      'help help';
+    align-items: start;
+    gap: 14px 28px;
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    padding: var(--ds-space-4);
+    overscroll-behavior: contain;
+    padding: 18px 24px;
+  }
+  .swipe-filters-sheet .swipe-filter-search {
+    grid-area: search;
+    margin: 0;
+  }
+  .swipe-filters-sheet .filter-primary-city {
+    grid-area: city;
+    margin: 0;
+  }
+  .swipe-filters-sheet .filter-primary-category {
+    grid-area: category;
+  }
+  .swipe-filters-sheet .filter-subcategory {
+    grid-area: subcategory;
+    margin: 0;
+  }
+  .swipe-filters-sheet .filters .salary-filter {
+    grid-area: salary;
+    margin: 0;
+    padding: 0;
+  }
+  .swipe-filters-sheet .filter-conditions {
+    grid-area: conditions;
+  }
+  .swipe-filters-sheet .filter-chips {
+    grid-area: employment;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+  }
+  .swipe-filters-sheet .filter-chips .ds-chip {
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 10px;
+    border-color: var(--ds-line);
+    text-align: center;
+    white-space: normal;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .swipe-filters-sheet .filter-help {
+    grid-area: help;
+    margin: 0;
+  }
+  .swipe-filters-sheet .filter-divider {
+    display: none;
+  }
+  .swipe-filters-sheet .filters :is(h3, legend) {
+    margin: 0 0 8px;
+    font-size: 13px;
   }
   .swipe-filters-sheet .filters :is(.choice, .ds-select) {
     width: 100%;
     min-height: var(--ds-control-touch);
   }
   .swipe-filters-sheet .check-row {
-    min-height: var(--ds-control-touch);
+    min-height: 36px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .swipe-filters-sheet .mobile-filters-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 24px;
+  }
+  .swipe-filters-sheet .mobile-filters-footer .filters-apply {
+    width: auto;
+    min-width: 240px;
+    margin-left: auto;
   }
 }
 

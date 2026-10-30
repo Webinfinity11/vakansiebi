@@ -1541,15 +1541,7 @@
   .board-shell.editorial-board.crafted-board.refined-board
     .results-title-row
     .recent-strip
-    > .recent-head,
-  .board-shell.editorial-board.crafted-board.refined-board
-    .results-title-row
-    .recent-strip
-    > .recent-track,
-  .board-shell.editorial-board.crafted-board.refined-board
-    .results-title-row
-    .recent-strip[open]
-    > .recent-track {
+    > .recent-popover {
     left: 0;
     right: 0;
     width: auto;

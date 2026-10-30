@@ -1,25 +1,8 @@
 'use client';
 import { useUi } from '@/app/ui-language';
 import { Fragment, useState } from 'react';
-import {
-  SlidersHorizontal,
-  ClipboardList,
-  Laptop,
-  ShieldCheck,
-  Calculator,
-  GraduationCap,
-  LayoutGrid,
-  Handshake,
-  Megaphone,
-  Truck,
-  HandPlatter,
-  Stethoscope,
-  HardHat,
-  Factory,
-  Scale,
-  Scissors,
-  Ellipsis,
-} from 'lucide-react';
+import { ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { CategoryIcon } from '@/components/category-icon';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { SearchFilters } from '@/lib/personal-space';
 import type { SearchMeta } from '@/lib/server/search-plan';
@@ -32,24 +15,6 @@ import { SalaryFilter } from './salary-filter';
 import { employmentLabels, type AdvancedFilters } from './advanced-filters';
 const cities = [...cityOptions];
 const allSubcategories = '__all__';
-const categoryIcons = {
-  ყველა: LayoutGrid,
-  ტექნოლოგიები: Laptop,
-  გაყიდვები: Handshake,
-  მარკეტინგი: Megaphone,
-  ადმინისტრაცია: ClipboardList,
-  ფინანსები: Calculator,
-  ლოჯისტიკა: Truck,
-  მომსახურება: HandPlatter,
-  სამედიცინო: Stethoscope,
-  განათლება: GraduationCap,
-  მშენებლობა: HardHat,
-  დაცვა: ShieldCheck,
-  წარმოება: Factory,
-  იურიდიული: Scale,
-  სილამაზე: Scissors,
-  სხვა: Ellipsis,
-};
 
 /* The rate as one tap per option; "all" needs no word for the rate twice. */
 const employmentChoices = (
@@ -61,6 +26,78 @@ const employmentChoices = (
       key === 'all' ? 'ყველა' : key === 'daily' ? 'დღიური სამუშაო' : label,
     ] as const,
 );
+
+function CategoryPositions({
+  category,
+  prefix,
+  selected,
+  options,
+  countsKnown,
+  count,
+  total,
+  onChange,
+}: {
+  category: string;
+  prefix: string;
+  selected: string;
+  options: ReturnType<typeof subcategoryChoices>;
+  countsKnown: boolean;
+  count: (id: string) => number;
+  total?: number;
+  onChange: (id: string) => void;
+}) {
+  const { ui } = useUi();
+  const [expanded, setExpanded] = useState(false);
+  const available = options.filter(
+    (item) => !countsKnown || count(item.id) > 0 || item.id === selected,
+  );
+  const hidden = options.length - available.length;
+  const visible = expanded ? options : available;
+  return (
+    <fieldset
+      className="subcategory-options"
+      aria-label={ui('{0} — ქვემიმართულება', [category])}
+    >
+      {[
+        ...(selected ? [{ id: '', label: 'ყველა პოზიცია' }] : []),
+        ...visible,
+      ].map((item) => (
+        <label
+          className="check-row"
+          key={item.id}
+          htmlFor={`${prefix}-subcategory-${item.id || 'all'}`}
+        >
+          <input
+            type="radio"
+            name={`${prefix}-subcategory`}
+            id={`${prefix}-subcategory-${item.id || 'all'}`}
+            value={item.id}
+            checked={selected === item.id}
+            onChange={() => onChange(item.id)}
+          />
+          <span>{ui(item.label)}</span>
+          {countsKnown && (
+            <small className="facet-count">
+              {item.id ? count(item.id) : total}
+            </small>
+          )}
+        </label>
+      ))}
+      {hidden > 0 && (
+        <button
+          className="subcategory-expand ds-btn ds-btn--ghost ds-btn--sm"
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded
+            ? ui('ნაკლები პოზიცია')
+            : ui('სხვა პოზიციები ({0})', [hidden])}
+        </button>
+      )}
+    </fieldset>
+  );
+}
 
 export function SearchFilterFields({
   value: draft,
@@ -168,7 +205,6 @@ export function SearchFilterFields({
                   allCategoriesVisible || index < 8 || c === draft.category,
               )
               .map((c) => {
-                const CategoryIcon = categoryIcons[c];
                 return (
                   <Fragment key={c}>
                     <label
@@ -188,6 +224,7 @@ export function SearchFilterFields({
                         }}
                       />
                       <CategoryIcon
+                        category={c}
                         className="category-icon"
                         size={16}
                         aria-hidden="true"
@@ -209,49 +246,17 @@ export function SearchFilterFields({
                     {c === draft.category &&
                       showSubcategories &&
                       subcategories.some((item) => item.category === c) && (
-                        <fieldset
-                          className="subcategory-options"
-                          aria-label={ui('{0} — ქვემიმართულება', [c])}
-                        >
-                          {[
-                            { id: '', label: 'ყველა პოზიცია' },
-                            ...orderedSubcategories(c),
-                          ].map((item) => (
-                            <label
-                              className="check-row"
-                              key={item.id}
-                              htmlFor={`${prefix}-subcategory-${item.id || 'all'}`}
-                              title={
-                                item.id
-                                  ? undefined
-                                  : ui(
-                                      'ამ მიმართულების ყველა ვაკანსია, დაუზუსტებელი პოზიციების ჩათვლით',
-                                    )
-                              }
-                            >
-                              <input
-                                type="radio"
-                                name={`${prefix}-subcategory`}
-                                id={`${prefix}-subcategory-${item.id || 'all'}`}
-                                value={item.id}
-                                checked={(draft.subcategory || '') === item.id}
-                                onChange={() => setSubcategory(item.id)}
-                              />
-                              <span>{ui(item.label)}</span>
-                              {facets && (
-                                <small className="facet-count">
-                                  {item.id
-                                    ? (facets.subcategories?.find(
-                                        (child) => child.id === item.id,
-                                      )?.count ?? 0)
-                                    : (facets.categories.find(
-                                        (parent) => parent.name === c,
-                                      )?.count ?? 0)}
-                                </small>
-                              )}
-                            </label>
-                          ))}
-                        </fieldset>
+                        <CategoryPositions
+                          key={c}
+                          category={c}
+                          prefix={prefix}
+                          selected={draft.subcategory || ''}
+                          options={orderedSubcategories(c)}
+                          countsKnown={!!orderingFacets?.subcategories}
+                          count={subcategoryCount}
+                          total={categoryCount(c)}
+                          onChange={setSubcategory}
+                        />
                       )}
                   </Fragment>
                 );
@@ -304,31 +309,33 @@ export function SearchFilterFields({
           </div>
         )}
       <div className="filter-divider" />
-      <h3>{ui('სამუშაო პირობები')}</h3>
-      <label className="check-row" htmlFor={`${prefix}-remote`}>
-        <Checkbox
-          id={`${prefix}-remote`}
-          checked={draft.remote}
-          onCheckedChange={changeRemote}
-        />
-        {ui('დისტანციური')}
-      </label>
-      <label className="check-row" htmlFor={`${prefix}-paid`}>
-        <Checkbox
-          id={`${prefix}-paid`}
-          checked={draft.paid}
-          onCheckedChange={changePaid}
-        />
-        {ui('ხელფასი მითითებულია')}
-      </label>
-      <label className="check-row" htmlFor={`${prefix}-entry-level`}>
-        <Checkbox
-          id={`${prefix}-entry-level`}
-          checked={draft.entryLevel}
-          onCheckedChange={(entryLevel) => changeAdvanced({ entryLevel })}
-        />
-        {ui('გამოცდილების გარეშე')}
-      </label>
+      <div className="filter-conditions">
+        <h3>{ui('სამუშაო პირობები')}</h3>
+        <label className="check-row" htmlFor={`${prefix}-remote`}>
+          <Checkbox
+            id={`${prefix}-remote`}
+            checked={draft.remote}
+            onCheckedChange={changeRemote}
+          />
+          {ui('დისტანციური')}
+        </label>
+        <label className="check-row" htmlFor={`${prefix}-paid`}>
+          <Checkbox
+            id={`${prefix}-paid`}
+            checked={draft.paid}
+            onCheckedChange={changePaid}
+          />
+          {ui('ხელფასი მითითებულია')}
+        </label>
+        <label className="check-row" htmlFor={`${prefix}-entry-level`}>
+          <Checkbox
+            id={`${prefix}-entry-level`}
+            checked={draft.entryLevel}
+            onCheckedChange={(entryLevel) => changeAdvanced({ entryLevel })}
+          />
+          {ui('გამოცდილების გარეშე')}
+        </label>
+      </div>
       {/* Every option in sight, one tap each, as the salary amounts are. */}
       <fieldset className="filter-chips">
         <legend>{ui('განაკვეთი')}</legend>

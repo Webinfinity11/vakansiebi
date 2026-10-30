@@ -86,7 +86,8 @@ void test(
       assert.equal(retry.invoiceUrl, received.invoiceUrl);
       const token = received.invoiceUrl!.split('/').pop()!;
       let inv = await getInvoice(token);
-      assert.equal(inv.amount_gel, 20);
+      assert.equal(inv.amount_gel, 50);
+      assert.equal(inv.placement_tier, 'premium');
       assert.equal(inv.service_days, 30);
       assert.equal(inv.status, 'pending');
       const queued = (
@@ -100,7 +101,7 @@ void test(
       for (const body of [queued.payload.html, queued.payload.text])
         assert.match(
           body,
-          /20 ₾[\s\S]*· 30 დღე|· 30 დღე[\s\S]*20 ₾/,
+          /50 ₾[\s\S]*· 30 დღე|· 30 დღე[\s\S]*50 ₾/,
           'invoice mail states the same price and term that activation applies',
         );
       assert.equal(queued.status, 'pending');
@@ -266,6 +267,36 @@ void test(
       assert.equal(
         (await getInvoice(paid.invoiceUrl!.split('/').pop()!)).status,
         'refunded',
+      );
+      const legacy = await submitJob(
+        { ...payload, requestId: randomUUID(), title: key + ' legacy' },
+        key + '-legacy',
+      );
+      ids.push(legacy.id);
+      await db().query(
+        'UPDATE job_invoices SET amount_gel=20 WHERE job_id=$1',
+        [legacy.id],
+      );
+      await mutateJob({ id: legacy.id, version: 1, action: 'confirm-payment' });
+      await assert.rejects(
+        mutateJob({
+          id: legacy.id,
+          version: 2,
+          action: 'publish',
+          placement: 'vip',
+        }),
+        /ჩარიცხვა/,
+        'a paid legacy premium invoice cannot be reused as VIP',
+      );
+      await mutateJob({
+        id: legacy.id,
+        version: 2,
+        action: 'publish',
+        placement: 'premium',
+      });
+      assert.equal(
+        (await getInvoice(legacy.invoiceUrl!.split('/').pop()!)).amount_gel,
+        20,
       );
       const fallback = await submitJob(
         { ...payload, requestId: randomUUID(), billingEmail: '' },

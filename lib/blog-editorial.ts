@@ -143,7 +143,7 @@ export function validateArticle(
   return draft;
 }
 export function draftPost(
-  draft: ArticleDraft,
+  draft: ArticleDraft & { links?: BlogPost['links'] },
   publishedAt: string,
   updatedAt?: string,
 ): BlogPost {
@@ -152,7 +152,7 @@ export function draftPost(
     cover: draft.coverKey === 'none' ? undefined : blogCovers[draft.coverKey],
     publishedAt,
     updatedAt,
-    links: [
+    links: draft.links ?? [
       { label: 'ვაკანსიების ნახვა', href: '/' },
       { label: 'რეზიუმეს შექმნა', href: '/cv' },
       { label: 'ბლოგი', href: '/blog' },

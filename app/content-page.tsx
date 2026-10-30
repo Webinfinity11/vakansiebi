@@ -34,7 +34,13 @@ export function ContentPage({
             ),
           }}
         />
-        <nav className="content-breadcrumb" aria-label="გვერდის მდებარეობა">
+        <nav
+          className="content-breadcrumb"
+          aria-labelledby="content-breadcrumb-label"
+        >
+          <span className="sr-only" id="content-breadcrumb-label">
+            <LocalText ka="გვერდის მდებარეობა" en="Breadcrumb" />
+          </span>
           <Link href="/" prefetch={false}>
             <ChevronLeft size={15} aria-hidden="true" />
             <LocalText ka="ვაკანსიები" en="Jobs" />

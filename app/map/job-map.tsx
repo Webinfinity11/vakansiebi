@@ -80,7 +80,7 @@ function MetroDistance({
   place: MapVacancy['places'][number] | undefined;
   station?: MetroStation;
 }) {
-  const { ui } = useUi();
+  const { ui, locale } = useUi();
   if (!place) return null;
   const near = station
     ? {
@@ -101,7 +101,7 @@ function MetroDistance({
       <TrainFront size={13} aria-hidden="true" />
       <span>
         {ui('მეტრო ')}
-        {near.station.name} · ≈{formatWalk(near.minutes)}
+        {ui(near.station.name)} · ≈{formatWalk(near.minutes, locale)}
       </span>
     </span>
   );
@@ -125,7 +125,11 @@ function features(list: MapVacancy[]) {
 }
 
 export function JobMap() {
-  const { ui } = useUi();
+  const { ui, locale } = useUi();
+  const currentLocale = useRef(locale);
+  useEffect(() => {
+    currentLocale.current = locale;
+  }, [locale]);
   const params = useSearchParams();
   const station = stationBySlug(params.get('station') || '');
   const requestedWalk = Number(params.get('walk'));
@@ -521,8 +525,11 @@ export function JobMap() {
         });
         addMetroStations(m, pickStation);
         installClusterLayout(m);
-        installMapPreviews(m, maplibre.Popup, (id) =>
-          latestVacancies.current.get(id),
+        installMapPreviews(
+          m,
+          maplibre.Popup,
+          (id) => latestVacancies.current.get(id),
+          () => currentLocale.current,
         );
         // The layout settles after the map is created (fonts, the phone sheet); keep the canvas
         // matched to its box so the first view is where it should be.
@@ -950,7 +957,7 @@ export function JobMap() {
             <div className="job-map-station-context">
               <div className="job-map-station-heading">
                 <TrainFront size={17} aria-hidden="true" />
-                <strong>{station.name}</strong>
+                <strong>{ui(station.name)}</strong>
                 <button
                   type="button"
                   className="ds-btn ds-btn--ghost ds-btn--sm"
@@ -1095,7 +1102,7 @@ export function JobMap() {
                     <span>{v.company}</span>
                     <MetroDistance place={v.places[0]} station={station} />
                     {v.salary && (
-                      <b>{compactSalary(v.salary, v.salaryPeriod)}</b>
+                      <b>{compactSalary(v.salary, v.salaryPeriod, locale)}</b>
                     )}
                     <small>
                       <MapPin size={14} aria-hidden="true" />
@@ -1196,7 +1203,7 @@ export function JobMap() {
                   </div>
                   <p>
                     {v.salary && (
-                      <b>{compactSalary(v.salary, v.salaryPeriod)}</b>
+                      <b>{compactSalary(v.salary, v.salaryPeriod, locale)}</b>
                     )}
                     <span>
                       <MapPin size={14} aria-hidden="true" />

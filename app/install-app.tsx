@@ -9,7 +9,14 @@ import {
   type ReactNode,
 } from 'react';
 import { usePathname } from 'next/navigation';
-import { Download, X } from 'lucide-react';
+import { Download, Share, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { useUi } from './ui-language';
 import {
   installAcceptedKey,
@@ -18,6 +25,8 @@ import {
   installDismissKey,
   installPage,
   installSeenKey,
+  installPlatform,
+  type InstallPlatform,
 } from '@/lib/app-install';
 
 type InstallEvent = Event & {
@@ -37,22 +46,29 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [eligibleVisit, setEligibleVisit] = useState(false);
   const [dismissed, setDismissed] = useState(true);
-  const [desktop, setDesktop] = useState(false);
+  const [platform, setPlatform] = useState<InstallPlatform>('desktop');
+  const [standalone, setStandalone] = useState(false);
+  const [installed, setInstalled] = useState(false);
+  const [instructions, setInstructions] = useState(false);
   const [busy, setBusy] = useState(false);
   const accepted = useRef(false);
   const visited = useRef(new Set<string>());
 
   useEffect(() => {
-    const screen = matchMedia('(min-width: 900px) and (pointer: fine)');
-    const standalone = matchMedia('(display-mode: standalone)');
-    const updateScreen = () =>
-      setDesktop(screen.matches && !standalone.matches);
-    updateScreen();
-    screen.addEventListener('change', updateScreen);
-    standalone.addEventListener('change', updateScreen);
+    const appMode = matchMedia('(display-mode: standalone)');
+    const isApp = () =>
+      appMode.matches ||
+      !!(navigator as Navigator & { standalone?: boolean }).standalone;
+    const updateMode = () => setStandalone(isApp());
+    updateMode();
+    appMode.addEventListener?.('change', updateMode);
     const initialise = setTimeout(() => {
+      setPlatform(
+        installPlatform(navigator.userAgent, navigator.maxTouchPoints),
+      );
       try {
         accepted.current = localStorage.getItem(installAcceptedKey) === '1';
+        setInstalled(accepted.current);
         setDismissed(installDismissed(localStorage.getItem(installDismissKey)));
         setEligibleVisit(localStorage.getItem(installSeenKey) === '1');
         localStorage.setItem(installSeenKey, '1');
@@ -67,14 +83,15 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => setReady(true), installDelayMs);
     const capture = (event: Event) => {
       const candidate = event as InstallEvent;
-      if (typeof candidate.prompt !== 'function' || standalone.matches) return;
+      if (typeof candidate.prompt !== 'function' || isApp()) return;
       event.preventDefault();
       if (accepted.current) return;
       pending.current = candidate;
       setAvailable(true);
     };
-    const installed = () => {
+    const onInstalled = () => {
       accepted.current = true;
+      setInstalled(true);
       try {
         localStorage.setItem(installAcceptedKey, '1');
       } catch {
@@ -85,10 +102,10 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
       setDismissed(true);
     };
     window.addEventListener('beforeinstallprompt', capture);
-    window.addEventListener('appinstalled', installed);
+    window.addEventListener('appinstalled', onInstalled);
     const sync = (event: StorageEvent) => {
       if (event.key === installAcceptedKey && event.newValue === '1')
-        installed();
+        onInstalled();
       if (event.key === installDismissKey)
         setDismissed(installDismissed(event.newValue));
     };
@@ -96,10 +113,9 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
     return () => {
       clearTimeout(initialise);
       clearTimeout(timer);
-      screen.removeEventListener('change', updateScreen);
-      standalone.removeEventListener('change', updateScreen);
+      appMode.removeEventListener?.('change', updateMode);
       window.removeEventListener('beforeinstallprompt', capture);
-      window.removeEventListener('appinstalled', installed);
+      window.removeEventListener('appinstalled', onInstalled);
       window.removeEventListener('storage', sync);
     };
   }, []);
@@ -121,7 +137,14 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
 
   async function install() {
     const event = pending.current;
-    if (!event || busy) return;
+    if (busy) return;
+    if (!event) {
+      if (platform !== 'desktop') {
+        dismiss();
+        setInstructions(true);
+      }
+      return;
+    }
     // A browser event can be used only once. Keep prompt() in the click gesture.
     pending.current = null;
     setBusy(true);
@@ -132,6 +155,7 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
       const choice = await event.userChoice;
       if (choice.outcome === 'accepted') {
         accepted.current = true;
+        setInstalled(true);
         try {
           localStorage.setItem(installAcceptedKey, '1');
         } catch {
@@ -145,17 +169,19 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const canInstall =
+    !standalone && !installed && (available || platform !== 'desktop');
+  const nativeInstall = available;
   const visible =
-    available &&
-    desktop &&
+    canInstall &&
     ready &&
-    eligibleVisit &&
+    (eligibleVisit || platform !== 'desktop') &&
     !dismissed &&
     !!pathname &&
     installPage(pathname);
   return (
     <InstallContext.Provider
-      value={{ available: available && desktop, install }}
+      value={{ available: canInstall && !busy, install }}
     >
       {children}
       {visible && (
@@ -174,12 +200,22 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
           </button>
           <Download size={24} aria-hidden="true" />
           <h2 id="install-app-title">
-            {locale === 'en' ? 'JOBX on your desktop' : 'JOBX სამუშაო მაგიდაზე'}
+            {platform === 'desktop'
+              ? locale === 'en'
+                ? 'JOBX on your desktop'
+                : 'JOBX სამუშაო მაგიდაზე'
+              : locale === 'en'
+                ? 'JOBX on your home screen'
+                : 'JOBX მთავარ ეკრანზე'}
           </h2>
           <p>
-            {locale === 'en'
-              ? 'Open jobs in their own window, straight from your desktop.'
-              : 'გახსენი ვაკანსიები ცალკე ფანჯარაში, პირდაპირ სამუშაო მაგიდიდან.'}
+            {platform !== 'desktop'
+              ? locale === 'en'
+                ? 'Add JOBX to your home screen and open jobs with one tap.'
+                : 'დაამატე JOBX მთავარ ეკრანზე და ვაკანსიები ერთი შეხებით გახსენი.'
+              : locale === 'en'
+                ? 'Open jobs in their own window, straight from your desktop.'
+                : 'გახსენი ვაკანსიები ცალკე ფანჯარაში, პირდაპირ სამუშაო მაგიდიდან.'}
           </p>
           <button
             type="button"
@@ -187,7 +223,13 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
             disabled={busy}
             onClick={install}
           >
-            {locale === 'en' ? 'Install JOBX' : 'დააყენე JOBX'}
+            {nativeInstall
+              ? locale === 'en'
+                ? 'Install JOBX'
+                : 'დააყენე JOBX'
+              : locale === 'en'
+                ? 'How to install'
+                : 'როგორ დავაყენო'}
           </button>
           <button
             type="button"
@@ -198,6 +240,70 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
           </button>
         </aside>
       )}
+      <Dialog
+        open={instructions && !standalone && !installed}
+        onOpenChange={setInstructions}
+      >
+        <DialogContent className="install-instructions">
+          <DialogHeader>
+            <DialogTitle>
+              {locale === 'en'
+                ? 'Add JOBX to your home screen'
+                : 'დაამატე JOBX მთავარ ეკრანზე'}
+            </DialogTitle>
+            <DialogDescription>
+              {platform === 'ios'
+                ? locale === 'en'
+                  ? 'Use Safari to add JOBX, then open it from its home screen icon.'
+                  : 'Safari-დან დაამატე JOBX და შემდეგ მთავარ ეკრანზე მისი ხატულიდან გახსენი.'
+                : locale === 'en'
+                  ? 'Use your browser’s installation menu to add JOBX.'
+                  : 'JOBX ბრაუზერის დაყენების მენიუდან დაამატე.'}
+            </DialogDescription>
+          </DialogHeader>
+          <ol>
+            <li>
+              {platform === 'ios'
+                ? locale === 'en'
+                  ? 'Open jobx.ge in Safari.'
+                  : 'გახსენი jobx.ge Safari-ში.'
+                : locale === 'en'
+                  ? 'Open jobx.ge in Chrome.'
+                  : 'გახსენი jobx.ge Chrome-ში.'}
+            </li>
+            <li>
+              {platform === 'ios' ? (
+                <>
+                  <Share size={16} aria-hidden="true" />
+                  {locale === 'en'
+                    ? 'Tap Share, directly or from the page menu.'
+                    : 'დააჭირე გაზიარებას (Share), პირდაპირ ან გვერდის მენიუდან.'}
+                </>
+              ) : locale === 'en' ? (
+                'Open the ⋮ menu and select “Install and create shortcut”.'
+              ) : (
+                'მენიუში (⋮) აირჩიე „დაყენება ან მალსახმობის შექმნა“ (Install and create shortcut).'
+              )}
+            </li>
+            <li>
+              {platform === 'ios'
+                ? locale === 'en'
+                  ? 'Choose “Add to Home Screen”, keep “Open as Web App” enabled if shown, then tap “Add”.'
+                  : 'აირჩიე „მთავარ ეკრანზე დამატება“ (Add to Home Screen), თუ ჩანს „Open as Web App“, ჩართული დატოვე და დააჭირე „დამატებას“ (Add).'
+                : locale === 'en'
+                  ? 'Choose “Install” and follow the on-screen instructions.'
+                  : 'აირჩიე „დაყენება“ (Install) და მიჰყევი ეკრანზე მითითებებს.'}
+            </li>
+          </ol>
+          <button
+            type="button"
+            className="ds-btn ds-btn--primary"
+            onClick={() => setInstructions(false)}
+          >
+            {locale === 'en' ? 'Got it' : 'გასაგებია'}
+          </button>
+        </DialogContent>
+      </Dialog>
     </InstallContext.Provider>
   );
 }

@@ -33,7 +33,7 @@ export function CompaniesDirectory({
   /** The page heading, placed above the count line this list keeps true. */
   children: ReactNode;
 }) {
-  const { ui } = useUi();
+  const { ui, locale } = useUi();
   const [query, setQuery] = useState('');
   const deferred = useDeferredValue(query);
   const names = useMemo(
@@ -122,9 +122,9 @@ export function CompaniesDirectory({
               <span className="companies-card-body">
                 <span
                   className="companies-card-name"
-                  title={companyVacancyTitle(company.name)}
+                  title={companyVacancyTitle(company.name, locale)}
                 >
-                  {companyVacancyTitle(company.name)}
+                  {companyVacancyTitle(company.name, locale)}
                 </span>
                 <span className="companies-card-jobs">
                   {company.jobs}
@@ -133,7 +133,9 @@ export function CompaniesDirectory({
                 {company.cities.length > 0 && (
                   <span className="companies-card-cities">
                     <MapPin size={14} aria-hidden="true" />
-                    <span>{company.cities.join(' · ')}</span>
+                    <span>
+                      {company.cities.map((city) => ui(city)).join(' · ')}
+                    </span>
                   </span>
                 )}
               </span>

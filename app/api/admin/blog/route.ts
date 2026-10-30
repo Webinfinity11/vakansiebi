@@ -9,39 +9,57 @@ import {
 import {
   editorialArticles,
   updateEditorialArticle,
+  createEditorialArticle,
+  staticEditorialArticles,
 } from '@/lib/server/blog-editorial';
 export const dynamic = 'force-dynamic';
 function configured() {
   if (process.env.BLOG_STORAGE_ENABLED !== 'true')
     throw new ApiError(
-      'ბლოგის საცავი ჯერ არ არის ჩართული. საჭიროა მიგრაცია 066 და BLOG_STORAGE_ENABLED=true.',
+      'ბლოგის შენახვა ჯერ არ არის გააქტიურებული. მიმართე საიტის ადმინისტრატორს.',
       503,
     );
 }
 export async function GET() {
   try {
     await requireAdmin();
-    configured();
-    return Response.json(await editorialArticles(), {
-      headers: { 'Cache-Control': 'private, no-store' },
-    });
+    const storageEnabled = process.env.BLOG_STORAGE_ENABLED === 'true';
+    return Response.json(
+      {
+        articles: storageEnabled
+          ? await editorialArticles()
+          : staticEditorialArticles(),
+        storageEnabled,
+      },
+      {
+        headers: { 'Cache-Control': 'private, no-store' },
+      },
+    );
   } catch (error) {
     return apiError(error);
   }
 }
-const change = z.object({
-  id: z.uuid(),
-  revision: z.number().int().positive(),
-  action: z.enum(['save', 'publish', 'unpublish', 'reject']),
-  content: z.unknown().optional(),
-  reviewed: z.boolean().optional(),
-});
+const change = z.union([
+  z.object({ action: z.literal('create'), content: z.unknown() }),
+  z.object({
+    id: z.union([z.uuid(), z.string().regex(/^static:[a-z][a-z0-9-]*$/)]),
+    revision: z.number().int().nonnegative(),
+    action: z.enum(['save', 'publish', 'unpublish', 'reject']),
+    content: z.unknown().optional(),
+    reviewed: z.boolean().optional(),
+  }),
+]);
 export async function POST(req: Request) {
   try {
     await requireAdmin();
     checkOrigin(req);
     configured();
     const input = change.parse(await readBody(req));
+    if (input.action === 'create')
+      return Response.json(await createEditorialArticle(input.content), {
+        status: 201,
+        headers: { 'Cache-Control': 'private, no-store' },
+      });
     if (input.action === 'publish' && !input.reviewed)
       throw new ApiError('გამოქვეყნებამდე გადაამოწმე ტექსტი და წყაროები.');
     const article = await updateEditorialArticle(

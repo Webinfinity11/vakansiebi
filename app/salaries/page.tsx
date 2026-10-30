@@ -9,8 +9,13 @@ export const metadata = contentMetadata(
   'ხელფასები',
   'შეადარე აქტიურ ვაკანსიებში მითითებული ანაზღაურება პროფესიების მიხედვით. თვიური და დღიური თანხები ცალ-ცალკე.',
 );
-export default async function SalariesPage() {
-  const roles = await salaryPages();
+export default async function SalariesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [roles, params] = await Promise.all([salaryPages(), searchParams]);
+  const initialPeriod = params.period === 'day' ? 'day' : 'month';
   return (
     <ContentPage
       path="/salaries"
@@ -20,10 +25,14 @@ export default async function SalariesPage() {
       }}
       intro={{
         ka: 'შეადარე აქტიურ ვაკანსიებში მითითებული ანაზღაურება. აირჩიე კატეგორია ან პროფესია და ნახე თვიური ან დღიური თანხები.',
-        en: 'Compare pay stated in active listings. Find your profession and explore monthly or daily amounts.',
+        en: 'Compare pay stated in active listings. Choose a category or profession to see monthly or daily amounts.',
       }}
     >
-      <SalaryExplorer roles={roles} />
+      <SalaryExplorer
+        key={initialPeriod}
+        roles={roles}
+        initialPeriod={initialPeriod}
+      />
     </ContentPage>
   );
 }

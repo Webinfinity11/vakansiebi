@@ -4,14 +4,16 @@ import { LoaderCircle } from 'lucide-react';
 import { vacancyCardCompany } from '@/lib/vacancy-card-labels';
 import { CompanyLogo } from './company-logo';
 import { companyDisplayName } from '@/lib/company-display-name';
+import { useUi } from './ui-language';
 
 function NavigationHint() {
+  const { ui } = useUi();
   const { pending } = useLinkStatus();
   return (
     <output
       className="company-navigation-hint"
       data-pending={pending || undefined}
-      aria-label={pending ? 'კომპანიის გვერდი იტვირთება' : undefined}
+      aria-label={pending ? ui('კომპანიის გვერდი იტვირთება') : undefined}
     >
       {/* Only the wait is shown; the name itself is the link. */}
       {pending && <LoaderCircle size={14} aria-hidden="true" />}
@@ -35,6 +37,7 @@ export function CompanyIdentity({
   onOpen?: () => void;
   disabled?: boolean;
 }) {
+  const { ui } = useUi();
   const displayName = companyDisplayName(company);
   const content = (
     <>
@@ -45,7 +48,8 @@ export function CompanyIdentity({
         large={large}
       />
       <span className="company-identity-name" title={displayName}>
-        {(large ? displayName : vacancyCardCompany(displayName)) || 'კომპანია'}
+        {(large ? displayName : vacancyCardCompany(displayName)) ||
+          ui('კომპანია')}
       </span>
     </>
   );
@@ -54,7 +58,7 @@ export function CompanyIdentity({
       className={`company-identity ${large ? 'identity-large' : ''}`}
       href={href}
       prefetch={false}
-      title={`${displayName} — კომპანიის ვაკანსიები`}
+      title={ui('{0} — კომპანიის ვაკანსიები', [displayName])}
       aria-disabled={disabled || undefined}
       tabIndex={disabled ? -1 : undefined}
       onClick={(event) => {

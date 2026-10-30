@@ -14,6 +14,6 @@ export const salaryPages = unstable_cache(
     );
     return summarizeSalaries(rows);
   },
-  ['salary-pages-v3'],
+  ['salary-pages-v4'],
   { revalidate: 3600 },
 );

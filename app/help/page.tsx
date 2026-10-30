@@ -75,7 +75,13 @@ export default function HelpPage() {
         </Link>
       </div>
       <div className="help-layout">
-        <section className="help-questions" aria-label="კითხვები და პასუხები">
+        <section
+          className="help-questions"
+          aria-labelledby="help-questions-label"
+        >
+          <h2 className="sr-only" id="help-questions-label">
+            <LocalText ka="კითხვები და პასუხები" en="Questions and answers" />
+          </h2>
           {questions.map((item) => (
             <details className="help-item" key={item.q}>
               <summary>

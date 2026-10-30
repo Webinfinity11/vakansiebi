@@ -4,6 +4,22 @@ import { salarySummary, salaryDetails } from '../lib/salary-summary';
 import { compactSalary } from '../lib/vacancy-presentation';
 import { vacancyCardSalary } from '../lib/vacancy-card-labels';
 
+void test('English salary labels preserve amounts, bounds, currencies and the source pay period', () => {
+  for (const [input, period, expected] of [
+    ['2000-დან ₾ / თვე', '', '2 000+ ₾ / month'],
+    ['100–150 ₾', 'day', '100–150 ₾ / day'],
+    ['≤ 80 ₾ / საათი', '', '≤ 80 ₾ / hour'],
+    ['32.20 ₾ / საკონტაქტო სთ', '', '32.20 ₾ / contact hour'],
+    ['50 ₾ / მ²', '', '50 ₾ / m²'],
+    ['შეთანხმებით', '', 'Negotiable'],
+    ['კონკურენტული', '', ''],
+  ]) {
+    assert.equal(compactSalary(input, period, 'en'), expected);
+    assert.equal(vacancyCardSalary(input, period, 'JOBX', 'en'), expected);
+    assert.equal(compactSalary(input, period), salarySummary(input, period));
+  }
+});
+
 void test('Georgian amount bounds before currency remain visible on vacancy cards', () => {
   for (const [input, expected] of [
     ['2000-დან ₾ / თვე · ხელზე', '2 000+ ₾ / თვე'],

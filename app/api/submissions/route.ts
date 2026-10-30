@@ -4,7 +4,10 @@ import { priorSubmission, submitJob } from '@/lib/server/job-submissions';
 import { submissionSchema } from '@/lib/job-submission';
 import { z } from 'zod';
 import { after } from 'next/server';
-import { deliverInvoiceEmails } from '@/lib/server/invoice-email';
+import {
+  deliverInvoiceEmails,
+  invoiceEmailEnabled,
+} from '@/lib/server/invoice-email';
 import { maxSubmissionBytes } from '@/lib/submission-logo';
 import {
   readSubmissionLogo,
@@ -86,7 +89,7 @@ export async function POST(req: Request) {
           // though the submission was created: return the accepted version.
           const prior = await priorSubmission(requestId.data);
           if (prior) {
-            if (prior.invoiceUrl)
+            if (prior.invoiceUrl && invoiceEmailEnabled())
               after(() =>
                 deliverInvoiceEmails(prior.id)
                   .then(() => {})
@@ -112,7 +115,7 @@ export async function POST(req: Request) {
       );
     }
     const result = await submitJob(parsed.data, client);
-    if (result.invoiceUrl)
+    if (result.invoiceUrl && invoiceEmailEnabled())
       after(() =>
         deliverInvoiceEmails(result.id)
           .then(() => {})

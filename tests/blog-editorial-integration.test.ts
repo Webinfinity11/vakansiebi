@@ -5,11 +5,15 @@ import { readFileSync } from 'node:fs';
 import { Client } from 'pg';
 import { db } from '../lib/server/db';
 import { blogGuides } from '../lib/blog-guides';
+import { blogPosts } from '../lib/blog';
+import { editablePost } from '../lib/blog-manual';
 import {
   claimBlogSlot,
   saveGeneratedArticle,
   updateEditorialArticle,
   failBlogSlot,
+  createEditorialArticle,
+  editorialArticles,
 } from '../lib/server/blog-editorial';
 import { publicBlogPosts, publicBlogPost } from '../lib/server/blog';
 import type { ArticleDraft, BlogEvidence } from '../lib/blog-editorial';
@@ -110,6 +114,83 @@ void test(
       assert.equal(
         new Date(restored.published_at!).toISOString(),
         new Date(published.published_at!).toISOString(),
+      );
+      const manual = await createEditorialArticle({
+        ...content,
+        slug: 'manual-article-example',
+        title: 'სამუშაო პირობების შეთანხმება დამსაქმებელთან',
+        sections: [
+          { id: 'first', title: '', paragraphs: [{ text: '' }], checklist: [] },
+        ],
+      });
+      assert.equal(manual.status, 'draft');
+      assert.equal(await publicBlogPost(manual.slug), undefined);
+      await assert.rejects(
+        updateEditorialArticle(manual.id, 1, 'publish'),
+        /შეავსე/,
+      );
+      const filled = {
+        ...manual.content,
+        sections: [
+          {
+            id: 'first',
+            title: 'სამუშაო პირობების განხილვა',
+            paragraphs: [
+              {
+                text: 'შეთავაზების მიღებამდე დამსაქმებელთან განიხილე სამუშაო გრაფიკი, მოვალეობები და ანაზღაურების პირობები.',
+              },
+            ],
+            checklist: [],
+          },
+        ],
+      };
+      await updateEditorialArticle(manual.id, 1, 'publish', filled);
+      assert.equal((await publicBlogPost(manual.slug))?.title, manual.title);
+      await assert.rejects(createEditorialArticle(filled), /უკვე არსებობს/);
+      const original = blogPosts.find((post) =>
+        post.sections.some((section) => section.table),
+      )!;
+      assert.ok(
+        (await editorialArticles()).some(
+          (post) => post.id === `static:${original.slug}`,
+        ),
+      );
+      const edit = {
+        ...editablePost(original),
+        description: original.description + ' დამატებითი ინფორმაცია.',
+      };
+      const edited = await updateEditorialArticle(
+        `static:${original.slug}`,
+        0,
+        'publish',
+        edit,
+      );
+      assert.equal(edited.revision, 1);
+      const publicEdit = await publicBlogPost(original.slug);
+      assert.equal(publicEdit?.description, edit.description);
+      assert.deepEqual(
+        publicEdit?.sections.find((section) => section.table)?.table,
+        original.sections.find((section) => section.table)?.table,
+      );
+      assert.deepEqual(publicEdit?.links, original.links);
+      assert.equal(
+        (await publicBlogPosts()).filter((post) => post.slug === original.slug)
+          .length,
+        1,
+      );
+      await assert.rejects(
+        updateEditorialArticle(`static:${original.slug}`, 0, 'publish', edit),
+        /უკვე შეიცვალა/,
+      );
+      await updateEditorialArticle(edited.id, 1, 'unpublish');
+      assert.equal(
+        await publicBlogPost(original.slug),
+        undefined,
+        'unpublishing a migrated static article must not restore its old public copy',
+      );
+      assert.equal(
+        (await publicBlogPosts()).some((post) => post.slug === original.slug),
+        false,
       );
       process.env.BLOG_STORAGE_ENABLED = 'false';
       assert.equal(await publicBlogPost(content.slug), undefined);

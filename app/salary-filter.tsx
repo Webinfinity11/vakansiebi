@@ -47,32 +47,31 @@ export function SalaryFilter({
         className="salary-presets"
         aria-label={ui('მინიმალური ანაზღაურება')}
       >
-        {[
-          null,
-          ...(value.salaryPeriod === 'day'
-            ? [50, 100, 150, 200]
-            : [500, 1000, 1500, 2000, 3000]),
-        ].map((amount) => (
+        {(value.salaryPeriod === 'day'
+          ? [50, 75, 100, 150, 200, 250]
+          : [500, 1000, 1500, 2000, 2500, 3000]
+        ).map((amount) => (
           <button
             type="button"
             className="ds-chip"
-            key={amount ?? 'any'}
+            key={amount}
             aria-pressed={
               value.salaryFrom === amount && value.salaryTo === null
             }
             onClick={() =>
               onChange({
                 ...advancedValues(value),
-                salaryFrom: amount,
+                salaryFrom:
+                  value.salaryFrom === amount && value.salaryTo === null
+                    ? null
+                    : amount,
                 salaryTo: null,
               })
             }
           >
-            {amount === null
-              ? ui('ნებისმიერი')
-              : ui('{0} ₾-დან', [
-                  amount.toLocaleString('en-US').replace(',', ' '),
-                ])}
+            {ui('{0} ₾-დან', [
+              amount.toLocaleString('en-US').replace(',', ' '),
+            ])}
           </button>
         ))}
       </fieldset>

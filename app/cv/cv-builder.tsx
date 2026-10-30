@@ -2,7 +2,7 @@
 import { useUi } from '@/app/ui-language';
 
 import Image from 'next/image';
-import { flushSync } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 
 import {
   useCallback,
@@ -296,6 +296,7 @@ export function CvSheet({
       }
       lang={cv.language}
     >
+      <footer className="cv-document-brand">jobx.ge</footer>
       <header className="cv-document-header">
         <div className="cv-identity">
           {cv.fullName && <p className="cv-person-name">{cv.fullName}</p>}
@@ -616,8 +617,19 @@ export function CvBuilder() {
   }, [cv, mounted, once]);
 
   useEffect(() => {
-    const beforePrint = () => flushSync(() => setPrinting(true));
-    const afterPrint = () => setPrinting(false);
+    let scrollBeforePrint = 0;
+    const beforePrint = () => {
+      scrollBeforePrint = window.scrollY;
+      // Chromium offsets fixed print footers when printing a scrolled long preview.
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      flushSync(() => setPrinting(true));
+    };
+    const afterPrint = () => {
+      setPrinting(false);
+      requestAnimationFrame(() =>
+        window.scrollTo({ top: scrollBeforePrint, behavior: 'instant' }),
+      );
+    };
     window.addEventListener('beforeprint', beforePrint);
     window.addEventListener('afterprint', afterPrint);
     return () => {
@@ -797,6 +809,13 @@ export function CvBuilder() {
   };
   return (
     <main className="cv-main">
+      {mounted &&
+        createPortal(
+          <div className="cv-print-brand" data-template={cv.template}>
+            jobx.ge
+          </div>,
+          document.body,
+        )}
       <div className="cv-intro">
         <h1>{t.heading}</h1>
         <p className="cv-note">{t.intro}</p>

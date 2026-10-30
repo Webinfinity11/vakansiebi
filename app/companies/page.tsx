@@ -80,7 +80,13 @@ export default async function CompaniesPage() {
       <PublicHeader />
       <TrackOnce code="companies_page" />
       <main className="vacancy-page-main">
-        <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
+        <nav
+          className="vacancy-breadcrumb"
+          aria-labelledby="companies-breadcrumb-label"
+        >
+          <span className="sr-only" id="companies-breadcrumb-label">
+            <UiText>გვერდის მდებარეობა</UiText>
+          </span>
           <Link href="/" prefetch={false}>
             <ChevronLeft size={16} aria-hidden="true" />
             <UiText>{'ვაკანსიები'}</UiText>

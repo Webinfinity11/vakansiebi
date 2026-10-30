@@ -51,8 +51,9 @@ export function vacancyCardSalary(
   salary: string,
   period: string,
   _source: string,
+  locale: 'ka' | 'en' = 'ka',
 ) {
-  return compactSalary(salary, period);
+  return compactSalary(salary, period, locale);
 }
 
 /** Legal forms add no useful distinction to the card; full identity remains available. */

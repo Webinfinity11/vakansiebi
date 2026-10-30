@@ -32,10 +32,16 @@ export async function generateMetadata({
 }
 export default async function SalaryPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const role = await findRole((await params).slug);
+  const [role, query] = await Promise.all([
+    findRole((await params).slug),
+    searchParams,
+  ]);
+  const initialPeriod = query.period === 'day' ? 'day' : 'month';
   return (
     <ContentPage
       path={`/salaries/${role.slug}`}
@@ -51,9 +57,16 @@ export default async function SalaryPage({
         en: `${role.total} active listings for this profession. The figures below use only starting amounts stated in listings.`,
       }}
     >
-      <SalaryExplorer roles={[role]} detail />
+      <SalaryExplorer
+        key={initialPeriod}
+        roles={[role]}
+        detail
+        initialPeriod={initialPeriod}
+      />
       <nav className="content-links">
-        <Link href="/salaries">
+        <Link
+          href={initialPeriod === 'day' ? '/salaries?period=day' : '/salaries'}
+        >
           <LocalText
             ka="ყველა პროფესია და გამოთვლის წესი"
             en="All professions and methodology"

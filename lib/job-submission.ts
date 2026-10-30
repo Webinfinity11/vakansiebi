@@ -115,7 +115,7 @@ export const submissionSchema = z
   })
   .superRefine((v, ctx) => {
     if (
-      v.placement === 'premium' &&
+      v.placement !== 'standard' &&
       v.billingEmail &&
       !safeEmail(v.billingEmail)
     )

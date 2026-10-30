@@ -112,7 +112,6 @@ export function AdminNavigation({
         <nav aria-label="ადმინის განყოფილებები">
           {[...new Set(items.map((item) => item.group))].map((group) => (
             <div className="admin-nav-group" key={group}>
-              <h2>{group}</h2>
               {items
                 .filter((item) => item.group === group)
                 .map((item) => {

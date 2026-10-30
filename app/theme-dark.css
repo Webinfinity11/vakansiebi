@@ -1957,8 +1957,6 @@
   border-left: 1px solid var(--jobx-color-dce2ec-surface);
 }
 :root[data-theme='dark'] .board-shell .subcategory-options .check-row:has(input[value='']:checked) {
-  color: var(--jobx-color-55575a-text);
-  background: transparent;
   box-shadow: none;
 }
 :root[data-theme='dark'] .board-shell
@@ -1984,6 +1982,9 @@
 }
 :root[data-theme='dark'] .company-logo-skeleton {
   background: linear-gradient(100deg, #272e3a 20%, #1c2845 45%, #272e3a 70%);
+}
+:root[data-theme='dark'] .board-shell .category-options .check-row:has(input:checked) {
+  box-shadow: none;
 }
 
 /* ── from app/phone.css ── */
@@ -2580,13 +2581,6 @@
   background: none;
   box-shadow: none;
 }
-:root[data-theme='dark'] .board-shell .results-title-row .recent-strip > .recent-head {
-  border-bottom: 0;
-}
-:root[data-theme='dark'] .board-shell .results-title-row .recent-strip > .recent-track,
-:root[data-theme='dark'] .board-shell .results-title-row .recent-strip[open] > .recent-track {
-  border-top: 0;
-}
 :root[data-theme='dark'] .board-shell .deck-invite-close {
   border: 0;
   background: none;
@@ -2779,6 +2773,16 @@
 :root[data-theme='dark'] .cv-preview-viewport,
 :root[data-theme='dark'] .cv-preview-paper {
     box-shadow: none !important;
+  }
+}
+@media print {
+  :root[data-theme='dark'] body:has(.cv-preview) > .cv-print-brand {
+    color: #989da7;
+  }
+}
+@media print {
+  :root[data-theme='dark'] body:has(.cv-preview) > .cv-print-brand[data-template='modern'] {
+    color: #131b2c;
   }
 }
 :root[data-theme='dark'] .cv-main .cv-template:focus-visible {

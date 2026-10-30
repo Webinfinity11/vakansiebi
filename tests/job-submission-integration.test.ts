@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { db } from '../lib/server/db';
 import { submitJob } from '../lib/server/job-submissions';
-import { POST } from '../app/api/submissions/route';
 import {
   adminJobs,
   publicJobs,
@@ -14,13 +13,15 @@ import {
 } from '../lib/server/jobs';
 import { submissionDate } from '../lib/job-submission';
 import { classify } from '../worker/categories';
+import { POST } from '../app/api/submissions/route';
 const enabled = process.env.RUN_DB_TESTS === '1';
 
 void test(
-  'direct submission is idempotent, moderated, published with 15 day benefit, filtered, expired and limited',
+  'direct submission is idempotent, moderated, published with a paid 30 day VIP, filtered, expired and limited',
   { skip: !enabled },
   async () => {
     assert.equal(new URL(process.env.DATABASE_URL!).pathname, '/ertad_test');
+    process.env.INVOICE_EMAIL_ENABLED = 'false';
     const key = 'SUBMISSIONTEST' + randomUUID().replaceAll('-', '');
     process.env.SESSION_SECRET ||=
       'isolated-submission-test-secret-at-least-32-characters';
@@ -45,7 +46,21 @@ void test(
       fax: '',
     };
     const ids: string[] = [];
+    const oldBilling = (await db().query('SELECT * FROM billing_settings'))
+      .rows[0];
+    const bban = 'ZZ0000000000000000';
+    const numeric = (bban + 'GE00').replace(/[A-Z]/g, (c) =>
+      String(c.charCodeAt(0) - 55),
+    );
+    const iban =
+      'GE' +
+      String(BigInt(98) - (BigInt(numeric) % BigInt(97))).padStart(2, '0') +
+      bban;
     try {
+      await db().query(
+        'INSERT INTO billing_settings(id,payee_name,bank_name,iban) VALUES(true,$1,$2,$3) ON CONFLICT(id) DO UPDATE SET payee_name=EXCLUDED.payee_name,bank_name=EXCLUDED.bank_name,iban=EXCLUDED.iban',
+        ['TEST recipient', 'TEST bank', iban],
+      );
       const results = await Promise.all([
         submitJob(base, key),
         submitJob(base, key),
@@ -110,7 +125,9 @@ void test(
         [ids[0]],
       );
       assert.ok(queued.jobs[0].submitted_at);
-      assert.equal(queued.jobs[0].vip_available, true);
+      assert.equal(queued.jobs[0].invoice?.amount_gel, 20);
+      assert.equal(queued.jobs[0].invoice?.placement_tier, 'vip');
+      assert.equal(queued.jobs[0].invoice?.status, 'pending');
       assert.ok(queued.counts.submissions >= 1);
       assert.equal((await adminJobs('submissions-all', key)).total, 1);
       assert.equal((await adminJobs('submissions-published', key)).total, 0);
@@ -123,6 +140,22 @@ void test(
         }),
         /ადმინისტრატორი/,
       );
+      await assert.rejects(
+        mutateJob({
+          id: ids[0],
+          version: row.version,
+          action: 'publish',
+          placement: 'vip',
+        }),
+        /ჩარიცხვა/,
+      );
+      await mutateJob({
+        id: ids[0],
+        version: row.version,
+        action: 'confirm-payment',
+      });
+      row = (await db().query('SELECT * FROM jobs WHERE id=$1', [ids[0]]))
+        .rows[0];
       await mutateJob({
         id: ids[0],
         version: row.version,
@@ -138,7 +171,7 @@ void test(
         Math.abs(
           new Date(row.placement_expires_at).getTime() -
             new Date(row.published_at).getTime() -
-            15 * 86400000,
+            30 * 86400000,
         ) < 1000,
       );
       const expires = row.placement_expires_at.toISOString();
@@ -174,13 +207,7 @@ void test(
       );
       ids.push(second.id);
       const secondQueued = await adminJobs('submissions', key + ' SECOND');
-      assert.equal(secondQueued.jobs[0].vip_available, false);
-      const firstAgain = await adminJobs('submissions-published', key);
-      assert.equal(
-        firstAgain.jobs.find((j) => j.id === ids[0])?.vip_available,
-        true,
-        'the vacancy holding the VIP still counts as eligible for it',
-      );
+      assert.equal(secondQueued.jobs[0].invoice?.status, 'pending');
       await assert.rejects(
         mutateJob({
           id: second.id,
@@ -188,7 +215,7 @@ void test(
           action: 'publish',
           placement: 'vip',
         }),
-        /უკვე გამოყენებული/,
+        /ჩარიცხვა/,
       );
       await mutateJob({
         id: second.id,
@@ -260,6 +287,16 @@ void test(
         /ლიმიტი/,
       );
     } finally {
+      await db().query(
+        'DELETE FROM job_invoices WHERE job_id=ANY($1::uuid[])',
+        [ids],
+      );
+      await db().query('DELETE FROM billing_settings');
+      if (oldBilling)
+        await db().query(
+          'INSERT INTO billing_settings(id,payee_name,bank_name,iban) VALUES(true,$1,$2,$3)',
+          [oldBilling.payee_name, oldBilling.bank_name, oldBilling.iban],
+        );
       await db().query(
         'DELETE FROM job_submissions WHERE job_id=ANY($1::uuid[])',
         [ids],

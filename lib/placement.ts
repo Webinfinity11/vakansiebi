@@ -5,4 +5,3 @@ export const placementLabels: Record<PlacementTier, string> = {
   vip: 'VIP',
   premium: 'პრემიუმი',
 };
-export const introductoryDays = 15;

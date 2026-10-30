@@ -1,12 +1,7 @@
-import { premiumPriceGEL, premiumDays } from '../billing';
+import { premiumDays, premiumPriceGEL, vipDays, vipPriceGEL } from '../billing';
 import type { PoolClient } from 'pg';
 import { ApiError } from './auth';
-import { companyKey } from '../company-key';
-import { introductoryDays, type PlacementTier } from '../placement';
-
-/** The free VIP is counted once per company under this normalised name. */
-export const bonusCompanyKey = (company: string) =>
-  companyKey(company).replace(/^(?:შპს|სს|llc|ltd)(?=.{3})/u, '');
+import { type PlacementTier } from '../placement';
 
 /** Called inside the moderation transaction, after the vacancy has passed publication checks. */
 export async function approvePlacement(
@@ -16,7 +11,7 @@ export async function approvePlacement(
     placement_tier: PlacementTier;
     placement_expires_at: Date | null;
   },
-  company: string,
+  _company: string,
   requested: PlacementTier,
 ) {
   const submission = (
@@ -32,40 +27,51 @@ export async function approvePlacement(
       );
     return;
   }
-  if (requested === 'premium') {
+  if (requested !== 'standard') {
     const invoice = (
       await c.query('SELECT * FROM job_invoices WHERE job_id=$1 FOR UPDATE', [
         job.id,
       ])
     ).rows[0];
+    // Preserve a previously granted free VIP without renewing its expiry.
+    if (
+      !invoice &&
+      requested === 'vip' &&
+      submission.bonus_company_key &&
+      job.placement_tier === 'vip' &&
+      job.placement_expires_at
+    )
+      return;
     if (
       !invoice ||
       invoice.status !== 'paid' ||
-      invoice.amount_gel !== premiumPriceGEL ||
-      // Previously issued invoices remain usable while the duration correction
-      // migrates their stored terms. New invoices always use premiumDays.
-      ![14, premiumDays].includes(invoice.service_days)
+      (invoice.placement_tier ?? 'premium') !== requested ||
+      // Preserve the terms of previously issued premium invoices.
+      (requested === 'vip'
+        ? invoice.amount_gel !== vipPriceGEL || invoice.service_days !== vipDays
+        : ![20, premiumPriceGEL].includes(invoice.amount_gel) ||
+          ![14, premiumDays].includes(invoice.service_days))
     )
       throw new ApiError(
-        'პრემიუმის გამოქვეყნებამდე დაადასტურე 20 ₾-ის ჩარიცხვა',
+        'გამოქვეყნებამდე დაადასტურე არჩეული პაკეტის ინვოისით გათვალისწინებული თანხის ჩარიცხვა',
       );
     if (invoice.activated_at) {
-      if (job.placement_tier === 'premium' && job.placement_expires_at) return;
+      if (job.placement_tier === requested && job.placement_expires_at) return;
       throw new ApiError('ამ ინვოისით განთავსება უკვე გააქტიურებული იყო');
     }
     await c.query('UPDATE job_invoices SET activated_at=now() WHERE id=$1', [
       invoice.id,
     ]);
     await c.query(
-      "UPDATE jobs SET placement_tier='premium',placement_expires_at=now()+$2 * interval '1 day' WHERE id=$1",
-      [job.id, invoice.service_days],
+      "UPDATE jobs SET placement_tier=$3,placement_expires_at=now()+$2 * interval '1 day' WHERE id=$1",
+      [job.id, invoice.service_days, requested],
     );
     await c.query(
       "INSERT INTO audit_log(job_id,action,actor,after_data) VALUES($1,'placement.approved','admin',$2)",
       [
         job.id,
         {
-          tier: 'premium',
+          tier: requested,
           days: invoice.service_days,
           price: invoice.amount_gel,
           invoiceId: invoice.id,
@@ -81,39 +87,4 @@ export async function approvePlacement(
     );
     return;
   }
-  // Saving or re-publishing an existing promotion never renews its clock.
-  if (submission.bonus_company_key) {
-    if (job.placement_tier === requested && job.placement_expires_at) return;
-    throw new ApiError(
-      'ამ განცხადების საჩუქარი უკვე გამოყენებულია. ხელახლა გააქტიურება არ ხდება.',
-    );
-  }
-  const key = bonusCompanyKey(company);
-  if (key.length < 2) throw new ApiError('მიუთითე კომპანიის სრული სახელი');
-  await c.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [
-    `placement-company:${key}`,
-  ]);
-  if (
-    (
-      await c.query(
-        'SELECT 1 FROM job_submissions WHERE bonus_company_key=$1',
-        [key],
-      )
-    ).rowCount
-  )
-    throw new ApiError(
-      `ამ კომპანიას ${introductoryDays}-დღიანი საჩუქარი უკვე გამოყენებული აქვს. აირჩიე სტანდარტული განთავსება.`,
-    );
-  await c.query(
-    'UPDATE job_submissions SET bonus_company_key=$2 WHERE job_id=$1',
-    [job.id, key],
-  );
-  await c.query(
-    "UPDATE jobs SET placement_tier=$2,placement_expires_at=now()+$3 * interval '1 day' WHERE id=$1",
-    [job.id, requested, introductoryDays],
-  );
-  await c.query(
-    "INSERT INTO audit_log(job_id,action,actor,after_data) VALUES($1,'placement.approved','admin',$2)",
-    [job.id, { tier: requested, days: introductoryDays, price: 0 }],
-  );
 }

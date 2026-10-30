@@ -2,11 +2,16 @@
 import { useUi } from '@/app/ui-language';
 import Link from 'next/link';
 import Image from 'next/image';
-import { invoiceContact, premiumDays, premiumPriceGEL } from '@/lib/billing';
+import {
+  invoiceContact,
+  premiumDays,
+  premiumPriceGEL,
+  paidPlacementPrices,
+  vipPriceGEL,
+} from '@/lib/billing';
 import {
   placementTiers,
   placementLabels,
-  introductoryDays,
   type PlacementTier,
 } from '@/lib/placement';
 import { track } from '@/lib/analytics-client';
@@ -678,24 +683,9 @@ export function PostJobForm({
               )}
             </p>
           )}
-          {values.placement === 'vip' && (
-            <p>
-              {ui(
-                'მოთხოვნილია VIP განთავსება. თუ ეს კომპანიის პირველი VIP-ია,',
-              )}{' '}
-              {introductoryDays}
-              {ui(
-                ' დღე უფასო იქნება — ამას ადმინისტრატორი დამტკიცებისას ამოწმებს.',
-              )}
-            </p>
-          )}
           {invoiceUrl && (
             <div className="post-invoice-callout">
-              <strong>
-                {ui('პრემიუმი · ')}
-                {premiumPriceGEL} ₾ / {premiumDays}
-                {ui(' დღე')}
-              </strong>
+              <strong>{ui('განთავსების ინვოისი')}</strong>
               <p>
                 {ui(
                   'საბანკო რეკვიზიტები და გადარიცხვის დანიშნულება იხილე ინვოისში. განთავსება გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ.',
@@ -1086,26 +1076,19 @@ export function PostJobForm({
                       choosePlan();
                       change('placement', t);
                     }}
-                    disabled={locked || (t === 'premium' && !premiumAvailable)}
+                    disabled={locked || (t !== 'standard' && !premiumAvailable)}
                   />
                   <span>
                     {ui(placementLabels[t])} ·{' '}
-                    {t === 'premium' ? `${premiumPriceGEL} ₾` : ui('უფასო')}
-                    {t === 'premium' && !premiumAvailable ? ui(' · მალე') : ''}
+                    {t === 'standard'
+                      ? ui('უფასო')
+                      : `${paidPlacementPrices[t]} ₾`}
+                    {t !== 'standard' && !premiumAvailable ? ui(' · მალე') : ''}
                   </span>
                 </label>
               ))}
             </div>
-            {values.placement === 'vip' && (
-              <p className="post-vip-note">
-                {ui('პირველი VIP ')}
-                {introductoryDays}
-                {ui(
-                  ' დღით უფასოა — ერთხელ თითო კომპანიაზე; ელიგიბელობა შემოწმებისას დადგინდება.',
-                )}
-              </p>
-            )}
-            {values.placement === 'premium' && (
+            {values.placement !== 'standard' && (
               <Field
                 name="billingEmail"
                 label={ui('ინვოისისთვის სხვა ელფოსტა (არასავალდებულო)')}
@@ -1124,18 +1107,9 @@ export function PostJobForm({
             <details className="post-plan-note">
               <summary>{ui('შეთავაზების პირობები')}</summary>
               <p>
-                {ui('პირველი VIP განთავსება ')}
-                {introductoryDays}
                 {ui(
-                  ' დღით უფასოა — ერთხელ თითო კომპანიაზე; შემოწმდება დამტკიცებისას. პრემიუმი ღირს',
-                )}{' '}
-                {premiumPriceGEL}
-                {ui(' ₾ და აქტიურდება ჩარიცხვის დადასტურების შემდეგ. VIP-ის ')}
-                {introductoryDays}
-                {ui(' დღე და პრემიუმის ')}
-                {premiumDays}
-                {ui(
-                  ' დღე ითვლება განთავსების გააქტიურებიდან. ვადის ამოწურვის შემდეგ განცხადება სტანდარტულ რეჟიმში რჩება. თანხა ავტომატურად არ ჩამოიჭრება.',
+                  'VIP — {0} ₾, პრემიუმი — {1} ₾. ორივე პაკეტი მოქმედებს {2} დღე გააქტიურებიდან. განთავსება იწყება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ. თანხა ავტომატურად არ ჩამოიჭრება.',
+                  [vipPriceGEL, premiumPriceGEL, premiumDays],
                 )}
               </p>
               <p>

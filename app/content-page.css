@@ -2,14 +2,14 @@
   width: 100%;
   max-width: 1080px;
   margin: 0 auto;
-  padding: 24px 28px 40px;
+  padding: 20px 28px 32px;
   color: var(--ds-ink);
 }
 .content-intro {
   margin-bottom: 20px;
 }
 .content-intro h1 {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: clamp(24px, 3vw, 32px);
   line-height: 1.35;
   letter-spacing: normal;
@@ -18,7 +18,7 @@
 .content-intro p {
   margin: 0;
   font-size: var(--ds-text-md);
-  line-height: 1.85;
+  line-height: 1.7;
   color: var(--ds-ink-2);
 }
 .content-grid {
@@ -147,7 +147,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin: 0 0 24px;
+  margin: 0 0 16px;
   font-size: var(--ds-text-sm);
   color: var(--ds-ink-3);
 }

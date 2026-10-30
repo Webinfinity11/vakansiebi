@@ -1,18 +1,9 @@
 'use client';
 import { TrackingSettings } from './tracking-settings';
 import { BillingSettings } from './billing-settings';
-import {
-  invoiceNumber,
-  invoiceStatuses,
-  premiumDays,
-  premiumPriceGEL,
-} from '@/lib/billing';
-import {
-  placementLabels,
-  placementTiers,
-  introductoryDays,
-  type PlacementTier,
-} from '@/lib/placement';
+import { SubmissionPayment, placementIsReady } from './submission-payment';
+import { invoiceNumber } from '@/lib/billing';
+import { placementLabels, type PlacementTier } from '@/lib/placement';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AdminNavigation } from './navigation';
@@ -154,13 +145,10 @@ async function request(url: string, body?: unknown) {
   if (!r.ok) throw Error(d.error || 'ოპერაცია ვერ შესრულდა');
   return d;
 }
-/* An active promotion keeps its tier and a paid request stays premium; otherwise an employer's
-   vacancy is offered the free VIP whenever the company has not used it yet. */
 function defaultPlacement(j: AdminJob): PlacementTier {
   if (j.placement_expires_at) return j.placement_tier;
-  if (j.requested_placement === 'premium') return 'premium';
-  if (j.submitted_at) return j.vip_available ? 'vip' : 'standard';
-  return j.requested_placement || 'standard';
+  if (j.invoice) return j.invoice.placement_tier ?? 'premium';
+  return 'standard';
 }
 /* JOBX's own vacancies, sent through the posting form, kept apart from the imported catalogue. */
 const submissionViews = [
@@ -208,18 +196,12 @@ function EditorWrap({
 /* What the employer sent through the posting form, laid out the way it will read on the site. */
 function SubmissionSummary({ job, draft }: { job: AdminJob; draft: Vacancy }) {
   const rows: [string, string][] = [
-    ['პოზიცია', draft.title],
-    ['კომპანია', draft.company],
     ['მიმართულება', draft.category],
     ['ქალაქი', draft.city],
     ['სამუშაო რეჟიმი', draft.mode || ''],
     ['განაკვეთი', draft.employmentType || ''],
     ['ანაზღაურება', draft.salary],
     ['ბოლო ვადა', draft.deadline],
-    [
-      'მოთხოვნილი განთავსება',
-      job.requested_placement ? placementLabels[job.requested_placement] : '',
-    ],
     ['გაგზავნდა', time(job.submitted_at || job.created_at)],
   ];
   const contacts = [
@@ -231,8 +213,8 @@ function SubmissionSummary({ job, draft }: { job: AdminJob; draft: Vacancy }) {
       <div className="editor-logo-row">
         <CompanyLogo company={draft.company} url={draft.logoUrl} />
         <div>
-          <strong>{draft.title}</strong>
-          <p>{draft.logoUrl ? 'ატვირთული ლოგო' : 'ლოგო არ ატვირთა'}</p>
+          <strong>{draft.company}</strong>
+          <p>{draft.logoUrl ? 'კომპანიის ლოგო' : 'ლოგო არ არის მითითებული'}</p>
         </div>
       </div>
       <dl>
@@ -394,7 +376,7 @@ export default function AdminPanel() {
           : {}),
         /* Chosen only while pending. Publishing edits to a live submission
            sends none, so the server keeps the placement it already has
-           instead of reading a default (a free VIP) the admin never saw. */
+           instead of changing the existing package. */
         ...(action === 'publish' &&
         selected.requested_placement &&
         selected.status === 'pending'
@@ -402,7 +384,10 @@ export default function AdminPanel() {
           : {}),
         ...extras,
       });
-      if (!nextJob) setSelected(null);
+      const keepEditor = ['confirm-payment', 'confirm-refund', 'save'].includes(
+        action,
+      );
+      if (!nextJob && !keepEditor) setSelected(null);
       setBillingVersion((v) => v + 1);
       setConfirm(null);
       setMessage(
@@ -412,9 +397,22 @@ export default function AdminPanel() {
             : 'ვაკანსია გამოქვეყნდა.'
           : action === 'reject'
             ? 'განცხადება უარყოფილია. შეტყობინება არ გაგზავნილა.'
-            : 'ცვლილება შენახულია.',
+            : action === 'confirm-payment'
+              ? 'ჩარიცხვა დადასტურებულია. ვაკანსია მზადაა გამოსაქვეყნებლად.'
+              : 'ცვლილება შენახულია.',
       );
       const refreshedJobs = await load();
+      if (keepEditor) {
+        const refreshed =
+          refreshedJobs?.find((job) => job.id === selected.id) ??
+          (await request(`/api/admin/jobs?status=all&id=${selected.id}`))
+            .jobs[0];
+        if (refreshed)
+          setSelected({
+            ...refreshed,
+            notification_email: selected.notification_email,
+          });
+      }
       if (nextJob) {
         const next = refreshedJobs?.find((job) => job.id === nextJob.id);
         if (next) openJob(next);
@@ -1819,6 +1817,22 @@ export default function AdminPanel() {
           </SheetHeader>
           {selected && draft && (
             <div className="edit-body">
+              {error && (
+                <p role="alert" className="notice">
+                  {error}
+                </p>
+              )}
+
+              {submission && (
+                <SubmissionPayment
+                  job={selected}
+                  tier={placement}
+                  busy={busy}
+                  onTier={setPlacement}
+                  onConfirm={(action) => setConfirm({ action })}
+                  onPublish={() => setConfirm({ action: 'publish' })}
+                />
+              )}
               {/* Asked while the submission waits for a decision; once it is
                   published the answer is given, unless it was marked a test. */}
               {submission &&
@@ -1872,78 +1886,6 @@ export default function AdminPanel() {
                     }
                   />
                   <p>პირადი საკონტაქტო მისამართი. საჯარო ვაკანსიაში არ ჩანს.</p>
-                </section>
-              )}
-              {submission && selected.status === 'pending' && (
-                <section className="notice placement-choice">
-                  <h3>განთავსება</h3>
-                  <p>
-                    {selected.placement_expires_at
-                      ? `${placementLabels[selected.placement_tier]} აქტიურია ${time(selected.placement_expires_at)}-მდე. ხელახლა დადასტურება ვადას არ გააგრძელებს.`
-                      : selected.vip_available
-                        ? `ამ კომპანიას უფასო VIP (${introductoryDays} დღე) ჯერ არ გამოუყენებია, ამიტომ VIP წინასწარ მოინიშნა. დაადასტურე, ან აირჩიე სტანდარტული.`
-                        : 'ამ კომპანიას უფასო VIP უკვე გამოყენებული აქვს, ასე რომ სტანდარტული მოინიშნა.'}
-                    {selected.requested_placement === 'premium' &&
-                      ` დამსაქმებელმა პრემიუმი მოითხოვა (${premiumPriceGEL} ₾ / ${premiumDays} დღე); აქტიურდება ჩარიცხვის დადასტურების შემდეგ.`}
-                  </p>
-                  <label htmlFor="admin-placement">
-                    განთავსება დამტკიცებისას
-                  </label>
-                  <SelectField
-                    id="admin-placement"
-                    value={placement}
-                    disabled={busy}
-                    onChange={(v) => setPlacement(v as PlacementTier)}
-                    options={placementTiers
-                      .filter(
-                        (t) =>
-                          t === 'standard' ||
-                          t === placement ||
-                          (t === 'vip' && selected.vip_available) ||
-                          (t === 'premium' && !!selected.invoice),
-                      )
-                      .map((t) => ({
-                        value: t,
-                        label:
-                          placementLabels[t] +
-                          (t === 'vip' && !selected.placement_expires_at
-                            ? ` · უფასოდ ${introductoryDays} დღე`
-                            : ''),
-                      }))}
-                  />
-                </section>
-              )}
-              {selected.invoice && (
-                <section className="notice editor-notice">
-                  <h3>ინვოისი · {invoiceStatuses[selected.invoice.status]}</h3>
-                  <a
-                    className="editor-notice-link"
-                    href={`/invoices/${selected.invoice.token}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink size={14} aria-hidden="true" />
-                    {invoiceNumber(selected.invoice.number)} ·{' '}
-                    {selected.invoice.amount_gel} ₾
-                  </a>
-                  {selected.invoice.status === 'pending' && (
-                    <button
-                      className="ds-btn ds-btn--secondary ds-btn--sm"
-                      disabled={busy}
-                      onClick={() => setConfirm({ action: 'confirm-payment' })}
-                    >
-                      ჩარიცხვის დადასტურება
-                    </button>
-                  )}
-                  {selected.invoice.status === 'refund_required' && (
-                    <button
-                      className="ds-btn ds-btn--secondary ds-btn--sm"
-                      disabled={busy}
-                      onClick={() => setConfirm({ action: 'confirm-refund' })}
-                    >
-                      დაბრუნების დადასტურება
-                    </button>
-                  )}
                 </section>
               )}
               <EditorWrap submission={submission}>
@@ -2027,11 +1969,6 @@ export default function AdminPanel() {
                       გადავამოწმე
                     </button>
                   </div>
-                )}
-                {error && (
-                  <p role="alert" className="notice">
-                    {error}
-                  </p>
                 )}
                 {!submission && (
                   <div className="editor-source-links">
@@ -2415,7 +2352,7 @@ export default function AdminPanel() {
                 <div className="editor-actions submission-actions">
                   <button
                     className="ds-btn ds-btn--primary"
-                    disabled={busy}
+                    disabled={busy || !placementIsReady(selected, placement)}
                     onClick={() => setConfirm({ action: 'publish' })}
                   >
                     <Check size={16} aria-hidden="true" />
@@ -2442,7 +2379,7 @@ export default function AdminPanel() {
                       check mark and "გამოქვეყნება" read as if it were not live. */}
                   <button
                     className="ds-btn ds-btn--primary"
-                    disabled={busy}
+                    disabled={busy || !placementIsReady(selected, placement)}
                     onClick={() => setConfirm({ action: 'publish' })}
                   >
                     {selected.status === 'published' ? (
@@ -2529,13 +2466,17 @@ export default function AdminPanel() {
                           ? 'გავაერთიანოთ ვაკანსიები?'
                           : confirm?.action === 'resume-automation'
                             ? 'ავტომატურ მართვას დავუბრუნოთ?'
-                            : 'დაადასტურე ცვლილება'}
+                            : confirm?.action === 'confirm-payment'
+                              ? 'ჩარიცხვის დადასტურება'
+                              : confirm?.action === 'confirm-refund'
+                                ? 'თანხის დაბრუნების დადასტურება'
+                                : 'დაადასტურე ცვლილება'}
             </DialogTitle>
             <DialogDescription>
               {confirm?.action === 'pause-all-sources'
                 ? 'ყველა წყაროზე შეჩერდება დაგეგმილი ავტომატური ძებნა. ხელახლა ჩართვა ამავე ღილაკით შეგიძლია.'
                 : confirm?.action === 'confirm-payment'
-                  ? 'დაადასტურე მხოლოდ მაშინ, თუ ინვოისის სრული თანხა უკვე ჩაირიცხა ანგარიშზე. ეს ღილაკი ბანკიდან მონაცემებს არ ამოწმებს.'
+                  ? `დაადასტურე მხოლოდ ინვოისი ${selected?.invoice ? invoiceNumber(selected.invoice.number) : ''}-ის სრული თანხის (${selected?.invoice?.amount_gel ?? ''} ₾) რეალურად ჩარიცხვის შემდეგ. ვაკანსია შემდეგ ცალკე ქვეყნდება.`
                   : confirm?.action === 'confirm-refund'
                     ? 'დაადასტურე მხოლოდ უკვე შესრულებული საბანკო დაბრუნება. ღილაკი თანხას არ რიცხავს.'
                     : confirm?.action === 'bulk-selected-publish'
@@ -2543,7 +2484,9 @@ export default function AdminPanel() {
                       : confirm?.action === 'bulk-publish'
                         ? 'გამოქვეყნდება წყაროებიდან შემოტანილი ყველა მოლოდინში მყოფი ვაკანსია, ყველა გვერდიდან და ფილტრის მიუხედავად. დამსაქმებლის განცხადებები ამაში არ შედის; ისინი ცალ-ცალკე დასტურდება. ვადაგასული, არასწორი და გაუქმებული წყაროს ჩანაწერები გამოტოვდება. შეტყობინებები არ გაიგზავნება.'
                         : confirm?.action === 'publish'
-                          ? 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
+                          ? submission && !selected?.is_test
+                            ? 'ვაკანსია საიტზე გამოჩნდება და დამსაქმებლისთვის შეტყობინება მომზადდება.'
+                            : 'ეს რედაქცია საიტზე გამოჩნდება. შეტყობინებები არ გაიგზავნება.'
                           : confirm?.action === 'apply-source'
                             ? 'წყაროს ტექსტი შენახულ რედაქციას ჩაანაცვლებს. საჯარო ვერსია უცვლელი დარჩება.'
                             : confirm?.action === 'merge'

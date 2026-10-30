@@ -44,8 +44,8 @@ export function formatDistance(meters: number) {
   return `${(meters / 1000).toFixed(1).replace('.', ',')} კმ`;
 }
 
-export function formatWalk(minutes: number) {
-  return `${minutes} წთ ფეხით`;
+export function formatWalk(minutes: number, locale: 'ka' | 'en' = 'ka') {
+  return locale === 'en' ? `${minutes} min walk` : `${minutes} წთ ფეხით`;
 }
 
 /** A circle on the map as a GeoJSON ring of `steps` points around [lon, lat]. */

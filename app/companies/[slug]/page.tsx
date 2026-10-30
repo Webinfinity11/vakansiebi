@@ -1,4 +1,7 @@
 import { UiText } from '@/app/ui-language';
+import { LocalText } from '@/app/local-text';
+import { translateUi } from '@/lib/ui-language';
+import { compactSalary } from '@/lib/vacancy-presentation';
 import { ServerSiteFooter } from '../../server-site-footer';
 import type { Metadata } from 'next';
 import { siteName } from '@/lib/site-brand';
@@ -275,7 +278,13 @@ export default async function CompanyPage(props: Props) {
       <PublicHeader />
       <TrackOnce code="company_page" />
       <main className="vacancy-page-main">
-        <nav className="vacancy-breadcrumb" aria-label="გვერდის მდებარეობა">
+        <nav
+          className="vacancy-breadcrumb"
+          aria-labelledby="company-breadcrumb-label"
+        >
+          <span className="sr-only" id="company-breadcrumb-label">
+            <UiText>გვერდის მდებარეობა</UiText>
+          </span>
           <Link href="/" prefetch={false}>
             <ChevronLeft size={16} aria-hidden="true" />
             <UiText>{'ვაკანსიები'}</UiText>
@@ -292,16 +301,27 @@ export default async function CompanyPage(props: Props) {
               <span>
                 <UiText>{'კომპანია'}</UiText>
               </span>
-              <h1 id="company-title">{companyVacancyTitle(employer.name)}</h1>
+              <h1 id="company-title">
+                <LocalText
+                  ka={companyVacancyTitle(employer.name)}
+                  en={companyVacancyTitle(employer.name, 'en')}
+                />
+              </h1>
             </div>
           </div>
           {employer.cities.length > 0 && (
             <p className="company-page-cities">
               <MapPin size={14} aria-hidden="true" />
-              {employer.cities
-                .slice(0, 8)
-                .map((c) => c.name)
-                .join(' · ')}
+              <LocalText
+                ka={employer.cities
+                  .slice(0, 8)
+                  .map((c) => c.name)
+                  .join(' · ')}
+                en={employer.cities
+                  .slice(0, 8)
+                  .map((c) => translateUi(c.name, 'en'))
+                  .join(' · ')}
+              />
             </p>
           )}
           {(overview || website) && (
@@ -400,25 +420,41 @@ export default async function CompanyPage(props: Props) {
                         {job.city && (
                           <span>
                             <MapPin size={14} aria-hidden="true" />
-                            {job.city}
+                            <UiText>{job.city}</UiText>
                           </span>
                         )}
                         {job.deadline && (
                           <time dateTime={job.deadline}>
                             <UiText>{'ბოლო ვადა '}</UiText>
-                            {formatDate(job.deadline)}
+                            <LocalText
+                              ka={formatDate(job.deadline)}
+                              en={formatDate(job.deadline, 'en')}
+                            />
                           </time>
                         )}
                       </span>
                     </span>
                     <span className="company-job-side">
-                      {salary && <b>{salary}</b>}
+                      {salary && (
+                        <b>
+                          <LocalText
+                            ka={salary}
+                            en={compactSalary(
+                              job.salary,
+                              job.salaryPeriod,
+                              'en',
+                            )}
+                          />
+                        </b>
+                      )}
                       {left !== null && left >= 0 && left <= 3 ? (
                         <span className="ds-badge ds-badge--warning">
                           {left === 0 ? (
                             <UiText>ბოლო დღე</UiText>
                           ) : (
-                            `${left} დღე დარჩა`
+                            <UiText values={[left]}>
+                              {left === 1 ? '1 დღე დარჩა' : '{0} დღე დარჩა'}
+                            </UiText>
                           )}
                         </span>
                       ) : (
@@ -436,7 +472,13 @@ export default async function CompanyPage(props: Props) {
             })}
           </ul>
           {result.pages > 1 && (
-            <nav className="company-page-pages" aria-label="გვერდები">
+            <nav
+              className="company-page-pages"
+              aria-labelledby="company-pages-label"
+            >
+              <span className="sr-only" id="company-pages-label">
+                <UiText>გვერდები</UiText>
+              </span>
               {page > 1 ? (
                 <Link
                   className="secondary-button"

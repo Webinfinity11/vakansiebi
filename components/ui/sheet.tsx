@@ -6,6 +6,7 @@ import { Dialog as SheetPrimitive } from '@base-ui/react/dialog';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { XIcon } from 'lucide-react';
+import { useUi } from '@/app/ui-language';
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -59,13 +60,14 @@ function SheetContent({
   children,
   side = 'right',
   showCloseButton = true,
-  closeLabel = 'დახურვა',
+  closeLabel,
   ...props
 }: SheetPrimitive.Popup.Props & {
   side?: 'top' | 'right' | 'bottom' | 'left';
   showCloseButton?: boolean;
   closeLabel?: string;
 }) {
+  const { ui } = useUi();
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -95,7 +97,7 @@ function SheetContent({
             }
           >
             <XIcon />
-            <span className="sr-only">{closeLabel}</span>
+            <span className="sr-only">{closeLabel ?? ui('დახურვა')}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

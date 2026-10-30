@@ -1,6 +1,19 @@
 import { z } from 'zod';
-export const premiumPriceGEL = 20;
+export const vipPriceGEL = 20;
+export const vipDays = 30;
+export const premiumPriceGEL = 50;
 export const premiumDays = 30;
+export const paidPlacementPrices = {
+  vip: vipPriceGEL,
+  premium: premiumPriceGEL,
+} as const;
+export function invoiceServiceLabel(invoice: {
+  placement_tier?: 'vip' | 'premium';
+}) {
+  return invoice.placement_tier === 'vip'
+    ? 'VIP განთავსება'
+    : 'პრემიუმ განთავსება';
+}
 export const invoiceContact = {
   email: 'invoice@jobx.ge',
   phone: '579 53 53 20',
@@ -43,6 +56,8 @@ export function invoiceNumber(number: string | number) {
   return digits.padStart(6, '0');
 }
 export type JobInvoice = {
+  /** Older queued email payloads predate this field and describe premium. */
+  placement_tier?: 'vip' | 'premium';
   id: string;
   number: string;
   token: string;

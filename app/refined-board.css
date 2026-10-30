@@ -2339,38 +2339,37 @@ details[open] > summary > svg.disclosure-chevron {
   background: var(--ds-accent-soft);
   color: var(--ds-accent-ink);
 }
-.board-shell .results-title-row .recent-strip > .recent-head,
-.board-shell .results-title-row .recent-strip > .recent-track,
-.board-shell .results-title-row .recent-strip[open] > .recent-track {
+.board-shell .results-title-row .recent-strip > .recent-popover {
   position: absolute;
+  top: calc(100% + 6px);
   right: 0;
   z-index: 30;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: min(340px, calc(100vw - 32px));
+  max-height: min(60dvh, 420px);
+  overflow: hidden;
   background: var(--ds-surface);
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-lg);
 }
-.board-shell .results-title-row .recent-strip > .recent-head {
-  top: calc(var(--ds-control-touch) + 6px);
+.board-shell .results-title-row .recent-popover > .recent-head {
   display: flex;
   justify-content: flex-end;
   min-height: 0;
-  padding: var(--ds-space-2) var(--ds-space-2) 0;
-  border: 1px solid var(--ds-line);
-  border-bottom: 0;
-  border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
+  margin: 0;
+  padding: var(--ds-space-2);
 }
-.board-shell .results-title-row .recent-strip > .recent-track,
-.board-shell .results-title-row .recent-strip[open] > .recent-track {
-  top: calc(var(--ds-control-touch) + 6px + 48px);
+.board-shell .results-title-row .recent-popover > .recent-track {
   display: flex;
   flex-direction: column;
   gap: var(--ds-space-2);
-  max-height: min(60vh, 420px);
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0 var(--ds-space-2) var(--ds-space-2);
-  border: 1px solid var(--ds-line);
-  border-top: 0;
-  border-radius: 0 0 var(--ds-radius-lg) var(--ds-radius-lg);
-  box-shadow: var(--ds-shadow-lg);
   scroll-snap-type: none;
 }
 .board-shell .results-title-row .recent-strip .recent-card {

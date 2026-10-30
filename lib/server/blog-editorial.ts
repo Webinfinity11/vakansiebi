@@ -4,29 +4,93 @@ import { blogPosts } from '../blog';
 import {
   editorialUrl,
   validateArticle,
-  type ArticleDraft,
   type BlogEvidence,
 } from '../blog-editorial';
 import { ApiError } from './auth';
+import {
+  editablePost,
+  validateEditableArticle,
+  type EditableArticle,
+} from '../blog-manual';
 
 export type EditorialArticle = {
   id: string;
   slug: string;
   title: string;
   status: 'draft' | 'published' | 'rejected';
-  content: ArticleDraft;
+  content: EditableArticle;
   evidence: BlogEvidence;
   revision: number;
   created_at: string;
   updated_at: string;
   published_at: string | null;
 };
+export function staticEditorialArticles(): EditorialArticle[] {
+  return blogPosts.map((post) => ({
+    id: `static:${post.slug}`,
+    slug: post.slug,
+    title: post.title,
+    status: 'published',
+    content: editablePost(post),
+    revision: 0,
+    created_at: post.publishedAt,
+    updated_at: post.updatedAt ?? post.publishedAt,
+    published_at: post.publishedAt,
+    evidence: {
+      model: 'static',
+      researchedAt: post.updatedAt ?? post.publishedAt,
+      notes: 'სარედაქციო ჩანაწერები ინახება docs/ საქაღალდეში.',
+      sources: [],
+      review: { approved: false, issues: [] },
+      usage: [],
+    },
+  }));
+}
 export async function editorialArticles() {
-  return (
+  const stored = (
     await db().query<EditorialArticle>(
       'SELECT * FROM blog_articles ORDER BY created_at DESC LIMIT 100',
     )
   ).rows;
+  return [
+    ...stored,
+    ...staticEditorialArticles().filter(
+      (post) => !stored.some((row) => row.slug === post.slug),
+    ),
+  ];
+}
+export async function createEditorialArticle(input: unknown) {
+  return transaction(async (c) => {
+    await c.query('SELECT pg_advisory_xact_lock(917466)');
+    const others = (
+      await c.query<{ slug: string; title: string }>(
+        'SELECT slug,title FROM blog_articles',
+      )
+    ).rows;
+    let content: EditableArticle;
+    try {
+      content = validateEditableArticle(input, [...blogPosts, ...others]);
+    } catch (error) {
+      throw new ApiError(
+        error instanceof Error && !('issues' in error)
+          ? error.message
+          : 'შეამოწმე სათაური, მისამართი და ტექსტის მოცულობა.',
+      );
+    }
+    const evidence: BlogEvidence = {
+      model: 'manual',
+      researchedAt: new Date().toISOString(),
+      notes: 'ხელით შექმნილი სტატია.',
+      sources: [],
+      review: { approved: false, issues: [] },
+      usage: [],
+    };
+    const { rows } = await c.query<EditorialArticle>(
+      'INSERT INTO blog_articles(slug,title,content,evidence) VALUES($1,$2,$3,$4) RETURNING *',
+      [content.slug, content.title, content, evidence],
+    );
+    return rows[0];
+  });
 }
 export async function recentArticles() {
   return [
@@ -93,6 +157,28 @@ export async function updateEditorialArticle(
   return transaction(async (c) => {
     // Serialize approvals so concurrent drafts cannot publish equivalent titles.
     await c.query('SELECT pg_advisory_xact_lock(917466)');
+    if (id.startsWith('static:')) {
+      const original = staticEditorialArticles().find((post) => post.id === id);
+      if (!original) throw new ApiError('სტატია ვერ მოიძებნა', 404);
+      const existing = await c.query(
+        'SELECT id FROM blog_articles WHERE slug=$1',
+        [original.slug],
+      );
+      if (existing.rowCount)
+        throw new ApiError('სტატია უკვე შეიცვალა. განაახლე გვერდი.', 409);
+      const imported = await c.query<{ id: string }>(
+        `INSERT INTO blog_articles(slug,title,status,content,evidence,revision,created_at,updated_at,published_at) VALUES($1,$2,'published',$3,$4,0,$5,$6,$5) RETURNING id`,
+        [
+          original.slug,
+          original.title,
+          original.content,
+          original.evidence,
+          original.published_at,
+          original.updated_at,
+        ],
+      );
+      id = imported.rows[0].id;
+    }
     const { rows } = await c.query<EditorialArticle>(
       'SELECT * FROM blog_articles WHERE id=$1 FOR UPDATE',
       [id],
@@ -107,15 +193,31 @@ export async function updateEditorialArticle(
         [id],
       )
     ).rows;
-    let content: ArticleDraft;
+    let content: EditableArticle;
     try {
-      content = validateArticle(input ?? current.content, [
-        ...blogPosts,
+      const duplicateCandidates = [
+        ...blogPosts.filter((post) => post.slug !== current.slug),
         ...others,
-      ]);
-    } catch {
+      ];
+      const candidate =
+        action === 'save' || action === 'publish'
+          ? (input ?? current.content)
+          : current.content;
+      content = validateEditableArticle(
+        candidate,
+        duplicateCandidates,
+        action === 'publish',
+      );
+      if (
+        action === 'publish' &&
+        !['manual', 'static'].includes(current.evidence.model)
+      )
+        validateArticle(candidate, duplicateCandidates);
+    } catch (error) {
       throw new ApiError(
-        'ტექსტი ვერ შემოწმდა: გადაამოწმე მოცულობა, ქართული ტექსტი, ქვეთავები და სათაურის უნიკალურობა.',
+        error instanceof Error && !('issues' in error)
+          ? error.message
+          : 'შეამოწმე ტექსტი, ქვეთავები და სათაურის უნიკალურობა.',
       );
     }
     if (content.slug !== current.slug)
@@ -124,6 +226,7 @@ export async function updateEditorialArticle(
       throw new ApiError('გამოქვეყნებამდე შეარჩიე თემის შესაბამისი ბანერი.');
     if (
       action === 'publish' &&
+      !['manual', 'static'].includes(current.evidence.model) &&
       (current.evidence.sources.length < 2 ||
         current.evidence.sources.some((source) => !editorialUrl(source.url)))
     )

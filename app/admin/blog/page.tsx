@@ -15,7 +15,7 @@ export default async function AdminBlog() {
     <AdminWorkspace
       active="blog"
       title="ბლოგი"
-      description="მონახაზების განხილვა, რედაქტირება და გამოქვეყნება."
+      description="ახალი სტატიის დამატება, არსებული სტატიების რედაქტირება და გამოქვეყნება."
     >
       <BlogEditor />
     </AdminWorkspace>

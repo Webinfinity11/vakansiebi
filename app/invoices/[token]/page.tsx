@@ -4,7 +4,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { getInvoice } from '@/lib/server/billing';
-import { invoiceContact, invoiceNumber, invoiceStatuses } from '@/lib/billing';
+import {
+  invoiceContact,
+  invoiceNumber,
+  invoiceStatuses,
+  invoiceServiceLabel,
+} from '@/lib/billing';
 import { InvoiceActions } from './print-actions';
 import '../../invoices.css';
 import '../../invoices-print.css';
@@ -23,6 +28,7 @@ export default async function InvoicePage({
   const invoice = await getInvoice(token);
   if (!invoice) notFound();
   const number = invoiceNumber(invoice.number);
+  const service = invoiceServiceLabel(invoice);
   return (
     <main className="invoice-page">
       <div className="invoice-toolbar">
@@ -82,7 +88,7 @@ export default async function InvoicePage({
           </thead>
           <tbody>
             <tr>
-              <td>პრემიუმ განთავსება JOBX-ზე</td>
+              <td>{service} JOBX-ზე</td>
               <td>{invoice.service_days} დღე</td>
               <td>{invoice.amount_gel} ₾</td>
             </tr>
@@ -103,7 +109,7 @@ export default async function InvoicePage({
               გადარიცხვის დანიშნულებაში მიუთითე: <strong>{number}</strong>
             </p>
             <p>
-              პრემიუმი გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების
+              განთავსება გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების
               შემდეგ. {invoice.service_days} დღის ათვლა დაიწყება გააქტიურებიდან.
             </p>
           </section>
@@ -111,7 +117,7 @@ export default async function InvoicePage({
         {invoice.status === 'paid' && (
           <p className="invoice-payment">
             {invoice.activated_at
-              ? 'პრემიუმ განთავსება გააქტიურებულია.'
+              ? `${service} გააქტიურებულია.`
               : 'გადახდა დადასტურებულია. განცხადება ელოდება გამოქვეყნებას.'}
           </p>
         )}

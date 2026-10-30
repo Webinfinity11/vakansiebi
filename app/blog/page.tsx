@@ -51,8 +51,8 @@ export default async function BlogPage() {
               </div>
               <div className="blog-card-content">
                 <div className="blog-card-top">
-                  <span className="blog-category" lang="ka">
-                    {post.category}
+                  <span className="blog-category">
+                    <UiText>{post.category}</UiText>
                   </span>
                   <span>
                     <UiText values={[blogReadingMinutes(post)]}>

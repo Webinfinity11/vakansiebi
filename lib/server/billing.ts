@@ -6,7 +6,7 @@ import { queueInvoiceEmail } from './invoice-email';
 import {
   billingSettingsSchema,
   premiumDays,
-  premiumPriceGEL,
+  paidPlacementPrices,
 } from '../billing';
 
 export async function billingSettings() {
@@ -19,7 +19,13 @@ export async function billingSettings() {
 }
 export async function createInvoice(
   c: PoolClient,
-  job: { id: string; company: string; title: string; billingEmail: string },
+  job: {
+    id: string;
+    company: string;
+    title: string;
+    billingEmail: string;
+    placement: 'vip' | 'premium';
+  },
 ) {
   const settings = (
     await c.query(
@@ -28,25 +34,26 @@ export async function createInvoice(
   ).rows[0];
   if (!billingSettingsSchema.safeParse(settings).success)
     throw new ApiError(
-      'პრემიუმის გადახდის რეკვიზიტები ჯერ არ არის დამატებული. აირჩიე სტანდარტული ან VIP განთავსება.',
+      'გადახდის რეკვიზიტები ჯერ არ არის დამატებული. შეგიძლია აირჩიო უფასო სტანდარტული განთავსება.',
       503,
     );
   const token = randomBytes(32).toString('hex');
   const invoice = (
     await c.query(
-      `INSERT INTO job_invoices(id,token,job_id,amount_gel,service_days,payer_name,vacancy_title,payee_name,bank_name,iban)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      `INSERT INTO job_invoices(id,token,job_id,amount_gel,service_days,payer_name,vacancy_title,payee_name,bank_name,iban,placement_tier)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
       [
         randomUUID(),
         token,
         job.id,
-        premiumPriceGEL,
+        paidPlacementPrices[job.placement],
         premiumDays,
         job.company,
         job.title,
         settings.payee_name,
         settings.bank_name,
         settings.iban,
+        job.placement,
       ],
     )
   ).rows[0];

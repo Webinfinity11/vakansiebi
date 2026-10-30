@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     );
     const invoices = (
       await db().query(
-        'SELECT job_id,number,token,payer_name,vacancy_title,amount_gel,status,created_at FROM job_invoices ORDER BY created_at DESC LIMIT 30 OFFSET $1',
+        'SELECT job_id,number,token,payer_name,vacancy_title,amount_gel,placement_tier,service_days,status,created_at FROM job_invoices ORDER BY created_at DESC LIMIT 30 OFFSET $1',
         [(page - 1) * 30],
       )
     ).rows;

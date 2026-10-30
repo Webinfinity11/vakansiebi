@@ -191,13 +191,9 @@
   place-items: center;
   width: 36px;
   height: 36px;
-  color: var(--ds-ink-2);
+  color: var(--ds-on-accent);
   border-radius: 10px;
-  background: var(--ds-surface-muted);
-}
-.public-menu nav a[aria-current='page'] .public-menu-icon {
-  color: var(--ds-accent-ink);
-  background: var(--ds-surface);
+  background: var(--ds-accent);
 }
 .public-menu-arrow {
   color: var(--ds-ink-3);
@@ -205,7 +201,10 @@
 .public-menu nav a.public-menu-personal {
   margin-top: 8px;
 }
-.public-menu nav a:hover,
+.public-menu nav a:hover {
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink);
+}
 .public-menu nav a[aria-current='page'] {
   background: var(--ds-accent-soft);
   color: var(--ds-accent-ink);

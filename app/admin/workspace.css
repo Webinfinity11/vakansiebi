@@ -3,15 +3,10 @@
   padding: 20px 12px 12px;
 }
 .admin-shell .admin-side nav {
-  gap: 20px;
+  gap: 12px;
 }
 .admin-shell .admin-nav-group {
   gap: 3px;
-}
-.admin-shell .admin-nav-group h2 {
-  font-size: 11px;
-  margin-bottom: 5px;
-  font-weight: 500;
 }
 .admin-nav-group a {
   display: flex;
@@ -114,6 +109,69 @@
   margin-top: 16px;
   font-size: 13px;
   color: var(--ds-accent);
+}
+.submission-payment {
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--ds-surface);
+  margin: 0 0 16px;
+}
+.submission-payment-heading,
+.submission-payment-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.submission-payment-heading {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.submission-payment-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1fr;
+  gap: 16px;
+  margin: 16px 0;
+}
+.submission-payment-summary label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.submission-payment-summary dl {
+  display: flex;
+  gap: 24px;
+  margin: 0;
+  align-items: center;
+}
+.submission-payment-summary dt {
+  font-size: 12px;
+  color: var(--ds-ink-3);
+}
+.submission-payment-summary dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+  font-size: 14px;
+}
+.submission-payment p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ds-ink-2);
+}
+.submission-payment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+@media (max-width: 600px) {
+  .submission-payment-summary {
+    grid-template-columns: 1fr;
+  }
+  .submission-payment-actions .ds-btn {
+    width: 100%;
+  }
 }
 .admin-shell .admin-panel > .reports-section:first-of-type {
   margin-top: 0;

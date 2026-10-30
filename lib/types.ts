@@ -91,7 +91,13 @@ export type PublicJob = Vacancy & {
 export type AdminJob = {
   invoice?: Pick<
     JobInvoice,
-    'status' | 'number' | 'created_at' | 'token' | 'amount_gel'
+    | 'status'
+    | 'number'
+    | 'created_at'
+    | 'token'
+    | 'amount_gel'
+    | 'placement_tier'
+    | 'service_days'
   > | null;
   requested_placement?: PlacementTier;
   /** Set only for a vacancy an employer sent through the posting form. */
@@ -99,8 +105,6 @@ export type AdminJob = {
   notification_email?: string | null;
   /** Marked by the admin as a test: listed apart and left out of every count. */
   is_test?: boolean | null;
-  /** For a submission: this company has not used its free VIP on another vacancy yet. */
-  vip_available?: boolean;
   placement_tier: PlacementTier;
   placement_expires_at: string | null;
   /** Effective at the time the admin snapshot was read. */

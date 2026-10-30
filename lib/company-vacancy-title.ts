@@ -16,8 +16,12 @@ const possessives = new Map([
   ['იფქლი', 'იფქლის'],
 ]);
 
-export function companyVacancyTitle(name: string): string {
+export function companyVacancyTitle(
+  name: string,
+  locale: 'ka' | 'en' = 'ka',
+): string {
   const clean = companyDisplayName(name);
+  if (locale === 'en') return `${clean} — Jobs`;
   const possessive = possessives.get(clean.toLocaleLowerCase('ka'));
   return possessive ? `${possessive} ვაკანსიები` : `${clean} — ვაკანსიები`;
 }

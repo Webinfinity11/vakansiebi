@@ -267,13 +267,13 @@ export async function renderCvPdf(cv: Cv): Promise<Uint8Array> {
       { gap: 4 },
     );
   }
-  sheet.need(20);
-  sheet.page.drawText('jobx.ge', {
-    x: margin,
-    y: margin - 18,
-    size: 8,
-    font: fonts.regular,
-    color: grey,
-  });
+  for (const page of doc.getPages())
+    page.drawText('jobx.ge', {
+      x: margin,
+      y: margin - 18,
+      size: 8,
+      font: fonts.regular,
+      color: grey,
+    });
   return doc.save();
 }

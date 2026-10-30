@@ -13,6 +13,7 @@ export function installMapPreviews(
   map: MapLibre,
   PopupClass: typeof Popup,
   lookup: (id: string) => MapVacancy | undefined,
+  locale: () => 'ka' | 'en' = () => 'ka',
 ) {
   let popup: Popup | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -72,14 +73,19 @@ export function installMapPreviews(
           salary.textContent = compactSalary(
             vacancy.salary,
             vacancy.salaryPeriod,
+            locale(),
           );
           text.append(salary);
         }
         const hint = document.createElement('small');
         hint.textContent =
-          vacancies.length > 1
-            ? `კიდევ ${vacancies.length - 1} ვაკანსია · დააჭირე სანახავად`
-            : 'დააჭირე ვაკანსიის სანახავად';
+          locale() === 'en'
+            ? vacancies.length > 1
+              ? `${vacancies.length - 1} more ${vacancies.length === 2 ? 'job' : 'jobs'} · Click to view`
+              : 'Click to view job'
+            : vacancies.length > 1
+              ? `კიდევ ${vacancies.length - 1} ვაკანსია · დააჭირე სანახავად`
+              : 'დააჭირე ვაკანსიის სანახავად';
         text.append(hint);
         content.append(avatar, text);
         popup = new PopupClass({

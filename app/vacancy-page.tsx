@@ -391,7 +391,7 @@ export default function VacancyPage({
     const outcome = await shareLink(
       window.location.origin + vacancyPath(job),
       `${job.title} — ${job.company}`,
-      [job.city, compactSalary(job.salary, job.salaryPeriod)]
+      [ui(job.city), compactSalary(job.salary, job.salaryPeriod, locale)]
         .filter(Boolean)
         .join(' · ') || undefined,
     );
@@ -752,7 +752,15 @@ export default function VacancyPage({
                       }
                     >
                       <dt>{ui(label ?? '')}</dt>
-                      <dd>{value}</dd>
+                      <dd>
+                        {label === 'ანაზღაურება'
+                          ? compactSalary(job.salary, job.salaryPeriod, locale)
+                          : ['ქალაქი', 'განაკვეთი', 'სამუშაო რეჟიმი'].includes(
+                                label ?? '',
+                              )
+                            ? ui(value ?? '')
+                            : value}
+                      </dd>
                     </div>
                   ))}
                 </dl>

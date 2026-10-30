@@ -63,6 +63,18 @@ void test('mail does not duplicate the owner address and rejects malformed desti
     ),
   );
 });
+void test('VIP mail names the paid VIP package and its stored terms', () => {
+  const email = invoiceEmail(
+    { ...invoice, placement_tier: 'vip' },
+    'billing@example.com',
+    'https://jobx.ge',
+  );
+  for (const body of [email.html, email.text]) {
+    assert.match(body, /VIP განთავსება · 30 დღე/);
+    assert.match(body, /20 ₾/);
+    assert.doesNotMatch(body, /პრემიუმ განთავსება/);
+  }
+});
 void test('test copies use the selected invoice button and only the test recipient', () => {
   const mail = invoiceEmail(
     invoice,

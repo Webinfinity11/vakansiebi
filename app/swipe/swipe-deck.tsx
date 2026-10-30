@@ -22,6 +22,7 @@ import {
   Clock,
   FileText,
   MapPin,
+  LoaderCircle,
   Send,
   Undo2,
   Upload,
@@ -50,7 +51,7 @@ import { vacancyContacts } from '@/lib/vacancy-details';
 import { compactSalary } from '@/lib/vacancy-presentation';
 import { vacancyPath } from '@/lib/vacancy-navigation';
 import { CompanyLogo } from '../company-logo';
-import { Description } from '../vacancy-text';
+import { Description, formatDate } from '../vacancy-text';
 
 /* One vacancy at a time over the board's own list and filters, and only the
    vacancies a CV can be mailed to: right always sends the CV from hr@jobx.ge
@@ -65,23 +66,7 @@ const noApplicant: SwipeApplicant = { name: '', email: '', phone: '' };
 const holdSeconds = 8;
 const consentKey = 'jobx-swipe-consent-v2';
 const hintKey = 'jobx-swipe-hint-v1';
-const keysKey = 'jobx-swipe-keys-v1';
-const keysVisits = 3;
 const maxUploadBytes = 4_000_000;
-const months = [
-  'იან',
-  'თებ',
-  'მარ',
-  'აპრ',
-  'მაი',
-  'ივნ',
-  'ივლ',
-  'აგვ',
-  'სექ',
-  'ოქტ',
-  'ნოე',
-  'დეკ',
-];
 const throwAt = 110;
 const exitDuration = 240;
 const reducedMotion = () =>
@@ -97,17 +82,25 @@ function daysLeft(deadline: string) {
   const end = Date.parse(deadline + 'T23:59:59+04:00');
   return Number.isFinite(end) ? Math.ceil((end - Date.now()) / 86400000) : null;
 }
-const deadlineLabel = (deadline: string) => {
-  const left = daysLeft(deadline);
-  if (left === null || left < 0) return '';
-  if (left === 0) return 'ბოლო დღე';
-  if (left <= 3) return `${left} დღე დარჩა`;
-  const [, month, day] = deadline.split('-').map(Number);
-  return `ვადა ${day} ${months[month - 1]}`;
-};
+
+export function SwipeLoading() {
+  return (
+    <output className="swipe-hint" aria-label="Swipe" aria-busy="true">
+      <LoaderCircle size={20} className="animate-spin" aria-hidden="true" />
+    </output>
+  );
+}
 
 export function SwipeDeck() {
-  const { ui } = useUi();
+  const { ui, locale } = useUi();
+  const deadlineLabel = (deadline: string) => {
+    const left = daysLeft(deadline);
+    if (left === null || left < 0) return '';
+    if (left === 0) return ui('ბოლო დღე');
+    if (left <= 3)
+      return left === 1 ? ui('1 დღე დარჩა') : ui('{0} დღე დარჩა', [left]);
+    return ui('ვადა {0}', [formatDate(deadline, locale)]);
+  };
   const opened = useRef(false);
   useEffect(() => {
     if (opened.current) return;
@@ -244,8 +237,6 @@ export function SwipeDeck() {
      in a sheet over the deck; the chip in the header reopens it. */
   const [askCv, setAskCv] = useState(false);
   const [hint, setHint] = useState(false);
-  // The key legend appears for a moment on the first few visits, then gets out of the way.
-  const [keys, setKeys] = useState(false);
   const [entering, setEntering] = useState<'left' | 'right' | 'next' | null>(
     null,
   );
@@ -293,11 +284,6 @@ export function SwipeDeck() {
         );
         setConsent(!!localStorage.getItem(consentKey));
         setHint(!localStorage.getItem(hintKey) && !reducedMotion());
-        const visits = Number(localStorage.getItem(keysKey)) || 0;
-        if (visits < keysVisits) {
-          localStorage.setItem(keysKey, String(visits + 1));
-          setKeys(true);
-        }
         setStarted(true);
       } catch {}
     }, 0);
@@ -472,11 +458,6 @@ export function SwipeDeck() {
   }, [pending, submit]);
 
   const current = queue[0];
-  useEffect(() => {
-    if (!keys) return;
-    const t = setTimeout(() => setKeys(false), 4500);
-    return () => clearTimeout(t);
-  }, [keys]);
   // Any reading or interaction ends the demonstration, including during its delay.
   useEffect(() => {
     if (!hint) return;
@@ -753,7 +734,11 @@ export function SwipeDeck() {
     const date = new Date(at);
     return Number.isNaN(date.getTime())
       ? ''
-      : `${date.getDate()} ${months[date.getMonth()]}`;
+      : new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'ka-GE', {
+          day: 'numeric',
+          month: 'short',
+          timeZone: 'Asia/Tbilisi',
+        }).format(date);
   };
 
   const attach = askCv ? (
@@ -938,8 +923,7 @@ export function SwipeDeck() {
     </dialog>
   ) : null;
 
-  if (!started)
-    return <output className="swipe-hint">{ui('იტვირთება…')}</output>;
+  if (!started) return <SwipeLoading />;
 
   return (
     <main className="swipe-main">
@@ -1120,26 +1104,34 @@ export function SwipeDeck() {
                   />
                   <div>
                     <b>{current.company || ui('კერძო განცხადება')}</b>
-                    {current.category && <span>{current.category}</span>}
+                    {current.category && <span>{ui(current.category)}</span>}
                   </div>
                 </div>
                 <h2>{current.title}</h2>
-                {compactSalary(current.salary, current.salaryPeriod) && (
+                {compactSalary(
+                  current.salary,
+                  current.salaryPeriod,
+                  locale,
+                ) && (
                   <p className="swipe-pay">
-                    {compactSalary(current.salary, current.salaryPeriod)}
+                    {compactSalary(
+                      current.salary,
+                      current.salaryPeriod,
+                      locale,
+                    )}
                   </p>
                 )}
                 <div className="swipe-chips">
                   {current.city && (
                     <span>
                       <MapPin size={14} aria-hidden="true" />
-                      {current.city}
+                      {ui(current.city)}
                     </span>
                   )}
                   {current.employmentType && (
                     <span>
                       <Briefcase size={14} aria-hidden="true" />
-                      {current.employmentType}
+                      {ui(current.employmentType)}
                     </span>
                   )}
                   {deadlineLabel(current.deadline) && (
@@ -1249,18 +1241,6 @@ export function SwipeDeck() {
             </span>
           </button>
         </div>
-        <p
-          className="swipe-keys"
-          aria-hidden="true"
-          data-show={keys || undefined}
-        >
-          <kbd>←</kbd>
-          {ui(' გამოტოვება · ')}
-          <kbd>→</kbd>
-          {ui(' გაგზავნა · ')}
-          <kbd>Ctrl</kbd>+<kbd>Z</kbd>
-          {ui(' უკან')}
-        </p>
       </div>
       {attach}
     </main>

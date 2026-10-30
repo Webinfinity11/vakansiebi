@@ -13,8 +13,13 @@ import {
 } from 'lucide-react';
 import { PublicHeader } from '../public-header';
 import { ServerSiteFooter } from '../server-site-footer';
-import { invoiceContact, premiumDays, premiumPriceGEL } from '@/lib/billing';
-import { introductoryDays } from '@/lib/placement';
+import {
+  invoiceContact,
+  premiumDays,
+  premiumPriceGEL,
+  vipPriceGEL,
+  vipDays,
+} from '@/lib/billing';
 import { billingSettings } from '@/lib/server/billing';
 import { breadcrumbs, jsonLd, shareImage, siteUrl } from '@/lib/seo';
 import './business.css';
@@ -65,10 +70,10 @@ export default async function BusinessPage() {
     {
       tier: 'vip',
       name: 'VIP',
-      price: 'უფასო',
-      period: 'პირველი {0} დღე',
-      periodValues: [introductoryDays],
-      description: 'პირველი VIP განთავსება, თითო კომპანიისთვის ერთხელ.',
+      price: `${vipPriceGEL} ₾`,
+      period: '{0} დღით',
+      periodValues: [vipDays],
+      description: 'შენი ვაკანსია სტანდარტულ შედეგებზე წინ გამოჩნდება.',
       features: [
         'სტანდარტული განთავსების შესაძლებლობები',
         'სტანდარტულ შედეგებზე წინ გამოჩენა',
@@ -105,18 +110,18 @@ export default async function BusinessPage() {
     {
       question: 'როდის გამოჩნდება ვაკანსია?',
       answer:
-        'განაცხადის გაგზავნის შემდეგ განცხადებას ადმინისტრატორი ამოწმებს. საიტზე ის დამტკიცების შემდეგ გამოჩნდება. პრემიუმ განთავსებისთვის გადახდის დადასტურებაც საჭიროა.',
+        'განაცხადის გაგზავნის შემდეგ განცხადებას ადმინისტრატორი ამოწმებს. საიტზე ის დამტკიცების შემდეგ გამოჩნდება. VIP და პრემიუმ განთავსებისთვის გადახდის დადასტურებაც საჭიროა.',
     },
     {
-      question: 'ვის შეუძლია უფასო VIP-ის გამოყენება?',
+      question: 'რა ღირს VIP განთავსება?',
       answer:
-        'პირველი VIP განთავსება {0} დღით უფასოა, თითო კომპანიისთვის ერთხელ. შემდეგ განცხადება ავტომატურად გადადის სტანდარტულ განთავსებაზე და რჩება განაცხადების მიღების ვადის ამოწურვამდე. შეთავაზების გამოყენების შესაძლებლობა განცხადების შემოწმებისას დგინდება.',
-      values: [introductoryDays],
+        'VIP განთავსება ღირს {0} ₾ და მოქმედებს {1} დღე გააქტიურებიდან. ვადის ამოწურვის შემდეგ განცხადება სტანდარტულად დარჩება, თუ განაცხადების მიღების ვადა ჯერ არ გასულა.',
+      values: [vipPriceGEL, vipDays],
     },
     {
-      question: 'როგორ გადავიხადო პრემიუმის საფასური?',
+      question: 'როგორ გადავიხადო განთავსების საფასური?',
       answer:
-        'განაცხადში პრემიუმის არჩევისას მიიღებ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.',
+        'განაცხადში VIP-ის ან პრემიუმის არჩევისას მიიღებ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. პრემიუმის ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.',
       values: [premiumPriceGEL, premiumDays],
     },
   ];
@@ -182,7 +187,10 @@ export default async function BusinessPage() {
             </span>
           </div>
         </section>
-        <ul className="business-facts" aria-label="განთავსება JOBX-ზე">
+        <span className="sr-only" id="business-facts-label">
+          <UiText>განთავსება JOBX-ზე</UiText>
+        </span>
+        <ul className="business-facts" aria-labelledby="business-facts-label">
           <li>
             <Check size={16} aria-hidden="true" />
             <UiText>{' რეგისტრაციის გარეშე'}</UiText>
@@ -274,11 +282,6 @@ export default async function BusinessPage() {
                   <h3 className="business-plan-label">
                     <UiText>{plan.name}</UiText>
                   </h3>
-                  {plan.name === 'VIP' ? (
-                    <span className="business-plan-offer">
-                      <UiText>{'დროებითი შეთავაზება'}</UiText>
-                    </span>
-                  ) : null}
                 </div>
                 <p className="business-plan-price">
                   <UiText>{plan.price}</UiText>
@@ -294,21 +297,21 @@ export default async function BusinessPage() {
                     <li key={feature}>
                       <Check size={15} aria-hidden="true" />
                       <UiText
-                        values={[
-                          plan.tier === 'vip' ? introductoryDays : premiumDays,
-                        ]}
+                        values={[plan.tier === 'vip' ? vipDays : premiumDays]}
                       >
                         {feature}
                       </UiText>
                     </li>
                   ))}
                 </ul>
-                {plan.name === 'პრემიუმი' && !premiumAvailable && (
+                {plan.tier !== 'standard' && !premiumAvailable && (
                   <small className="business-plan-unavailable">
-                    <UiText>{'პრემიუმის გადახდა ამჟამად მიუწვდომელია.'}</UiText>
+                    <UiText>
+                      {'ფასიანი განთავსება ამჟამად მიუწვდომელია.'}
+                    </UiText>
                   </small>
                 )}
-                {plan.tier !== 'premium' || premiumAvailable ? (
+                {plan.tier === 'standard' || premiumAvailable ? (
                   <Link
                     href={`/post-job?placement=${plan.tier}`}
                     prefetch={false}
@@ -334,7 +337,7 @@ export default async function BusinessPage() {
           <p className="business-plan-terms">
             <UiText>
               {
-                'VIP-ის უფასო შეთავაზება შემოწმდება დამტკიცებისას. VIP და პრემიუმ პერიოდი ითვლება გააქტიურებიდან; ვადის გასვლის შემდეგ განცხადება სტანდარტულ რეჟიმში რჩება, მის მითითებულ ბოლო ვადამდე. თანხა ავტომატურად არ ჩამოიჭრება.'
+                'VIP-ისა და პრემიუმის 30-დღიანი პერიოდი იწყება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ. შემდეგ ვაკანსია სტანდარტულად რჩება მის ბოლო ვადამდე. თანხა ავტომატურად არ ჩამოიჭრება.'
               }
             </UiText>
           </p>

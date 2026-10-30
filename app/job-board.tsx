@@ -176,7 +176,7 @@ const JobCard = memo(function JobCard({
   const swipe = useSwipe({
     onRight: () => onToggleSave(j.id),
   });
-  const salary = vacancyCardSalary(j.salary, j.salaryPeriod, j.source);
+  const salary = vacancyCardSalary(j.salary, j.salaryPeriod, j.source, locale);
   const cardTitle = vacancyCardTitle(j.title, j.source);
   const left = j.deadline ? daysUntil(j.deadline) : NaN;
   const urgent = left >= 0 && left <= 3;
@@ -268,8 +268,8 @@ const JobCard = memo(function JobCard({
             {j.city && (
               <span>
                 <MapPin size={14} />
-                <span className="location-text" title={j.city}>
-                  {vacancyCardLocation(j.city)}
+                <span className="location-text" title={ui(j.city)}>
+                  {ui(vacancyCardLocation(j.city))}
                 </span>
               </span>
             )}
@@ -1259,7 +1259,6 @@ export default function JobBoard({
         {ui('ვაკანსიებზე გადასვლა')}
       </a>
       <PublicHeader
-        dailyOnly={advanced.salaryPeriod === 'day'}
         savedCount={saved.length}
         savedOnly={savedOnly}
         /* The field is right below the masthead here; two searches on one
@@ -1592,6 +1591,9 @@ export default function JobBoard({
                   >
                     <MapPin size={16} aria-hidden="true" />
                     <span className="results-map-label">{ui('რუკაზე')}</span>
+                    <span className="results-feature-hint" aria-hidden="true">
+                      {ui('სიახლე')}
+                    </span>
                   </Link>
                   {/* Secondary: the same list, one vacancy at a time. */}
                   <Link
@@ -1602,6 +1604,9 @@ export default function JobBoard({
                   >
                     <Layers size={16} aria-hidden="true" />
                     <span className="results-map-label">Swipe</span>
+                    <span className="results-feature-hint" aria-hidden="true">
+                      {ui('სიახლე')}
+                    </span>
                   </Link>
                   <button
                     className="mobile-filter-toggle secondary-button"

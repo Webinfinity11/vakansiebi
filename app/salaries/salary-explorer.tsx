@@ -5,9 +5,11 @@ import { ArrowUpRight, ChevronDown, Search, X } from 'lucide-react';
 import { useUi } from '../ui-language';
 import { translateUi } from '@/lib/ui-language';
 import { textSearch } from '@/lib/search-text';
-import type { SalaryRole } from '@/lib/salary-pages';
+import { salaryVacanciesHref, type SalaryRole } from '@/lib/salary-pages';
 import { categories } from '@/lib/types';
 import { SelectField } from '../select-field';
+import { CategoryIcon } from '@/components/category-icon';
+import { InputGroupAddon } from '@/components/ui/input-group';
 import {
   Combobox,
   ComboboxInput,
@@ -21,13 +23,15 @@ import './salaries.css';
 export function SalaryExplorer({
   roles,
   detail = false,
+  initialPeriod = 'month',
 }: {
   roles: SalaryRole[];
   detail?: boolean;
+  initialPeriod?: 'month' | 'day';
 }) {
   const { locale } = useUi();
   const t = (ka: string, en: string) => (locale === 'en' ? en : ka);
-  const [period, setPeriod] = useState<'month' | 'day'>('month');
+  const [period, setPeriod] = useState<'month' | 'day'>(initialPeriod);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('vacancies');
   const [group, setGroup] = useState('');
@@ -38,16 +42,7 @@ export function SalaryExplorer({
   const filtered = useMemo(() => {
     const match = textSearch(query);
     return roles
-      .filter(
-        (role) =>
-          detail ||
-          role.kind === 'profession' ||
-          (role.kind === 'category' &&
-            !roles.some(
-              (child) =>
-                child.kind === 'profession' && child.group === role.group,
-            )),
-      )
+      .filter((role) => detail || role.kind !== 'legacy')
       .filter(
         (role) =>
           (!group || role.group === group) &&
@@ -70,14 +65,34 @@ export function SalaryExplorer({
   const selected = roles[0],
     sample = selected?.[period];
   const available = roles.filter(
-    (role) => role.kind === 'profession' && role[period],
+    (role) => role.kind !== 'legacy' && role[period],
   ).length;
+  const payCount = (role: SalaryRole) =>
+    period === 'day' ? role.dayCount : role.monthCount;
+  // Category totals count each vacancy once; professions overlap their parent category.
+  const categoryRoles = roles.filter((role) => role.kind === 'category');
+  const categoryCounts = new Map(
+    categoryRoles.map((role) => [role.group, payCount(role)]),
+  );
+  const statedCount = group
+    ? (categoryCounts.get(group) ?? 0)
+    : categoryRoles.reduce((sum, role) => sum + payCount(role), 0);
+  const vacanciesHref = salaryVacanciesHref(
+    (detail ? selected : categoryRoles.find((role) => role.group === group))
+      ?.href ?? '/',
+    period,
+  );
   const scale = Math.max(1, ...filtered.map((role) => role[period]?.high ?? 0));
   const categoryOptions = [
-    { value: '', label: t('ყველა კატეგორია', 'All categories') },
+    {
+      value: '',
+      label: t('ყველა კატეგორია', 'All categories'),
+      count: categoryRoles.reduce((sum, role) => sum + payCount(role), 0),
+    },
     ...categories.map((value) => ({
       value,
       label: translateUi(value, locale),
+      count: categoryCounts.get(value) ?? 0,
     })),
   ];
   return (
@@ -167,26 +182,59 @@ export function SalaryExplorer({
               <ComboboxInput
                 aria-label={t('კატეგორიის არჩევა', 'Choose category')}
                 placeholder={t('ყველა კატეგორია', 'All categories')}
-                showClear
-              />
-              <ComboboxContent>
+                showClear={Boolean(group)}
+                clearLabel={t('კატეგორიის გასუფთავება', 'Clear category')}
+              >
+                <InputGroupAddon align="inline-start">
+                  <CategoryIcon category={group} size={18} />
+                </InputGroupAddon>
+              </ComboboxInput>
+              <ComboboxContent className="salary-category-menu">
+                <p className="salary-category-menu-heading">
+                  {period === 'day'
+                    ? t('დღიური თანხა მითითებულია', 'Listings with daily pay')
+                    : t(
+                        'თვიური თანხა მითითებულია',
+                        'Listings with monthly pay',
+                      )}
+                </p>
                 <ComboboxEmpty>{t('ვერ მოიძებნა', 'No results')}</ComboboxEmpty>
                 <ComboboxList>
-                  {(item: { value: string; label: string }) => (
+                  {(item: { value: string; label: string; count: number }) => (
                     <ComboboxItem key={item.value} value={item}>
-                      {item.label}
+                      <CategoryIcon category={item.value} size={18} />
+                      <span className="salary-category-name">{item.label}</span>
+                      <span className="salary-category-count">
+                        {number(item.count)}
+                      </span>
                     </ComboboxItem>
                   )}
                 </ComboboxList>
               </ComboboxContent>
             </Combobox>
           </div>
-          <span>
+          <span className="salary-category-summary" aria-live="polite">
             {t(
-              `${categories.length} კატეგორია · ${available} მიმართულებაზე საკმარისი მონაცემია`,
-              `${categories.length} categories · ${available} roles with comparable data`,
+              `${number(statedCount)} განცხადებაში მითითებულია ${period === 'day' ? 'დღიური' : 'თვიური'} თანხა`,
+              `${number(statedCount)} ${statedCount === 1 ? 'listing with' : 'listings with'} ${period === 'day' ? 'daily' : 'monthly'} pay`,
             )}
+            <small>
+              {t(
+                `${categories.length} კატეგორია · ${available} მიმართულებაზე საკმარისი მონაცემია`,
+                `${categories.length} categories · ${available} salary comparisons available`,
+              )}
+            </small>
           </span>
+          {period === 'day' && (
+            <Link
+              className="ds-btn ds-btn--primary salary-daily-link"
+              href={vacanciesHref}
+              prefetch={false}
+            >
+              {t('დღიური ვაკანსიების ნახვა', 'Browse daily-pay jobs')}
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </Link>
+          )}
         </div>
       )}
       {detail ? (
@@ -208,7 +256,7 @@ export function SalaryExplorer({
                 <p>
                   {t(
                     `${number(sample.count)} განცხადების მიხედვით`,
-                    `Based on ${number(sample.count)} listings`,
+                    `Based on ${number(sample.count)} ${sample.count === 1 ? 'listing' : 'listings'}`,
                   )}
                 </p>
               </div>
@@ -295,16 +343,18 @@ export function SalaryExplorer({
           <div className="salary-detail-action">
             <span>
               {t(
-                `${number(selected.total)} აქტიური ვაკანსია`,
-                `${number(selected.total)} active vacancies`,
+                `${number(period === 'day' ? selected.dayCount : selected.total)} აქტიური ვაკანსია`,
+                `${number(period === 'day' ? selected.dayCount : selected.total)} active ${(period === 'day' ? selected.dayCount : selected.total) === 1 ? 'job' : 'jobs'}`,
               )}
             </span>
             <Link
               className="ds-btn ds-btn--primary"
-              href={selected.href}
+              href={vacanciesHref}
               prefetch={false}
             >
-              {t('ვაკანსიების ნახვა', 'Browse jobs')}
+              {period === 'day'
+                ? t('დღიური ვაკანსიების ნახვა', 'Browse daily-pay jobs')
+                : t('ვაკანსიების ნახვა', 'Browse jobs')}
               <ArrowUpRight size={16} />
             </Link>
           </div>
@@ -315,7 +365,7 @@ export function SalaryExplorer({
             <p className="salary-found" aria-live="polite">
               {t(
                 `${filtered.length} მიმართულება · თანხები ლარში`,
-                `${filtered.length} roles · Amounts in GEL`,
+                `${filtered.length} results · Amounts in GEL`,
               )}
             </p>
             <label>
@@ -331,41 +381,53 @@ export function SalaryExplorer({
             </label>
           </div>
           <div className="salary-table" key={period + group}>
-            <div className="salary-table-head" aria-hidden="true">
-              <span>{t('პროფესია', 'Profession')}</span>
-              <span>{t('ანაზღაურების დიაპაზონი', 'Pay range')}</span>
-              <span
-                title={t(
-                  'განცხადებების ნახევარში თანხა ამაზე დაბალია, ნახევარში — მაღალი.',
-                  'Half the stated amounts are below this value and half above.',
-                )}
-              >
-                {t('შუა მაჩვენებელი', 'Median')}
-              </span>
-              <span>{t('ხელფასი მითითებულია', 'Pay stated in')}</span>
-              <span />
-            </div>
+            {filtered.length > 0 && (
+              <div className="salary-table-head" aria-hidden="true">
+                <span>{t('მიმართულება', 'Category / profession')}</span>
+                <span>{t('ანაზღაურების დიაპაზონი', 'Pay range')}</span>
+                <span
+                  title={t(
+                    'განცხადებების ნახევარში თანხა ამაზე დაბალია, ნახევარში — მაღალი.',
+                    'Half the stated amounts are below this value and half above.',
+                  )}
+                >
+                  {t('შუა მაჩვენებელი', 'Median')}
+                </span>
+                <span>{t('ხელფასი მითითებულია', 'Pay stated in')}</span>
+                <span />
+              </div>
+            )}
             <ul>
               {(expanded ? filtered : filtered.slice(0, 12)).map((role) => {
                 const s = role[period];
                 return (
                   <li key={role.slug}>
                     <Link
-                      href={`/salaries/${role.slug}`}
+                      href={`/salaries/${role.slug}${period === 'day' ? '?period=day' : ''}`}
                       className="salary-row"
                       prefetch={false}
                     >
                       <div className="salary-role">
-                        <strong>{translateUi(role.label, locale)}</strong>
-                        {!group && role.group && (
-                          <span>{translateUi(role.group, locale)}</span>
-                        )}
-                        <span>
-                          {t(
-                            `${number(role.total)} ვაკანსია`,
-                            `${number(role.total)} vacancies`,
-                          )}
+                        <span className="salary-role-icon" aria-hidden="true">
+                          <CategoryIcon category={role.group} size={18} />
                         </span>
+                        <div className="salary-role-copy">
+                          <strong>{translateUi(role.label, locale)}</strong>
+                          {role.kind === 'category' ? (
+                            <span>{t('კატეგორია', 'Category')}</span>
+                          ) : (
+                            !group &&
+                            role.group && (
+                              <span>{translateUi(role.group, locale)}</span>
+                            )
+                          )}
+                          <span>
+                            {t(
+                              `${number(role.total)} ვაკანსია`,
+                              `${number(role.total)} ${role.total === 1 ? 'job' : 'jobs'}`,
+                            )}
+                          </span>
+                        </div>
                       </div>
                       <div className="salary-range">
                         <span className="salary-mobile-label">
@@ -411,13 +473,30 @@ export function SalaryExplorer({
                         )}
                       </div>
                       <div className="salary-sample">
-                        {s ? (
+                        {(period === 'month'
+                          ? role.monthCount
+                          : role.dayCount) > 0 ? (
                           <>
-                            <b>{number(s.count)}</b>
-                            <span>{t('განცხადება', 'listings')}</span>
+                            <b>
+                              {number(
+                                period === 'month'
+                                  ? role.monthCount
+                                  : role.dayCount,
+                              )}
+                            </b>
+                            <span>
+                              {t(
+                                'განცხადება',
+                                (period === 'month'
+                                  ? role.monthCount
+                                  : role.dayCount) === 1
+                                  ? 'listing'
+                                  : 'listings',
+                              )}
+                            </span>
                           </>
                         ) : (
-                          <span>—</span>
+                          <span>{t('არ არის მითითებული', 'Not stated')}</span>
                         )}
                       </div>
                       <ArrowUpRight
@@ -438,36 +517,76 @@ export function SalaryExplorer({
               >
                 {t(
                   `კიდევ ${filtered.length - 12} პროფესიის ნახვა`,
-                  `Show ${filtered.length - 12} more professions`,
+                  `Show ${filtered.length - 12} more ${filtered.length - 12 === 1 ? 'result' : 'results'}`,
                 )}
                 <ChevronDown size={16} />
               </button>
             )}
             {!filtered.length && (
               <div className="salary-empty">
-                <p>
+                <span className="salary-empty-icon">
+                  <CategoryIcon category={group} size={24} />
+                </span>
+                <h2>
                   {t(
-                    'ამ სახელით პროფესია ვერ მოიძებნა.',
-                    'No profession matches that search.',
+                    query.trim()
+                      ? 'ამ სახელით პროფესია ვერ მოიძებნა'
+                      : period === 'day'
+                        ? 'დღიური მონაცემები ჯერ არასაკმარისია'
+                        : 'თვიური მონაცემები ჯერ არასაკმარისია',
+                    query.trim()
+                      ? 'No matching categories or professions'
+                      : period === 'day'
+                        ? 'Not enough daily pay data yet'
+                        : 'Not enough monthly pay data yet',
                   )}
+                </h2>
+                <p>
+                  {query.trim()
+                    ? t(
+                        'სცადე სხვა დასახელება ან გაასუფთავე ძიება.',
+                        'Try another name or clear the search.',
+                      )
+                    : t(
+                        'სტატისტიკისთვის კატეგორიაში ან პროფესიაში სულ მცირე 8 განცხადების ანაზღაურება უნდა იყოს მითითებული.',
+                        'Statistics require stated pay in at least eight active listings for a category or profession.',
+                      )}
                 </p>
-                <button
-                  className="ds-btn ds-btn--secondary"
-                  onClick={() => setQuery('')}
-                >
-                  {t('ყველა პროფესია', 'All professions')}
-                </button>
+                <div className="salary-empty-actions">
+                  <button
+                    className="ds-btn ds-btn--secondary"
+                    onClick={() => {
+                      setQuery('');
+                      setShowAll(true);
+                    }}
+                  >
+                    {query.trim()
+                      ? t('ძიების გასუფთავება', 'Clear search')
+                      : t('პროფესიების ნახვა', 'Browse professions')}
+                  </button>
+                  {!query.trim() && period === 'day' && (
+                    <button
+                      type="button"
+                      className="ds-btn ds-btn--ghost"
+                      onClick={() => setPeriod('month')}
+                    >
+                      {t('თვიურის ნახვა', 'View monthly pay')}
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
         </>
       )}
-      <p className="salary-reading-note">
-        {t(
-          'ზოლი აჩვენებს განცხადებების შუა 50%-ის დიაპაზონს, წერტილი — მედიანას. ანუ თანხების ნახევარი ამ მაჩვენებელზე დაბალია, ნახევარი — მაღალი.',
-          'The bar shows the middle 50% of stated amounts; the dot marks the median. Half the amounts are below that value and half above.',
-        )}
-      </p>
+      {(detail ? !!sample : filtered.some((role) => !!role[period])) && (
+        <p className="salary-reading-note">
+          {t(
+            'ზოლი აჩვენებს განცხადებების შუა 50%-ის დიაპაზონს, წერტილი — მედიანას. ანუ თანხების ნახევარი ამ მაჩვენებელზე დაბალია, ნახევარი — მაღალი.',
+            'The bar shows the middle 50% of stated amounts; the dot marks the median. Half the amounts are below that value and half above.',
+          )}
+        </p>
+      )}
       <details className="salary-method" id="salary-method">
         <summary>
           {t(
@@ -480,7 +599,7 @@ export function SalaryExplorer({
           <p>
             {t(
               'თანხები მოდის ჯობიქსის აქტიური ვაკანსიებიდან — დასაქმების საიტებიდან მიღებული და უშუალოდ დამსაქმებლების დამატებული განცხადებებიდან. ერთსა და იმავე ვაკანსიას ერთხელ ვითვლით. პროფესიას ვაკანსიების კატალოგის იმავე კატეგორიითა და სათაურის წესით ვარჩევთ; მონაცემები ყველა ქალაქს მოიცავს.',
-              'Amounts come from active JOBX vacancies collected from employment websites or posted by employers. Each vacancy is counted once. Professions are matched by title, across all cities.',
+              'Amounts come from active JOBX vacancies collected from employment websites or posted by employers. Each vacancy is counted once within a category or profession. We use the same categories and title matching as the job catalogue, across all cities.',
             )}
           </p>
           <p>

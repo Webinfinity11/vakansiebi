@@ -9,8 +9,10 @@ import {
   billingSettingsSchema,
   invoiceNumber,
   invoiceStatuses,
+  invoiceServiceLabel,
   premiumDays,
   premiumPriceGEL,
+  vipPriceGEL,
   type JobInvoice,
 } from '@/lib/billing';
 import { placementLabels, type PlacementTier } from '@/lib/placement';
@@ -251,6 +253,9 @@ export function BillingSettings({
                     <div className="records-main">
                       <strong>{inv.payer_name}</strong>
                       <span>{inv.vacancy_title}</span>
+                      <small>
+                        {invoiceServiceLabel(inv)} · {inv.service_days} დღე
+                      </small>
                     </div>
                     <span className="records-num records-strong">
                       {inv.amount_gel} ₾
@@ -313,8 +318,9 @@ export function BillingSettings({
               <div>
                 <h2 id="bl-payee">ინვოისის რეკვიზიტები</h2>
                 <p>
-                  პრემიუმი — {premiumPriceGEL} ₾ / {premiumDays} დღე. თანხა
-                  ირიცხება ამ ანგარიშზე; ჩარიცხვას ადმინისტრატორი ადასტურებს.
+                  VIP — {vipPriceGEL} ₾ / {premiumDays} დღე; პრემიუმი —{' '}
+                  {premiumPriceGEL} ₾ / {premiumDays} დღე. თანხა ირიცხება ამ
+                  ანგარიშზე; ჩარიცხვას ადმინისტრატორი ადასტურებს.
                 </p>
               </div>
               {!editing && (

@@ -49,9 +49,21 @@ export type SalarySample = {
 };
 export type SalaryRole = (typeof salaryRoles)[number] & {
   total: number;
+  monthCount: number;
+  dayCount: number;
   month: SalarySample | null;
   day: SalarySample | null;
 };
+
+/** Keep the same category/profession when opening the vacancies behind a comparison. */
+export function salaryVacanciesHref(href: string, period: 'month' | 'day') {
+  const [path, query = ''] = href.split('?');
+  const params = new URLSearchParams(query);
+  if (period === 'day') params.set('salaryPeriod', 'day');
+  else params.delete('salaryPeriod');
+  const search = params.toString();
+  return path + (search ? `?${search}` : '');
+}
 export function salarySample(
   values: (number | string | null)[],
 ): SalarySample | null {
@@ -99,6 +111,12 @@ export function summarizeSalaries(
     return {
       ...role,
       total: jobs.length,
+      monthCount: jobs.filter(
+        (row) => Number.isFinite(Number(row.month)) && Number(row.month) > 0,
+      ).length,
+      dayCount: jobs.filter(
+        (row) => Number.isFinite(Number(row.day)) && Number(row.day) > 0,
+      ).length,
       month: salarySample(jobs.map((row) => row.month)),
       day: salarySample(jobs.map((row) => row.day)),
     };

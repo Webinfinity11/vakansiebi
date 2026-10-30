@@ -23,7 +23,7 @@ export function SimilarVacancies({
   id: string;
   returnTo: string;
 }) {
-  const { ui } = useUi();
+  const { ui, locale } = useUi();
   const [result, setResult] = useState<{
     key: string;
     attempt: number;
@@ -85,7 +85,7 @@ export function SimilarVacancies({
         </>
       ) : current.error ? (
         <>
-          <output className="filter-help">{current.error}</output>
+          <output className="filter-help">{ui(current.error)}</output>
           <button
             type="button"
             className="secondary-button"
@@ -122,12 +122,31 @@ export function SimilarVacancies({
                 {vacancyCardTitle(job.title, job.source)}
               </h3>
               <VacancyStatus seen={activity.seen.includes(job.id)} />
-              {vacancyCardSalary(job.salary, job.salaryPeriod, job.source) && (
+              {vacancyCardSalary(
+                job.salary,
+                job.salaryPeriod,
+                job.source,
+                locale,
+              ) && (
                 <span className="similar-salary">
-                  {vacancyCardSalary(job.salary, job.salaryPeriod, job.source)}
+                  {vacancyCardSalary(
+                    job.salary,
+                    job.salaryPeriod,
+                    job.source,
+                    locale,
+                  )}
                 </span>
               )}
-              <p>{reasons.join(' · ')}</p>
+              <p>
+                {reasons
+                  .map((reason) => {
+                    const named = /^(მიმართულება|ქალაქი): (.+)$/.exec(reason);
+                    return named
+                      ? ui(`${named[1]}: {0}`, [ui(named[2])])
+                      : ui(reason);
+                  })
+                  .join(' · ')}
+              </p>
               <span className="similar-open">{ui('ვაკანსიის ნახვა')}</span>
             </Link>
           ))}

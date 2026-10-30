@@ -23,30 +23,32 @@ export function RecentVacancies({
         <span className="recent-count">{items.length}</span>
         <ChevronDown className="disclosure-chevron" aria-hidden="true" />
       </summary>
-      <div className="recent-head">
-        <button
-          type="button"
-          className="ds-btn ds-btn--ghost ds-btn--sm"
-          onClick={onClear}
-        >
-          {ui('გასუფთავება')}
-        </button>
-      </div>
-      <div className="recent-track">
-        {items.map((item) => (
-          /* This strip is part of the list too: a vacancy opened from it
-             should be stepped back over, not stacked on top of. */
-          <ListHopLink
-            className="recent-card"
-            key={item.id}
-            href={vacancyPath(item, { from: returnPath })}
-            from={returnPath}
-            event="open_recent"
+      <div className="recent-popover">
+        <div className="recent-head">
+          <button
+            type="button"
+            className="ds-btn ds-btn--ghost ds-btn--sm"
+            onClick={onClear}
           >
-            <strong title={item.title}>{vacancyCardTitle(item.title)}</strong>
-            <span>{item.company || ui('კერძო განცხადება')}</span>
-          </ListHopLink>
-        ))}
+            {ui('გასუფთავება')}
+          </button>
+        </div>
+        <div className="recent-track">
+          {items.map((item) => (
+            /* This strip is part of the list too: a vacancy opened from it
+             should be stepped back over, not stacked on top of. */
+            <ListHopLink
+              className="recent-card"
+              key={item.id}
+              href={vacancyPath(item, { from: returnPath })}
+              from={returnPath}
+              event="open_recent"
+            >
+              <strong title={item.title}>{vacancyCardTitle(item.title)}</strong>
+              <span>{item.company || ui('კერძო განცხადება')}</span>
+            </ListHopLink>
+          ))}
+        </div>
       </div>
     </details>
   );

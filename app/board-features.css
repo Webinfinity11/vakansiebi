@@ -443,7 +443,21 @@
   }
 }
 .board-shell .results-tools .results-map-link {
+  position: relative;
   text-decoration: none;
+}
+.board-shell .results-tools .results-feature-hint {
+  position: absolute;
+  top: -8px;
+  right: 7px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--ds-danger);
+  color: var(--ds-on-accent);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+  pointer-events: none;
 }
 
 /* "შეცდომის შეტყობინება" under a vacancy: a secondary button that opens a small form. */

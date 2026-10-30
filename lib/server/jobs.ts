@@ -9,7 +9,6 @@ import { enqueueIndexingNotifications } from './indexing-queue';
 import { queuePublicationEmail } from './publication-email';
 import { safeEmail } from '../application-contact';
 import { placementTiers } from '../placement';
-import { bonusCompanyKey } from './job-placement';
 import { approvePlacement } from './job-placement';
 import { approveSubmissionLogo } from './submission-logos';
 import { employerlessSources, privateListingLabel } from '../types';
@@ -465,7 +464,7 @@ export async function adminJobs(
     AND (${sourceParam}='' OR EXISTS (SELECT 1 FROM source_items f WHERE f.job_id=j.id AND f.source_id=${sourceParam}))`;
   const rows = (
     await db().query(
-      `SELECT j.*,(SELECT notification_email FROM job_submissions sub WHERE sub.job_id=j.id) AS notification_email,(SELECT requested_placement FROM job_submissions sub WHERE sub.job_id=j.id) AS requested_placement,(SELECT created_at FROM job_submissions sub WHERE sub.job_id=j.id) AS submitted_at,(SELECT is_test FROM job_submissions sub WHERE sub.job_id=j.id) AS is_test,(SELECT jsonb_build_object('status',inv.status,'number',inv.number,'created_at',inv.created_at,'token',inv.token,'amount_gel',inv.amount_gel) FROM job_invoices inv WHERE inv.job_id=j.id) AS invoice,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where('$4', '$5')} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
+      `SELECT j.*,(SELECT notification_email FROM job_submissions sub WHERE sub.job_id=j.id) AS notification_email,(SELECT requested_placement FROM job_submissions sub WHERE sub.job_id=j.id) AS requested_placement,(SELECT created_at FROM job_submissions sub WHERE sub.job_id=j.id) AS submitted_at,(SELECT is_test FROM job_submissions sub WHERE sub.job_id=j.id) AS is_test,(SELECT jsonb_build_object('status',inv.status,'number',inv.number,'created_at',inv.created_at,'token',inv.token,'amount_gel',inv.amount_gel,'placement_tier',inv.placement_tier,'service_days',inv.service_days) FROM job_invoices inv WHERE inv.job_id=j.id) AS invoice,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where('$4', '$5')} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
       [status, q, (page - 1) * 30, source, jobId],
     )
   ).rows;
@@ -488,33 +487,11 @@ export async function adminJobs(
       FROM jobs`,
     )
   ).rows[0];
-  // An employer's vacancy is offered the free VIP by default, so the editor needs to know
-  // up front whether this company has already used it.
-  const keys = rows
-    .filter((r) => r.submitted_at)
-    .map((r) => bonusCompanyKey(r.draft.company || ''));
-  const used = new Set(
-    keys.length
-      ? (
-          await db().query(
-            'SELECT job_id,bonus_company_key FROM job_submissions WHERE bonus_company_key=ANY($1)',
-            [keys],
-          )
-        ).rows.map((r) => r.bonus_company_key + '|' + r.job_id)
-      : [],
-  );
-  for (const r of rows)
-    if (r.submitted_at) {
-      r.placement_active =
-        !!r.placement_expires_at &&
-        new Date(r.placement_expires_at).getTime() > Date.now();
-      const key = bonusCompanyKey(r.draft.company || '');
-      r.vip_available =
-        key.length >= 2 &&
-        ![...used].some(
-          (u) => u.startsWith(key + '|') && !u.endsWith('|' + r.id),
-        );
-    }
+  for (const row of rows) {
+    row.placement_active =
+      !!row.placement_expires_at &&
+      new Date(row.placement_expires_at).getTime() > Date.now();
+  }
   return { jobs: rows, total, counts };
 }
 export async function bulkPublishCandidates() {
@@ -771,7 +748,7 @@ export async function mutateJob(
           : undefined);
       if (placement) {
         await approvePlacement(c, job, draft.company, placement);
-        if (placement !== 'premium') await cancelUnusedInvoice(c, job.id);
+        if (placement === 'standard') await cancelUnusedInvoice(c, job.id);
       }
       // Approve uploads atomically with publication; an invalid upload must not
       // leave a published vacancy pointing at a private or missing image.

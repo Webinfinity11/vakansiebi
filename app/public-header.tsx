@@ -14,7 +14,8 @@ import {
   BriefcaseBusiness,
   BookOpen,
   ChevronRight,
-  Banknote,
+  ChartNoAxesCombined,
+  Layers,
 } from 'lucide-react';
 import {
   Sheet,
@@ -54,7 +55,6 @@ function localAction(
 export function PublicHeader({
   savedCount,
   savedOnly = false,
-  dailyOnly = false,
   showSearch = true,
   onVacancies,
   onSaved,
@@ -62,7 +62,6 @@ export function PublicHeader({
 }: {
   savedCount?: number;
   savedOnly?: boolean;
-  dailyOnly?: boolean;
   /* The board carries the search field itself, so the masthead does not repeat it. */
   showSearch?: boolean;
   onVacancies?: () => void;
@@ -99,20 +98,22 @@ export function PublicHeader({
   const current = savedOnly
     ? 'saved'
     : pathname === '/'
-      ? dailyOnly
-        ? 'daily'
-        : 'all'
-      : pathname === '/map'
-        ? 'map'
-        : pathname === '/companies'
-          ? 'companies'
-          : pathname === '/blog' || pathname.startsWith('/blog/')
-            ? 'blog'
-            : pathname === '/business'
-              ? 'business'
-              : pathname === '/cv'
-                ? 'cv'
-                : null;
+      ? 'all'
+      : pathname === '/salaries' || pathname.startsWith('/salaries/')
+        ? 'salaries'
+        : pathname === '/map'
+          ? 'map'
+          : pathname === '/swipe'
+            ? 'swipe'
+            : pathname === '/companies'
+              ? 'companies'
+              : pathname === '/blog' || pathname.startsWith('/blog/')
+                ? 'blog'
+                : pathname === '/business'
+                  ? 'business'
+                  : pathname === '/cv'
+                    ? 'cv'
+                    : null;
   const here = (place: string) =>
     current === place ? ('page' as const) : undefined;
   return (
@@ -238,20 +239,8 @@ export function PublicHeader({
               icon: BriefcaseBusiness,
               action: onVacancies,
             },
-            {
-              href: '/?salaryPeriod=day',
-              label: 'დღიური ანაზღაურება',
-              place: 'daily',
-              icon: Banknote,
-            },
             { href: '/map', label: 'რუკა', place: 'map', icon: Map },
-            {
-              href: '/companies',
-              label: 'კომპანიები',
-              place: 'companies',
-              icon: Building2,
-            },
-            { href: '/blog', label: 'ბლოგი', place: 'blog', icon: BookOpen },
+            { href: '/swipe', label: 'Swipe', place: 'swipe', icon: Layers },
             {
               href: '/?saved=1',
               label: 'შენახული ვაკანსიები',
@@ -260,11 +249,24 @@ export function PublicHeader({
               action: onSaved,
             },
             {
+              href: '/companies',
+              label: 'კომპანიები',
+              place: 'companies',
+              icon: Building2,
+            },
+            {
               href: '/cv',
               label: 'რეზიუმეს შექმნა',
               place: 'cv',
               icon: FilePlus2,
             },
+            {
+              href: '/salaries?period=day',
+              label: 'ხელფასები',
+              place: 'salaries',
+              icon: ChartNoAxesCombined,
+            },
+            { href: '/blog', label: 'ბლოგი', place: 'blog', icon: BookOpen },
           ].map(({ href, label, place, icon: Icon, action }) => (
             <Link
               key={place}

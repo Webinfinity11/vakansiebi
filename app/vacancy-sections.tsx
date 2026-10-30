@@ -44,7 +44,6 @@ export function VacancySections({
           className="regular-vacancies"
           aria-label={ui('სხვა ვაკანსიები')}
         >
-          <h3>{ui('სხვა ვაკანსიები')}</h3>
           {regular.map(card)}
         </section>
       )}
