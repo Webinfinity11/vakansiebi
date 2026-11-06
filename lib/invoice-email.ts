@@ -49,7 +49,7 @@ export function invoiceEmail(
     ['ანგარიში', invoice.iban],
     ['გადარიცხვის დანიშნულება', number],
   ];
-  const contactText = `ინვოისთან ან გადახდასთან დაკავშირებით დაგვიკავშირდით: ${invoiceContact.phone}.`;
+  const contactText = `ინვოისთან ან გადახდასთან დაკავშირებით მოგვწერეთ: ${invoiceContact.email}`;
   return {
     from: `JOBX <${invoiceContact.email}>`,
     to: [email],
@@ -62,7 +62,6 @@ export function invoiceEmail(
       `ინვოისის ნახვა და მიმდინარე სტატუსი: ${url}`,
       'გადახდამდე გადაამოწმეთ ინვოისის მიმდინარე სტატუსი. განთავსება გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ.',
       contactText,
-      invoiceContact.email,
     ].join('\n\n'),
     html: emailLayout(
       origin,

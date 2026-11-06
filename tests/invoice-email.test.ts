@@ -20,7 +20,7 @@ const invoice: JobInvoice = {
   paid_at: null,
   activated_at: null,
 };
-void test('invoice mail escapes user content, links the private invoice and has the requested phone', () => {
+void test('invoice mail escapes user content, links the private invoice and provides email contact only', () => {
   const email = invoiceEmail(invoice, 'billing@example.com', 'https://jobx.ge');
   assert.deepEqual(email.to, ['billing@example.com']);
   assert.deepEqual(email.bcc, ['invoice@jobx.ge']);
@@ -30,8 +30,13 @@ void test('invoice mail escapes user content, links the private invoice and has 
   assert.doesNotMatch(email.html, /<img src=x/);
   assert.match(email.html, /Designer &amp; Developer/);
   assert.ok(email.html.includes(`https://jobx.ge/invoices/${invoice.token}`));
-  assert.ok(email.html.includes(`tel:${invoiceContact.telephone}`));
-  assert.ok(email.text.includes(invoiceContact.phone));
+  assert.ok(email.html.includes(`mailto:${invoiceContact.email}`));
+  assert.ok(email.text.includes(invoiceContact.email));
+  assert.doesNotMatch(email.html, /tel:|დაგვირეკეთ/);
+  for (const body of [email.html, email.text]) {
+    assert.ok(!body.includes(invoiceContact.phone));
+    assert.ok(!body.includes(invoiceContact.telephone));
+  }
   assert.equal(email.subject, 'JOBX — ინვოისი 000007');
   assert.match(email.html, /პრემიუმ განთავსება · 30 დღე/);
   assert.match(email.text, /პრემიუმ განთავსება · 30 დღე/);
