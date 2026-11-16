@@ -16,17 +16,20 @@ export function candidatesInPeriod(candidates: readonly AnalyticsCandidate[], pe
 
 export function candidateSources(candidates: readonly AnalyticsCandidate[], period: CandidatePeriod) {
   const scoped = candidatesInPeriod(candidates, period);
-  const counts = { applied: 0, upload: 0, cv_box: 0 };
+  const counts = { applied: 0, upload: 0, cv_box: 0, base: 0 };
   for (const candidate of scoped) {
     const source = candidate.source === 'swipe' || candidate.source === 'resume'
       ? 'applied' : candidate.source;
     counts[source]++;
   }
-  return (['applied', 'upload', 'cv_box'] as const).map((source) => ({
-    source,
-    count: counts[source],
-    share: scoped.length ? counts[source] / scoped.length : 0,
-  }));
+  // People taken from the JOBX CV base are listed only when there are some.
+  return (['applied', 'upload', 'cv_box', 'base'] as const)
+    .filter((source) => source !== 'base' || counts.base > 0)
+    .map((source) => ({
+      source,
+      count: counts[source],
+      share: scoped.length ? counts[source] / scoped.length : 0,
+    }));
 }
 
 /** Average for the application's chart cohort, using only recorded hire dates. */

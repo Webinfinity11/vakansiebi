@@ -4,6 +4,7 @@ import {
   candidateNotes,
   changeCandidate,
   companyCandidates,
+  companyCvBase,
 } from '@/lib/server/company-candidates';
 export const dynamic = 'force-dynamic';
 const headers = { 'Cache-Control': 'private, no-store' };
@@ -13,11 +14,14 @@ export async function GET(req: Request) {
       ['owner', 'recruiter', 'viewer'],
       true,
     );
-    const entry = new URL(req.url).searchParams.get('entry');
+    const params = new URL(req.url).searchParams;
+    const entry = params.get('entry');
     return Response.json(
       entry
         ? await candidateNotes(company, entry)
-        : await companyCandidates(company),
+        : params.get('base') === '1'
+          ? await companyCvBase(company)
+          : await companyCandidates(company),
       { headers },
     );
   } catch (e) {

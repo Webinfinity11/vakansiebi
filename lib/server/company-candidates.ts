@@ -20,6 +20,9 @@ import {
   type CandidateProfile,
 } from '../company-candidates';
 
+/** Parsed profiles of base CVs are shared by all companies under this key. */
+const baseKey = '__jobx_base';
+
 /* Every application a company may see, from all three sources, joined to its own state.
    Ownership is the only gate: a vacancy the company owns (company_job_ownership) or an upload
    in its own name. Failed or unsent swipe deliveries never reached the company and stay out. */
@@ -51,12 +54,31 @@ WITH owned AS (
     u.title, '', u.created_at, true, NULL::uuid, NULL::jsonb, '[]'::jsonb
   FROM company_cv_uploads u LEFT JOIN owned o ON o.id=u.job_id
   WHERE u.company_key=$1
+  UNION ALL
+  -- The JOBX CV base, open to every approved company: resumes built on JOBX...
+  SELECT 'base:r:'||r.id, 'base', NULL::uuid, '', r.cv->>'fullName',
+    COALESCE(r.cv->>'email',''), COALESCE(r.cv->>'phone',''), COALESCE(r.cv->>'title',''),
+    COALESCE(r.cv->>'city',''), r.updated_at, true, CASE WHEN r.photo IS NOT NULL THEN r.id END,
+    r.cv - 'photo', '[]'::jsonb
+  FROM resumes r WHERE r.expires_at>now() AND COALESCE(r.cv->>'fullName','')<>''
+  UNION ALL
+  -- ...and each person's latest uploaded CV sent with a swipe application.
+  SELECT 'base:s:'||a.id, 'base', NULL::uuid, '', a.candidate_name, a.candidate_email,
+    a.candidate_phone, '', '', COALESCE(a.sent_at, a.created_at), true, NULL::uuid, NULL::jsonb, '[]'::jsonb
+  FROM (SELECT DISTINCT ON (lower(candidate_email)) * FROM swipe_applications
+    WHERE status='sent' AND cv_kind='upload' AND cv_file IS NOT NULL
+    ORDER BY lower(candidate_email), COALESCE(sent_at, created_at) DESC) a
 )
 SELECT e.*, COALESCE(s.stage,'new') AS stage, s.rating, s.seen_at IS NOT NULL AS seen,
-  s.interview_at, s.interview_note, s.hired_at, p.parsed, p.edited,
+  s.interview_at, s.interview_note, s.hired_at, COALESCE(p.parsed, pb.parsed) AS parsed, p.edited,
   (SELECT count(*)::int FROM company_candidate_notes n WHERE n.company_key=$1 AND n.entry=e.entry) AS notes
 FROM entries e LEFT JOIN company_candidate_states s ON s.company_key=$1 AND s.entry=e.entry
-LEFT JOIN company_cv_profiles p ON p.company_key=$1 AND p.entry=e.entry`;
+LEFT JOIN company_cv_profiles p ON p.company_key=$1 AND p.entry=e.entry
+LEFT JOIN company_cv_profiles pb ON e.source='base' AND pb.company_key='${baseKey}' AND pb.entry=e.entry`;
+/* A base person joins the company's own candidates once the company acts on them. */
+const trackedSql = `(e.source<>'base' OR s.stage<>'new' OR s.rating IS NOT NULL
+  OR s.interview_at IS NOT NULL OR EXISTS(SELECT 1 FROM company_candidate_notes n
+  WHERE n.company_key=$1 AND n.entry=e.entry))`;
 
 type Row = {
   entry: string;
@@ -208,7 +230,17 @@ function candidateProfile(cv: Partial<Cv>): CandidateProfile {
 export async function companyCandidates(company: CompanyIdentity) {
   await ensureCvProfiles(company);
   const { rows } = await db().query<Row>(
-    candidatesSql + ' ORDER BY e.applied_at DESC LIMIT 2000',
+    candidatesSql + ' WHERE ' + trackedSql + ' ORDER BY e.applied_at DESC LIMIT 2000',
+    [company.companyKey],
+  );
+  return rows.map(candidate);
+}
+
+/** The whole JOBX CV base for the company's CV base view. */
+export async function companyCvBase(company: CompanyIdentity) {
+  await ensureBaseProfiles();
+  const { rows } = await db().query<Row>(
+    candidatesSql + " WHERE e.source='base' ORDER BY e.applied_at DESC LIMIT 5000",
     [company.companyKey],
   );
   return rows.map(candidate);
@@ -217,7 +249,7 @@ export async function companyCandidates(company: CompanyIdentity) {
 const entrySchema = z
   .string()
   .regex(
-    /^(swipe|upload):[0-9a-f-]{36}$|^resume:[0-9a-f-]{36}:[0-9a-f-]{36}$/,
+    /^(swipe|upload):[0-9a-f-]{36}$|^resume:[0-9a-f-]{36}:[0-9a-f-]{36}$|^base:[rs]:[0-9a-f-]{36}$/,
     'კანდიდატი ვერ მოიძებნა.',
   );
 /** The entry, if this company may see it; otherwise a 404 that reveals nothing. */
@@ -456,6 +488,22 @@ export async function candidateCv(
 ): Promise<{ body: BodyInit; type: string; name: string } | null> {
   const c = await ownedEntry(company, entry);
   const fileName = (c.name || 'CV').replace(/[^\p{L}\p{N} ._-]/gu, '').trim();
+  if (c.source === 'base') {
+    const [, kind, id] = entry.split(':');
+    if (kind === 'r') {
+      const cv = await resumeDetail(id);
+      return cv
+        ? { body: Buffer.from(await renderCvPdf(cv)), type: 'application/pdf', name: `${fileName}.pdf` }
+        : null;
+    }
+    const file = (
+      await db().query<{ cv_file: string | null }>(
+        "SELECT cv_file FROM swipe_applications WHERE id=$1 AND status='sent'",
+        [id],
+      )
+    ).rows[0]?.cv_file;
+    return file ? blobFile(file, 'application/pdf', `${fileName}.pdf`) : null;
+  }
   if (c.source === 'resume') {
     const [, , resumeId] = entry.split(':');
     const cv = await resumeDetail(resumeId);
@@ -764,6 +812,45 @@ export async function reparseCvProfiles(options: {
     }
   }
   return results;
+}
+
+/* Base CVs sent as PDFs are parsed once for everyone, a few per request; the backfill script
+   can do them all at once. Needs the Blob token, as the files are private. */
+let baseBackfill: Promise<void> | null = null;
+export async function ensureBaseProfiles(limit = 4): Promise<number> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return 0;
+  if (baseBackfill) {
+    await baseBackfill;
+    return 0;
+  }
+  let done = 0;
+  const run = async () => {
+    const { rows } = await db().query<{ entry: string; path: string }>(
+      `SELECT 'base:s:'||a.id AS entry, a.cv_file AS path
+      FROM (SELECT DISTINCT ON (lower(candidate_email)) * FROM swipe_applications
+        WHERE status='sent' AND cv_kind='upload' AND cv_file IS NOT NULL
+        ORDER BY lower(candidate_email), COALESCE(sent_at, created_at) DESC) a
+      LEFT JOIN company_cv_profiles p ON p.company_key=$1 AND p.entry='base:s:'||a.id
+      WHERE p.parsed_at IS NULL LIMIT $2`,
+      [baseKey, Math.max(1, limit)],
+    );
+    for (const row of rows) {
+      try {
+        const bytes = await cvFileBytes({ content: null, path: row.path });
+        if (bytes) {
+          await saveCvProfile(baseKey, row.entry, bytes, 'CV.pdf');
+          done++;
+        }
+      } catch {
+        /* An unavailable file is retried on a later request. */
+      }
+    }
+  };
+  baseBackfill = run().finally(() => {
+    baseBackfill = null;
+  });
+  await baseBackfill;
+  return done;
 }
 
 // Small lazy batches. No public fetch: files are read only through private Blob storage or

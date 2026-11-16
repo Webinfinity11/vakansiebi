@@ -19,7 +19,7 @@ export const stageLabels: Record<CandidateStage, string> = {
   hired: 'აყვანილი',
   rejected: 'უარი',
 };
-export type CandidateSource = 'swipe' | 'resume' | 'upload' | 'cv_box';
+export type CandidateSource = 'swipe' | 'resume' | 'upload' | 'cv_box' | 'base';
 export const languageLevels = ['a1', 'a2', 'b1', 'b2', 'c1', 'c2', 'native'] as const;
 export type CandidateLanguageLevel = (typeof languageLevels)[number];
 export const educationLevels = [

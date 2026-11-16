@@ -519,7 +519,7 @@ function FilterPanel({ f, set, toggle, facets, group }: {
     </div>},
     {key:"source",title:"წყარო და თარიღი",count:Number(f.source!=="all")+Number(!!f.period),body:<>
       <label className="ct-select">წყარო<select value={f.source} onChange={event=>set("source",event.target.value as Filters["source"])}>
-        <option value="all">ყველა</option><option value="applied">ვაკანსიაზე გამოგზავნილი</option><option value="upload">თქვენ მიერ ატვირთული</option><option value="cv_box">CV ყუთი</option>
+        <option value="all">ყველა</option><option value="own">თქვენი კანდიდატები</option><option value="base">JOBX-ის CV ბაზა</option><option value="applied">ვაკანსიაზე გამოგზავნილი</option><option value="upload">თქვენ მიერ ატვირთული</option><option value="cv_box">CV ყუთი</option>
       </select></label>
       <label className="ct-select">როდის დაემატა<select value={String(f.period)} onChange={event=>set("period",Number(event.target.value))}>
         <option value="0">ნებისმიერ დროს</option><option value="7">ბოლო 7 დღე</option><option value="30">ბოლო 30 დღე</option><option value="90">ბოლო 3 თვე</option>
@@ -629,10 +629,10 @@ function PersonRow({
           {p.entries.map((e) => (
             <span className="ct-entry" key={e.entry}>
               <button type="button" className="ct-job" onClick={() => onOpen(e.entry)}>
-                {e.jobTitle || "ვაკანსიის გარეშე"}
+                {e.source === "base" ? "CV-ის ნახვა" : e.jobTitle || "ვაკანსიის გარეშე"}
                 <CandidateSignals candidate={e} />
               </button>
-              <span className="ct-source">{e.source === "upload" ? "თქვენ მიერ ატვირთული" : e.source === "cv_box" ? "CV ყუთი" : "ვაკანსიაზე გამოგზავნილი"}</span>
+              <span className="ct-source">{e.source === "upload" ? "თქვენ მიერ ატვირთული" : e.source === "cv_box" ? "CV ყუთი" : e.source === "base" ? "JOBX-ის CV ბაზა" : "ვაკანსიაზე გამოგზავნილი"}</span>
             </span>
           ))}
           <span className="ct-reach">

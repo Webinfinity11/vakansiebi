@@ -165,6 +165,8 @@ export function CompanyPortal({
   const [closing, setClosing] = useState<CompanyJob | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidatesLoaded, setCandidatesLoaded] = useState(false);
+  // The JOBX CV base, loaded the first time the CV base tab opens.
+  const [cvBase, setCvBase] = useState<Candidate[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<CompanyJobStats[]>([]);
   const [statsLoaded, setStatsLoaded] = useState(false);
@@ -220,6 +222,20 @@ export function CompanyPortal({
       });
     return () => controller.abort();
   }, [ready, approved]);
+  useEffect(() => {
+    if (tab !== "talent" || !approved || cvBase) return;
+    let alive = true;
+    request("candidates?base=1")
+      .then((list: Candidate[]) => alive && setCvBase(list))
+      .catch((e: Error) => {
+        if (!alive) return;
+        setCvBase([]);
+        setError(e.message);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [tab, approved, cvBase]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 6000);
@@ -801,10 +817,17 @@ export function CompanyPortal({
         {tab === "talent" && approved && (
           <TalentView
             canEdit={canEdit}
-            candidates={candidates}
+            candidates={
+              cvBase
+                ? [...candidates, ...cvBase.filter((b) => !candidates.some((c) => c.entry === b.entry))]
+                : candidates
+            }
             jobs={jobs}
-            loaded={candidatesLoaded}
+            loaded={candidatesLoaded && !!cvBase}
             onOpen={(entry) => {
+              const fromBase = cvBase?.find((b) => b.entry === entry);
+              if (fromBase && !candidates.some((c) => c.entry === entry))
+                setCandidates((list) => [fromBase, ...list]);
               setCandidateFilter(undefined);
               setSelected(entry);
               setTab("candidates");

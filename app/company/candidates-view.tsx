@@ -198,7 +198,7 @@ export function CandidatesView({
       onSelect(visible[0]?.entry ?? null);
   }, [desktop, view, visible, selected, onSelect]);
   useEffect(() => { setPicked([]); }, [job, stage, source, query, onlyMatching, canEdit]);
-  const sourceLabel = (c: Candidate) => c.source === 'upload' ? 'თქვენ მიერ ატვირთული' : c.source === 'cv_box' ? 'CV ყუთი' : 'ვაკანსიაზე გამოგზავნილი';
+  const sourceLabel = (c: Candidate) => c.source === 'upload' ? 'თქვენ მიერ ატვირთული' : c.source === 'cv_box' ? 'CV ყუთი' : c.source === 'base' ? 'JOBX-ის CV ბაზიდან' : 'ვაკანსიაზე გამოგზავნილი';
   const togglePick = (entry: string) => setPicked((all) => all.includes(entry) ? all.filter((id) => id !== entry) : [...all, entry]);
   const toggleSort = (key: 'date' | 'stage') => setSort((previous) => ({ key, ascending: previous.key === key ? !previous.ascending : true }));
   const photos = useMemo(() => {

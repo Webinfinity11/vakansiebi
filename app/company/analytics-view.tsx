@@ -114,6 +114,7 @@ export function AnalyticsView({
     applied: 'ვაკანსიაზე გამოგზავნილი',
     upload: 'თქვენ მიერ ატვირთული',
     cv_box: 'CV ყუთი',
+    base: 'JOBX-ის CV ბაზიდან',
   };
   const applied = candidates.filter(
     (c) =>

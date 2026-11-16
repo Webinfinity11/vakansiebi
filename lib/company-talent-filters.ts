@@ -49,7 +49,7 @@ export type Filters = {
   phone: boolean;
   hideRejected: boolean;
   unchecked: boolean;
-  source: "all" | "applied" | "upload" | "cv_box";
+  source: "all" | "applied" | "upload" | "cv_box" | "base" | "own";
   requirementsMatch: boolean;
   period: number;
   sort: "match" | "recent" | "years" | "rating";
@@ -192,6 +192,10 @@ export function passes(
   )
     return false;
   if (f.source === "cv_box" && !p.entries.some((e) => e.source === "cv_box"))
+    return false;
+  if (f.source === "base" && !p.entries.some((e) => e.source === "base"))
+    return false;
+  if (f.source === "own" && !p.entries.some((e) => e.source !== "base"))
     return false;
   if (
     f.source === "applied" &&
@@ -361,7 +365,11 @@ export function filterChips(f: Filters, facets: Facets, set: <K extends keyof Fi
                 ? "ატვირთული"
                 : f.source === "cv_box"
                   ? "CV ყუთი"
-                  : "ვაკანსიაზე გამოგზავნილი",
+                  : f.source === "base"
+                    ? "JOBX-ის CV ბაზა"
+                    : f.source === "own"
+                      ? "თქვენი კანდიდატები"
+                      : "ვაკანსიაზე გამოგზავნილი",
             clear: () => set("source", "all"),
           },
         ]
@@ -396,7 +404,7 @@ export function normalizeFilters(value: unknown): Filters {
   if (educationLevels.includes(v.education as EducationLevel)) f.education = v.education as EducationLevel;
   for (const key of ['rated','phone','hideRejected','unchecked','requirementsMatch'] as const) f[key] = v[key] === true;
   if (v.skillMode === 'any') f.skillMode = 'any';
-  if (['all','applied','upload','cv_box'].includes(v.source as string)) f.source = v.source as Filters['source'];
+  if (['all','applied','upload','cv_box','base','own'].includes(v.source as string)) f.source = v.source as Filters['source'];
   if ([7,30,90].includes(v.period as number)) f.period = v.period as number;
   if (['match','recent','years','rating'].includes(v.sort as string)) f.sort = v.sort as Filters['sort'];
   return f;
