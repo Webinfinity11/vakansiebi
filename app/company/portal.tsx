@@ -346,6 +346,25 @@ export function CompanyPortal({
     return (
       <div className="cp cp--auth">
         <div className="cp-auth-shell">
+          <aside className="cp-auth-aside">
+            <span className="cp-auth-kicker">კომპანიის სივრცე</span>
+            <h2>შერჩევის მთელი პროცესი ერთ სივრცეში</h2>
+            <ul>
+              <li>
+                <Briefcase size={18} />
+                ვაკანსიები და განაცხადები ერთ ადგილას
+              </li>
+              <li>
+                <UsersRound size={18} />
+                კანდიდატები ეტაპების მიხედვით: ახალი, გასაუბრება, შეთავაზება
+              </li>
+              <li>
+                <Database size={18} />
+                CV ბაზა, ანალიტიკა და გუნდთან ერთად მუშაობა
+              </li>
+            </ul>
+            <p>კომპანიის სივრცე სატესტო რეჟიმში მუშაობს.</p>
+          </aside>
           <div className="cp-auth-panel">
             <div className="cp-auth-top">
               <Brand />

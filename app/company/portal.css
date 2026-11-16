@@ -4297,3 +4297,29 @@ textarea.cp-input {
   .cp-main > .cp-password-settings .cp-settings-foot { padding: 0 16px 24px; }
   .cp-main > .cp-password-settings .cp-settings-foot .cp-btn { width: 100%; }
 }
+
+/* Sign-in and registration: the form on the site's light canvas, the logo without a white chip,
+   and on wide screens a navy panel that says what the workspace is for. */
+.cp--auth, .cp-auth-shell { background: var(--cp-canvas); }
+.cp-auth-shell { display: grid; grid-template-columns: minmax(0, 1fr); }
+.cp-auth-panel { width: 100%; }
+.cp-auth-aside { display: none; }
+.cp-auth-top > :first-child { background: none; padding: 0; border-radius: 0; }
+.cp-auth-back { color: var(--cp-ink-2); }
+.cp-auth-back:hover { color: var(--cp-accent); }
+.cp-auth { box-shadow: var(--cp-shadow); }
+@media (min-width: 1024px) {
+  .cp-auth-shell { grid-template-columns: minmax(360px, 0.8fr) minmax(0, 1.2fr); }
+  .cp-auth-aside {
+    position: sticky; top: 0; display: flex; flex-direction: column; justify-content: center;
+    gap: 24px; height: 100dvh; box-sizing: border-box; padding: 48px clamp(32px, 4vw, 72px);
+    background: var(--cp-nav-gradient); color: #fff;
+  }
+  .cp-auth-kicker { font-size: 13px; font-weight: 600; color: var(--cp-nav-ink); }
+  .cp-auth-aside h2 { margin: 0; font-size: clamp(26px, 2.4vw, 34px); line-height: 1.4; color: #fff; }
+  .cp-auth-aside ul { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+  .cp-auth-aside li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.6; color: var(--cp-nav-ink); }
+  .cp-auth-aside li svg { flex: none; margin-top: 3px; color: #fff; }
+  .cp-auth-aside p { margin: 8px 0 0; padding-top: 20px; border-top: 1px solid rgb(255 255 255 / 0.16); font-size: 13px; color: var(--cp-nav-ink); }
+  .cp-auth-panel { min-width: 0; }
+}
