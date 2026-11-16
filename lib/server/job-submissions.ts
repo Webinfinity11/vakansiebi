@@ -1,3 +1,5 @@
+import { saveJobQuestions } from './job-questions';
+import type { JobQuestion } from '../job-questions';
 import { createInvoice } from './billing';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
@@ -42,7 +44,7 @@ export async function priorSubmission(
 export async function submitJob(
   input: unknown,
   client: string,
-  owner?: { accountId: string; companyKey: string },
+  owner?: { accountId: string; companyKey: string; questions?: JobQuestion[] },
 ): Promise<{
   id: string;
   received: true;
@@ -104,7 +106,7 @@ export async function submitJob(
     ).rows[0];
     if (count.hourly >= 5 || count.daily >= 20)
       throw new ApiError(
-        'ამ დროისთვის განცხადებების ლიმიტი ამოიწურა. სცადე მოგვიანებით.',
+        'ამ დროისთვის განცხადებების ლიმიტი ამოიწურა. სცადეთ მოგვიანებით.',
         429,
       );
     const id = randomUUID();
@@ -153,6 +155,7 @@ export async function submitJob(
             placement: data.placement,
           })
         : undefined;
+    if (owner?.questions) await saveJobQuestions(c, id, owner.questions);
     return { id, received: true, ...(invoiceUrl ? { invoiceUrl } : {}) };
   });
 }

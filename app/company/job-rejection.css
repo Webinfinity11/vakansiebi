@@ -1,0 +1,6 @@
+.cp-job-rejection {
+  overflow-wrap: anywhere;
+  color: var(--cp-ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}

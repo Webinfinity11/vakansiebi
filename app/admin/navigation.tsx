@@ -110,33 +110,29 @@ export function AdminNavigation({
           />
         </label>
         <nav aria-label="ადმინის განყოფილებები">
-          {[...new Set(items.map((item) => item.group))].map((group) => (
-            <div className="admin-nav-group" key={group}>
-              {items
-                .filter((item) => item.group === group)
-                .map((item) => {
-                  const Icon = icons[item.id];
-                  const count = counts[item.id];
-                  return (
-                    <Link
-                      prefetch={false}
-                      key={item.id}
-                      href={'href' in item ? item.href : adminHref(item.id)}
-                      aria-current={selected === item.id ? 'page' : undefined}
-                      title={item.description}
-                      onClick={() => {
-                        setOpen(false);
-                        onNavigate?.();
-                      }}
-                    >
-                      <Icon size={17} />
-                      <span>{item.label}</span>
-                      {!!count && <b>{count}</b>}
-                    </Link>
-                  );
-                })}
-            </div>
-          ))}
+          <div className="admin-nav-group">
+            {items.map((item) => {
+              const Icon = icons[item.id];
+              const count = counts[item.id];
+              return (
+                <Link
+                  prefetch={false}
+                  key={item.id}
+                  href={'href' in item ? item.href : adminHref(item.id)}
+                  aria-current={selected === item.id ? 'page' : undefined}
+                  title={item.description}
+                  onClick={() => {
+                    setOpen(false);
+                    onNavigate?.();
+                  }}
+                >
+                  <Icon size={17} />
+                  <span>{item.label}</span>
+                  {!!count && <b>{count}</b>}
+                </Link>
+              );
+            })}
+          </div>
           {!items.length && (
             <p className="admin-menu-empty">განყოფილება ვერ მოიძებნა</p>
           )}

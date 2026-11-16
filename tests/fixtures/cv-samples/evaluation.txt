@@ -1,0 +1,179 @@
+As of 2026-11-16T12:00:00Z. Exact field-group equality; arrays compared unordered; extras fail.
+
+| fixture | extracted chars | field | expected | actual | OK/MISS |
+|---|---:|---|---|---|---|
+| europass-en.pdf | 471 | name | "Alex Sample" | "(not exposed by parser schema)" | MISS |
+| europass-en.pdf | 471 | email | "synthetic1@example.com" | "(not exposed by parser schema)" | MISS |
+| europass-en.pdf | 471 | phone | "+995 555 00 00 01" | "(not exposed by parser schema)" | MISS |
+| europass-en.pdf | 471 | city | "თბილისი" | "თბილისი" | OK |
+| europass-en.pdf | 471 | roles | ["Data Analyst — Example Europe","Junior Analyst — Sample Europe"] | ["01/"] | MISS |
+| europass-en.pdf | 471 | years | 7 | 4 | MISS |
+| europass-en.pdf | 471 | education | ["Bachelor of Science — Example University"] | [] | MISS |
+| europass-en.pdf | 471 | educationLevel | "bachelor" | null | MISS |
+| europass-en.pdf | 471 | skills | ["Excel","SQL","Data visualization"] | ["Excel","SQL"] | MISS |
+| europass-en.pdf | 471 | languages | [{"name":"ქართული","level":"native"},{"name":"ინგლისური","level":"b2"}] | [{"name":"ქართული","level":null},{"name":"ინგლისური","level":"b2"}] | MISS |
+| europass-en.pdf | 471 | certifications | ["Google Data Analytics Certificate"] | "(not exposed by parser schema)" | MISS |
+| europass-en.pdf | 471 | roleDates | [{"start":"2022-07","end":"current"},{"start":"2019-03","end":"2022-06"}] | "(not exposed by parser schema)" | MISS |
+| linkedin-export.pdf | 372 | name | "Robin Demo" | "(not exposed by parser schema)" | MISS |
+| linkedin-export.pdf | 372 | email | "synthetic2@example.com" | "(not exposed by parser schema)" | MISS |
+| linkedin-export.pdf | 372 | phone | "+995 555 00 00 02" | "(not exposed by parser schema)" | MISS |
+| linkedin-export.pdf | 372 | city | "თბილისი" | "თბილისი" | OK |
+| linkedin-export.pdf | 372 | roles | ["Product Analyst — Fictional Network"] | [] | MISS |
+| linkedin-export.pdf | 372 | years | 6 | null | MISS |
+| linkedin-export.pdf | 372 | education | ["Master of Science — Sample Institute"] | [] | MISS |
+| linkedin-export.pdf | 372 | educationLevel | "master" | null | MISS |
+| linkedin-export.pdf | 372 | skills | ["SQL","Tableau","Stakeholder management"] | ["SQL"] | MISS |
+| linkedin-export.pdf | 372 | languages | [{"name":"ინგლისური","level":"full professional"}] | [{"name":"ინგლისური","level":null}] | MISS |
+| linkedin-export.pdf | 372 | certifications | ["Professional Scrum Master I"] | "(not exposed by parser schema)" | MISS |
+| linkedin-export.pdf | 372 | roleDates | [{"start":"2020-01","end":"current"}] | "(not exposed by parser schema)" | MISS |
+| two-column-canva.pdf | 312 | name | "Dara Fiction" | "(not exposed by parser schema)" | MISS |
+| two-column-canva.pdf | 312 | email | "synthetic3@example.com" | "(not exposed by parser schema)" | MISS |
+| two-column-canva.pdf | 312 | phone | "+995 555 00 00 03" | "(not exposed by parser schema)" | MISS |
+| two-column-canva.pdf | 312 | city | "ბათუმი" | "ბათუმი" | OK |
+| two-column-canva.pdf | 312 | roles | ["Designer — Imaginary Studio"] | [] | MISS |
+| two-column-canva.pdf | 312 | years | 4 | null | MISS |
+| two-column-canva.pdf | 312 | education | ["Bachelor of Arts — Fictional Academy"] | [] | MISS |
+| two-column-canva.pdf | 312 | educationLevel | "bachelor" | null | MISS |
+| two-column-canva.pdf | 312 | skills | ["Figma","Photoshop","Typography"] | ["Photoshop","Figma"] | MISS |
+| two-column-canva.pdf | 312 | languages | [{"name":"ინგლისური","level":"c1"}] | [{"name":"ინგლისური","level":"c1"}] | OK |
+| two-column-canva.pdf | 312 | certifications | ["Design Foundations Certificate"] | "(not exposed by parser schema)" | MISS |
+| two-column-canva.pdf | 312 | roleDates | [{"start":"2019","end":"2022"}] | "(not exposed by parser schema)" | MISS |
+| us-resume.pdf | 392 | name | "Mira Example" | "(not exposed by parser schema)" | MISS |
+| us-resume.pdf | 392 | email | "synthetic4@example.com" | "(not exposed by parser schema)" | MISS |
+| us-resume.pdf | 392 | phone | "+995 555 00 00 04" | "(not exposed by parser schema)" | MISS |
+| us-resume.pdf | 392 | city | "Boston" | "" | MISS |
+| us-resume.pdf | 392 | roles | ["Senior Analyst — Fictional Labs","Analyst — Example Works"] | ["Senior Analyst — Fictional Labs","Analyst — Example Works"] | OK |
+| us-resume.pdf | 392 | years | 5 | 5 | OK |
+| us-resume.pdf | 392 | education | ["Bachelor of Science — Fictional University"] | ["Bachelor of Science — Fictional University"] | OK |
+| us-resume.pdf | 392 | educationLevel | "bachelor" | "bachelor" | OK |
+| us-resume.pdf | 392 | skills | ["SQL","Python","Tableau"] | ["SQL","Python","Tableau"] | OK |
+| us-resume.pdf | 392 | languages | [{"name":"ინგლისური","level":"native"},{"name":"გერმანული","level":"b2"}] | [{"name":"ინგლისური","level":"native"},{"name":"გერმანული","level":"b2"}] | OK |
+| us-resume.pdf | 392 | certifications | ["AWS Certified Cloud Practitioner"] | "(not exposed by parser schema)" | MISS |
+| us-resume.pdf | 392 | roleDates | [{"start":"2020-01","end":"2023-12"},{"start":"2018-03","end":"2021-06"}] | "(not exposed by parser schema)" | MISS |
+| hh-ru.pdf | 317 | name | "Алина Примерова" | "(not exposed by parser schema)" | MISS |
+| hh-ru.pdf | 317 | email | "synthetic5@example.com" | "(not exposed by parser schema)" | MISS |
+| hh-ru.pdf | 317 | phone | "+995 555 00 00 05" | "(not exposed by parser schema)" | MISS |
+| hh-ru.pdf | 317 | city | "ქუთაისი" | "ქუთაისი" | OK |
+| hh-ru.pdf | 317 | roles | ["Бухгалтер — Пример Компания"] | [] | MISS |
+| hh-ru.pdf | 317 | years | 6 | null | MISS |
+| hh-ru.pdf | 317 | education | ["Магистр экономики — Учебный институт"] | ["Магистр экономики — Учебный институт"] | OK |
+| hh-ru.pdf | 317 | educationLevel | "master" | "master" | OK |
+| hh-ru.pdf | 317 | skills | ["1C","Excel","CRM"] | ["Excel","1C","CRM","ბუღალტერია","Знание языков: Русский — Родной","Английский — B2","Сертификаты"] | MISS |
+| hh-ru.pdf | 317 | languages | [{"name":"რუსული","level":"native"},{"name":"ინგლისური","level":"b2"}] | [{"name":"რუსული","level":"native"},{"name":"ინგლისური","level":"b2"}] | OK |
+| hh-ru.pdf | 317 | certifications | ["Сертификат 1С Профессионал"] | "(not exposed by parser schema)" | MISS |
+| hh-ru.pdf | 317 | roleDates | [{"start":"2020-06","end":"current"}] | "(not exposed by parser schema)" | MISS |
+| georgian.pdf | 284 | name | "ნინა მაგალითაძე" | "(not exposed by parser schema)" | MISS |
+| georgian.pdf | 284 | email | "synthetic6@example.com" | "(not exposed by parser schema)" | MISS |
+| georgian.pdf | 284 | phone | "+995 555 00 00 06" | "(not exposed by parser schema)" | MISS |
+| georgian.pdf | 284 | city | "თბილისი" | "თბილისი" | OK |
+| georgian.pdf | 284 | roles | ["ბუღალტერი — სადემო კომპანია"] | ["ბუღალტერი — სადემო კომპანია","2021 წლის მარტი – დღემდე"] | MISS |
+| georgian.pdf | 284 | years | 5 | null | MISS |
+| georgian.pdf | 284 | education | ["ბაკალავრი — სადემო უნივერსიტეტი"] | ["ბაკალავრი — სადემო უნივერსიტეტი"] | OK |
+| georgian.pdf | 284 | educationLevel | "bachelor" | "bachelor" | OK |
+| georgian.pdf | 284 | skills | ["Excel","1C","ბუღალტერია"] | ["Excel","1C","ბუღალტერია"] | OK |
+| georgian.pdf | 284 | languages | [{"name":"ქართული","level":"native"},{"name":"ინგლისური","level":"b2"}] | [{"name":"ქართული","level":"native"},{"name":"ინგლისური","level":"b2"}] | OK |
+| georgian.pdf | 284 | certifications | ["ბუღალტერიის სერტიფიკატი"] | "(not exposed by parser schema)" | MISS |
+| georgian.pdf | 284 | roleDates | [{"start":"2021-03","end":"current"}] | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.txt | 0 | name | "ნინა მაგალითაძე" | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.txt | 0 | email | "synthetic6@example.com" | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.txt | 0 | phone | "+995 555 00 00 06" | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.txt | 0 | city | "თბილისი" | "" | MISS |
+| georgian-acadnusx.txt | 0 | roles | ["ბუღალტერი — სადემო კომპანია"] | [] | MISS |
+| georgian-acadnusx.txt | 0 | years | 5 | null | MISS |
+| georgian-acadnusx.txt | 0 | education | ["ბაკალავრი — სადემო უნივერსიტეტი"] | [] | MISS |
+| georgian-acadnusx.txt | 0 | educationLevel | "bachelor" | null | MISS |
+| georgian-acadnusx.txt | 0 | skills | ["Excel","1C","ბუღალტერია"] | [] | MISS |
+| georgian-acadnusx.txt | 0 | languages | [{"name":"ქართული","level":"native"},{"name":"ინგლისური","level":"b2"}] | [] | MISS |
+| georgian-acadnusx.txt | 0 | certifications | ["ბუღალტერიის სერტიფიკატი"] | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.txt | 0 | roleDates | [{"start":"2021-03","end":"current"}] | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.pdf | 284 | name | "ნინა მაგალითაძე" | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.pdf | 284 | email | "synthetic6@example.com" | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.pdf | 284 | phone | "+995 555 00 00 06" | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.pdf | 284 | city | "თბილისი" | "თბილისი" | OK |
+| georgian-acadnusx.pdf | 284 | roles | ["ბუღალტერი — სადემო კომპანია"] | [] | MISS |
+| georgian-acadnusx.pdf | 284 | years | 5 | null | MISS |
+| georgian-acadnusx.pdf | 284 | education | ["ბაკალავრი — სადემო უნივერსიტეტი"] | [] | MISS |
+| georgian-acadnusx.pdf | 284 | educationLevel | "bachelor" | null | MISS |
+| georgian-acadnusx.pdf | 284 | skills | ["Excel","1C","ბუღალტერია"] | ["Excel","1C"] | MISS |
+| georgian-acadnusx.pdf | 284 | languages | [{"name":"ქართული","level":"native"},{"name":"ინგლისური","level":"b2"}] | [] | MISS |
+| georgian-acadnusx.pdf | 284 | certifications | ["ბუღალტერიის სერტიფიკატი"] | "(not exposed by parser schema)" | MISS |
+| georgian-acadnusx.pdf | 284 | roleDates | [{"start":"2021-03","end":"current"}] | "(not exposed by parser schema)" | MISS |
+| word-table.docx | 380 | name | "Mira Example" | "(not exposed by parser schema)" | MISS |
+| word-table.docx | 380 | email | "synthetic4@example.com" | "(not exposed by parser schema)" | MISS |
+| word-table.docx | 380 | phone | "+995 555 00 00 04" | "(not exposed by parser schema)" | MISS |
+| word-table.docx | 380 | city | "Boston" | "" | MISS |
+| word-table.docx | 380 | roles | ["Senior Analyst — Fictional Labs","Analyst — Example Works"] | ["Senior Analyst — Fictional Labs"] | MISS |
+| word-table.docx | 380 | years | 5 | 5 | OK |
+| word-table.docx | 380 | education | ["Bachelor of Science — Fictional University"] | ["Bachelor of Science — Fictional University"] | OK |
+| word-table.docx | 380 | educationLevel | "bachelor" | "bachelor" | OK |
+| word-table.docx | 380 | skills | ["SQL","Python","Tableau"] | ["SQL","Python","Tableau"] | OK |
+| word-table.docx | 380 | languages | [{"name":"ინგლისური","level":"native"},{"name":"გერმანული","level":"b2"}] | [{"name":"ინგლისური","level":"native"},{"name":"გერმანული","level":"b2"}] | OK |
+| word-table.docx | 380 | certifications | ["AWS Certified Cloud Practitioner"] | "(not exposed by parser schema)" | MISS |
+| word-table.docx | 380 | roleDates | [{"start":"2020-01","end":"2023-12"},{"start":"2018-03","end":"2021-06"}] | "(not exposed by parser schema)" | MISS |
+| scanned.pdf | 0 | name | "Mira Example" | "(not exposed by parser schema)" | MISS |
+| scanned.pdf | 0 | email | "synthetic4@example.com" | "(not exposed by parser schema)" | MISS |
+| scanned.pdf | 0 | phone | "+995 555 00 00 04" | "(not exposed by parser schema)" | MISS |
+| scanned.pdf | 0 | city | "Boston" | "" | MISS |
+| scanned.pdf | 0 | roles | ["Senior Analyst — Fictional Labs","Analyst — Example Works"] | [] | MISS |
+| scanned.pdf | 0 | years | 5 | null | MISS |
+| scanned.pdf | 0 | education | ["Bachelor of Science — Fictional University"] | [] | MISS |
+| scanned.pdf | 0 | educationLevel | "bachelor" | null | MISS |
+| scanned.pdf | 0 | skills | ["SQL","Python","Tableau"] | [] | MISS |
+| scanned.pdf | 0 | languages | [{"name":"ინგლისური","level":"native"},{"name":"გერმანული","level":"b2"}] | [] | MISS |
+| scanned.pdf | 0 | certifications | ["AWS Certified Cloud Practitioner"] | "(not exposed by parser schema)" | MISS |
+| scanned.pdf | 0 | roleDates | [{"start":"2020-01","end":"2023-12"},{"start":"2018-03","end":"2021-06"}] | "(not exposed by parser schema)" | MISS |
+| us-resume.rtf | 0 | name | "Mira Example" | "(not exposed by parser schema)" | MISS |
+| us-resume.rtf | 0 | email | "synthetic4@example.com" | "(not exposed by parser schema)" | MISS |
+| us-resume.rtf | 0 | phone | "+995 555 00 00 04" | "(not exposed by parser schema)" | MISS |
+| us-resume.rtf | 0 | city | "Boston" | "" | MISS |
+| us-resume.rtf | 0 | roles | ["Senior Analyst — Fictional Labs","Analyst — Example Works"] | [] | MISS |
+| us-resume.rtf | 0 | years | 5 | null | MISS |
+| us-resume.rtf | 0 | education | ["Bachelor of Science — Fictional University"] | [] | MISS |
+| us-resume.rtf | 0 | educationLevel | "bachelor" | null | MISS |
+| us-resume.rtf | 0 | skills | ["SQL","Python","Tableau"] | [] | MISS |
+| us-resume.rtf | 0 | languages | [{"name":"ინგლისური","level":"native"},{"name":"გერმანული","level":"b2"}] | [] | MISS |
+| us-resume.rtf | 0 | certifications | ["AWS Certified Cloud Practitioner"] | "(not exposed by parser schema)" | MISS |
+| us-resume.rtf | 0 | roleDates | [{"start":"2020-01","end":"2023-12"},{"start":"2018-03","end":"2021-06"}] | "(not exposed by parser schema)" | MISS |
+| us-resume.odt | 0 | name | "Mira Example" | "(not exposed by parser schema)" | MISS |
+| us-resume.odt | 0 | email | "synthetic4@example.com" | "(not exposed by parser schema)" | MISS |
+| us-resume.odt | 0 | phone | "+995 555 00 00 04" | "(not exposed by parser schema)" | MISS |
+| us-resume.odt | 0 | city | "Boston" | "" | MISS |
+| us-resume.odt | 0 | roles | ["Senior Analyst — Fictional Labs","Analyst — Example Works"] | [] | MISS |
+| us-resume.odt | 0 | years | 5 | null | MISS |
+| us-resume.odt | 0 | education | ["Bachelor of Science — Fictional University"] | [] | MISS |
+| us-resume.odt | 0 | educationLevel | "bachelor" | null | MISS |
+| us-resume.odt | 0 | skills | ["SQL","Python","Tableau"] | [] | MISS |
+| us-resume.odt | 0 | languages | [{"name":"ინგლისური","level":"native"},{"name":"გერმანული","level":"b2"}] | [] | MISS |
+| us-resume.odt | 0 | certifications | ["AWS Certified Cloud Practitioner"] | "(not exposed by parser schema)" | MISS |
+| us-resume.odt | 0 | roleDates | [{"start":"2020-01","end":"2023-12"},{"start":"2018-03","end":"2021-06"}] | "(not exposed by parser schema)" | MISS |
+
+| field | correct | expected |
+|---|---:|---:|
+| name | 0 | 12 |
+| email | 0 | 12 |
+| phone | 0 | 12 |
+| city | 6 | 12 |
+| roles | 1 | 12 |
+| years | 2 | 12 |
+| education | 4 | 12 |
+| educationLevel | 4 | 12 |
+| skills | 3 | 12 |
+| languages | 5 | 12 |
+| certifications | 0 | 12 |
+| roleDates | 0 | 12 |
+| TOTAL | 25 | 144 |
+
+| fixture | extract ms | parse ms | total ms |
+|---|---:|---:|---:|
+| europass-en.pdf | 1054.86 | 45.51 | 1100.37 |
+| linkedin-export.pdf | 12.42 | 9.36 | 21.78 |
+| two-column-canva.pdf | 7.78 | 0.83 | 8.6 |
+| us-resume.pdf | 6.96 | 21.57 | 28.53 |
+| hh-ru.pdf | 5.45 | 0.69 | 6.14 |
+| georgian.pdf | 6.11 | 0.69 | 6.8 |
+| georgian-acadnusx.txt | 0.02 | 0.19 | 0.21 |
+| georgian-acadnusx.pdf | 5.62 | 0.46 | 6.08 |
+| word-table.docx | 0.93 | 1.16 | 2.09 |
+| scanned.pdf | 2.96 | 0.17 | 3.13 |
+| us-resume.rtf | 0.02 | 0.1 | 0.12 |
+| us-resume.odt | 0.01 | 0.08 | 0.09 |

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { apiError, checkOrigin, readBody } from '@/lib/server/auth';
 import {
   loginCompany,
+  currentCompany,
   setCompanySession,
   logoutCompany,
 } from '@/lib/server/company-auth';
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
   try {
     checkOrigin(req);
     const data = z
-      .object({ username: z.string().max(128), password: z.string().max(128) })
+      .object({ username: z.string().max(254), password: z.string().max(128) })
       .parse(await readBody(req));
     const token = await loginCompany(
       data.username,
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     );
     await setCompanySession(token);
     return Response.json(
-      { ok: true },
+      { ok: true, identity: await currentCompany() },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (e) {
@@ -35,6 +36,16 @@ export async function DELETE(req: Request) {
       { ok: true },
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
+  } catch (e) {
+    return apiError(e);
+  }
+}
+
+export async function GET() {
+  try {
+    return Response.json(await currentCompany(), {
+      headers: { 'Cache-Control': 'private, no-store' },
+    });
   } catch (e) {
     return apiError(e);
   }

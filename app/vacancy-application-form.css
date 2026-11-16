@@ -1,0 +1,63 @@
+.vacancy-application form,
+.vacancy-application fieldset {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.vacancy-application fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.vacancy-application label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  line-height: 1.7;
+  min-width: 0;
+}
+.vacancy-application input:not([type='checkbox']),
+.vacancy-application select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #dce6fa);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font: inherit;
+}
+.vacancy-application input[type='file'] {
+  font-size: 12px;
+}
+.vacancy-application .vacancy-application-consent {
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  font-size: 12px;
+}
+.vacancy-application-consent input {
+  width: 18px;
+  height: 18px;
+  margin: 4px 0;
+}
+.vacancy-application button {
+  width: 100%;
+  white-space: normal;
+}
+.vacancy-application [role='alert'] {
+  color: #a42525;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.vacancy-application-success {
+  display: block;
+  color: #226741;
+  line-height: 1.8;
+}
+.vacancy-application-email {
+  display: block;
+  margin-top: 16px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

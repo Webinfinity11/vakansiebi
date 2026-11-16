@@ -35,8 +35,20 @@ export default function MapPage() {
   return (
     <div className="board-shell job-map-shell">
       <PublicHeader />
+      {/* The map reads the address bar, so it renders in the browser only.
+          The server HTML still names the page and says what it offers. */}
       <Suspense
-        fallback={<output className="job-map-hint">რუკა იტვირთება…</output>}
+        fallback={
+          <div className="job-map">
+            <div className="job-map-bar">
+              <div className="job-map-title">
+                <h1>ვაკანსიები რუკაზე</h1>
+                <p>{description}</p>
+              </div>
+            </div>
+            <output className="job-map-hint">რუკა იტვირთება…</output>
+          </div>
+        }
       >
         <JobMap />
       </Suspense>

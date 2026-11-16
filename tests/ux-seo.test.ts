@@ -380,3 +380,28 @@ void test('job locations carry the region, a stated street, and the employment t
     'PART_TIME',
   );
 });
+
+void test('JobPosting experience uses only recognized lower bounds in months', () => {
+  for (const [value, months] of [['1–3 წელი',12],['3–5 წელი',36],['5 წელზე მეტი',60],['1 წლამდე',undefined],['გამოცდილების გარეშე',undefined],['უცნობი',undefined]] as const) {
+    const result = jobPosting({...job, facts:[{label:'გამოცდილება',value}]}, job.datePosted);
+    assert.equal(result?.experienceRequirements?.monthsOfExperience, months);
+    if (months) assert.equal(result?.experienceRequirements?.['@type'],'OccupationalExperienceRequirements');
+  }
+});
+
+void test('jobBenefits is explicit company-owned profile content and leaves identity metadata unchanged', () => {
+  const profile = { website: '', description: '', benefits: ['დაზღვევა', ' ', 'ტრენინგები'], whyUs: 'გუნდური მუშაობა' };
+  const base = jobPosting(job, '2026-09-14')!;
+  const data = jobPosting({ ...job, companyOwned: true, companyProfile: profile }, '2026-09-14')!;
+  assert.equal(data.jobBenefits, 'დაზღვევა; ტრენინგები');
+  assert.equal(data.title, base.title);
+  assert.equal(data.url, base.url);
+  assert.equal(data.description, base.description);
+  for (const patch of [
+    { companyProfile: profile },
+    { companyOwned: false, companyProfile: profile },
+    { companyOwned: true, companyProfile: { ...profile, benefits: [] } },
+    { companyOwned: true, companyProfile: { ...profile, benefits: [' '] } },
+    { companyOwned: true },
+  ]) assert.equal('jobBenefits' in jobPosting({ ...job, ...patch }, '2026-09-14')!, false);
+});

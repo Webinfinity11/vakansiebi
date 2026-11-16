@@ -1,3 +1,5 @@
+import { after } from 'next/server';
+import { notifyApplication } from '@/lib/server/notification-jobs';
 import { apiError, ApiError, checkOrigin } from '@/lib/server/auth';
 import { clientKey, rateLimit } from '@/lib/server/rate-limit';
 import {
@@ -23,6 +25,7 @@ export async function POST(request: Request) {
     if (!rate.allowed) throw new ApiError('სცადე მოგვიანებით', 429);
     const form = await readSwipeForm(request);
     const sent = await sendSwipeApplication(form, client);
+    after(() => notifyApplication({ jobId: form.job }));
     return Response.json(
       { ok: true, to: sent.to },
       { headers: { 'Cache-Control': 'no-store' } },

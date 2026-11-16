@@ -1,0 +1,51 @@
+.an-extra > .an-card > p {
+  font-size: 13px;
+  color: var(--cp-ink-2);
+}
+.an-source-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.an-source-list li > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--cp-ink-2);
+}
+.an-source-list b {
+  font-variant-numeric: tabular-nums;
+}
+.an-source-list .an-track {
+  display: block;
+}
+
+.an-extra { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.an-extra > .an-card { min-width: 0; }
+.an-extra > .an-card > .an-hire-value { font-size: 28px; font-weight: 600; color: var(--cp-ink); }
+@media (max-width: 760px) { .an-extra { grid-template-columns: minmax(0, 1fr); } }
+
+/* Same surface and type scale as the other work screens; series remain real. */
+.an-kpis { gap: 16px; border: 0; background: none; }
+.an-kpis > div { padding: 24px; border: 0; border-top: 3px solid var(--cp-accent); border-radius: var(--cp-radius); background: var(--cp-surface); box-shadow: var(--cp-shadow); }
+.an-kpis strong { font-size: 36px; }
+.an-card { border: 0; border-radius: var(--cp-radius); background: var(--cp-surface); box-shadow: var(--cp-shadow); padding: 24px; }
+.an-card h2 { font-size: 17px; line-height: 1.5; }
+.an-card h2 .cp-status-mark { font: inherit; }
+.an-card-head p, .an-trend, .an-foot, .an-none, .an-tips, .an-num small, .an-axis, .an-xaxis, .an-actions { font-size: 13px; color: var(--cp-ink-2); }
+.an-bar i, .an-track i { background: var(--cp-accent); }
+.an-extra, .an-split { gap: 24px; }
+.an-extra > .an-card > .an-hire-value { font-size: 36px; }
+.an-table .cp-row { border-bottom-color: var(--cp-line-2); }
+@media (min-width: 1600px) {
+  .cp-main:has(.an-kpis) { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 24px; align-content: start; }
+  .cp-main:has(.an-kpis) > :is(.cp-head,.an-kpis,.an-split,.an-card--table,.an-foot) { grid-column: 1 / -1; }
+  .cp-main:has(.an-kpis) > .an-extra { grid-template-columns: minmax(0,1fr); }
+  .cp-main:has(.an-kpis) > * { margin-block: 0; min-width: 0; }
+}
+@media (max-width: 600px) { .an-card, .an-kpis > div { padding: 16px; } }

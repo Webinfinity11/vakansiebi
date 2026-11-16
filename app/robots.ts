@@ -38,6 +38,17 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       { userAgent: '*', ...open },
       { userAgent: aiBots, ...open },
+      // Keep search crawlers focused on vacancy pages. Social preview bots
+      // retain the wildcard rules so shared links can still load their cards.
+      {
+        userAgent: ['Googlebot', 'Bingbot'],
+        ...open,
+        disallow: [
+          ...open.disallow,
+          '/vacancies/*/opengraph-image',
+          '/vacancies/*/twitter-image',
+        ],
+      },
     ],
     /* The index first, then every leaf on its own line. A crawler that cannot
        process the index — which is what Search Console reported for days — can

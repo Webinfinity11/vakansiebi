@@ -36,3 +36,30 @@ export function installPage(pathname: string) {
     /^\/vacancies\/[^/]+$/.test(pathname)
   );
 }
+
+/** Known embedded browsers cannot offer the normal browser installation flow. */
+export function isInAppBrowser(userAgent: string) {
+  return /FBAN|FBAV|FB_IAB|Instagram|Messenger|TikTok|musical_ly|BytedanceWebview|\bLine\/|;\s*wv\b|\bMicroMessenger\b|Snapchat/i.test(
+    userAgent,
+  );
+}
+
+export function canWaitForInstall(userAgent: string, maxTouchPoints = 0) {
+  return (
+    installPlatform(userAgent, maxTouchPoints) !== 'ios' &&
+    !isInAppBrowser(userAgent) &&
+    /Chrome\/|Chromium\/|Edg\//i.test(userAgent)
+  );
+}
+
+/** Preserve path/query, but never allow a page fragment to inject intent fields. */
+export function chromeInstallIntent(href: string) {
+  const url = new URL(href);
+  return `intent://${url.host}${url.pathname}${url.search}#Intent;scheme=https;package=com.android.chrome;end`;
+}
+
+export function canPromptAfterWait(
+  activation: { isActive: boolean } | undefined,
+) {
+  return activation?.isActive === true;
+}

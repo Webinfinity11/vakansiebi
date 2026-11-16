@@ -8,6 +8,7 @@ import { GET as categoriesGET } from '../app/sitemap-categories.xml/route';
 import { GET as companiesGET } from '../app/sitemap-companies.xml/route';
 import { GET as jobsGET } from '../app/sitemap-jobs.xml/route';
 import robots from '../app/robots';
+import { vacancySitemapEntries } from '../lib/server/sitemap-entries';
 import { GET as contentGET } from '../app/sitemap-content.xml/route';
 import {
   createSitemapHandler,
@@ -16,6 +17,45 @@ import {
   sitemapIndexResponse,
   sitemapLeaves,
 } from '../lib/sitemap';
+
+void test('search crawlers skip vacancy images while social previews keep wildcard access', () => {
+  const { rules } = robots();
+  assert.ok(Array.isArray(rules));
+  const wildcard = rules.find((rule) => rule.userAgent === '*');
+  assert.ok(wildcard);
+  const imagePaths = [
+    '/vacancies/*/opengraph-image',
+    '/vacancies/*/twitter-image',
+  ];
+  for (const bot of ['Googlebot', 'Bingbot']) {
+    const group: (typeof rules)[number] | undefined = rules.find(
+      (rule) => Array.isArray(rule.userAgent) && rule.userAgent.includes(bot),
+    );
+    assert.ok(group, bot);
+    assert.deepEqual(group.allow, wildcard.allow);
+    assert.ok(group.allow?.includes('/'));
+    assert.deepEqual(group.disallow, [
+      ...(wildcard.disallow as string[]),
+      ...imagePaths,
+    ]);
+  }
+  for (const path of imagePaths)
+    assert.ok(!wildcard.disallow?.includes(path));
+});
+
+void test('vacancy sitemap omits titles with no slug and preserves normal entries', () => {
+  const lastModified = new Date('2026-11-13T00:00:00Z');
+  const id = 'c761afaa-0a35-43b9-9697-ce120e1f7163';
+  assert.deepEqual(
+    vacancySitemapEntries([
+      { id, title: '🇬🇪', lastModified },
+      { id: 'empty', title: '', lastModified },
+      { id: 'punctuation', title: '!!!', lastModified },
+      { id, title: 'დეველოპერი', lastModified },
+    ]),
+    [{ url: `https://jobx.ge/vacancies/developeri-${id}`, lastModified }],
+  );
+});
 
 async function withoutDatabase(run: () => Promise<void>) {
   const previous = process.env.DATABASE_URL;

@@ -1,0 +1,210 @@
+/* The site footer. Its own class keeps it clear of the older footer rules that
+   are still spread across globals, board, refined-board and phone styles. */
+.site-footer.jx-footer {
+  display: block;
+  box-sizing: border-box;
+  width: auto;
+  max-width: 1224px;
+  margin: 40px auto 0;
+  padding: 40px 0 24px;
+  border-top: 1px solid var(--ds-line);
+  background: transparent;
+  color: var(--ds-ink-2);
+  font-size: 14px;
+}
+.site-footer.jx-footer > div {
+  margin: 0;
+  font-size: inherit;
+}
+.site-footer.jx-footer :is(ul, p) {
+  margin: 0;
+  padding: 0;
+}
+.site-footer.jx-footer ul {
+  list-style: none;
+}
+.site-footer.jx-footer > .jx-footer-top {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(0, 2.4fr);
+  gap: 40px;
+  align-items: start;
+}
+.jx-footer-brand {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+}
+.jx-footer-brand .jobx-brand,
+.jx-footer-brand .jobx-brand img {
+  width: 104px;
+  height: 35px;
+  object-fit: contain;
+}
+.jx-footer-brand > p {
+  line-height: 1.7;
+  color: var(--ds-ink-3, #6b778c);
+}
+.jx-footer-social {
+  display: flex;
+  gap: 8px;
+}
+.site-footer.jx-footer .jx-footer-social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  border: 1px solid var(--ds-line);
+  border-radius: 999px;
+  color: var(--ds-ink);
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.site-footer.jx-footer .jx-footer-social a:hover,
+.site-footer.jx-footer .jx-footer-social a:focus-visible {
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
+}
+.site-footer.jx-footer .jx-footer-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 32px;
+  margin: 0;
+}
+.jx-footer-title {
+  margin-bottom: 14px !important;
+  color: var(--ds-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+.jx-footer-columns ul {
+  display: grid;
+  gap: 4px;
+}
+.site-footer.jx-footer .jx-footer-columns :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: auto;
+  min-height: 34px;
+  width: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  line-height: 1.5;
+  background: none;
+  color: var(--ds-ink-2);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.site-footer.jx-footer .jx-footer-columns :is(a, button):hover,
+.site-footer.jx-footer .jx-footer-columns :is(a, button):focus-visible {
+  color: var(--ds-accent-ink, var(--ds-accent));
+}
+.jx-footer-install:empty {
+  display: none;
+}
+.site-footer.jx-footer > .jx-footer-help {
+  margin: 28px 0 0;
+}
+.jx-footer-help summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  color: var(--ds-ink-2);
+  font-size: 14px;
+  cursor: pointer;
+}
+.jx-footer-help p {
+  max-width: 760px;
+  margin: 4px 0 8px !important;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--ds-ink-3, #6b778c);
+}
+.site-footer.jx-footer > .jx-footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ds-line);
+  color: var(--ds-ink-3, #6b778c);
+  font-size: 13px;
+}
+.site-footer.jx-footer .jx-footer-bottom > span {
+  display: inline;
+}
+.jx-footer-credit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.site-footer.jx-footer .jx-footer-credit > a {
+  display: inline;
+  min-height: 0;
+  color: var(--ds-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.jx-footer-credit strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.site-footer.jx-footer .jx-footer-credit > a:hover {
+  color: var(--ds-accent-ink, var(--ds-accent));
+}
+/* TOP.GE requires the badge at its original size and opacity. */
+.jx-footer-credit .top-ge-counter {
+  display: inline-flex;
+}
+.jx-footer-credit .top-ge-counter img {
+  display: block;
+}
+
+@media (max-width: 1280px) {
+  .site-footer.jx-footer {
+    margin-inline: 28px;
+  }
+}
+@media (max-width: 900px) {
+  .site-footer.jx-footer > .jx-footer-top {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}
+@media (max-width: 760px) {
+  .site-footer.jx-footer {
+    margin: 28px 16px 0;
+    padding: 28px 0 20px;
+  }
+  .site-footer.jx-footer .jx-footer-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 16px;
+  }
+  .site-footer.jx-footer .jx-footer-columns :is(a, button) {
+    min-height: 40px;
+  }
+  .site-footer.jx-footer > .jx-footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-footer.jx-footer .jx-footer-social a {
+    transition: none;
+  }
+}

@@ -1,3 +1,4 @@
+import { runNotificationJobs } from '@/lib/server/notification-jobs';
 import { timingSafeEqual } from 'node:crypto';
 import { deliverInvoiceEmails } from '@/lib/server/invoice-email';
 import { deliverPublicationEmails } from '@/lib/server/publication-email';
@@ -18,13 +19,14 @@ export async function GET(request: Request) {
   )
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    const [invoices, publications, removals] = await Promise.all([
+    const [invoices, publications, removals, notifications] = await Promise.all([
       deliverInvoiceEmails(undefined, 5),
       deliverPublicationEmails(undefined, 5),
       deliverRemovalConfirmations(undefined, 5),
+      runNotificationJobs().catch(() => ({ error: 'Notification delivery deferred' })),
     ]);
     return Response.json(
-      { ...invoices, publications, removals },
+      { ...invoices, publications, removals, notifications },
       {
         headers: { 'Cache-Control': 'no-store' },
       },

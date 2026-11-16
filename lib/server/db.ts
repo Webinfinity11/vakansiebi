@@ -4,12 +4,22 @@ const globalDb = globalThis as unknown as { ertadPool?: Pool };
 export function db() {
   if (!process.env.DATABASE_URL)
     throw new Error('DATABASE_URL is not configured');
-  return (globalDb.ertadPool ??= new Pool({
-    ...databaseConnection(),
-    max: 5,
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
-  }));
+  if (!globalDb.ertadPool) {
+    const pool = new Pool({
+      ...databaseConnection(),
+      max: 5,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+    });
+    // An idle client can be closed by the server (Neon suspends, a restart, an admin terminate).
+    // pg emits that on the pool; without a listener Node treats it as an uncaught exception.
+    // The pool already discards the broken client, so the next query simply opens a new one.
+    pool.on('error', (error) => {
+      console.warn('Idle database connection closed:', error.message);
+    });
+    globalDb.ertadPool = pool;
+  }
+  return globalDb.ertadPool;
 }
 export async function transaction<T>(fn: (client: PoolClient) => Promise<T>) {
   const c = await db().connect();

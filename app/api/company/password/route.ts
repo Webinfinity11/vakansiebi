@@ -4,12 +4,16 @@ import { apiError, checkOrigin, readBody } from '@/lib/server/auth';
 import {
   changeCompanyPassword,
   logoutCompany,
-  requireCompany,
+  requireCompanyRole,
 } from '@/lib/server/company-auth';
 export async function POST(req: Request) {
   try {
     checkOrigin(req);
-    const company = await requireCompany(true);
+    const company = await requireCompanyRole(
+      ['owner', 'recruiter', 'viewer'],
+      false,
+      true,
+    );
     const data = z
       .object({
         currentPassword: z.string().max(128),

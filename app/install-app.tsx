@@ -9,7 +9,16 @@ import {
   type ReactNode,
 } from 'react';
 import { usePathname } from 'next/navigation';
-import { Download, Share, X } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Check,
+  Download,
+  EllipsisVertical,
+  Share,
+  SquarePlus,
+  X,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +28,10 @@ import {
 } from '@/components/ui/dialog';
 import { useUi } from './ui-language';
 import {
+  canWaitForInstall,
+  canPromptAfterWait,
+  chromeInstallIntent,
+  isInAppBrowser,
   installAcceptedKey,
   installDelayMs,
   installDismissed,
@@ -35,8 +48,9 @@ type InstallEvent = Event & {
 };
 const InstallContext = createContext<{
   available: boolean;
+  busy: boolean;
   install: () => void;
-}>({ available: false, install: () => {} });
+}>({ available: false, busy: false, install: () => {} });
 
 export function InstallAppProvider({ children }: { children: ReactNode }) {
   const { locale } = useUi();
@@ -51,6 +65,13 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
   const [installed, setInstalled] = useState(false);
   const [instructions, setInstructions] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [embedded, setEmbedded] = useState(false);
+  const [chromium, setChromium] = useState(false);
+  const [ipad, setIpad] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
+  const waitForEvent = useRef<((event: InstallEvent | null) => void) | null>(
+    null,
+  );
   const accepted = useRef(false);
   const visited = useRef(new Set<string>());
 
@@ -66,6 +87,11 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
       setPlatform(
         installPlatform(navigator.userAgent, navigator.maxTouchPoints),
       );
+      setEmbedded(isInAppBrowser(navigator.userAgent));
+      setChromium(
+        canWaitForInstall(navigator.userAgent, navigator.maxTouchPoints),
+      );
+      setIpad(/iPad|Macintosh/i.test(navigator.userAgent));
       try {
         accepted.current = localStorage.getItem(installAcceptedKey) === '1';
         setInstalled(accepted.current);
@@ -88,8 +114,10 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
       if (accepted.current) return;
       pending.current = candidate;
       setAvailable(true);
+      waitForEvent.current?.(candidate);
     };
     const onInstalled = () => {
+      waitForEvent.current?.(null);
       accepted.current = true;
       setInstalled(true);
       try {
@@ -111,6 +139,7 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener('storage', sync);
     return () => {
+      waitForEvent.current?.(null);
       clearTimeout(initialise);
       clearTimeout(timer);
       appMode.removeEventListener?.('change', updateMode);
@@ -136,16 +165,40 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
   }
 
   async function install() {
-    const event = pending.current;
+    let event = pending.current;
     if (busy) return;
-    if (!event) {
-      if (platform !== 'desktop') {
-        dismiss();
-        setInstructions(true);
-      }
+    if (embedded) {
+      dismiss();
+      setCopyStatus('');
+      setInstructions(true);
       return;
     }
-    // A browser event can be used only once. Keep prompt() in the click gesture.
+    if (!event && chromium) {
+      setBusy(true);
+      event = await new Promise<InstallEvent | null>((resolve) => {
+        const timer = setTimeout(() => finish(null), 3000);
+        const finish = (candidate: InstallEvent | null) => {
+          clearTimeout(timer);
+          waitForEvent.current = null;
+          resolve(candidate);
+        };
+        waitForEvent.current = finish;
+      });
+      setBusy(false);
+      if (accepted.current) return;
+      if (event && !canPromptAfterWait(navigator.userActivation)) {
+        dismiss();
+        setInstructions(true);
+        return;
+      }
+    }
+    if (!event) {
+      dismiss();
+      setInstructions(true);
+      return;
+    }
+    setInstructions(false);
+    // Use the event once, during a fresh tap or while transient activation remains.
     pending.current = null;
     setBusy(true);
     setAvailable(false);
@@ -162,27 +215,33 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
           /* Retained for this visit. */
         }
       }
-    } catch {
-      /* A cancelled or unavailable browser prompt leaves the page usable. */
+    } catch (error) {
+      // Activation rejection does not consume the event; other errors may.
+      if (error instanceof DOMException && error.name === 'NotAllowedError') {
+        pending.current = event;
+        setAvailable(true);
+      }
+      setInstructions(true);
     } finally {
       setBusy(false);
     }
   }
 
   const canInstall =
-    !standalone && !installed && (available || platform !== 'desktop');
-  const nativeInstall = available;
+    !standalone &&
+    !installed &&
+    (available || chromium || platform !== 'desktop');
+
   const visible =
     canInstall &&
+    !instructions &&
     ready &&
     (eligibleVisit || platform !== 'desktop') &&
     !dismissed &&
     !!pathname &&
     installPage(pathname);
   return (
-    <InstallContext.Provider
-      value={{ available: canInstall && !busy, install }}
-    >
+    <InstallContext.Provider value={{ available: canInstall, busy, install }}>
       {children}
       {visible && (
         <aside className="install-app" aria-labelledby="install-app-title">
@@ -223,13 +282,13 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
             disabled={busy}
             onClick={install}
           >
-            {nativeInstall
+            {busy
               ? locale === 'en'
-                ? 'Install JOBX'
-                : 'დააყენე JOBX'
+                ? 'Preparing…'
+                : 'მზადდება…'
               : locale === 'en'
-                ? 'How to install'
-                : 'როგორ დავაყენო'}
+                ? 'Install JOBX'
+                : 'დააყენე JOBX'}
           </button>
           <button
             type="button"
@@ -252,56 +311,185 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
                 : 'დაამატე JOBX მთავარ ეკრანზე'}
             </DialogTitle>
             <DialogDescription>
-              {platform === 'ios'
+              {embedded
                 ? locale === 'en'
-                  ? 'Use Safari to add JOBX, then open it from its home screen icon.'
-                  : 'Safari-დან დაამატე JOBX და შემდეგ მთავარ ეკრანზე მისი ხატულიდან გახსენი.'
-                : locale === 'en'
-                  ? 'Use your browser’s installation menu to add JOBX.'
-                  : 'JOBX ბრაუზერის დაყენების მენიუდან დაამატე.'}
+                  ? 'Installation is not available inside this app’s browser. Open this page in your browser.'
+                  : 'ამ აპის შიდა ბრაუზერში JOBX ვერ დაყენდება. გახსენი გვერდი ბრაუზერში.'
+                : available
+                  ? locale === 'en'
+                    ? 'Ready to install.'
+                    : 'ყველაფერი მზადაა დასაყენებლად.'
+                  : platform === 'ios'
+                    ? locale === 'en'
+                      ? 'Open jobx.ge in Safari and follow these three steps.'
+                      : 'გახსენი jobx.ge Safari-ში და მიჰყევი ამ სამ ნაბიჯს.'
+                    : locale === 'en'
+                      ? 'Open jobx.ge in Chrome and follow these three steps.'
+                      : 'გახსენი jobx.ge Chrome-ში და მიჰყევი ამ სამ ნაბიჯს.'}
             </DialogDescription>
           </DialogHeader>
-          <ol>
-            <li>
-              {platform === 'ios'
-                ? locale === 'en'
-                  ? 'Open jobx.ge in Safari.'
-                  : 'გახსენი jobx.ge Safari-ში.'
-                : locale === 'en'
-                  ? 'Open jobx.ge in Chrome.'
-                  : 'გახსენი jobx.ge Chrome-ში.'}
-            </li>
-            <li>
-              {platform === 'ios' ? (
-                <>
-                  <Share size={16} aria-hidden="true" />
-                  {locale === 'en'
-                    ? 'Tap Share, directly or from the page menu.'
-                    : 'დააჭირე გაზიარებას (Share), პირდაპირ ან გვერდის მენიუდან.'}
-                </>
-              ) : locale === 'en' ? (
-                'Open the ⋮ menu and select “Install and create shortcut”.'
+          {embedded ? (
+            <div className="install-browser-help">
+              {platform === 'android' ? (
+                <button
+                  type="button"
+                  className="ds-btn ds-btn--primary"
+                  onClick={() => {
+                    window.location.href = chromeInstallIntent(
+                      window.location.href,
+                    );
+                  }}
+                >
+                  {locale === 'en' ? 'Open in Chrome' : 'გახსენი Chrome-ში'}
+                </button>
               ) : (
-                'მენიუში (⋮) აირჩიე „დაყენება ან მალსახმობის შექმნა“ (Install and create shortcut).'
+                <>
+                  <p>
+                    {locale === 'en'
+                      ? 'Open the ⋯ or Share menu and choose “Open in Safari”. If it is missing, copy the link and paste it in Safari.'
+                      : 'გახსენი ⋯ ან გაზიარების მენიუ და აირჩიე „Open in Safari“. თუ ეს პუნქტი არ ჩანს, დააკოპირე ბმული და ჩასვი Safari-ში.'}
+                  </p>
+                  <button
+                    type="button"
+                    className="ds-btn ds-btn--primary"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(
+                          window.location.href,
+                        );
+                        setCopyStatus(
+                          locale === 'en'
+                            ? 'Link copied'
+                            : 'ბმული დაკოპირებულია',
+                        );
+                      } catch {
+                        setCopyStatus(
+                          locale === 'en'
+                            ? 'Copy the link from the address bar.'
+                            : 'დააკოპირე ბმული მისამართის ველიდან.',
+                        );
+                      }
+                    }}
+                  >
+                    {locale === 'en' ? 'Copy link' : 'ბმულის კოპირება'}
+                  </button>
+                  <p role="status">{copyStatus}</p>
+                </>
               )}
-            </li>
-            <li>
-              {platform === 'ios'
-                ? locale === 'en'
-                  ? 'Choose “Add to Home Screen”, keep “Open as Web App” enabled if shown, then tap “Add”.'
-                  : 'აირჩიე „მთავარ ეკრანზე დამატება“ (Add to Home Screen), თუ ჩანს „Open as Web App“, ჩართული დატოვე და დააჭირე „დამატებას“ (Add).'
-                : locale === 'en'
-                  ? 'Choose “Install” and follow the on-screen instructions.'
-                  : 'აირჩიე „დაყენება“ (Install) და მიჰყევი ეკრანზე მითითებებს.'}
-            </li>
-          </ol>
-          <button
-            type="button"
-            className="ds-btn ds-btn--primary"
-            onClick={() => setInstructions(false)}
-          >
-            {locale === 'en' ? 'Got it' : 'გასაგებია'}
-          </button>
+            </div>
+          ) : available ? (
+            <button
+              type="button"
+              className="ds-btn ds-btn--primary"
+              onClick={install}
+              disabled={busy}
+            >
+              {locale === 'en' ? 'Install JOBX' : 'დააყენე JOBX'}
+            </button>
+          ) : (
+            <>
+              {platform === 'ios' && (
+                <div className="install-share-pointer">
+                  {ipad ? (
+                    <ArrowUp aria-hidden="true" />
+                  ) : (
+                    <ArrowDown aria-hidden="true" />
+                  )}
+                  <Share aria-hidden="true" />
+                  <span>
+                    {locale === 'en'
+                      ? ipad
+                        ? 'Look for Share in Safari’s top toolbar.'
+                        : 'Look for Share in Safari’s bottom toolbar, or open ⋯ first.'
+                      : ipad
+                        ? 'გაზიარების ღილაკი Safari-ის ზედა პანელზეა.'
+                        : 'გაზიარების ღილაკი Safari-ის ქვედა პანელზეა; თუ არ ჩანს, ჯერ გახსენი ⋯.'}
+                  </span>
+                </div>
+              )}
+              <ol className="install-steps">
+                <li>
+                  <span className="install-step-icon" aria-hidden="true">
+                    {platform === 'ios' ? (
+                      <Share size={22} />
+                    ) : (
+                      <EllipsisVertical size={22} />
+                    )}
+                  </span>
+                  <div>
+                    <strong>
+                      {platform === 'ios'
+                        ? locale === 'en'
+                          ? 'Tap Share'
+                          : 'დააჭირე გაზიარებას'
+                        : locale === 'en'
+                          ? 'Open the menu'
+                          : 'გახსენი მენიუ'}
+                    </strong>
+                    <span>{platform === 'ios' ? 'Share' : '⋮'}</span>
+                  </div>
+                </li>
+                <li>
+                  <span className="install-step-icon" aria-hidden="true">
+                    <SquarePlus size={22} />
+                  </span>
+                  <div>
+                    <strong>
+                      {platform === 'ios'
+                        ? locale === 'en'
+                          ? 'Add to Home Screen'
+                          : 'დაამატე მთავარ ეკრანზე'
+                        : locale === 'en'
+                          ? 'Choose installation'
+                          : 'აირჩიე დაყენება'}
+                    </strong>
+                    <span>
+                      {platform === 'ios'
+                        ? 'Add to Home Screen'
+                        : platform === 'desktop'
+                          ? 'Cast, save, and share → Install page as app'
+                          : 'Add to home screen → Install'}
+                    </span>
+                  </div>
+                </li>
+                <li>
+                  <span className="install-step-icon" aria-hidden="true">
+                    <Check size={22} />
+                  </span>
+                  <div>
+                    <strong>
+                      {platform === 'ios'
+                        ? locale === 'en'
+                          ? 'Tap Add'
+                          : 'დააჭირე დამატებას'
+                        : locale === 'en'
+                          ? 'Tap Install'
+                          : 'დააჭირე დაყენებას'}
+                    </strong>
+                    <span>{platform === 'ios' ? 'Add' : 'Install'}</span>
+                  </div>
+                </li>
+              </ol>
+              <p className="install-step-note">
+                {platform === 'ios'
+                  ? locale === 'en'
+                    ? 'If shown, keep “Open as Web App” enabled. JOBX will appear on your home screen.'
+                    : 'თუ ჩანს, „Open as Web App“ ჩართული დატოვე. JOBX-ის აიქონი მთავარ ეკრანზე გამოჩნდება.'
+                  : locale === 'en'
+                    ? 'JOBX will appear on your home screen.'
+                    : 'JOBX-ის აიქონი მთავარ ეკრანზე გამოჩნდება.'}
+              </p>
+            </>
+          )}
+          {!available && (
+            <button
+              type="button"
+              className={`ds-btn ${embedded ? 'ds-btn--secondary' : 'ds-btn--primary'}`}
+              onClick={() => setInstructions(false)}
+            >
+              {locale === 'en' ? 'Got it' : 'გასაგებია'}
+            </button>
+          )}
         </DialogContent>
       </Dialog>
     </InstallContext.Provider>
@@ -309,13 +497,19 @@ export function InstallAppProvider({ children }: { children: ReactNode }) {
 }
 
 export function InstallAppAction() {
-  const { available, install } = useContext(InstallContext);
+  const { available, busy, install } = useContext(InstallContext);
   const { locale } = useUi();
   if (!available) return null;
   return (
-    <button type="button" onClick={install}>
+    <button type="button" onClick={install} disabled={busy} aria-busy={busy}>
       <Download size={16} aria-hidden="true" />
-      {locale === 'en' ? 'Install JOBX' : 'დააყენე JOBX'}
+      {busy
+        ? locale === 'en'
+          ? 'Preparing…'
+          : 'მზადდება…'
+        : locale === 'en'
+          ? 'Install JOBX'
+          : 'დააყენე JOBX'}
     </button>
   );
 }

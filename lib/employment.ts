@@ -1,3 +1,4 @@
+// Pattern changes require a new stored-flags migration; search-filter-flags-integration checks parity.
 // Match an offered schedule in the description, where some sources omit the
 // structured field. A bare mention can describe past experience or splitting
 // a full-time job between two duties, so it is not enough on its own.

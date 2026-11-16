@@ -20,7 +20,7 @@ export function requireCompanyPortal() {
   if (process.env.COMPANY_PORTAL_ENABLED !== 'true')
     throw new ApiError('კომპანიის სივრცე ჯერ არ არის ჩართული.', 503);
 }
-const digest = (token: string) =>
+export const digest = (token: string) =>
   createHash('sha256').update(token).digest('hex');
 const derive = (password: string, salt: string) =>
   new Promise<Buffer>((resolve, reject) =>
@@ -49,13 +49,17 @@ export async function verifyCompanyPassword(password: string, stored: string) {
 export function newCompanyPassword() {
   return randomBytes(18).toString('base64url');
 }
-async function recordAttempt(network: string, username: string) {
+export async function recordAttempt(
+  network: string,
+  username: string,
+  scope = 'login',
+) {
   const secret = process.env.SESSION_SECRET;
   if (!secret || secret.length < 32)
     throw new Error('Session protection is not configured');
   const keyed = (s: string) =>
     createHmac('sha256', secret).update(s).digest('hex');
-  const net = keyed('company-network:' + clientNetwork(network)),
+  const net = keyed('company-network:' + scope + ':' + clientNetwork(network)),
     user = keyed('company-user:' + username);
   await transaction(async (c) => {
     await c.query('SELECT pg_advisory_xact_lock(917467)');
@@ -71,7 +75,7 @@ async function recordAttempt(network: string, username: string) {
       [net, user],
     );
     if (rows[0].network >= 8 || rows[0].username >= 12 || rows[0].total >= 300)
-      throw new ApiError('ძალიან ბევრი მცდელობაა. სცადე 15 წუთში.', 429);
+      throw new ApiError('ძალიან ბევრი მცდელობაა. სცადეთ 15 წუთში.', 429);
     await c.query(
       'INSERT INTO company_login_attempts(network_hash,username_hash) VALUES($1,$2)',
       [net, user],
@@ -90,14 +94,16 @@ export async function loginCompany(
     network,
     username.success ? username.data : usernameInput.slice(0, 64).toLowerCase(),
   );
-  const account = username.success
-    ? (
-        await db().query(
-          'SELECT id,password_hash,enabled FROM company_accounts WHERE username=$1',
-          [username.data],
-        )
-      ).rows[0]
-    : null;
+  const email = usernameInput.trim().toLowerCase();
+  const account =
+    username.success || email.includes('@')
+      ? (
+          await db().query(
+            'SELECT id,password_hash,enabled FROM company_accounts WHERE username=$1 OR lower(email)=$1',
+            [username.success ? username.data : email],
+          )
+        ).rows[0]
+      : null;
   const valid = await verifyCompanyPassword(
     password,
     account?.password_hash ?? 'invalid',
@@ -136,9 +142,9 @@ export async function companyIdentity(
   )
     return null;
   const { rows } = await db().query(
-    `UPDATE company_sessions s SET last_seen_at=now() FROM company_accounts a JOIN company_profiles p ON p.company_key=a.company_key
+    `UPDATE company_sessions s SET last_seen_at=now() FROM company_accounts a JOIN company_profiles p ON p.company_key=a.company_key JOIN company_accounts owner ON owner.company_key=a.company_key AND owner.role='owner' AND owner.enabled
     WHERE s.token_hash=$1 AND s.account_id=a.id AND a.enabled AND s.expires_at>now() AND s.last_seen_at>now()-interval '2 hours'
-    RETURNING a.id,a.company_key AS "companyKey",p.name,a.username,a.email,a.must_change_password AS "mustChangePassword"`,
+    RETURNING a.id,a.company_key AS "companyKey",p.name,a.username,a.email,a.must_change_password AS "mustChangePassword",a.role,p.approval_status AS "approvalStatus",a.email_verified AS "emailVerified",a.representative_name AS "representativeName"`,
     [digest(token)],
   );
   return rows[0] ?? null;
@@ -152,7 +158,7 @@ export async function requireCompany(allowPasswordChange = false) {
   if (!company)
     throw new ApiError('კომპანიის სივრცეში შესვლა აუცილებელია.', 401);
   if (company.mustChangePassword && !allowPasswordChange)
-    throw new ApiError('პირველ შესვლაზე შეცვალე დროებითი პაროლი.', 403);
+    throw new ApiError('პირველ შესვლაზე შეცვალეთ დროებითი პაროლი.', 403);
   return company;
 }
 export async function setCompanySession(token: string) {
@@ -212,4 +218,31 @@ export async function changeCompanyPassword(
       ['company:' + company.id, { accountId: company.id }],
     );
   });
+}
+
+export async function requireCompanyRole(
+  roles: readonly string[] = ['owner', 'recruiter', 'viewer'],
+  approved = false,
+  allowPasswordChange = false,
+) {
+  const company = await requireCompany(allowPasswordChange);
+  if (!roles.includes(company.role))
+    throw new ApiError('ამ მოქმედებისთვის საკმარისი უფლება არ გაქვთ.', 403);
+  if (
+    approved &&
+    (company.approvalStatus !== 'approved' || !company.emailVerified)
+  )
+    throw new ApiError(
+      'კანდიდატებზე წვდომისთვის საჭიროა ელფოსტისა და კომპანიის დადასტურება.',
+      403,
+    );
+  return company;
+}
+export async function createCompanySession(accountId: string) {
+  const token = randomBytes(32).toString('hex');
+  await db().query(
+    "INSERT INTO company_sessions(token_hash,account_id,expires_at) VALUES($1,$2,now()+interval '12 hours')",
+    [digest(token), accountId],
+  );
+  return token;
 }

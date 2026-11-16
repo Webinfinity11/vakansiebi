@@ -1,15 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { Client, Pool } from 'pg';
 import { indexingTransition } from '../lib/server/google-indexing';
 import {
   drainIndexingQueue,
   enqueueIndexingNotifications,
+  indexingCanonicalId,
   pruneIndexingQueue,
 } from '../lib/server/indexing-queue';
 import type { Vacancy } from '../lib/types';
+import { fingerprint } from '../worker/adapters';
 
 void test(
   'persisted indexing delivery survives rollback, missing credentials, failures and concurrent edits',
@@ -58,25 +60,38 @@ void test(
     assert.equal(events.length, 1);
     const queue = async () =>
       (await pool.query('SELECT * FROM google_indexing_queue')).rows[0];
+    const addJob = async (jobId: string, published: Vacancy = vacancy) => {
+      await pool.query(
+        "INSERT INTO jobs(id,status,draft,published,fingerprint,published_at) VALUES($1,'published',$2,$2,$3,now())",
+        [jobId, published, fingerprint(published)],
+      );
+      await pool.query(
+        "INSERT INTO source_items(id,source_id,external_id,url,job_id) VALUES($1::uuid,'hr',$1::text,$2,$1::uuid)",
+        [jobId, published.url],
+      );
+    };
+    const removeJobs = async (ids: string[]) => {
+      await pool.query(
+        'DELETE FROM source_items WHERE job_id=ANY($1::uuid[])',
+        [ids],
+      );
+      await pool.query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [ids]);
+    };
     const reset = async () => {
       await pool.query('TRUNCATE google_indexing_queue');
-      await pool.query("UPDATE jobs SET status='published',published=$1", [
-        vacancy,
-      ]);
+      await pool.query(
+        "UPDATE jobs SET status='published',published=$1 WHERE id=$2",
+        [vacancy, id],
+      );
       await enqueueIndexingNotifications(events, pool);
     };
     try {
       await client.query(`CREATE SCHEMA ${schema}`);
       await client.query(`SET search_path TO ${schema}`);
-      await client.query(
-        'CREATE TABLE jobs(id uuid PRIMARY KEY,status text,published jsonb,is_test boolean DEFAULT false)',
-      );
-      await client.query(
-        'CREATE TABLE job_submissions(job_id uuid,is_test boolean DEFAULT false)',
-      );
-      await client.query(
-        readFileSync('db/migrations/037_google_indexing_daily.sql', 'utf8'),
-      );
+      for (const name of readdirSync('db/migrations')
+        .filter((name) => name.endsWith('.sql'))
+        .sort())
+        await client.query(readFileSync('db/migrations/' + name, 'utf8'));
       const migration = readFileSync(
         'db/migrations/050_google_indexing_queue.sql',
         'utf8',
@@ -84,9 +99,9 @@ void test(
       await client.query(migration);
       await client.query(migration);
       await pool.query(
-        "INSERT INTO jobs(id,status,published) VALUES($1,'published',$2)",
-        [id, vacancy],
+        "INSERT INTO sources(id,name,retired) VALUES('hr','hr.ge',false) ON CONFLICT(id) DO UPDATE SET retired=false",
       );
+      await addJob(id);
       await t.test(
         'rollback leaves no notification; publishers without credentials keep committed notifications',
         async () => {
@@ -324,21 +339,95 @@ void test(
         },
       );
       await t.test(
+        'a duplicate consumes no API quota; its public canonical is delivered',
+        async () => {
+          await reset();
+          const newerId = randomUUID();
+          await pool.query(
+            "UPDATE jobs SET published_at=now()-interval '1 day' WHERE id=$1",
+            [id],
+          );
+          await addJob(newerId);
+          await enqueueIndexingNotifications(
+            indexingTransition(
+              newerId,
+              { status: 'pending', published: null },
+              { status: 'published', published: vacancy },
+            ),
+            pool,
+          );
+          assert.equal(await indexingCanonicalId(id, pool), newerId);
+          assert.equal(await indexingCanonicalId(newerId, pool), newerId);
+          const sent: string[] = [];
+          const result = await drainIndexingQueue({
+            connection: pool,
+            settings,
+            send: async (url) => {
+              sent.push(url);
+              return { status: 'sent' };
+            },
+          });
+          assert.equal(result.cancelled, 1);
+          assert.equal(result.sent, 1);
+          assert.equal(sent.length, 1);
+          assert.ok(sent[0].endsWith(newerId));
+          assert.deepEqual(
+            (
+              await pool.query(
+                'SELECT status,last_error,attempts FROM google_indexing_queue WHERE job_id=$1',
+                [id],
+              )
+            ).rows[0],
+            { status: 'cancelled', last_error: 'non-canonical', attempts: 0 },
+          );
+          await removeJobs([newerId]);
+          assert.equal(await indexingCanonicalId(id, pool), id);
+          await enqueueIndexingNotifications(events, pool);
+          const reopened = await drainIndexingQueue({
+            connection: pool,
+            settings,
+            send: async () => ({ status: 'sent' }),
+          });
+          assert.equal(
+            reopened.sent,
+            1,
+            'a republished canonical can requeue unchanged content',
+          );
+        },
+      );
+      await t.test(
+        'a published job whose source is retired is cancelled before sending',
+        async () => {
+          await reset();
+          await pool.query("UPDATE sources SET retired=true WHERE id='hr'");
+          try {
+            assert.equal(await indexingCanonicalId(id, pool), null);
+            const result = await drainIndexingQueue({
+              connection: pool,
+              settings,
+              send: async () => assert.fail('private job announced'),
+            });
+            assert.equal(result.cancelled, 1);
+            assert.equal((await queue()).last_error, 'page-unavailable');
+          } finally {
+            await pool.query("UPDATE sources SET retired=false WHERE id='hr'");
+          }
+        },
+      );
+      await t.test(
         'recent deliveries reserve every fifth slot for the oldest waiting job',
         async () => {
           await reset();
           await pool.query('TRUNCATE google_indexing_queue');
           const ids = Array.from({ length: 7 }, () => randomUUID());
           for (let i = 0; i < ids.length; i++) {
-            await pool.query(
-              "INSERT INTO jobs(id,status,published) VALUES($1,'published',$2)",
-              [ids[i], vacancy],
-            );
+            const distinct = { ...vacancy, company: `Queue fixture ${ids[i]}` };
+            await addJob(ids[i], distinct);
             await enqueueIndexingNotifications(
               indexingTransition(
                 ids[i],
                 { status: 'pending', published: null },
-                { status: 'published', published: vacancy },
+                { status: 'published', published: distinct },
               ),
               pool,
             );
@@ -361,7 +450,7 @@ void test(
           assert.ok(delivered[1].includes(ids[6]));
           assert.equal(delivered.length, 5);
           await pool.query('TRUNCATE google_indexing_queue');
-          await pool.query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [ids]);
+          await removeJobs(ids);
         },
       );
       await t.test(
@@ -369,15 +458,13 @@ void test(
         async () => {
           await reset();
           const otherId = randomUUID();
-          await pool.query(
-            "INSERT INTO jobs(id,status,published) VALUES($1,'published',$2)",
-            [otherId, vacancy],
-          );
+          const distinct = { ...vacancy, company: 'Other queue fixture' };
+          await addJob(otherId, distinct);
           await enqueueIndexingNotifications(
             indexingTransition(
               otherId,
               { status: 'pending', published: null },
-              { status: 'published', published: vacancy },
+              { status: 'published', published: distinct },
             ),
             pool,
           );

@@ -1,4 +1,7 @@
 'use client';
+import { AutoPublishMark, type AutoPublishedJob } from './auto-publish-mark';
+import { RejectMenu, QuickModeration } from './reject-menu';
+import { rejectionText, type JobRejection } from '@/lib/job-rejection';
 import { TrackingSettings } from './tracking-settings';
 import { BillingSettings } from './billing-settings';
 import { SubmissionPayment, placementIsReady } from './submission-payment';
@@ -350,6 +353,16 @@ export default function AdminPanel() {
      open all day paid for a few hundred of them; worse, the list moved under
      whoever was reading it. Every action already reloads, and the refresh
      button is beside the search field. */
+  const moderateRow = async (job: AdminJob, action: 'publish' | 'reject', extras: Record<string, unknown> = {}) => {
+    await request('/api/admin/jobs', {
+      id: job.id, version: job.version, action,
+      ...(action === 'publish' ? { draft: job.draft,
+        ...(job.requested_placement && job.status === 'pending' ? { placement: job.requested_placement } : {}),
+      } : {}),
+      ...extras,
+    });
+    await load();
+  };
   const act = async (action: string, extras: Record<string, unknown> = {}) => {
     if (!selected) return;
     const selectedIndex = jobs.findIndex((job) => job.id === selected.id);
@@ -396,7 +409,7 @@ export default function AdminPanel() {
             ? 'ვაკანსია გამოქვეყნდა. წერილი დაემატა გაგზავნის რიგს.'
             : 'ვაკანსია გამოქვეყნდა.'
           : action === 'reject'
-            ? 'განცხადება უარყოფილია. შეტყობინება არ გაგზავნილა.'
+            ? result.rejectionEmailQueued ? 'განცხადება უარყოფილია. წერილი დაემატა გაგზავნის რიგს.' : 'განცხადება უარყოფილია.'
             : action === 'confirm-payment'
               ? 'ჩარიცხვა დადასტურებულია. ვაკანსია მზადაა გამოსაქვეყნებლად.'
               : 'ცვლილება შენახულია.',
@@ -670,6 +683,7 @@ export default function AdminPanel() {
                     <span>
                       <strong>{j.draft.title}</strong>
                       <small>{j.draft.company}</small>
+                      {j.status === 'rejected' && (j as AdminJob & { rejection?: JobRejection }).rejection && <small className="admin-rejection-reason">{rejectionText((j as AdminJob & { rejection: JobRejection }).rejection.reason, (j as AdminJob & { rejection: JobRejection }).rejection.note)}</small>}
                     </span>
                   </span>
                   <span className="admin-row-meta">
@@ -722,6 +736,8 @@ export default function AdminPanel() {
                     )}
                   </span>
                 </button>
+                {tab === 'submissions' && submissionView === 'submissions-published' && <AutoPublishMark key={j.id} id={j.id} value={(j as AdminJob & AutoPublishedJob).autoPublished} />}
+                {tab === 'submissions' && submissionView === 'submissions' && <QuickModeration disabled={busy} onPublish={() => moderateRow(j, 'publish')} onReject={value => moderateRow(j, 'reject', value)} />}
               </div>
             );
           })}
@@ -2358,13 +2374,10 @@ export default function AdminPanel() {
                     <Check size={16} aria-hidden="true" />
                     დადასტურება და გამოქვეყნება
                   </button>
-                  <button
-                    className="ds-btn ds-btn--danger"
-                    disabled={busy}
-                    onClick={() => setConfirm({ action: 'reject' })}
-                  >
-                    უარყოფა
-                  </button>
+                  {submission ? <RejectMenu key={selected.id} disabled={busy} onReject={async value => {
+                    await request('/api/admin/jobs', { id: selected.id, version: selected.version, action: 'reject', ...value });
+                    setSelected(null); setMessage('განცხადება უარყოფილია.'); await load();
+                  }} /> : <button className="ds-btn ds-btn--ghost admin-ghost-danger" disabled={busy} onClick={() => setConfirm({ action: 'reject' })}>უარყოფა</button>}
                   <button
                     className="ds-btn ds-btn--secondary"
                     disabled={busy}
@@ -2405,13 +2418,10 @@ export default function AdminPanel() {
                   >
                     არქივში გადატანა
                   </button>
-                  <button
-                    className="ds-btn ds-btn--ghost admin-ghost-danger"
-                    disabled={busy}
-                    onClick={() => setConfirm({ action: 'reject' })}
-                  >
-                    უარყოფა
-                  </button>
+                  {submission ? <RejectMenu key={selected.id} disabled={busy} onReject={async value => {
+                    await request('/api/admin/jobs', { id: selected.id, version: selected.version, action: 'reject', ...value });
+                    setSelected(null); setMessage('განცხადება უარყოფილია.'); await load();
+                  }} /> : <button className="ds-btn ds-btn--ghost admin-ghost-danger" disabled={busy} onClick={() => setConfirm({ action: 'reject' })}>უარყოფა</button>}
                   {['archived', 'rejected'].includes(selected.status) && (
                     <button
                       className="ds-btn ds-btn--ghost"

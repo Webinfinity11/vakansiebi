@@ -56,22 +56,90 @@
 .install-instructions [data-slot='dialog-description'] {
   line-height: 1.7;
 }
-.install-instructions ol {
+.install-instructions .install-steps {
   margin: 0;
-  padding-left: 24px;
-  list-style: decimal;
+  padding: 0;
+  list-style: none;
+  counter-reset: install-step;
   color: var(--ds-ink-2);
-  line-height: 1.8;
+  display: grid;
+  gap: 8px;
 }
-.install-instructions li + li {
-  margin-top: 12px;
+.install-steps li {
+  display: grid;
+  grid-template-columns: 18px 40px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  background: var(--ds-surface-muted);
+  counter-increment: install-step;
 }
-.install-instructions li svg {
-  display: inline;
-  vertical-align: middle;
-  margin-right: 6px;
-  color: var(--ds-accent-ink);
+.install-steps li::before {
+  content: counter(install-step);
+  color: var(--ds-ink-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+.install-step-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--ds-accent);
+  color: var(--ds-on-accent);
+}
+.install-steps strong,
+.install-steps li > div > span {
+  display: block;
+  line-height: 1.5;
+}
+.install-steps strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ds-ink);
+}
+.install-steps li > div > span {
+  margin-top: 3px;
+  color: var(--ds-ink-3);
+  font-size: 12px;
+}
+.install-step-note {
+  margin: 0;
+  color: var(--ds-ink-3);
+  font-size: 12px;
+  line-height: 1.65;
 }
 .install-instructions > button {
+  min-height: 44px;
+}
+
+.install-share-pointer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  background: var(--ds-surface-muted);
+  color: var(--ds-ink-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.install-share-pointer svg {
+  flex-shrink: 0;
+  color: var(--ds-accent-ink);
+}
+.install-browser-help {
+  display: grid;
+  gap: 12px;
+}
+.install-browser-help p {
+  margin: 0;
+  line-height: 1.7;
+}
+.install-browser-help button {
   min-height: 44px;
 }

@@ -8,7 +8,7 @@ import { companyVacancyTitle } from './company-vacancy-title';
 import { vacancySegment } from './vacancy-navigation';
 import { salaryFacts } from './salary-summary';
 import { vacancySummary } from './vacancy-summary';
-import { siteName, siteAlternateNames } from './site-brand';
+import { siteSocialProfiles, siteName, siteAlternateNames } from './site-brand';
 import { invoiceContact } from './billing';
 
 export const siteUrl = 'https://jobx.ge';
@@ -321,6 +321,9 @@ export function jobPosting(
       .filter(Boolean)
       .map((line) => `<p>${htmlText(line)}</p>`)
       .join(''),
+    ...(job.companyOwned && job.companyProfile?.benefits?.some(benefit => benefit.trim())
+      ? { jobBenefits: job.companyProfile.benefits.filter(benefit => benefit.trim()).join('; ') }
+      : {}),
     datePosted: job.datePosted,
     ...(job.deadline ? { validThrough: `${job.deadline}T23:59:59+04:00` } : {}),
     hiringOrganization: {
@@ -352,6 +355,11 @@ export function jobPosting(
           ),
         }),
     ...(employment ? { employmentType: employment } : {}),
+    ...(() => {
+      const value = job.facts?.find(f => f.label === 'გამოცდილება')?.value ?? '';
+      const months = ({ '1–3 წელი': 12, '3–5 წელი': 36, '5 წელზე მეტი': 60 } as Record<string, number>)[value];
+      return months ? { experienceRequirements: { '@type': 'OccupationalExperienceRequirements', monthsOfExperience: months } } : {};
+    })(),
     /* Google prints the pay beside a job result when the posting publishes it,
        and thousands here do. Only what the board itself shows is published: one
        price, one period, read back from the label the reader sees, with
@@ -404,6 +412,7 @@ export function siteIdentity() {
       alternateName: siteAlternateNames,
       url: siteUrl + '/',
       logo: siteUrl + '/brand/jobx-mark.png',
+      sameAs: siteSocialProfiles.map((profile) => profile.url),
       areaServed: { '@type': 'Country', name: 'Georgia' },
       contactPoint: [
         {

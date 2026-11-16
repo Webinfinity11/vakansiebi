@@ -59,7 +59,9 @@ export function SalaryExplorer({
       .sort((a, b) =>
         sort === 'salary'
           ? (b[period]?.median ?? -1) - (a[period]?.median ?? -1)
-          : b.total - a.total,
+          : period === 'day'
+            ? b.dayCount - a.dayCount
+            : b.total - a.total,
       );
   }, [roles, query, sort, period, group, detail, showAll]);
   const selected = roles[0],
@@ -394,20 +396,30 @@ export function SalaryExplorer({
                   {t('შუა მაჩვენებელი', 'Median')}
                 </span>
                 <span>{t('ხელფასი მითითებულია', 'Pay stated in')}</span>
-                <span />
+                <span>{t('ვაკანსიები', 'Jobs')}</span>
               </div>
             )}
             <ul>
               {(expanded ? filtered : filtered.slice(0, 12)).map((role) => {
                 const s = role[period];
+                const count = payCount(role);
+                const jobCount = period === 'day' ? count : role.total;
+                const jobsLabel = t(
+                  `${number(jobCount)} ${period === 'day' ? 'დღიური ვაკანსია' : 'ვაკანსია'}`,
+                  `${number(jobCount)} ${period === 'day' ? 'daily-pay ' : ''}${jobCount === 1 ? 'job' : 'jobs'}`,
+                );
                 return (
                   <li key={role.slug}>
-                    <Link
-                      href={`/salaries/${role.slug}${period === 'day' ? '?period=day' : ''}`}
-                      className="salary-row"
-                      prefetch={false}
-                    >
-                      <div className="salary-role">
+                    <div className="salary-row" data-has-pay={!!s}>
+                      <Link
+                        href={`/salaries/${role.slug}${period === 'day' ? '?period=day' : ''}`}
+                        className="salary-role"
+                        prefetch={false}
+                        title={t(
+                          'ხელფასის სტატისტიკის ნახვა',
+                          'View salary statistics',
+                        )}
+                      >
                         <span className="salary-role-icon" aria-hidden="true">
                           <CategoryIcon category={role.group} size={18} />
                         </span>
@@ -421,14 +433,9 @@ export function SalaryExplorer({
                               <span>{translateUi(role.group, locale)}</span>
                             )
                           )}
-                          <span>
-                            {t(
-                              `${number(role.total)} ვაკანსია`,
-                              `${number(role.total)} ${role.total === 1 ? 'job' : 'jobs'}`,
-                            )}
-                          </span>
+                          <span>{jobsLabel}</span>
                         </div>
-                      </div>
+                      </Link>
                       <div className="salary-range">
                         <span className="salary-mobile-label">
                           {t('დიაპაზონი', 'Range')}
@@ -438,6 +445,12 @@ export function SalaryExplorer({
                             <strong>
                               {number(s.low)} – {number(s.high)}{' '}
                               <small>₾</small>
+                              <span className="salary-amount-period">
+                                /{' '}
+                                {period === 'day'
+                                  ? t('დღე', 'day')
+                                  : t('თვე', 'month')}
+                              </span>
                             </strong>
                             <div
                               className="salary-mini-range"
@@ -473,25 +486,13 @@ export function SalaryExplorer({
                         )}
                       </div>
                       <div className="salary-sample">
-                        {(period === 'month'
-                          ? role.monthCount
-                          : role.dayCount) > 0 ? (
+                        {count > 0 ? (
                           <>
-                            <b>
-                              {number(
-                                period === 'month'
-                                  ? role.monthCount
-                                  : role.dayCount,
-                              )}
-                            </b>
+                            <b>{number(count)}</b>
                             <span>
                               {t(
                                 'განცხადება',
-                                (period === 'month'
-                                  ? role.monthCount
-                                  : role.dayCount) === 1
-                                  ? 'listing'
-                                  : 'listings',
+                                count === 1 ? 'listing' : 'listings',
                               )}
                             </span>
                           </>
@@ -499,12 +500,32 @@ export function SalaryExplorer({
                           <span>{t('არ არის მითითებული', 'Not stated')}</span>
                         )}
                       </div>
-                      <ArrowUpRight
-                        size={18}
-                        className="salary-row-arrow"
-                        aria-hidden="true"
-                      />
-                    </Link>
+                      {jobCount > 0 ? (
+                        <Link
+                          href={salaryVacanciesHref(role.href, period)}
+                          prefetch={false}
+                          className="salary-vacancies-link"
+                          aria-label={`${translateUi(role.label, locale)} — ${jobsLabel}`}
+                        >
+                          <span className="salary-vacancies-desktop">
+                            {t('ვაკანსიები', 'Jobs')}
+                          </span>
+                          <span className="salary-vacancies-mobile">
+                            {t(`ნახე ${jobsLabel}`, `Browse ${jobsLabel}`)}
+                          </span>
+                          <ArrowUpRight size={16} aria-hidden="true" />
+                        </Link>
+                      ) : (
+                        <span className="salary-vacancies-unavailable">
+                          {period === 'day'
+                            ? t(
+                                'დღიური თანხა არ არის მითითებული',
+                                'No daily pay stated',
+                              )
+                            : t('ვაკანსია არ არის', 'No jobs available')}
+                        </span>
+                      )}
+                    </div>
                   </li>
                 );
               })}

@@ -1,0 +1,1752 @@
+{
+  "asOf": "2026-11-16T12:00:00Z",
+  "totals": {
+    "name": {
+      "correct": 0,
+      "expected": 12
+    },
+    "email": {
+      "correct": 0,
+      "expected": 12
+    },
+    "phone": {
+      "correct": 0,
+      "expected": 12
+    },
+    "city": {
+      "correct": 6,
+      "expected": 12
+    },
+    "roles": {
+      "correct": 1,
+      "expected": 12
+    },
+    "years": {
+      "correct": 2,
+      "expected": 12
+    },
+    "education": {
+      "correct": 4,
+      "expected": 12
+    },
+    "educationLevel": {
+      "correct": 4,
+      "expected": 12
+    },
+    "skills": {
+      "correct": 3,
+      "expected": 12
+    },
+    "languages": {
+      "correct": 5,
+      "expected": 12
+    },
+    "certifications": {
+      "correct": 0,
+      "expected": 12
+    },
+    "roleDates": {
+      "correct": 0,
+      "expected": 12
+    }
+  },
+  "correct": 25,
+  "expected": 144,
+  "results": [
+    {
+      "filename": "europass-en.pdf",
+      "chars": 471,
+      "extractMs": 1054.86,
+      "parseMs": 45.51,
+      "totalMs": 1100.37,
+      "text": "Alex Sample\nsynthetic1@example.com\n+995 555 00 00 01\nTbilisi\nWORK EXPERIENCE\nData Analyst — Example Europe\n01/07/2022 – Current\nJunior Analyst — Sample Europe\n01/03/2019 – 30/06/2022\nEDUCATION AND TRAINING\nBachelor of Science — Example University\nLANGUAGE SKILLS\nMother tongue(s): Georgian\nEnglish: Listening B2 Reading B2 Spoken interaction B2\nSpoken production B2 Writing B2\nDIGITAL SKILLS\nExcel, SQL, Data visualization\nCERTIFICATIONS\nGoogle Data Analytics Certificate",
+      "profile": {
+        "years": 4,
+        "roles": [
+          "01/"
+        ],
+        "skills": [
+          "Excel",
+          "SQL"
+        ],
+        "languages": [
+          {
+            "name": "ქართული",
+            "level": null
+          },
+          {
+            "name": "ინგლისური",
+            "level": "b2"
+          }
+        ],
+        "education": [],
+        "educationLevel": null,
+        "city": "თბილისი",
+        "text": "Alex Sample\nsynthetic1@example.com\n+995 555 00 00 01\nTbilisi\nWORK EXPERIENCE\nData Analyst — Example Europe\n01/07/2022 – Current\nJunior Analyst — Sample Europe\n01/03/2019 – 30/06/2022\nEDUCATION AND TRAINING\nBachelor of Science — Example University\nLANGUAGE SKILLS\nMother tongue(s): Georgian\nEnglish: Listening B2 Reading B2 Spoken interaction B2\nSpoken production B2 Writing B2\nDIGITAL SKILLS\nExcel, SQL, Data visualization\nCERTIFICATIONS\nGoogle Data Analytics Certificate"
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "Alex Sample",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic1@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 01",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "თბილისი",
+          "actual": "თბილისი",
+          "ok": true
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "Data Analyst — Example Europe",
+            "Junior Analyst — Sample Europe"
+          ],
+          "actual": [
+            "01/"
+          ],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 7,
+          "actual": 4,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "Bachelor of Science — Example University"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "Excel",
+            "SQL",
+            "Data visualization"
+          ],
+          "actual": [
+            "Excel",
+            "SQL"
+          ],
+          "ok": false
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ქართული",
+              "level": "native"
+            },
+            {
+              "name": "ინგლისური",
+              "level": "b2"
+            }
+          ],
+          "actual": [
+            {
+              "name": "ქართული",
+              "level": null
+            },
+            {
+              "name": "ინგლისური",
+              "level": "b2"
+            }
+          ],
+          "ok": false
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "Google Data Analytics Certificate"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2022-07",
+              "end": "current"
+            },
+            {
+              "start": "2019-03",
+              "end": "2022-06"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": true,
+        "email": true,
+        "phone": true
+      }
+    },
+    {
+      "filename": "linkedin-export.pdf",
+      "chars": 372,
+      "extractMs": 12.42,
+      "parseMs": 9.36,
+      "totalMs": 21.78,
+      "text": "Contact Robin Demo\nsynthetic2@example.com Summary\n+995 555 00 00 02 Product analytics and reporting.\nTbilisi Experience\nTop Skills Product Analyst — Fictional Network\nSQL January 2020 - Present (5 years 11 months)\nTableau Education\nStakeholder management Master of Science — Sample Institute\nLanguages\nEnglish (Full Professional)\nCertifications\nProfessional Scrum Master I",
+      "profile": {
+        "years": null,
+        "roles": [],
+        "skills": [
+          "SQL"
+        ],
+        "languages": [
+          {
+            "name": "ინგლისური",
+            "level": null
+          }
+        ],
+        "education": [],
+        "educationLevel": null,
+        "city": "თბილისი",
+        "text": "Contact Robin Demo\nsynthetic2@example.com Summary\n+995 555 00 00 02 Product analytics and reporting.\nTbilisi Experience\nTop Skills Product Analyst — Fictional Network\nSQL January 2020 - Present (5 years 11 months)\nTableau Education\nStakeholder management Master of Science — Sample Institute\nLanguages\nEnglish (Full Professional)\nCertifications\nProfessional Scrum Master I"
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "Robin Demo",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic2@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 02",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "თბილისი",
+          "actual": "თბილისი",
+          "ok": true
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "Product Analyst — Fictional Network"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 6,
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "Master of Science — Sample Institute"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "educationLevel",
+          "expected": "master",
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "SQL",
+            "Tableau",
+            "Stakeholder management"
+          ],
+          "actual": [
+            "SQL"
+          ],
+          "ok": false
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ინგლისური",
+              "level": "full professional"
+            }
+          ],
+          "actual": [
+            {
+              "name": "ინგლისური",
+              "level": null
+            }
+          ],
+          "ok": false
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "Professional Scrum Master I"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2020-01",
+              "end": "current"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": true,
+        "email": true,
+        "phone": true
+      }
+    },
+    {
+      "filename": "two-column-canva.pdf",
+      "chars": 312,
+      "extractMs": 7.78,
+      "parseMs": 0.83,
+      "totalMs": 8.6,
+      "text": "Dara Fiction\nE X P E R I E N C E\nDesigner — Imaginary Studio\n2019 — 2022\nE D U C A T I O N\nBachelor of Arts — Fictional Academy\nC E R T I F I C A T I O N S\nDesign Foundations Certificate\n+ Contact\nsynthetic3@example.com\n+995 555 00 00 03\nBatumi\nS K I L L S\nFigma\nPhotoshop\nTypography\nL A N G U A G E S\nEnglish C1",
+      "profile": {
+        "years": null,
+        "roles": [],
+        "skills": [
+          "Photoshop",
+          "Figma"
+        ],
+        "languages": [
+          {
+            "name": "ინგლისური",
+            "level": "c1"
+          }
+        ],
+        "education": [],
+        "educationLevel": null,
+        "city": "ბათუმი",
+        "text": "Dara Fiction\nE X P E R I E N C E\nDesigner — Imaginary Studio\n2019 — 2022\nE D U C A T I O N\nBachelor of Arts — Fictional Academy\nC E R T I F I C A T I O N S\nDesign Foundations Certificate\n+ Contact\nsynthetic3@example.com\n+995 555 00 00 03\nBatumi\nS K I L L S\nFigma\nPhotoshop\nTypography\nL A N G U A G E S\nEnglish C1"
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "Dara Fiction",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic3@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 03",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "ბათუმი",
+          "actual": "ბათუმი",
+          "ok": true
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "Designer — Imaginary Studio"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 4,
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "Bachelor of Arts — Fictional Academy"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "Figma",
+            "Photoshop",
+            "Typography"
+          ],
+          "actual": [
+            "Photoshop",
+            "Figma"
+          ],
+          "ok": false
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ინგლისური",
+              "level": "c1"
+            }
+          ],
+          "actual": [
+            {
+              "name": "ინგლისური",
+              "level": "c1"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "Design Foundations Certificate"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2019",
+              "end": "2022"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": true,
+        "email": true,
+        "phone": true
+      }
+    },
+    {
+      "filename": "us-resume.pdf",
+      "chars": 392,
+      "extractMs": 6.96,
+      "parseMs": 21.57,
+      "totalMs": 28.53,
+      "text": "Mira Example\nsynthetic4@example.com\n+995 555 00 00 04\nBoston\nPROFESSIONAL SUMMARY\nAnalyst focused on reliable reporting.\nEXPERIENCE\nSenior Analyst — Fictional Labs\nJan 2020 – Dec 2023\nAnalyst — Example Works\nMar 2018 – Jun 2021\nEDUCATION\nBachelor of Science — Fictional University\nSKILLS\nSQL, Python, Tableau\nLANGUAGES\nEnglish native; German B2\nCERTIFICATIONS\nAWS Certified Cloud Practitioner",
+      "profile": {
+        "years": 5,
+        "roles": [
+          "Senior Analyst — Fictional Labs",
+          "Analyst — Example Works"
+        ],
+        "skills": [
+          "SQL",
+          "Python",
+          "Tableau"
+        ],
+        "languages": [
+          {
+            "name": "ინგლისური",
+            "level": "native"
+          },
+          {
+            "name": "გერმანული",
+            "level": "b2"
+          }
+        ],
+        "education": [
+          "Bachelor of Science — Fictional University"
+        ],
+        "educationLevel": "bachelor",
+        "city": "",
+        "text": "Mira Example\nsynthetic4@example.com\n+995 555 00 00 04\nBoston\nPROFESSIONAL SUMMARY\nAnalyst focused on reliable reporting.\nEXPERIENCE\nSenior Analyst — Fictional Labs\nJan 2020 – Dec 2023\nAnalyst — Example Works\nMar 2018 – Jun 2021\nEDUCATION\nBachelor of Science — Fictional University\nSKILLS\nSQL, Python, Tableau\nLANGUAGES\nEnglish native; German B2\nCERTIFICATIONS\nAWS Certified Cloud Practitioner"
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "Mira Example",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic4@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 04",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "Boston",
+          "actual": "",
+          "ok": false
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "Senior Analyst — Fictional Labs",
+            "Analyst — Example Works"
+          ],
+          "actual": [
+            "Senior Analyst — Fictional Labs",
+            "Analyst — Example Works"
+          ],
+          "ok": true
+        },
+        {
+          "field": "years",
+          "expected": 5,
+          "actual": 5,
+          "ok": true
+        },
+        {
+          "field": "education",
+          "expected": [
+            "Bachelor of Science — Fictional University"
+          ],
+          "actual": [
+            "Bachelor of Science — Fictional University"
+          ],
+          "ok": true
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": "bachelor",
+          "ok": true
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "SQL",
+            "Python",
+            "Tableau"
+          ],
+          "actual": [
+            "SQL",
+            "Python",
+            "Tableau"
+          ],
+          "ok": true
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ინგლისური",
+              "level": "native"
+            },
+            {
+              "name": "გერმანული",
+              "level": "b2"
+            }
+          ],
+          "actual": [
+            {
+              "name": "ინგლისური",
+              "level": "native"
+            },
+            {
+              "name": "გერმანული",
+              "level": "b2"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "AWS Certified Cloud Practitioner"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2020-01",
+              "end": "2023-12"
+            },
+            {
+              "start": "2018-03",
+              "end": "2021-06"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": true,
+        "email": true,
+        "phone": true
+      }
+    },
+    {
+      "filename": "hh-ru.pdf",
+      "chars": 317,
+      "extractMs": 5.45,
+      "parseMs": 0.69,
+      "totalMs": 6.14,
+      "text": "Алина Примерова\nsynthetic5@example.com\n+995 555 00 00 05\nКутаиси\nОпыт работы — 6 лет 3 месяца\nБухгалтер — Пример Компания\nИюнь 2020 — настоящее время\nОбразование\nМагистр экономики — Учебный институт\nКлючевые навыки\n1С, Excel, CRM\nЗнание языков: Русский — Родной, Английский — B2\nСертификаты\nСертификат 1С Профессионал",
+      "profile": {
+        "years": null,
+        "roles": [],
+        "skills": [
+          "Excel",
+          "1C",
+          "CRM",
+          "ბუღალტერია",
+          "Знание языков: Русский — Родной",
+          "Английский — B2",
+          "Сертификаты"
+        ],
+        "languages": [
+          {
+            "name": "რუსული",
+            "level": "native"
+          },
+          {
+            "name": "ინგლისური",
+            "level": "b2"
+          }
+        ],
+        "education": [
+          "Магистр экономики — Учебный институт"
+        ],
+        "educationLevel": "master",
+        "city": "ქუთაისი",
+        "text": "Алина Примерова\nsynthetic5@example.com\n+995 555 00 00 05\nКутаиси\nОпыт работы — 6 лет 3 месяца\nБухгалтер — Пример Компания\nИюнь 2020 — настоящее время\nОбразование\nМагистр экономики — Учебный институт\nКлючевые навыки\n1С, Excel, CRM\nЗнание языков: Русский — Родной, Английский — B2\nСертификаты\nСертификат 1С Профессионал"
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "Алина Примерова",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic5@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 05",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "ქუთაისი",
+          "actual": "ქუთაისი",
+          "ok": true
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "Бухгалтер — Пример Компания"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 6,
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "Магистр экономики — Учебный институт"
+          ],
+          "actual": [
+            "Магистр экономики — Учебный институт"
+          ],
+          "ok": true
+        },
+        {
+          "field": "educationLevel",
+          "expected": "master",
+          "actual": "master",
+          "ok": true
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "1C",
+            "Excel",
+            "CRM"
+          ],
+          "actual": [
+            "Excel",
+            "1C",
+            "CRM",
+            "ბუღალტერია",
+            "Знание языков: Русский — Родной",
+            "Английский — B2",
+            "Сертификаты"
+          ],
+          "ok": false
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "რუსული",
+              "level": "native"
+            },
+            {
+              "name": "ინგლისური",
+              "level": "b2"
+            }
+          ],
+          "actual": [
+            {
+              "name": "რუსული",
+              "level": "native"
+            },
+            {
+              "name": "ინგლისური",
+              "level": "b2"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "Сертификат 1С Профессионал"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2020-06",
+              "end": "current"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": true,
+        "email": true,
+        "phone": true
+      }
+    },
+    {
+      "filename": "georgian.pdf",
+      "chars": 284,
+      "extractMs": 6.11,
+      "parseMs": 0.69,
+      "totalMs": 6.8,
+      "text": "ნინა მაგალითაძე\nsynthetic6@example.com\n+995 555 00 00 06\nთბილისი\nსამუშაო გამოცდილება\nბუღალტერი — სადემო კომპანია\n2021 წლის მარტი – დღემდე\nგანათლება\nბაკალავრი — სადემო უნივერსიტეტი\nუნარები\nExcel, 1C, ბუღალტერია\nენები\nქართული მშობლიური\nინგლისური B2\nსერტიფიკატები\nბუღალტერიის სერტიფიკატი",
+      "profile": {
+        "years": null,
+        "roles": [
+          "ბუღალტერი — სადემო კომპანია",
+          "2021 წლის მარტი – დღემდე"
+        ],
+        "skills": [
+          "Excel",
+          "1C",
+          "ბუღალტერია"
+        ],
+        "languages": [
+          {
+            "name": "ქართული",
+            "level": "native"
+          },
+          {
+            "name": "ინგლისური",
+            "level": "b2"
+          }
+        ],
+        "education": [
+          "ბაკალავრი — სადემო უნივერსიტეტი"
+        ],
+        "educationLevel": "bachelor",
+        "city": "თბილისი",
+        "text": "ნინა მაგალითაძე\nsynthetic6@example.com\n+995 555 00 00 06\nთბილისი\nსამუშაო გამოცდილება\nბუღალტერი — სადემო კომპანია\n2021 წლის მარტი – დღემდე\nგანათლება\nბაკალავრი — სადემო უნივერსიტეტი\nუნარები\nExcel, 1C, ბუღალტერია\nენები\nქართული მშობლიური\nინგლისური B2\nსერტიფიკატები\nბუღალტერიის სერტიფიკატი"
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "ნინა მაგალითაძე",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic6@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 06",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "თბილისი",
+          "actual": "თბილისი",
+          "ok": true
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "ბუღალტერი — სადემო კომპანია"
+          ],
+          "actual": [
+            "ბუღალტერი — სადემო კომპანია",
+            "2021 წლის მარტი – დღემდე"
+          ],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 5,
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "ბაკალავრი — სადემო უნივერსიტეტი"
+          ],
+          "actual": [
+            "ბაკალავრი — სადემო უნივერსიტეტი"
+          ],
+          "ok": true
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": "bachelor",
+          "ok": true
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "Excel",
+            "1C",
+            "ბუღალტერია"
+          ],
+          "actual": [
+            "Excel",
+            "1C",
+            "ბუღალტერია"
+          ],
+          "ok": true
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ქართული",
+              "level": "native"
+            },
+            {
+              "name": "ინგლისური",
+              "level": "b2"
+            }
+          ],
+          "actual": [
+            {
+              "name": "ქართული",
+              "level": "native"
+            },
+            {
+              "name": "ინგლისური",
+              "level": "b2"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "ბუღალტერიის სერტიფიკატი"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2021-03",
+              "end": "current"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": true,
+        "email": true,
+        "phone": true
+      }
+    },
+    {
+      "filename": "georgian-acadnusx.txt",
+      "chars": 0,
+      "extractMs": 0.02,
+      "parseMs": 0.19,
+      "totalMs": 0.21,
+      "text": "",
+      "profile": {
+        "years": null,
+        "roles": [],
+        "skills": [],
+        "languages": [],
+        "education": [],
+        "educationLevel": null,
+        "city": "",
+        "text": ""
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "ნინა მაგალითაძე",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic6@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 06",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "თბილისი",
+          "actual": "",
+          "ok": false
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "ბუღალტერი — სადემო კომპანია"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 5,
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "ბაკალავრი — სადემო უნივერსიტეტი"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "Excel",
+            "1C",
+            "ბუღალტერია"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ქართული",
+              "level": "native"
+            },
+            {
+              "name": "ინგლისური",
+              "level": "b2"
+            }
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "ბუღალტერიის სერტიფიკატი"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2021-03",
+              "end": "current"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": false,
+        "email": false,
+        "phone": false
+      },
+      "directTextDiagnostic": {
+        "years": null,
+        "roles": [],
+        "skills": [
+          "Excel",
+          "1C"
+        ],
+        "languages": [],
+        "education": [],
+        "educationLevel": null,
+        "city": "თბილისი",
+        "text": "nina magaliTaZe\nsynthetic6@example.com\n+995 555 00 00 06\nTbilisi\nsamuSao gamocdileba\nbuRalteri — sademo kompania\n2021 wlis marti – dRemde\nganaTleba\nbakalavri — sademo universiteti\nunarebi\nExcel, 1C, buRalteria\nenebi\nqarTuli mSobliuri\ninglisuri B2\nsertifikatebi\nbuRalteriis sertifikati"
+      }
+    },
+    {
+      "filename": "georgian-acadnusx.pdf",
+      "chars": 284,
+      "extractMs": 5.62,
+      "parseMs": 0.46,
+      "totalMs": 6.08,
+      "text": "nina magaliTaZe\nsynthetic6@example.com\n+995 555 00 00 06\nTbilisi\nsamuSao gamocdileba\nbuRalteri — sademo kompania\n2021 wlis marti – dRemde\nganaTleba\nbakalavri — sademo universiteti\nunarebi\nExcel, 1C, buRalteria\nenebi\nqarTuli mSobliuri\ninglisuri B2\nsertifikatebi\nbuRalteriis sertifikati",
+      "profile": {
+        "years": null,
+        "roles": [],
+        "skills": [
+          "Excel",
+          "1C"
+        ],
+        "languages": [],
+        "education": [],
+        "educationLevel": null,
+        "city": "თბილისი",
+        "text": "nina magaliTaZe\nsynthetic6@example.com\n+995 555 00 00 06\nTbilisi\nsamuSao gamocdileba\nbuRalteri — sademo kompania\n2021 wlis marti – dRemde\nganaTleba\nbakalavri — sademo universiteti\nunarebi\nExcel, 1C, buRalteria\nenebi\nqarTuli mSobliuri\ninglisuri B2\nsertifikatebi\nbuRalteriis sertifikati"
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "ნინა მაგალითაძე",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic6@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 06",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "თბილისი",
+          "actual": "თბილისი",
+          "ok": true
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "ბუღალტერი — სადემო კომპანია"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 5,
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "ბაკალავრი — სადემო უნივერსიტეტი"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "Excel",
+            "1C",
+            "ბუღალტერია"
+          ],
+          "actual": [
+            "Excel",
+            "1C"
+          ],
+          "ok": false
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ქართული",
+              "level": "native"
+            },
+            {
+              "name": "ინგლისური",
+              "level": "b2"
+            }
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "ბუღალტერიის სერტიფიკატი"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2021-03",
+              "end": "current"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": false,
+        "email": true,
+        "phone": true
+      }
+    },
+    {
+      "filename": "word-table.docx",
+      "chars": 380,
+      "extractMs": 0.93,
+      "parseMs": 1.16,
+      "totalMs": 2.09,
+      "text": "synthetic4@example.com\n+995 555 00 00 04\nBoston\nPROFESSIONAL SUMMARY\nAnalyst focused on reliable reporting.\nEXPERIENCE\nJan 2020 – Dec 2023\nSenior Analyst — Fictional Labs\nMar 2018 – Jun 2021\nAnalyst — Example Works\nEDUCATION\nBachelor of Science — Fictional University\nSKILLS\nSQL, Python, Tableau\nLANGUAGES\nEnglish native; German B2\nCERTIFICATIONS\nAWS Certified Cloud Practitioner\n",
+      "profile": {
+        "years": 5,
+        "roles": [
+          "Senior Analyst — Fictional Labs"
+        ],
+        "skills": [
+          "SQL",
+          "Python",
+          "Tableau"
+        ],
+        "languages": [
+          {
+            "name": "ინგლისური",
+            "level": "native"
+          },
+          {
+            "name": "გერმანული",
+            "level": "b2"
+          }
+        ],
+        "education": [
+          "Bachelor of Science — Fictional University"
+        ],
+        "educationLevel": "bachelor",
+        "city": "",
+        "text": "synthetic4@example.com\n+995 555 00 00 04\nBoston\nPROFESSIONAL SUMMARY\nAnalyst focused on reliable reporting.\nEXPERIENCE\nJan 2020 – Dec 2023\nSenior Analyst — Fictional Labs\nMar 2018 – Jun 2021\nAnalyst — Example Works\nEDUCATION\nBachelor of Science — Fictional University\nSKILLS\nSQL, Python, Tableau\nLANGUAGES\nEnglish native; German B2\nCERTIFICATIONS\nAWS Certified Cloud Practitioner\n"
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "Mira Example",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic4@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 04",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "Boston",
+          "actual": "",
+          "ok": false
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "Senior Analyst — Fictional Labs",
+            "Analyst — Example Works"
+          ],
+          "actual": [
+            "Senior Analyst — Fictional Labs"
+          ],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 5,
+          "actual": 5,
+          "ok": true
+        },
+        {
+          "field": "education",
+          "expected": [
+            "Bachelor of Science — Fictional University"
+          ],
+          "actual": [
+            "Bachelor of Science — Fictional University"
+          ],
+          "ok": true
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": "bachelor",
+          "ok": true
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "SQL",
+            "Python",
+            "Tableau"
+          ],
+          "actual": [
+            "SQL",
+            "Python",
+            "Tableau"
+          ],
+          "ok": true
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ინგლისური",
+              "level": "native"
+            },
+            {
+              "name": "გერმანული",
+              "level": "b2"
+            }
+          ],
+          "actual": [
+            {
+              "name": "ინგლისური",
+              "level": "native"
+            },
+            {
+              "name": "გერმანული",
+              "level": "b2"
+            }
+          ],
+          "ok": true
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "AWS Certified Cloud Practitioner"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2020-01",
+              "end": "2023-12"
+            },
+            {
+              "start": "2018-03",
+              "end": "2021-06"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": false,
+        "email": true,
+        "phone": true
+      }
+    },
+    {
+      "filename": "scanned.pdf",
+      "chars": 0,
+      "extractMs": 2.96,
+      "parseMs": 0.17,
+      "totalMs": 3.13,
+      "text": "",
+      "profile": {
+        "years": null,
+        "roles": [],
+        "skills": [],
+        "languages": [],
+        "education": [],
+        "educationLevel": null,
+        "city": "",
+        "text": ""
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "Mira Example",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic4@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 04",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "Boston",
+          "actual": "",
+          "ok": false
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "Senior Analyst — Fictional Labs",
+            "Analyst — Example Works"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 5,
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "Bachelor of Science — Fictional University"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "SQL",
+            "Python",
+            "Tableau"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ინგლისური",
+              "level": "native"
+            },
+            {
+              "name": "გერმანული",
+              "level": "b2"
+            }
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "AWS Certified Cloud Practitioner"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2020-01",
+              "end": "2023-12"
+            },
+            {
+              "start": "2018-03",
+              "end": "2021-06"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": false,
+        "email": false,
+        "phone": false
+      }
+    },
+    {
+      "filename": "us-resume.rtf",
+      "chars": 0,
+      "extractMs": 0.02,
+      "parseMs": 0.1,
+      "totalMs": 0.12,
+      "text": "",
+      "profile": {
+        "years": null,
+        "roles": [],
+        "skills": [],
+        "languages": [],
+        "education": [],
+        "educationLevel": null,
+        "city": "",
+        "text": ""
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "Mira Example",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic4@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 04",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "Boston",
+          "actual": "",
+          "ok": false
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "Senior Analyst — Fictional Labs",
+            "Analyst — Example Works"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 5,
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "Bachelor of Science — Fictional University"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "SQL",
+            "Python",
+            "Tableau"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ინგლისური",
+              "level": "native"
+            },
+            {
+              "name": "გერმანული",
+              "level": "b2"
+            }
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "AWS Certified Cloud Practitioner"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2020-01",
+              "end": "2023-12"
+            },
+            {
+              "start": "2018-03",
+              "end": "2021-06"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": false,
+        "email": false,
+        "phone": false
+      }
+    },
+    {
+      "filename": "us-resume.odt",
+      "chars": 0,
+      "extractMs": 0.01,
+      "parseMs": 0.08,
+      "totalMs": 0.09,
+      "text": "",
+      "profile": {
+        "years": null,
+        "roles": [],
+        "skills": [],
+        "languages": [],
+        "education": [],
+        "educationLevel": null,
+        "city": "",
+        "text": ""
+      },
+      "fields": [
+        {
+          "field": "name",
+          "expected": "Mira Example",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "email",
+          "expected": "synthetic4@example.com",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "phone",
+          "expected": "+995 555 00 00 04",
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "city",
+          "expected": "Boston",
+          "actual": "",
+          "ok": false
+        },
+        {
+          "field": "roles",
+          "expected": [
+            "Senior Analyst — Fictional Labs",
+            "Analyst — Example Works"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "years",
+          "expected": 5,
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "education",
+          "expected": [
+            "Bachelor of Science — Fictional University"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "educationLevel",
+          "expected": "bachelor",
+          "actual": null,
+          "ok": false
+        },
+        {
+          "field": "skills",
+          "expected": [
+            "SQL",
+            "Python",
+            "Tableau"
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "languages",
+          "expected": [
+            {
+              "name": "ინგლისური",
+              "level": "native"
+            },
+            {
+              "name": "გერმანული",
+              "level": "b2"
+            }
+          ],
+          "actual": [],
+          "ok": false
+        },
+        {
+          "field": "certifications",
+          "expected": [
+            "AWS Certified Cloud Practitioner"
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        },
+        {
+          "field": "roleDates",
+          "expected": [
+            {
+              "start": "2020-01",
+              "end": "2023-12"
+            },
+            {
+              "start": "2018-03",
+              "end": "2021-06"
+            }
+          ],
+          "actual": "(not exposed by parser schema)",
+          "ok": false
+        }
+      ],
+      "contactTextPresence": {
+        "name": false,
+        "email": false,
+        "phone": false
+      }
+    }
+  ]
+}

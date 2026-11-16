@@ -5,7 +5,7 @@ import { contentMetadata } from '@/lib/content-seo';
 
 export const metadata = contentMetadata(
   '/about',
-  'ჩვენ შესახებ — ჯობიქსი',
+  'ჩვენ შესახებ',
   'ჯობიქსი აერთიანებს ვაკანსიებს დასაქმების საიტებიდან და დამსაქმებლებისგან. გაიგე, როგორ მუშაობს ძიება და სად უნდა გააგზავნო განაცხადი.',
 );
 export default function AboutPage() {

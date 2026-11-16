@@ -7,7 +7,11 @@ import { useEffect, useState } from 'react';
 import { CompanyLogo } from './company-logo';
 import { companyDisplayName } from '@/lib/company-display-name';
 import { useVacancyActivity } from './use-vacancy-activity';
-import { markListHop, vacancyPath } from '@/lib/vacancy-navigation';
+import {
+  markListHop,
+  resolveReturnPath,
+  vacancyPath,
+} from '@/lib/vacancy-navigation';
 import type { SimilarVacancy } from '@/lib/similar-vacancies';
 import { trackAction } from '@/lib/analytics-client';
 import {
@@ -18,12 +22,21 @@ import {
 } from '@/lib/public-load';
 export function SimilarVacancies({
   id,
-  returnTo,
+  returnTo: initialReturnTo,
+  initial,
 }: {
   id: string;
   returnTo: string;
+  initial?: SimilarVacancy[];
 }) {
   const { ui, locale } = useUi();
+  const [returnTo, setReturnTo] = useState(initialReturnTo);
+  // A server-rendered slot cannot receive VacancyPage's hydrated history state.
+  useEffect(() => {
+    const path = resolveReturnPath(initialReturnTo);
+    const frame = requestAnimationFrame(() => setReturnTo(path));
+    return () => cancelAnimationFrame(frame);
+  }, [id, initialReturnTo]);
   const [result, setResult] = useState<{
     key: string;
     attempt: number;
@@ -35,7 +48,8 @@ export function SimilarVacancies({
   const excluded = activity.hidden.map((item) => item.id).join(',');
   const key = id + ':' + excluded;
   useEffect(() => {
-    if (!activity.ready) return;
+    if (!activity.ready || (initial !== undefined && !excluded && retry === 0))
+      return;
     const controller = new AbortController();
     const query = new URLSearchParams();
     if (excluded) query.set('exclude', excluded);
@@ -58,9 +72,13 @@ export function SimilarVacancies({
         trackAction(loadFailureAction('similar', error));
       });
     return () => controller.abort();
-  }, [activity.ready, id, excluded, key, retry]);
+  }, [activity.ready, id, excluded, key, retry, initial]);
   const current =
-    result?.key === key && result.attempt === retry ? result : null;
+    result?.key === key && result.attempt === retry
+      ? result
+      : initial !== undefined && !excluded && retry === 0
+        ? { jobs: initial, error: '' }
+        : null;
   return (
     <section
       className="similar-vacancies"

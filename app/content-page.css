@@ -142,7 +142,7 @@
   }
 }
 
-.content-breadcrumb {
+.board-shell .content-breadcrumb {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

@@ -82,3 +82,13 @@ void test('page one and tracking-only addresses consolidate to the homepage', ()
     assert.equal(seo.index, true);
   }
 });
+
+void test('list pages and searches do not share one meta description', () => {
+  const first = searchSeo(new URLSearchParams('category=ფინანსები'));
+  const next = searchSeo(new URLSearchParams('category=ფინანსები&page=2'));
+  assert.notEqual(first.description, next.description);
+  assert.match(next.description, /გვერდი 2\.$/);
+  const home = searchSeo(new URLSearchParams());
+  const query = searchSeo(new URLSearchParams('q=ბარისტა'));
+  assert.notEqual(query.description, home.description);
+});

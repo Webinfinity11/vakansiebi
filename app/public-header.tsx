@@ -16,6 +16,8 @@ import {
   ChevronRight,
   ChartNoAxesCombined,
   Layers,
+  LogIn,
+  Plus,
 } from 'lucide-react';
 import {
   Sheet,
@@ -116,104 +118,160 @@ export function PublicHeader({
                     : null;
   const here = (place: string) =>
     current === place ? ('page' as const) : undefined;
+  /* Employers on /business get their own masthead: the page's sections, sign-in
+     and one action. The job seeker's search, saved list and CV stay in the menu. */
+  const business = pathname === '/business';
   return (
     <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
       <header className="topbar public-header">
         <div className="header-inner">
           <Brand priority />
-          <nav aria-label={ui('მთავარი ნავიგაცია')} className="site-nav">
-            <Link
-              href="/map"
-              prefetch={false}
-              className="ds-btn ds-btn--ghost site-nav-link header-map-link"
-              aria-current={here('map')}
+          {business ? (
+            <nav
+              aria-label={ui('გვერდის ნაწილები')}
+              className="site-nav business-nav"
             >
-              {ui('რუკა')}
-            </Link>
-            <Link
-              href="/companies"
-              prefetch={false}
-              className="ds-btn ds-btn--ghost site-nav-link header-companies-link"
-              aria-current={here('companies')}
-            >
-              {ui('კომპანიები')}
-            </Link>
-            <Link
-              href="/blog"
-              prefetch={false}
-              className="ds-btn ds-btn--ghost site-nav-link"
-              aria-current={here('blog')}
-            >
-              {ui('ბლოგი')}
-            </Link>
-          </nav>
-          <div className="header-actions">
-            {showSearch && (
+              {[
+                ['#features', 'ფუნქციები'],
+                ['#how', 'როგორ მუშაობს'],
+                ['#placements', 'ფასები'],
+                ['#faq', 'კითხვა-პასუხი'],
+              ].map(([href, label]) => (
+                <a
+                  key={href}
+                  href={href}
+                  className="ds-btn ds-btn--ghost site-nav-link"
+                >
+                  {ui(label)}
+                </a>
+              ))}
+            </nav>
+          ) : (
+            <nav aria-label={ui('მთავარი ნავიგაცია')} className="site-nav">
               <Link
-                href="/#search-heading"
+                href="/map"
                 prefetch={false}
-                className="ds-btn ds-btn--secondary site-action site-search"
-                aria-label={ui('ძიება')}
-                title={ui('ძიება')}
-                onClick={(event) => localAction(event, onSearch)}
+                className="ds-btn ds-btn--ghost site-nav-link header-map-link"
+                aria-current={here('map')}
               >
-                <Search aria-hidden="true" />
-                <span className="site-action-label">{ui('ძებნა')}</span>
+                {ui('რუკა')}
               </Link>
-            )}
-            <Link
-              href="/?saved=1"
-              prefetch={false}
-              className="ds-btn ds-btn--secondary site-action header-saved"
-              aria-label={
-                count > 0
-                  ? ui('შენახული ვაკანსიები: {0}', [count])
-                  : ui('შენახული ვაკანსიები')
-              }
-              title={ui('შენახული ვაკანსიები')}
-              aria-current={here('saved')}
-              onClick={(event) => localAction(event, onSaved)}
-            >
-              <Bookmark aria-hidden="true" />
-              <span className="site-action-label">{ui('შენახული')}</span>
-              {/* A zero says nothing; the count appears once there is something to count. */}
-              {count > 0 && (
-                <span className="site-count" aria-hidden="true">
-                  {count}
-                </span>
+              <Link
+                href="/companies"
+                prefetch={false}
+                className="ds-btn ds-btn--ghost site-nav-link header-companies-link"
+                aria-current={here('companies')}
+              >
+                {ui('კომპანიები')}
+              </Link>
+              <Link
+                href="/blog"
+                prefetch={false}
+                className="ds-btn ds-btn--ghost site-nav-link"
+                aria-current={here('blog')}
+              >
+                {ui('ბლოგი')}
+              </Link>
+            </nav>
+          )}
+          {business ? (
+            <div className="header-actions">
+              <Link
+                href="/company"
+                prefetch={false}
+                className="ds-btn ds-btn--ghost site-action header-login"
+                aria-label={ui('კომპანიის ანგარიშში შესვლა')}
+                title={ui('კომპანიის ანგარიშში შესვლა')}
+              >
+                <LogIn aria-hidden="true" />
+                <span className="site-action-label">{ui('შესვლა')}</span>
+              </Link>
+              <Link
+                href="/post-job"
+                prefetch={false}
+                className="ds-btn ds-btn--primary header-post-job"
+              >
+                <Plus aria-hidden="true" />
+                <span>{ui('ვაკანსიის დამატება')}</span>
+              </Link>
+              <SheetTrigger
+                className="ds-btn ds-btn--secondary ds-btn--icon site-menu-trigger"
+                aria-label={ui('მენიუს გახსნა')}
+              >
+                <Menu aria-hidden="true" />
+              </SheetTrigger>
+            </div>
+          ) : (
+            <div className="header-actions">
+              {showSearch && (
+                <Link
+                  href="/#search-heading"
+                  prefetch={false}
+                  className="ds-btn ds-btn--secondary site-action site-search"
+                  aria-label={ui('ძიება')}
+                  title={ui('ძიება')}
+                  onClick={(event) => localAction(event, onSearch)}
+                >
+                  <Search aria-hidden="true" />
+                  <span className="site-action-label">{ui('ძებნა')}</span>
+                </Link>
               )}
-            </Link>
-            <Link
-              href="/cv"
-              prefetch={false}
-              className="ds-btn ds-btn--secondary site-action header-cv"
-              aria-label={ui('რეზიუმეს შექმნა')}
-              title={ui('რეზიუმეს შექმნა')}
-              aria-current={here('cv')}
-            >
-              <FilePlus2 aria-hidden="true" />
-              <span className="site-action-label">{ui('რეზიუმეს შექმნა')}</span>
-            </Link>
-            {/* The one primary action in the masthead. */}
-            <Link
-              href="/business"
-              prefetch={false}
-              className="ds-btn ds-btn--primary site-post"
-              aria-label={ui('ბიზნესისთვის')}
-              title={ui('ბიზნესისთვის')}
-              aria-current={here('business')}
-            >
-              <Building2 aria-hidden="true" />
-              <span className="site-action-label">{ui('ბიზნესისთვის')}</span>
-            </Link>
-            <ThemeToggle />
-            <SheetTrigger
-              className="ds-btn ds-btn--secondary ds-btn--icon site-menu-trigger"
-              aria-label={ui('მენიუს გახსნა')}
-            >
-              <Menu aria-hidden="true" />
-            </SheetTrigger>
-          </div>
+              <Link
+                href="/?saved=1"
+                prefetch={false}
+                className="ds-btn ds-btn--secondary site-action header-saved"
+                aria-label={
+                  count > 0
+                    ? ui('შენახული ვაკანსიები: {0}', [count])
+                    : ui('შენახული ვაკანსიები')
+                }
+                title={ui('შენახული ვაკანსიები')}
+                aria-current={here('saved')}
+                onClick={(event) => localAction(event, onSaved)}
+              >
+                <Bookmark aria-hidden="true" />
+                <span className="site-action-label">{ui('შენახული')}</span>
+                {/* A zero says nothing; the count appears once there is something to count. */}
+                {count > 0 && (
+                  <span className="site-count" aria-hidden="true">
+                    {count}
+                  </span>
+                )}
+              </Link>
+              <Link
+                href="/cv"
+                prefetch={false}
+                className="ds-btn ds-btn--secondary site-action header-cv"
+                aria-label={ui('რეზიუმეს შექმნა')}
+                title={ui('რეზიუმეს შექმნა')}
+                aria-current={here('cv')}
+              >
+                <FilePlus2 aria-hidden="true" />
+                <span className="site-action-label">
+                  {ui('რეზიუმეს შექმნა')}
+                </span>
+              </Link>
+              {/* The one primary action in the masthead. */}
+              <Link
+                href="/business"
+                prefetch={false}
+                className="ds-btn ds-btn--primary site-post"
+                aria-label={ui('ბიზნესისთვის')}
+                title={ui('ბიზნესისთვის')}
+                aria-current={here('business')}
+              >
+                <Building2 aria-hidden="true" />
+                <span className="site-action-label">{ui('ბიზნესისთვის')}</span>
+              </Link>
+              <ThemeToggle />
+              <SheetTrigger
+                className="ds-btn ds-btn--secondary ds-btn--icon site-menu-trigger"
+                aria-label={ui('მენიუს გახსნა')}
+              >
+                <Menu aria-hidden="true" />
+              </SheetTrigger>
+            </div>
+          )}
         </div>
       </header>
       <SheetContent className="public-menu" showCloseButton={false}>
@@ -304,6 +362,15 @@ export function PublicHeader({
           >
             <Building2 size={18} aria-hidden="true" />
             {ui('ბიზნესისთვის')}
+          </Link>
+          <Link
+            href="/company"
+            prefetch={false}
+            className="ds-btn ds-btn--secondary public-menu-business"
+            onClick={() => setMenuOpen(false)}
+          >
+            <LogIn size={18} aria-hidden="true" />
+            {ui('კომპანიის ანგარიში')}
           </Link>
           <div className="public-menu-preferences">
             <div className="public-menu-preference">

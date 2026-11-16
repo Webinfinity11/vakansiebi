@@ -23,8 +23,10 @@ import {
 } from 'lucide-react';
 import { PublicHeader } from './public-header';
 import { CompanyIdentity } from './company-identity';
+import { VacancyCompanyBenefits } from './vacancy-company-benefits';
 import { Description, formatDate } from './vacancy-text';
 import { QuickApply, TranslationHelp } from './quick-apply';
+import { VacancyApplicationForm } from './vacancy-application-form';
 import {
   vacancyContacts,
   workSchedule,
@@ -71,11 +73,30 @@ function daysUntil(date: string) {
   target.setHours(0, 0, 0, 0);
   return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
-function ApplyAction({ job }: { job: PublicJob }) {
+function ApplyAction({
+  job,
+}: {
+  job: PublicJob & { companyApplyEnabled?: boolean };
+}) {
   const { ui } = useUi();
   const contacts = vacancyContacts(job);
   const emails = contacts.emails.filter((c) => c.application);
   const external = applicationDestination(job);
+  if (job.companyApplyEnabled)
+    return (
+      <button
+        className="primary"
+        onClick={() => {
+          const form = document.getElementById('vacancy-application');
+          form?.scrollIntoView({ block: 'center' });
+          form
+            ?.querySelector<HTMLInputElement>('input')
+            ?.focus({ preventScroll: true });
+        }}
+      >
+        {ui('CV-ის გაგზავნა')}
+      </button>
+    );
   if (contacts.phones.length === 1 && contacts.emails.length === 1)
     return (
       <>
@@ -275,15 +296,17 @@ export default function VacancyPage({
   returnTo: initialReturnTo,
   companyPath = null,
   relatedSearches,
+  similar,
   footer,
   embedded = false,
 }: {
-  job: PublicJob;
+  job: PublicJob & { companyApplyEnabled?: boolean };
   preview: boolean;
   returnTo: string;
   /** The employer's own page, when it has one. */
   companyPath?: string | null;
   relatedSearches?: ReactNode;
+  similar?: ReactNode;
   footer?: ReactNode;
   /** Reuse the full vacancy inside the map's scrollable detail panel. */
   embedded?: boolean;
@@ -793,10 +816,14 @@ export default function VacancyPage({
               className="vacancy-contact"
               aria-label={ui('დამსაქმებელთან დაკავშირება')}
             >
-              <QuickApply job={job}>
-                {cvHint}
-                {deckHint}
-              </QuickApply>
+              {job.companyApplyEnabled ? (
+                <VacancyApplicationForm key={job.id} job={job} />
+              ) : (
+                <QuickApply job={job}>
+                  {cvHint}
+                  {deckHint}
+                </QuickApply>
+              )}
             </aside>
           )}
           {hasDescriptionContent && (
@@ -868,6 +895,7 @@ export default function VacancyPage({
                   </dl>
                 </section>
               )}
+              <VacancyCompanyBenefits owned={job.companyOwned} profile={job.companyProfile} heading={ui('რას გთავაზობთ')} />
               {(job.companyProfile?.website ||
                 job.companyProfile?.description) && (
                 <section className="company-about">
@@ -984,7 +1012,7 @@ export default function VacancyPage({
           {!preview && !embedded && (
             <>
               {relatedSearches}
-              <SimilarVacancies id={job.id} returnTo={returnTo} />
+              {similar ?? <SimilarVacancies id={job.id} returnTo={returnTo} />}
             </>
           )}
         </article>

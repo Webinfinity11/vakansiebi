@@ -1,6 +1,63 @@
 /** Reviewed interface copy; source listings are intentionally not translated. */
 export const englishUi: Readonly<Record<string, string>> = {
+  'ვაკანსიის გაგზავნის შემდეგ განცხადებას ადმინისტრატორი ამოწმებს. საიტზე ის დამტკიცების შემდეგ გამოჩნდება. VIP და პრემიუმ განთავსებისთვის გადახდის დადასტურებაც საჭიროა.':
+    'An administrator reviews your job before publication. VIP and premium placements also require payment confirmation.',
+  'აირჩიეთ ქალაქი': 'Choose a city',
+  'სცადეთ მოგვიანებით.': 'Try again later.',
+  'ყველაფერი': 'Everything',
+  'მხოლოდ ნახვა': 'View only',
+  'ბუღალტერი, 1C': 'Accountant, 1C',
+  '12 შესაბამისი CV': '12 matching CVs',
+  'ჩანს ყველა ვაკანსიაზე': 'Shown on every job',
+  'გამარჯობა, ნინო! გიწვევთ გასაუბრებაზე.': 'Hello, Nino! We would like to invite you to an interview.',
+  'ყველა განაცხადი ერთ ადგილას': 'Every application in one place',
+  'ყოველი კანდიდატი ჩანს, რომელ ეტაპზეა: ახალი, გასაუბრება თუ შეთავაზება. აღარავინ დაიკარგება.': 'See which stage each candidate is at: new, interview or offer. Nobody gets lost.',
+  'სწრაფი ძიება რეზიუმეებში': 'Quick CV search',
+  'ჩაწერეთ პოზიცია ან უნარი და მაშინვე ნახავთ შესაბამის კანდიდატებს.': 'Type a position or skill and see matching candidates right away.',
+  'რამდენმა ნახა და გამოგზავნა': 'Who viewed and who applied',
+  'თითოეულ ვაკანსიაზე ხედავთ ნახვებისა და განაცხადების რაოდენობას.': 'See the number of views and applications for each job.',
+  'კოლეგებთან ერთად': 'Work with colleagues',
+  'მოიწვიეთ კოლეგები და თავად განსაზღვრეთ, ვინ რას ხედავს და რისი შეცვლა შეუძლია.': 'Invite colleagues and decide who can see and change what.',
+  'თქვენი კომპანიის გვერდი': 'Your company page',
+  'ლოგო, აღწერა და ბენეფიტები ერთხელ შეავსეთ და ყველა ვაკანსიაზე გამოჩნდება.': 'Add your logo, description and benefits once and they appear on every job.',
+  'პასუხი კანდიდატს ერთ წუთში': 'Reply to candidates in a minute',
+  'მზა შაბლონით მოიწვიეთ გასაუბრებაზე ან თავაზიანად უპასუხეთ უარით.': 'Use a ready template to invite to an interview or decline politely.',
+  'ახალი განაცხადი': 'New application',
+  'კომპანიის სივრცე სატესტო რეჟიმში მუშაობს.': 'The company workspace is in beta.',
+  'ბუღალტერი 1C': 'Accountant 1C',
+  '12 CV': '12 CVs',
+  '5 წელი · თბილისი': '5 years · Tbilisi',
+  'ინგლისური B2': 'English B2',
+  'ნახვა': 'Views',
+  'განაცხადი': 'Applications',
+  'ნ.ბ.': 'N.B.',
+  'გ.კ.': 'G.K.',
+  'მ.ჯ.': 'M.J.',
+  'მნახველი': 'Viewer',
+  'კ': 'C',
+  'თქვენი კომპანია': 'Your company',
+  'დაზღვევა': 'Insurance',
+  'ტრენინგები': 'Training',
+  'ბონუსი': 'Bonus',
+  'მოწვევა გასაუბრებაზე': 'Interview invitation',
+  'გამარჯობა,': 'Hello,',
+  'ნ.გ.': 'N.G.',
+  'ლ.ც.': 'L.Ts.',
+  'თ.მ.': 'T.M.',
+  'დ.ხ.': 'D.Kh.',
+  'ე.ქ.': 'E.K.',
+  'ს.ა.': 'S.A.',
+  '1 სთ წინ': '1 h ago',
+  '3 სთ წინ': '3 h ago',
+  'გუშინ': 'Yesterday',
+  'ახლახან': 'Just now',
+  'საილუსტრაციო მაგალითი': 'Illustrative example',
+  'ა.ბ.': 'A.B.',
+  'მ.კ.': 'M.K.',
+  '+11 განაცხადი ამ კვირაში': '+11 applications this week',
+  '+12 განაცხადი ამ კვირაში': '+12 applications this week',
   სიახლე: 'New',
+  'რას გთავაზობთ': 'What we offer',
   'კომპანიის გვერდი იტვირთება': 'Loading company page',
   '{0} — კომპანიის ვაკანსიები': '{0} — Company jobs',
   'ქალაქი: {0}': 'City: {0}',
@@ -50,13 +107,13 @@ export const englishUi: Readonly<Record<string, string>> = {
   'განთავსების ინვოისი': 'Placement invoice',
   'VIP — {0} ₾, პრემიუმი — {1} ₾. ორივე პაკეტი მოქმედებს {2} დღე გააქტიურებიდან. განთავსება იწყება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ. თანხა ავტომატურად არ ჩამოიჭრება.':
     'VIP costs {0} GEL and Premium costs {1} GEL. Both packages last {2} days from activation after the listing and payment are approved. There are no automatic charges.',
-  'შენი ვაკანსია სტანდარტულ შედეგებზე წინ გამოჩნდება.':
+  'ვაკანსია სტანდარტულ განცხადებებზე წინ გამოჩნდება.':
     'Your vacancy appears ahead of standard listings.',
   'რა ღირს VIP განთავსება?': 'How much does VIP placement cost?',
   'VIP განთავსება ღირს {0} ₾ და მოქმედებს {1} დღე გააქტიურებიდან. ვადის ამოწურვის შემდეგ განცხადება სტანდარტულად დარჩება, თუ განაცხადების მიღების ვადა ჯერ არ გასულა.':
     'VIP placement costs {0} GEL for {1} days from activation. Afterwards the listing remains standard until its application deadline.',
   'როგორ გადავიხადო განთავსების საფასური?': 'How do I pay for a placement?',
-  'განაცხადში VIP-ის ან პრემიუმის არჩევისას მიიღებ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. პრემიუმის ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.':
+  'განაცხადში VIP-ის ან პრემიუმის არჩევისას მიიღებთ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. პრემიუმის ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.':
     'Choose VIP or Premium to receive an invoice with bank details and a payment reference. Premium costs {0} GEL for {1} days. Placement starts after the listing and payment are approved. There are no automatic charges.',
   'ფასიანი განთავსება ამჟამად მიუწვდომელია.':
     'Paid placement is currently unavailable.',
@@ -117,7 +174,7 @@ export const englishUi: Readonly<Record<string, string>> = {
   'რეზიუმეს შექმნა': 'Create a CV',
   'ვაკანსიის უფასო განთავსება': 'Post a job for free',
   'როგორ მუშაობს JOBX?': 'How does JOBX work?',
-  'მოძებნე ვაკანსია, გაეცანი პირობებს და განაცხადისთვის გადადი პირველწყაროზე. შენახული ვაკანსიები ამ ბრაუზერში რჩება და სხვა მოწყობილობაზე ავტომატურად არ გადადის. თემასა და შენახული ვაკანსიების სიას ამ ბრაუზერში ვინახავთ; ძიებებისა და მოქმედებების ანონიმური სტატისტიკა სერვერზე ინახება, ზოგი ლოგო კი გარე საიტიდან იტვირთება. PDF-ად შენახვისას რეზიუმეს ასლი ფოტოსთან ერთად JOBX-ზეც ინახება ბოლო შენახვიდან 12 თვემდე და CV-ის გვერდზე „გასუფთავებით“ წაიშლება. საჯარო გვერდებზე შეიძლება გამოიყენებოდეს Google Analytics, Yandex Metrika და Meta Pixel ვიზიტების, საიტთან ურთიერთქმედებისა და რეკლამის შედეგების გასაზომად. ეს სერვისები იყენებს ქუქი-ფაილებს.':
+  'მოძებნე ვაკანსია, გაეცანი პირობებს და განაცხადის გასაგზავნად გადადი პირველწყაროზე. შენახული ვაკანსიები ამ ბრაუზერში რჩება და სხვა მოწყობილობაზე ავტომატურად არ გადადის. თემასა და შენახული ვაკანსიების სიას ამ ბრაუზერში ვინახავთ; ძიებებისა და მოქმედებების ანონიმური სტატისტიკა სერვერზე ინახება, ზოგი ლოგო კი გარე საიტიდან იტვირთება. PDF-ად შენახვისას რეზიუმეს ასლი ფოტოსთან ერთად JOBX-ზეც ინახება ბოლო შენახვიდან 12 თვემდე და CV-ის გვერდზე „გასუფთავებით“ წაიშლება. საჯარო გვერდებზე შეიძლება გამოიყენებოდეს Google Analytics, Yandex Metrika და Meta Pixel ვიზიტების, საიტთან ურთიერთქმედებისა და რეკლამის შედეგების გასაზომად. ეს სერვისები იყენებს ქუქი-ფაილებს.':
     'Find a job, review its requirements and visit the original source to apply. Saved jobs stay in this browser and do not automatically sync to other devices. Your theme, interface language and saved jobs are stored in this browser. Anonymous search and action statistics are stored on the server; some logos load from external sites. Saving a CV as a PDF also stores a copy, including its photo, on JOBX for up to 12 months after the last save. You can delete it using Clear on the CV page. Public pages may use Google Analytics, Yandex Metrika and Meta Pixel to measure visits, interactions and advertising results. These services use cookies.',
   'როგორ იყენებს Google მონაცემებს': 'How Google uses data',
   'ვაკანსიები სხვადასხვა წყაროდან': 'Jobs from multiple sources',
@@ -346,6 +403,8 @@ export const englishUi: Readonly<Record<string, string>> = {
   'მოძებნე კომპანია': 'Find a company',
   'ძებნის გასუფთავება': 'Clear search',
   'ნაპოვნია {0}': 'Found: {0}',
+  'მეტის ჩვენება': 'Show more',
+  'კიდევ {0} კომპანია': '{0} more companies',
   '“ ვერ მოიძებნა': '” was not found',
   'სიაში მხოლოდ ის კომპანიებია, რომლებსაც ახლა აქტიური ვაკანსია აქვთ.':
     'Only companies with active jobs are listed.',
@@ -758,32 +817,34 @@ export const englishUi: Readonly<Record<string, string>> = {
   'უფასო სტანდარტული განთავსება': 'Free standard listing',
   'კანდიდატთან პირდაპირი კავშირი': 'Direct contact with candidates',
   'როგორ განათავსო ვაკანსია უფასოდ': 'How to post a job for free',
-  'შეავსე განცხადება': 'Complete your listing',
-  'მიუთითე პოზიცია, პირობები, კომპანიის მონაცემები და განაცხადის მიღების გზა.':
+  'შეავსეთ განცხადება': 'Complete your listing',
+  'მიუთითეთ პოზიცია, პირობები, კომპანიის მონაცემები და განაცხადის მიღების გზა.':
     'Add the role, conditions, company details and how candidates should apply.',
-  'გაიარე შემოწმება': 'Submit for review',
+  'ადმინისტრატორის შემოწმება': 'Submit for review',
   'გაგზავნილ განცხადებას ადმინისტრატორი განიხილავს და გამოქვეყნებამდე ამოწმებს.':
     'An administrator reviews your listing before publication.',
-  'გამოჩნდი ძიებაში': 'Appear in search',
+  'ვაკანსიის გამოქვეყნება': 'Appear in search',
   'დამტკიცებული ვაკანსია ხელმისაწვდომი გახდება; კანდიდატები მითითებული გზით დაგიკავშირდებიან.':
     'Once approved, your job becomes available. Candidates contact you using the details you provided.',
   'აირჩიე შენთვის შესაფერისი განთავსება': 'Choose your placement',
-  'განთავსების ტიპს განცხადების შევსებისას აირჩევ.':
+  'განთავსების ტიპს განცხადების შევსებისას აირჩევთ.':
     'Select a placement when completing your listing.',
   'დროებითი შეთავაზება': 'Limited-time offer',
   'პრემიუმის გადახდა ამჟამად მიუწვდომელია.':
     'Premium payment is currently unavailable.',
   'უფასოდ განთავსება': 'Post for free',
   'VIP-ის არჩევა': 'Choose VIP',
+  'დაგვიკავშირდით': 'Contact us',
   'პრემიუმის არჩევა': 'Choose Premium',
   'ამჟამად მიუწვდომელია': 'Currently unavailable',
   'VIP-ის უფასო შეთავაზება შემოწმდება დამტკიცებისას. VIP და პრემიუმ პერიოდი ითვლება გააქტიურებიდან; ვადის გასვლის შემდეგ განცხადება სტანდარტულ რეჟიმში რჩება, მის მითითებულ ბოლო ვადამდე. თანხა ავტომატურად არ ჩამოიჭრება.':
     'Eligibility for the free VIP offer is checked during approval. VIP and Premium periods start at activation. Afterwards, the job remains a standard listing until its deadline. No automatic charges apply.',
   'კითხვები და პასუხები': 'Questions and answers',
-  'დავიწყოთ შენი ვაკანსიით.': 'Start with your next vacancy.',
-  'თუ შევსებისას კითხვა გაგიჩნდება, დაგვირეკე.':
+  'განათავსეთ პირველი ვაკანსია': 'Start with your next vacancy.',
+  'შეკითხვების შემთხვევაში დაგვიკავშირდით.':
     'Call us if you need help with your listing.',
   'განთავსებაზე კითხვა გაქვს?': 'Need help posting a job?',
+  'განთავსებაზე კითხვა გაქვთ?': 'Need help posting a job?',
   'კომპანიების სია ჯერ ცარიელია': 'No companies listed yet',
   'კომპანიების სია ახლა ვერ ჩაიტვირთა': 'Could not load companies',
   'სია ვაკანსიების განახლებასთან ერთად შეივსება.':
@@ -811,7 +872,7 @@ export const englishUi: Readonly<Record<string, string>> = {
     'This employer does not currently have enough active jobs.',
   'კომპანიების სია': 'Company directory',
   'გვერდი ვერ მოიძებნა | JOBX': 'Page not found | JOBX',
-  'გვერდი აღარ არის ხელმისაწვდომი': 'This page is no longer available',
+  'გვერდი ვერ მოიძებნა': 'This page is no longer available',
   'შესაძლოა, განცხადების ვადა გავიდა ან ბმული შეიცვალა.':
     'The listing may have expired or its link may have changed.',
   'აქტიური ვაკანსიების ნახვა': 'View active jobs',
@@ -820,12 +881,13 @@ export const englishUi: Readonly<Record<string, string>> = {
   'შესაძლოა, ვადა ამოიწურა ან განცხადება მოიხსნა.':
     'It may have expired or been removed.',
   'სხვა ვაკანსიების ნახვა': 'View other jobs',
-  'საწყისი განთავსება': 'Initial placement',
-  'როცა გინდა, რომ შენი ვაკანსია ძიების შედეგებში გამოჩნდეს.':
+  'საბაზისო განთავსება': 'Initial placement',
+  'ვაკანსიის სტანდარტული გამოქვეყნება ძიების შედეგებში.':
     'Show your vacancy in search results.',
   'ვაკანსიის სრული აღწერა და პირობები': 'Full job description and conditions',
   'კომპანიის სახელი და ლოგო': 'Company name and logo',
-  'შენ მიერ მითითებული განაცხადის გზა': 'Your chosen application method',
+  'განაცხადის მიღების თქვენთვის სასურველი გზა':
+    'Applications by the method you choose',
   'პირველი VIP განთავსება, თითო კომპანიისთვის ერთხელ.':
     'First VIP placement, once per company.',
   'სტანდარტული განთავსების შესაძლებლობები': 'All standard listing features',
@@ -835,7 +897,7 @@ export const englishUi: Readonly<Record<string, string>> = {
   'VIP და სტანდარტულ შედეგებზე წინ გამოჩენა':
     'Placement above VIP and standard results',
   'შემიძლია ვაკანსია უფასოდ განვათავსო?': 'Can I post a job for free?',
-  'დიახ. აირჩიე სტანდარტული განთავსება და შეავსე ვაკანსიის ფორმა. განცხადების გამოქვეყნება უფასოა, რეგისტრაცია საჭირო არ არის. ვაკანსია ადმინისტრატორის შემოწმებისა და დამტკიცების შემდეგ გამოჩნდება.':
+  'დიახ. აირჩიეთ სტანდარტული განთავსება და შეავსეთ ვაკანსიის ფორმა. განცხადების გამოქვეყნება უფასოა, რეგისტრაცია საჭირო არ არის. ვაკანსია ადმინისტრატორის შემოწმებისა და დამტკიცების შემდეგ გამოჩნდება.':
     'Yes. Choose standard placement and complete the form. Publication is free and requires no registration. Your job appears after an administrator reviews and approves it.',
   'მჭირდება რეგისტრაცია?': 'Do I need to register?',
   'განცხადების დასამატებლად რეგისტრაცია საჭირო არ არის. შეავსე ვაკანსიისა და კომპანიის მონაცემები და მიუთითე, როგორ დაგიკავშირდეს კანდიდატი.':
@@ -878,9 +940,83 @@ export const englishUi: Readonly<Record<string, string>> = {
   თემა: 'Theme',
   'მინიმუმ 30 სიმბოლო': 'At least 30 characters',
   'კარგ გუნდს კარგი ადამიანები ქმნიან.': 'Great teams start with great people.',
+  'ვაკანსიები მთელი საქართველოდან': 'Jobs from across Georgia',
+  'სოციალური ქსელები': 'Social media',
+  'სამუშაოს მაძიებლებს': 'For job seekers',
+  'ვაკანსიების ძებნა': 'Search jobs',
+  'ვაკანსიების ძიება': 'Search jobs',
+  დამსაქმებლებს: 'For employers',
+  'კომპანიის შესვლა': 'Company sign-in',
+  'განცხადების დასამატებლად რეგისტრაცია საჭირო არ არის. შეავსეთ ვაკანსიისა და კომპანიის მონაცემები და მიუთითეთ საკონტაქტო ინფორმაცია ან განაცხადის მიღების გზა. თუ კანდიდატების ერთ სივრცეში მართვა გსურთ, დაარეგისტრირეთ კომპანიის ანგარიში. ანგარიში ადმინისტრატორის დამტკიცების შემდეგ ჩაირთვება.':
+    'You do not need to register to add a job. Fill in the job and company details and give contact details or how to apply. To manage candidates in one place, register a company account; it is switched on after an administrator approves it.',
+  ფუნქციები: 'Features',
+  'კითხვა-პასუხი': 'FAQ',
+  ფასები: 'Pricing',
+  'როგორ მუშაობს': 'How it works',
+  'გვერდის ნაწილები': 'Page sections',
+  'ანგარიშში შესვლა': 'Sign in',
+  'კომპანიის ანგარიშში შესვლა': 'Sign in to your company account',
+  გუნდი: 'Team',
+  კანდიდატები: 'Candidates',
+  შეთავაზება: 'Offer',
+  ინგლისური: 'English',
+  მფლობელი: 'Owner',
+  'ნახვები და განაცხადები': 'Views and applications',
+  რეკომენდებული: 'Recommended',
+  'შერჩევის მთელი პროცესი ერთ სივრცეში':
+    'Your whole hiring process in one place',
+  'განაცხადები აღარ იკარგება ფოსტასა და ჩატებში. ყველა კანდიდატი, CV და კოლეგის შეფასება ერთ ადგილას გაქვთ.':
+    'Applications no longer get lost in email and chats. Every candidate, CV and colleague’s rating is in one place.',
+  'განაცხადებს მიიღებთ ელფოსტით ან ტელეფონით':
+    'Receive applications by email or phone',
+  'გუნდის მოწვევა და როლები': 'Team invitations and roles',
+  'კანდიდატების დაფა და CV ბაზა': 'Candidate board and CV database',
+  'კომპანიის გვერდი და ანალიტიკა': 'Company page and analytics',
+  'მარტივი ფორმა, რამდენიმე წუთში': 'A simple form, done in minutes',
+  'ვაკანსიის განთავსება': 'Post a job',
+  'განათავსეთ ვაკანსია უფასოდ და რეგისტრაციის გარეშე. კომპანიის ანგარიშით კი კანდიდატებს, CV-ებსა და გუნდის მუშაობას ერთ სივრცეში მართავთ.':
+    'Post a job for free, with no registration. With a company account you manage candidates, CVs and your team in one place.',
+  'კომპანიის რეგისტრაცია': 'Register your company',
+  'კომპანიის რეგისტრაცია ': 'Register your company ',
+  'უკვე გაქვს ანგარიში? ': 'Already have an account? ',
+  შესვლა: 'Sign in',
+  დამსაქმებელი: 'employers',
+  'განთავსების ორი გზა': 'Choose how you work',
+  'ერთჯერადი ვაკანსიისთვის ფორმა საკმარისია. თუ ხშირად ეძებთ თანამშრომლებს, კომპანიის ანგარიში დროს დაგიზოგავთ.':
+    'For a single job the form is enough. If you hire often, a company account saves you time.',
+  'სწრაფი განთავსება': 'Quick posting',
+  'შეავსეთ ფორმა და გამოგზავნეთ. ვაკანსია შემოწმების შემდეგ გამოქვეყნდება, კანდიდატები კი თქვენ მიერ მითითებული გზით დაგიკავშირდებიან.':
+    'Fill in the form and send it. The job is published after review, and candidates contact you the way you choose.',
+  'უფასოა და რეგისტრაცია არ სჭირდება': 'Free, no registration needed',
+  'საჭიროების შემთხვევაში VIP ან პრემიუმი':
+    'VIP or Premium when you need more reach',
+  'კომპანიის ანგარიში': 'Company account',
+  'ყველა ვაკანსია და განაცხადი ერთ სივრცეშია. ანგარიში ადმინისტრატორის დამტკიცების შემდეგ ჩაირთვება.':
+    'All your jobs and applications in one place. The account is activated after an administrator approves it.',
+  'კანდიდატების დაფა': 'Candidate board',
+  'განაცხადები ეტაპების მიხედვით: ახალი, განხილული, გასაუბრება, შეთავაზება.':
+    'Applications by stage: new, in review, shortlisted.',
+  'CV ბაზა': 'CV database',
+  'კანდიდატების რეზიუმეები ერთ ადგილას, ძიებითა და ფილტრებით.':
+    'Candidate CVs in one place, with search and filters.',
+  ანალიტიკა: 'Analytics',
+  'ნახვები და განაცხადები თითოეული ვაკანსიის მიხედვით.':
+    'Views and applications for each job.',
+  'გუნდი და როლები': 'Team and roles',
+  'მოიწვიეთ კოლეგები და მიეცით მფლობელის, რეკრუტერის ან მნახველის წვდომა.':
+    'Invite colleagues as owner, recruiter or viewer.',
+  'კომპანიის გვერდი': 'Company page',
+  'ფონური ფოტო, აღწერა და ბენეფიტები თქვენს ყველა ვაკანსიასთან ერთად.':
+    'Cover image, description and benefits alongside all your jobs.',
+  'შეტყობინებები კანდიდატებს': 'Messages to candidates',
+  'შაბლონები პასუხისა და უარისთვის, პირდაპირ კანდიდატის ბარათიდან.':
+    'Reply and rejection templates, straight from the candidate card.',
+  'სტანდარტული განთავსება უფასოა. ფასიან განთავსებაზე კითხვით დაგვიკავშირდით.':
+    'Standard posting is free. Contact us about paid placement.',
+  'კანდიდატების სამართავად: ': 'To manage candidates: ',
   'პირველი VIP განთავსება {0} დღით უფასოა, თითო კომპანიისთვის ერთხელ. შემდეგ განცხადება ავტომატურად გადადის სტანდარტულ განთავსებაზე და რჩება განაცხადების მიღების ვადის ამოწურვამდე. შეთავაზების გამოყენების შესაძლებლობა განცხადების შემოწმებისას დგინდება.':
     'Your first VIP listing is free for {0} days, once per company. It then becomes a standard listing until its application deadline. Eligibility is checked when the listing is reviewed.',
-  'განაცხადში პრემიუმის არჩევისას მიიღებ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.':
+  'განაცხადში პრემიუმის არჩევისას მიიღებთ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.':
     'Choose Premium in the form to receive an invoice with bank details and a payment reference. It costs ₾{0} for {1} days. Placement starts after the listing and payment are approved. No automatic charges apply.',
   ბლოგი: 'Blog',
   ენა: 'Language',
@@ -898,4 +1034,9 @@ export const englishUi: Readonly<Record<string, string>> = {
   'ბლოგზე დაბრუნება': 'Back to the blog',
   'რას გააკეთებს გუნდის ახალი წევრი?\n\nმოვალეობები\n• ...\n\nმოთხოვნები\n• ...\n\nგრაფიკი და დამატებითი პირობები\n• ...':
     'What will your new team member do?\n\nResponsibilities\n• ...\n\nRequirements\n• ...\n\nSchedule and other conditions\n• ...',
+
+  // Polite employer workspace copy; keep existing seeker translations.
+  "აირჩიეთ": "Select",
+  გამოცდილება: 'Experience',
+  ენები: 'Languages',
 };

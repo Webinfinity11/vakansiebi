@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { currentCompany } from '@/lib/server/company-auth';
+import { googleSignInEnabled } from '@/lib/server/company-google';
 import { CompanyPortal } from './portal';
 import { ContentPage } from '../content-page';
 export const dynamic = 'force-dynamic';
@@ -15,12 +16,17 @@ export default async function CompanyPage() {
         path="/company"
         title={{ ka: 'კომპანიის სივრცე', en: 'Company workspace' }}
         intro={{
-          ka: 'კომპანიის ანგარიშზე წვდომის მისაღებად დაგვიკავშირდი.',
+          ka: 'კომპანიის ანგარიშზე წვდომის მისაღებად დაგვიკავშირდით.',
           en: 'Contact us to arrange access to your company account.',
         }}
       >
         <Link href="/contact">კონტაქტი</Link>
       </ContentPage>
     );
-  return <CompanyPortal identity={await currentCompany()} />;
+  return (
+    <CompanyPortal
+      identity={await currentCompany()}
+      googleEnabled={googleSignInEnabled()}
+    />
+  );
 }

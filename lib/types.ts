@@ -78,7 +78,9 @@ export type PublicJob = Vacancy & {
   logoOrigin?: string;
   summary?: boolean;
   sourceChanged?: boolean;
-  companyProfile?: { website: string; description: string };
+  /** Set by the vacancy detail loader after checking company_job_ownership. */
+  companyOwned?: boolean;
+  companyProfile?: { website: string; description: string; benefits?: string[]; whyUs?: string };
   id: string;
   createdAt: string;
   sources: {

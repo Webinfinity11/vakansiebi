@@ -106,7 +106,7 @@ export default async function InvoicePage({
           <section className="invoice-payment">
             <h2>საბანკო გადარიცხვა</h2>
             <p>
-              გადარიცხვის დანიშნულებაში მიუთითე: <strong>{number}</strong>
+              გადარიცხვის დანიშნულებაში მიუთითეთ: <strong>{number}</strong>
             </p>
             <p>
               განთავსება გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების
@@ -136,7 +136,7 @@ export default async function InvoicePage({
           <p className="invoice-payment">თანხის დაბრუნება დადასტურებულია.</p>
         )}
         <footer>
-          <p>ინვოისთან ან გადახდასთან დაკავშირებით დაგვიკავშირდი:</p>
+          <p>ინვოისთან ან გადახდასთან დაკავშირებით დაგვიკავშირდით:</p>
           <a href={`tel:${invoiceContact.telephone}`}>{invoiceContact.phone}</a>
           <p>JOBX · jobx.ge</p>
         </footer>

@@ -1,0 +1,82 @@
+.company-cover-preview {
+  width: 100%;
+  aspect-ratio: 8 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.company-cv-box-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.company-cv-box-toggle input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.company-job-questions fieldset {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--cp-line, #e5e7eb);
+  border-radius: 10px;
+  padding: 16px;
+  margin-block: 16px;
+}
+.company-job-questions legend {
+  padding-inline: 6px;
+}
+
+/* Same card as the profile summary above it: question, answer, comparison. */
+.cc-question-answers {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--cp-line);
+  border-radius: 10px;
+  background: #fafbfc;
+}
+.cc-question-answers > h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.cc-question-answers > p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--cp-ink-3);
+}
+.cc-question-answers dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.cc-question-answers dl > div {
+  display: grid;
+  gap: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--cp-line);
+}
+.cc-question-answers dt {
+  font-size: 12px;
+  color: var(--cp-ink-3);
+}
+.cc-question-answers dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cc-question-answers dd small {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--cp-ink-3);
+}
+
+/* Profile artwork and upload controls: existing assets, shared card rhythm. */
+.company-cover-preview { border-radius: var(--cp-radius); }
+.cp-fields label.company-cv-box-toggle { display: flex; flex-direction: row; align-items: flex-start; gap: 16px; padding: 16px; border-radius: var(--cp-radius-sm); background: var(--cp-side); font-size: 14px; line-height: 1.7; }
+.company-cv-box-toggle input { margin-top: 3px; accent-color: var(--cp-accent); }
+.cp-fields input[type=file] { font-size: 13px; overflow: hidden; }
+.cp-fields input[type=file]::file-selector-button { border: 0; border-radius: 6px; padding: 8px; margin-right: 8px; background: var(--cp-side); color: var(--cp-ink); font: inherit; cursor: pointer; }

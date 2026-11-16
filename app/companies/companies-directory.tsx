@@ -23,6 +23,8 @@ const plain = (text: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+const pageSize = 120;
+
 /** Every company with a logo, and a name filter that runs in the browser: the whole list is
     already on the page, so narrowing it needs no request. */
 export function CompaniesDirectory({
@@ -35,15 +37,20 @@ export function CompaniesDirectory({
 }) {
   const { ui, locale } = useUi();
   const [query, setQuery] = useState('');
+  // Nine hundred cards were a 1.4 MB page. The first batch is drawn; the rest
+  // join on request, and a name search still covers every company.
+  const [limit, setLimit] = useState(pageSize);
   const deferred = useDeferredValue(query);
   const names = useMemo(
     () => companies.map((c) => plain(companyDisplayName(c.name))),
     [companies],
   );
   const needle = plain(deferred);
-  const shown = companies.filter(
+  const matched = companies.filter(
     (_c, i) => !needle || names[i].includes(needle),
   );
+  const shown = needle ? matched : matched.slice(0, limit);
+  const hiddenCount = matched.length - shown.length;
   const vacancies = companies.reduce((sum, c) => sum + c.jobs, 0);
   const grid = useRef<HTMLUListElement>(null);
   useEffect(() => {
@@ -65,7 +72,7 @@ export function CompaniesDirectory({
     );
     for (const card of grid.current.children) observer.observe(card);
     return () => observer.disconnect();
-  }, [needle, companies]);
+  }, [needle, companies, limit]);
   return (
     <>
       <header className="companies-head">
@@ -143,6 +150,18 @@ export function CompaniesDirectory({
           </li>
         ))}
       </ul>
+      {hiddenCount > 0 && (
+        <div className="companies-more">
+          <button
+            type="button"
+            className="ds-btn ds-btn--secondary"
+            onClick={() => setLimit((value) => value + pageSize)}
+          >
+            {ui('მეტის ჩვენება')}
+          </button>
+          <span>{ui('კიდევ {0} კომპანია', [hiddenCount])}</span>
+        </div>
+      )}
       {!shown.length && needle && (
         <div className="companies-empty companies-empty--filter ds-appear">
           <h2>

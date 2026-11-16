@@ -1,0 +1,9 @@
+.cp-notifications { padding: clamp(20px, 3vw, 32px); margin-block: 24px; border: 1px solid var(--cp-line); border-radius: var(--cp-radius); background: var(--cp-surface); color: var(--cp-ink); box-shadow: var(--cp-shadow-sm); }
+.cp-notifications h2 { margin: 0 0 12px; font-size: 20px; line-height: 1.6; }
+.cp-notifications p { line-height: 1.8; }
+.cp-notifications fieldset { padding: 0; border: 0; min-width: 0; margin: 24px 0; }
+.cp-notifications legend { font-weight: 600; margin-bottom: 12px; }
+.cp-notifications-choice { display: flex; align-items: center; gap: 12px; min-height: 44px; padding-block: 8px; cursor: pointer; line-height: 1.7; }
+.cp-notifications-choice input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--cp-accent); }
+.cp-notifications-template { display: grid; gap: 10px; margin-top: 20px; }
+.cp-notifications .cp-btn { white-space: normal; min-height: 44px; height: auto; }

@@ -40,7 +40,7 @@ export function cvAttachmentName(candidateName: string) {
 }
 
 export function swipeApplicationEmail(
-  job: { id: string; title: string; company: string },
+  job: { id: string; title: string; company: string; companyOwned?: boolean },
   candidate: SwipeCandidate,
   recipient: string,
   pdf: Buffer | Uint8Array,
@@ -52,6 +52,7 @@ export function swipeApplicationEmail(
     throw new Error('Invalid application email');
   const origin = emailOrigin(appUrl);
   const url = new URL(vacancyPath(job), origin).href;
+  const companyUrl = job.companyOwned ? new URL('/company', origin).href : null;
   const remove = removalLink(job.id, to, origin);
   const name = clean(candidate.name).slice(0, 120) || 'კანდიდატი';
   const phone = clean(candidate.phone).slice(0, 32);
@@ -77,6 +78,7 @@ export function swipeApplicationEmail(
       `${name} განაცხადს აკეთებს თქვენს ვაკანსიაზე „${title}“${company ? ` (${company})` : ''}, რომელიც JOBX-ზეა განთავსებული.`,
       ...rows.map(([label, value]) => `${label}: ${value}`),
       `ვაკანსია JOBX-ზე: ${url}`,
+      ...(companyUrl ? [`განაცხადები კომპანიის სივრცეში: ${companyUrl}`] : []),
       ...(remove
         ? [
             `თქვენი კომპანიის ვაკანსიების ამოღება და მომავალი განთავსების შეჩერება: ${remove}`,
@@ -96,7 +98,7 @@ export function swipeApplicationEmail(
             `<tr><td style="padding:10px 16px;font-size:12px;line-height:20px;color:#536078;white-space:nowrap;vertical-align:top">${escapeEmailHtml(label)}</td><td style="padding:10px 16px;font-size:14px;line-height:20px;color:#202b3d;word-break:break-word">${escapeEmailHtml(value)}</td></tr>`,
         )
         .join('')}</table>
-<p style="margin:0;font-size:14px;line-height:24px;color:#202b3d">${escapeEmailHtml(note)}</p>${emailButton(url, 'ვაკანსიის ნახვა JOBX-ზე')}<p style="margin:0;font-size:12px;line-height:20px;color:#738095">წერილი გაგზავნილია JOBX-ის მეშვეობით კანდიდატის თანხმობით.</p>${remove ? `<p style="font-size:12px;line-height:20px"><a href="${escapeEmailHtml(remove)}">თქვენი კომპანიის ვაკანსიების ამოღება და მომავალი განთავსების შეჩერება</a></p>` : ''}`,
+<p style="margin:0;font-size:14px;line-height:24px;color:#202b3d">${escapeEmailHtml(note)}</p>${companyUrl ? emailButton(companyUrl, 'განაცხადები კომპანიის სივრცეში') : ''}${emailButton(url, 'ვაკანსიის ნახვა JOBX-ზე')}<p style="margin:0;font-size:12px;line-height:20px;color:#738095">წერილი გაგზავნილია JOBX-ის მეშვეობით კანდიდატის თანხმობით.</p>${remove ? `<p style="font-size:12px;line-height:20px"><a href="${escapeEmailHtml(remove)}">თქვენი კომპანიის ვაკანსიების ამოღება და მომავალი განთავსების შეჩერება</a></p>` : ''}`,
       'JOBX-თან დაკავშირებით დაგვიკავშირდით:',
       swipeSender,
     ),

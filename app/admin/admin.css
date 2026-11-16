@@ -3904,3 +3904,28 @@ body:has(.admin-shell) .job-choice-options {
 .vacancy-performance .admin-analytics-note {
   margin-top: var(--ds-space-3);
 }
+
+/* Inline moderation stays in the row and can expand without clipping. */
+.admin-quick-moderation { grid-column: 1 / -1; padding: 8px 16px 12px; min-width: 0; }
+.admin-quick-buttons { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+.admin-reject { min-width: 0; max-width: 100%; }
+.admin-reject-menu { display: grid; gap: 12px; padding: 12px 0; width: min(440px, 100%); }
+.admin-reject-menu label { display: grid; gap: 6px; }
+.admin-reject-reasons { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.admin-reject-reasons legend { padding: 0; margin-bottom: 6px; }
+.admin-reject-reasons > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-reject-reason { position: relative; display: inline-flex; cursor: pointer; }
+.admin-reject-reason input { position: absolute; opacity: 0; pointer-events: none; }
+.admin-reject-reason span { padding: 6px 12px; border: 1px solid var(--ds-line); border-radius: 999px; background: var(--ds-surface); color: var(--ds-ink); font-size: 13px; line-height: 1.4; }
+.admin-reject-reason:hover span { border-color: var(--ds-line-strong); }
+.admin-reject-reason input:checked + span { border-color: var(--ds-danger); background: color-mix(in srgb, var(--ds-danger) 10%, var(--ds-surface)); color: var(--ds-danger); font-weight: 600; }
+.admin-reject-reason input:focus-visible + span { outline: 2px solid var(--ds-accent); outline-offset: 2px; }
+.admin-reject-guidance { margin: 0; padding: 8px 10px; border-radius: 6px; background: var(--ds-surface-muted); color: var(--ds-ink-2); font-size: 13px; line-height: 1.5; }
+.admin-reject-menu :is(select, textarea) { width: 100%; min-width: 0; font: inherit; padding: 8px; color: inherit; background: var(--ds-surface); border: 1px solid var(--ds-line); border-radius: 6px; }
+.admin-reject-menu textarea { min-height: 80px; }
+.admin-quick-moderation [role="alert"], .admin-reject-menu [role="alert"] { color: var(--ds-danger); overflow-wrap: anywhere; }
+.admin-shell .admin-row-title .admin-rejection-reason { display: block; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+
+.admin-auto-publish { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; color: var(--ds-ink); }
+.admin-auto-publish > span { font-size: 12px; line-height: 1.6; }
+.admin-auto-publish > small { flex-basis: 100%; color: #b42318; }

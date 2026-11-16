@@ -1,0 +1,176 @@
+ M app/about/page.tsx
+ M app/admin/company-accounts/accounts.tsx
+ M app/admin/navigation.tsx
+ M app/api/admin/company-accounts/route.ts
+ M app/api/company/jobs/route.ts
+ M app/api/company/password/route.ts
+ M app/api/company/profile/route.ts
+ M app/api/company/session/route.ts
+ M app/board-features.css
+ M app/board.css
+ M app/business/business.css
+ M app/business/page.tsx
+ M app/companies/[slug]/company.css
+ M app/companies/[slug]/not-found.tsx
+ M app/companies/[slug]/page.tsx
+ M app/companies/companies-directory.tsx
+ M app/companies/companies.css
+ M app/company/page.tsx
+ M app/company/portal.css
+ M app/company/portal.tsx
+ M app/contact/page.tsx
+ M app/globals.css
+ M app/hero-heading.tsx
+ M app/install-app.css
+ M app/install-app.tsx
+ M app/job-board.tsx
+ M app/map/page.tsx
+ M app/not-found.tsx
+ M app/page.tsx
+ M app/phone.css
+ M app/public-header.css
+ M app/public-header.tsx
+ M app/refined-board.css
+ M app/robots.ts
+ M app/salaries/salaries.css
+ M app/salaries/salary-explorer.tsx
+ M app/similar-vacancies.tsx
+ M app/site-footer.tsx
+ M app/swipe/swipe-deck.tsx
+ M app/theme-dark.css
+ M app/vacancies/[id]/not-found.tsx
+ M app/vacancies/[id]/opengraph-image.tsx
+ M app/vacancies/[id]/page.tsx
+ M app/vacancies/[id]/twitter-image.tsx
+ M app/vacancy-page.tsx
+ M lib/app-install.ts
+ M lib/company-job-form.ts
+ M lib/company-portal.ts
+ M lib/employment.ts
+ M lib/experience.ts
+ M lib/search-seo.ts
+ M lib/seo.ts
+ M lib/server/companies.ts
+ M lib/server/company-accounts.ts
+ M lib/server/company-auth.ts
+ M lib/server/company-jobs.ts
+ M lib/server/db.ts
+ M lib/server/indexing-queue.ts
+ M lib/server/job-submissions.ts
+ M lib/server/jobs.ts
+ M lib/server/landing-facts.ts
+ M lib/server/search-plan.ts
+ M lib/server/similar-vacancies.ts
+ M lib/server/sitemap-entries.ts
+ M lib/server/swipe-apply.ts
+ M lib/server/vacancy-page.ts
+ M lib/site-brand.ts
+ M lib/swipe-apply-email.ts
+ M lib/ui-english.ts
+ M next.config.ts
+ M package-lock.json
+ M package.json
+ M tests/app-install.test.ts
+ M tests/billing-integration.test.ts
+ M tests/indexing-queue-integration.test.ts
+ M tests/search-seo.test.ts
+ M tests/sitemap.test.ts
+?? .threadrig/
+?? app/admin/company-accounts/accounts.css
+?? app/api/applications/
+?? app/api/companies/
+?? app/api/company-covers/
+?? app/api/company/analytics/
+?? app/api/company/billing/
+?? app/api/company/candidates/
+?? app/api/company/google/
+?? app/api/company/profile/cover/
+?? app/api/company/register/
+?? app/api/company/team/
+?? app/application-questions.tsx
+?? app/business/feature-art.tsx
+?? app/business/workspace-preview.tsx
+?? app/companies/[slug]/cv-box.tsx
+?? app/company/analytics-view.tsx
+?? app/company/avatar.tsx
+?? app/company/billing-view.tsx
+?? app/company/billing.css
+?? app/company/branding.css
+?? app/company/candidate-answers.tsx
+?? app/company/candidates-view.tsx
+?? app/company/candidates.css
+?? app/company/company-api.ts
+?? app/company/cv-viewer.tsx
+?? app/company/job-editor.tsx
+?? app/company/job-questions.tsx
+?? app/company/jobs-view.tsx
+?? app/company/placement-choice.tsx
+?? app/company/placement-upgrade.tsx
+?? app/company/profile-branding.tsx
+?? app/company/setup-guide.tsx
+?? app/company/talent-view.tsx
+?? app/company/team-view.tsx
+?? app/site-footer.css
+?? app/vacancy-application-form.css
+?? app/vacancy-application-form.tsx
+?? db/migrations/073_company_candidates.sql
+?? db/migrations/074_candidate_interviews.sql
+?? db/migrations/075_company_cv_profiles.sql
+?? db/migrations/076_company_registration.sql
+?? db/migrations/077_company_team.sql
+?? db/migrations/079_job_questions.sql
+?? db/migrations/080_company_branding.sql
+?? db/migrations/081_search_filter_flags.sql
+?? db/migrations/082_company_google_sign_in.sql
+?? docs/company-billing-implementation-2026-11-13.md
+?? docs/company-cv-box-questions-branding-handoff-2026-11-13.md
+?? docs/competitor-gap-hrge-2026-11-13.md
+?? docs/georgia-runner-job.yml
+?? docs/georgia-runner-readme.diff
+?? docs/georgian-copy-guide.md
+?? docs/google-indexing-audit-2026-11-09.md
+?? docs/google-sign-in-plan.md
+?? docs/hr-workspace-research-2026-11-13.md
+?? docs/job-posting-flow-plan.md
+?? docs/linkedin-company-page.md
+?? docs/scraper-status-2026-09-21.md
+?? docs/search-console-audit-2026-09-19.md
+?? docs/seo-fixes-2026-11-13.md
+?? lib/company-analytics.ts
+?? lib/company-candidates.ts
+?? lib/company-registration.ts
+?? lib/cv-parse.ts
+?? lib/cv-upload.ts
+?? lib/job-questions.ts
+?? lib/pagination.ts
+?? lib/server/company-analytics.ts
+?? lib/server/company-billing.ts
+?? lib/server/company-candidates.ts
+?? lib/server/company-covers.ts
+?? lib/server/company-cv-box.ts
+?? lib/server/company-google.ts
+?? lib/server/cv-text.ts
+?? lib/server/job-questions.ts
+?? lib/vacancy-title.ts
+?? public/brand/jobx-linkedin-recruitment-v3.png
+?? public/brand/jobx-linkedin-recruitment-v4.png
+?? public/brand/jobx-linkedin-work-process-v2.png
+?? public/llms.txt
+?? public/pdfjs/
+?? reports/
+?? research_notes/
+?? scripts/seed-company-portal.ts
+?? scripts/setup-georgia-runner.sh
+?? tests/company-account-linking.test.ts
+?? tests/company-billing.test.ts
+?? tests/company-branding.test.ts
+?? tests/company-cv-box.integration.test.ts
+?? tests/company-google.test.ts
+?? tests/company-registration.test.ts
+?? tests/cv-parse.test.ts
+?? tests/cv-upload.test.ts
+?? tests/fixtures/cv-samples/
+?? tests/job-questions.test.ts
+?? tests/pagination.test.ts
+?? tests/search-filter-flags-integration.test.ts
+?? tests/vacancy-title.test.ts

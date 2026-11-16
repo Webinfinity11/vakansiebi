@@ -315,3 +315,50 @@
     display: none;
   }
 }
+
+/* ── Employer masthead (/business) ─────────────────────────────────────────────────── */
+.board-shell .topbar.public-header .business-nav {
+  margin-left: var(--ds-space-4);
+}
+.board-shell .topbar.public-header .header-inner .header-post-job {
+  width: auto;
+  padding-inline: var(--ds-space-4);
+  gap: var(--ds-space-2);
+  font-weight: var(--ds-weight-strong);
+}
+.board-shell .topbar.public-header .header-login {
+  padding-inline: var(--ds-space-3);
+}
+@media (max-width: 1100px) {
+  .board-shell .topbar.public-header .header-inner .business-nav {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .board-shell
+    .topbar.public-header
+    .header-inner
+    .header-actions
+    .header-post-job {
+    width: auto;
+    padding-inline: var(--ds-space-3);
+  }
+}
+@media (max-width: 380px) {
+  .board-shell
+    .topbar.public-header
+    .header-inner
+    .header-actions
+    .header-post-job
+    span {
+    display: none;
+  }
+  .board-shell
+    .topbar.public-header
+    .header-inner
+    .header-actions
+    .header-post-job {
+    width: var(--ds-control-touch);
+    padding: 0;
+  }
+}

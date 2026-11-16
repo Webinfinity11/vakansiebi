@@ -176,7 +176,7 @@
   gap: var(--ds-space-1);
 }
 :root .board-shell.company-page .company-job-meta > * + *::before {
-  content: '·';
+  content: "·";
   margin-right: var(--ds-space-1);
   color: var(--ds-line-strong);
 }
@@ -214,7 +214,7 @@
   :root
     .board-shell.company-page
     .vacancy-breadcrumb
-    > span[aria-hidden='true'] {
+    > span[aria-hidden="true"] {
     display: inline;
     color: var(--ds-ink-3);
   }
@@ -259,10 +259,9 @@
    label wrapping on phones. The submit action stays beside the fields. */
 :root .board-shell.company-page .company-filters {
   display: grid;
-  grid-template-columns: minmax(180px, 1.3fr) minmax(150px, 1fr) minmax(
-      190px,
-      1.1fr
-    ) minmax(160px, 1fr) auto;
+  grid-template-columns:
+    minmax(180px, 1.3fr) minmax(150px, 1fr) minmax(190px, 1.1fr)
+    minmax(160px, 1fr) auto;
   align-items: end;
   gap: var(--ds-space-3);
   padding: var(--ds-space-4);
@@ -280,7 +279,7 @@
   color: var(--ds-ink-2);
   font-size: var(--ds-text-sm);
 }
-:root .board-shell.company-page .company-filters input[type='search'] {
+:root .board-shell.company-page .company-filters input[type="search"] {
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -302,7 +301,7 @@
   .board-shell.company-page
   .company-filters
   .ds-select
-  [data-slot='select-value'] {
+  [data-slot="select-value"] {
   white-space: normal;
   overflow: visible;
   -webkit-line-clamp: unset;
@@ -379,4 +378,64 @@
   margin: 0 0 var(--ds-space-2);
   line-height: 1.7;
   color: var(--ds-ink-2);
+}
+
+.company-page-cover {
+  width: 100%;
+  max-height: 340px;
+  aspect-ratio: 8 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+.company-branding {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 20px 40px;
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px solid var(--ds-border, #e5e7eb);
+  border-radius: 14px;
+  background: var(--ds-surface, #fff);
+}
+.company-branding > div > h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+.company-branding p {
+  margin: 0;
+  line-height: 1.7;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  color: var(--ds-ink-2, #334155);
+}
+.company-branding ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.company-branding li {
+  position: relative;
+  padding-inline-start: 22px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  color: var(--ds-ink-2, #334155);
+}
+.company-branding li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 4px;
+  top: 0.65em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ds-accent, #2563eb);
+}
+.company-cv-box {
+  margin-block: 28px;
+}
+:root .board-shell.company-page .company-branding + .company-cv-box {
+  margin-top: 20px;
 }

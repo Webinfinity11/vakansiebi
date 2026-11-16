@@ -8,11 +8,11 @@
 
 /* All widths: the search field is type="search"; keep the native clear button but drop the
    platform styling so the rounded panel stays consistent. */
-.searchbar input[type='search'] {
+.searchbar input[type="search"] {
   appearance: none;
   -webkit-appearance: none;
 }
-.searchbar input[type='search']::-webkit-search-decoration {
+.searchbar input[type="search"]::-webkit-search-decoration {
   -webkit-appearance: none;
 }
 /* All widths: "ახალი" pill for vacancies posted in the last two days. */
@@ -106,7 +106,9 @@
       var(--jobx-space-12px);
   }
   .board-shell .discovery-hero h1,
-  .board-shell .hero h1 {
+  .board-shell .discovery-hero .hero-title,
+  .board-shell .hero h1,
+  .board-shell .hero .hero-title {
     font-size: var(--jobx-font-size-26px);
     line-height: 1.35;
     letter-spacing: -0.5px;
@@ -167,7 +169,7 @@
     background: var(--jobx-color-f2f6fc-surface);
   }
   .discovery-shortcut:hover,
-  .discovery-shortcut[aria-pressed='true'] {
+  .discovery-shortcut[aria-pressed="true"] {
     border-color: var(--jobx-color-96b5ec-text);
     background: var(--jobx-color-e5edfc-surface);
   }
@@ -469,7 +471,7 @@
   }
 
   /* ---------- Filter sheet: a bottom sheet ---------- */
-  .mobile-filters-sheet[data-slot='sheet-content'],
+  .mobile-filters-sheet[data-slot="sheet-content"],
   .mobile-filters-sheet {
     width: 100% !important;
     max-width: 100% !important;
@@ -487,7 +489,7 @@
     gap: 0;
   }
   .mobile-filters-sheet::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 8px;
     left: 50%;
@@ -497,7 +499,7 @@
     border-radius: var(--jobx-radius-999px);
     background: #cfd6e2;
   }
-  .mobile-filters-sheet [data-slot='sheet-header'] {
+  .mobile-filters-sheet [data-slot="sheet-header"] {
     flex: 0 0 auto;
     min-height: 52px;
     justify-content: center;
@@ -505,21 +507,21 @@
     border-bottom: 1px solid var(--border);
     gap: var(--jobx-space-2px);
   }
-  .mobile-filters-sheet [data-slot='sheet-title'] {
+  .mobile-filters-sheet [data-slot="sheet-title"] {
     font-size: var(--jobx-font-size-17px);
     line-height: 1.4;
   }
-  .mobile-filters-sheet [data-slot='sheet-description'] {
+  .mobile-filters-sheet [data-slot="sheet-description"] {
     display: none;
   }
-  .mobile-filters-sheet [data-slot='sheet-close'] {
+  .mobile-filters-sheet [data-slot="sheet-close"] {
     top: 10px;
     right: 10px;
     width: 44px;
     height: 44px;
     border-radius: var(--jobx-radius-10px);
   }
-  .mobile-filters-sheet [data-slot='sheet-close'] svg {
+  .mobile-filters-sheet [data-slot="sheet-close"] svg {
     width: 20px;
     height: 20px;
   }
@@ -557,7 +559,7 @@
     height: auto;
     font-size: var(--jobx-font-size-16px);
   }
-  .mobile-filter-options [data-slot='select-item'] {
+  .mobile-filter-options [data-slot="select-item"] {
     min-height: 48px;
     padding-block: var(--jobx-space-12px);
     font-size: var(--jobx-font-size-14px);
@@ -595,8 +597,8 @@
     font-size: var(--jobx-font-size-14px);
     padding: var(--jobx-space-6px) var(--jobx-space-8px);
   }
-  .mobile-filters-sheet .check-row input[type='radio'],
-  .mobile-filters-sheet input[type='radio'] {
+  .mobile-filters-sheet .check-row input[type="radio"],
+  .mobile-filters-sheet input[type="radio"] {
     width: 20px;
     height: 20px;
   }
@@ -782,7 +784,7 @@
 
 /* The enclosing search panel supplies the input's focus indicator. Other controls retain
    their own focus rings so keyboard users can tell which action is selected. */
-.board-shell .discovery-hero .searchbar input[type='search']:focus-visible {
+.board-shell .discovery-hero .searchbar input[type="search"]:focus-visible {
   outline: none;
   box-shadow: none;
 }
@@ -827,7 +829,8 @@
     padding: var(--jobx-space-26px) var(--jobx-space-16px)
       var(--jobx-space-24px);
   }
-  .board-shell.editorial-board .discovery-hero h1 {
+  .board-shell.editorial-board .discovery-hero h1,
+  .board-shell.editorial-board .discovery-hero .hero-title {
     font-size: clamp(
       var(--jobx-font-size-30px),
       8.2vw,
@@ -981,7 +984,7 @@
    production cards measured 167–220px at 390px; text can still grow naturally. */
 @media (max-width: 760px) {
   /* The sheet backdrop is portaled outside the board shell. */
-  [data-slot='sheet-overlay'] {
+  [data-slot="sheet-overlay"] {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -1117,14 +1120,14 @@
     border-radius: var(--jobx-radius-12px);
     overscroll-behavior: contain;
   }
-  .job-choice-options [data-slot='select-item'] {
+  .job-choice-options [data-slot="select-item"] {
     min-height: 48px;
     padding: var(--jobx-space-12px) var(--jobx-space-30px)
       var(--jobx-space-12px) var(--jobx-space-12px);
     font-size: var(--jobx-font-size-14px);
     line-height: 1.5;
   }
-  .job-choice-options [data-slot='select-item'] > span {
+  .job-choice-options [data-slot="select-item"] > span {
     white-space: normal;
   }
 }
@@ -1172,8 +1175,8 @@
     flex: 1;
     font-size: var(--jobx-font-size-16px);
   }
-  .cv-shell .cv-layout[data-view='form'] .cv-preview,
-  .cv-shell .cv-layout[data-view='preview'] .cv-editor-column {
+  .cv-shell .cv-layout[data-view="form"] .cv-preview,
+  .cv-shell .cv-layout[data-view="preview"] .cv-editor-column {
     display: none;
   }
   .cv-shell .cv-preview {
@@ -1333,7 +1336,7 @@
   }
   /* The sheet: a bold title like every other heading, one divider between sections, and rows
      that start at the fields' edge. */
-  .mobile-filters-sheet [data-slot='sheet-title'].cn-font-heading {
+  .mobile-filters-sheet [data-slot="sheet-title"].cn-font-heading {
     font-weight: 700;
   }
   .mobile-filters-sheet .filters .advanced-filters {

@@ -1,3 +1,4 @@
+import { isCompanyCover } from './company-covers';
 import { z } from 'zod';
 import { db, transaction } from './db';
 import { ApiError } from './auth';
@@ -16,6 +17,18 @@ export const companySchema = z.object({
     .refine((v) => !v || isLocalLogoUrl(v) || safeExternalUrl(v) === v),
   website: external,
   description: z.string().trim().max(3000),
+  coverUrl: z
+    .string()
+    .max(2000)
+    .refine((v) => !v || isCompanyCover(v))
+    .optional(),
+  benefits: z
+    .array(z.string().trim().max(120))
+    .max(12)
+    .transform((values) => [...new Set(values.filter(Boolean))])
+    .optional(),
+  whyUs: z.string().trim().max(1500).optional(),
+  cvBoxEnabled: z.boolean().optional(),
   version: z.number().int().nonnegative(),
 });
 export async function getCompany(name: string) {
@@ -30,9 +43,23 @@ export async function getCompany(name: string) {
         logoUrl: row.logo_url,
         website: row.website,
         description: row.description,
+        coverUrl: row.cover_url,
+        benefits: row.benefits,
+        whyUs: row.why_us,
+        cvBoxEnabled: row.cv_box_enabled,
         version: row.version,
       }
-    : { name, logoUrl: '', website: '', description: '', version: 0 };
+    : {
+        name,
+        logoUrl: '',
+        website: '',
+        description: '',
+        coverUrl: '',
+        benefits: [],
+        whyUs: '',
+        cvBoxEnabled: false,
+        version: 0,
+      };
 }
 export async function saveCompany(
   input: unknown,
@@ -80,9 +107,29 @@ export async function saveCompany(
         'კომპანიის მონაცემები შეიცვალა. გახსენი ხელახლა.',
         409,
       );
+    if (
+      data.coverUrl &&
+      !(
+        await c.query(
+          'SELECT 1 FROM company_cover_images WHERE hash=$1 AND company_key=$2',
+          [data.coverUrl.split('/').pop(), key],
+        )
+      ).rowCount
+    )
+      throw new ApiError('ქავერის სურათი ვერ მოიძებნა.');
     await c.query(
       'INSERT INTO company_profiles(company_key,name,logo_url,website,description) VALUES($1,$2,$3,$4,$5) ON CONFLICT(company_key) DO UPDATE SET name=excluded.name,logo_url=excluded.logo_url,website=excluded.website,description=excluded.description,version=company_profiles.version+1,updated_at=now()',
       [key, data.name, data.logoUrl, data.website, data.description],
+    );
+    await c.query(
+      `UPDATE company_profiles SET cover_url=$2,benefits=$3,why_us=$4,cv_box_enabled=$5 WHERE company_key=$1`,
+      [
+        key,
+        data.coverUrl ?? current?.cover_url ?? '',
+        JSON.stringify(data.benefits ?? current?.benefits ?? []),
+        data.whyUs ?? current?.why_us ?? '',
+        data.cvBoxEnabled ?? current?.cv_box_enabled ?? false,
+      ],
     );
     await c.query(
       'INSERT INTO audit_log(action,actor,before_data,after_data) VALUES($1,$2,$3,$4)',

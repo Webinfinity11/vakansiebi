@@ -1,3 +1,5 @@
+import { answerQuestions } from '../job-questions';
+import { loadJobQuestions } from './job-questions';
 import { put } from '@vercel/blob';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
@@ -44,6 +46,7 @@ const fields = z.object({
   resume: z.uuid().optional(),
 });
 export type SwipeForm = z.infer<typeof fields> & {
+  answers?: Record<string, string>;
   cv: { kind: 'upload'; pdf: Uint8Array } | { kind: 'jobx'; cv: Cv };
 };
 
@@ -78,13 +81,26 @@ export async function readSwipeForm(request: Request): Promise<SwipeForm> {
     phone: text('phone') ?? '',
     resume: text('resume') || undefined,
   });
+  let answers: Record<string, string> | undefined;
+  const rawAnswers = text('answers');
+  if (rawAnswers) {
+    if (rawAnswers.length > 10000)
+      throw new ApiError('პასუხები მეტისმეტად დიდია.', 413);
+    try {
+      answers = z
+        .record(z.string(), z.string().max(500))
+        .parse(JSON.parse(rawAnswers));
+    } catch {
+      throw new ApiError('კითხვარის პასუხები არასწორია.');
+    }
+  }
   const file = form.get('file');
   if (file && typeof file !== 'string') {
     if (file.size > maxUploadBytes)
       throw new ApiError('PDF 4 მბ-ზე დიდია — უფრო პატარა ფაილი ატვირთე', 413);
     const pdf = new Uint8Array(await file.arrayBuffer());
     if (!isPdf(pdf)) throw new ApiError('ატვირთული ფაილი PDF არ არის');
-    return { ...parsed, cv: { kind: 'upload', pdf } };
+    return { ...parsed, answers, cv: { kind: 'upload', pdf } };
   }
   const raw = text('cv');
   if (!raw) throw new ApiError('CV არ არის მიმაგრებული');
@@ -96,7 +112,7 @@ export async function readSwipeForm(request: Request): Promise<SwipeForm> {
   } catch {
     throw new ApiError('არასწორი მოთხოვნა');
   }
-  return { ...parsed, cv: { kind: 'jobx', cv: cvSchema.parse(json) } };
+  return { ...parsed, answers, cv: { kind: 'jobx', cv: cvSchema.parse(json) } };
 }
 
 type Sent = { id: string; to: string };
@@ -107,6 +123,18 @@ export async function sendSwipeApplication(
 ): Promise<Sent> {
   const job = await getVacancyPage(form.job);
   if (!job) throw new ApiError('ეს ვაკანსია აღარ არის ან ვადა გაუვიდა', 404);
+  const questions = await loadJobQuestions(job.id);
+  if (questions.length && !form.answers)
+    throw new ApiError(
+      'ამ ვაკანსიაზე მოკლე კითხვარია შესავსები. გახსენი ვაკანსია და შეავსე განაცხადი.',
+      422,
+    );
+  let questionAnswers;
+  try {
+    questionAnswers = answerQuestions(questions, form.answers);
+  } catch (e) {
+    throw new ApiError(e instanceof Error ? e.message : 'შეავსე კითხვარი.');
+  }
   const vacancyEmail = vacancyContacts(job).emails[0]?.email;
   if (!vacancyEmail)
     throw new ApiError('ამ ვაკანსიას განაცხადის ელფოსტა არ აქვს', 422);
@@ -137,8 +165,8 @@ export async function sendSwipeApplication(
   const row = (
     await db().query<{ id: string }>(
       `INSERT INTO swipe_applications
-         (job_id,candidate_key,candidate_name,candidate_email,candidate_phone,client_hash,resume_id,cv_kind,recipient)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         (job_id,candidate_key,candidate_name,candidate_email,candidate_phone,client_hash,resume_id,cv_kind,recipient,question_answers)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        ON CONFLICT (job_id,candidate_key) WHERE status<>'failed' DO NOTHING
        RETURNING id`,
       [
@@ -151,6 +179,7 @@ export async function sendSwipeApplication(
         form.resume ?? null,
         form.cv.kind,
         recipient,
+        JSON.stringify(questionAnswers),
       ],
     )
   ).rows[0];

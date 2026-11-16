@@ -82,6 +82,36 @@ void test(
       );
       ids.push(received.id);
       assert.ok(received.invoiceUrl);
+      const beforeEdit = (
+        await db().query('SELECT draft,version FROM jobs WHERE id=$1', [
+          received.id,
+        ])
+      ).rows[0];
+      await assert.rejects(
+        mutateJob(
+          {
+            id: received.id,
+            version: beforeEdit.version,
+            action: 'save',
+            draft: { ...beforeEdit.draft, title: key + ' failed edit' },
+          },
+          undefined,
+          async () => {
+            throw Error('related billing failed');
+          },
+        ),
+        /related billing failed/,
+      );
+      const afterFailedEdit = (
+        await db().query('SELECT draft,version FROM jobs WHERE id=$1', [
+          received.id,
+        ])
+      ).rows[0];
+      assert.deepEqual(
+        afterFailedEdit,
+        beforeEdit,
+        'related invoice failure rolls back the vacancy edit and version',
+      );
       const retry = await submitJob(payload, key);
       assert.equal(retry.invoiceUrl, received.invoiceUrl);
       const token = received.invoiceUrl!.split('/').pop()!;

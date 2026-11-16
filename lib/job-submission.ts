@@ -5,6 +5,29 @@ import { safeEmail } from './application-contact';
 import { telephoneNumber } from './vacancy-details';
 import { submissionLogoSchema } from './submission-logo';
 
+export const experienceOptions = [
+  'გამოცდილების გარეშე',
+  '1 წლამდე',
+  '1–3 წელი',
+  '3–5 წელი',
+  '5 წელზე მეტი',
+] as const;
+export const languageOptions = [
+  'ქართული',
+  'ინგლისური',
+  'რუსული',
+  'გერმანული',
+  'ფრანგული',
+  'თურქული',
+  'იტალიური',
+  'ესპანური',
+  'სომხური',
+  'აზერბაიჯანული',
+  'უკრაინული',
+  'ჩინური',
+  'არაბული',
+] as const;
+export const languageLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 export const nativeSource = 'JOBX';
 export const employmentOptions = [
   'სრული განაკვეთი',
@@ -14,7 +37,7 @@ export const employmentOptions = [
 ] as const;
 export const workModes = ['ადგილზე', 'ჰიბრიდული', 'დისტანციური'] as const;
 export const contactRequiredMessage =
-  'მიუთითე ელფოსტა, ტელეფონი ან https:// ბმული';
+  'მიუთითეთ ელფოსტა, ტელეფონი ან https:// ბმული';
 export function contactDestination(
   value: string,
 ): { email: string; phone: string; applicationUrl: string } | null {
@@ -48,7 +71,7 @@ export function submissionDate(now = new Date()) {
 }
 const text = (min: number, max: number) =>
   z
-    .string({ error: 'შეავსე ველი' })
+    .string({ error: 'შეავსეთ ველი' })
     .trim()
     .min(min, `მინიმუმ ${min} სიმბოლო`)
     .max(max, `მაქსიმუმ ${max} სიმბოლო`)
@@ -62,54 +85,68 @@ const text = (min: number, max: number) =>
 const amount = z.union([
   z.literal(''),
   z
-    .string({ error: 'შეავსე ველი' })
-    .regex(/^\d{1,7}$/, 'მიუთითე მთელი რიცხვი')
+    .string({ error: 'შეავსეთ ველი' })
+    .regex(/^\d{1,7}$/, 'მიუთითეთ მთელი რიცხვი')
     .refine(
       (v) => Number(v) > 0 && Number(v) <= 1000000,
-      'მიუთითე თანხა 1-დან 1 000 000-მდე',
+      'მიუთითეთ თანხა 1-დან 1 000 000-მდე',
     ),
 ]);
 export const submissionSchema = z
   .object({
-    requestId: z.uuid({ error: 'განაახლე გვერდი და სცადე ხელახლა' }),
+    requestId: z.uuid({ error: 'განაახლეთ გვერდი და სცადეთ ხელახლა' }),
     placement: z
-      .enum(placementTiers, { error: 'აირჩიე განთავსების ტიპი' })
+      .enum(placementTiers, { error: 'აირჩიეთ განთავსების ტიპი' })
       .default('standard'),
+    experience: z.enum(experienceOptions).or(z.literal('')).default(''),
+    languages: z
+      .array(
+        z.object({
+          name: z.enum(languageOptions),
+          level: z.enum(languageLevels).or(z.literal('')),
+        }),
+      )
+      .max(5)
+      .refine(
+        (v) => new Set(v.map((l) => l.name)).size === v.length,
+        'ეს ენა უკვე არჩეულია',
+      )
+      .default([]),
     title: text(3, 120),
     company: text(2, 160),
     notificationEmail: z
-      .string({ error: 'მიუთითე ელფოსტა შეტყობინებისთვის' })
+      .string({ error: 'მიუთითეთ ელფოსტა შეტყობინებისთვის' })
       .trim()
       .max(254)
-      .refine((v) => !!safeEmail(v), 'მიუთითე სწორი ელფოსტა შეტყობინებისთვის'),
+      .refine((v) => !!safeEmail(v), 'მიუთითეთ სწორი ელფოსტა შეტყობინებისთვის'),
     billingEmail: z.string().trim().max(254).default(''),
     logo: submissionLogoSchema,
     category: z.enum(categories).or(z.literal('')).default(''),
     city: text(0, 100),
-    mode: z.enum(workModes, { error: 'აირჩიე მუშაობის ფორმატი' }),
+    mode: z.enum(workModes, { error: 'აირჩიეთ მუშაობის ფორმატი' }),
     employmentType: z.enum(employmentOptions, {
-      error: 'აირჩიე დასაქმების ტიპი',
+      error: 'აირჩიეთ დასაქმების ტიპი',
     }),
     salaryFrom: amount,
     salaryTo: amount,
     salaryPeriod: z.enum(['თვე', 'დღე'], {
-      error: 'აირჩიე ანაზღაურების სიხშირე',
+      error: 'აირჩიეთ ანაზღაურების სიხშირე',
     }),
     salaryBasis: z
-      .enum(['ხელზე', 'დარიცხული'], { error: 'აირჩიე ანაზღაურების ტიპი' })
+      .enum(['ხელზე', 'დარიცხული'], { error: 'აირჩიეთ ანაზღაურების ტიპი' })
       .default('ხელზე'),
     deadline: z
-      .string({ error: 'შეავსე ველი' })
+      .string({ error: 'შეავსეთ ველი' })
       .refine(
         (v) =>
           /^\d{4}-\d{2}-\d{2}$/.test(v) &&
           Number.isFinite(Date.parse(v)) &&
           new Date(v).toISOString().slice(0, 10) === v,
-        'აირჩიე სწორი თარიღი',
+        'აირჩიეთ სწორი თარიღი',
       ),
     description: text(30, 20000),
     contact: text(3, 2000),
-    consent: z.literal(true, { error: 'დაადასტურე ინფორმაციის გამოქვეყნება' }),
+    consent: z.literal(true, { error: 'დაადასტურეთ ინფორმაციის გამოქვეყნება' }),
     // Honeypot: filled values are silently accepted, so autofill does not cause a 400.
     fax: z.string().max(200).default(''),
   })
@@ -122,7 +159,7 @@ export const submissionSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['billingEmail'],
-        message: 'მიუთითე ელფოსტა ინვოისის მისაღებად',
+        message: 'მიუთითეთ ელფოსტა ინვოისის მისაღებად',
       });
     if (!contactDestination(v.contact))
       ctx.addIssue({
@@ -134,13 +171,13 @@ export const submissionSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['city'],
-        message: 'აირჩიე ქალაქი',
+        message: 'აირჩიეთ ქალაქი',
       });
     if (v.salaryTo && !v.salaryFrom)
       ctx.addIssue({
         code: 'custom',
         path: ['salaryFrom'],
-        message: 'მიუთითე საწყისი თანხაც',
+        message: 'მიუთითეთ საწყისი თანხაც',
       });
     if (v.salaryFrom && v.salaryTo && Number(v.salaryTo) < Number(v.salaryFrom))
       ctx.addIssue({
@@ -154,7 +191,7 @@ export const submissionSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['deadline'],
-        message: 'აირჩიე ვადა დღევანდელი დღიდან 90 დღის ფარგლებში',
+        message: 'აირჩიეთ ვადა დღევანდელი დღიდან 90 დღის ფარგლებში',
       });
   });
 export type JobSubmission = z.infer<typeof submissionSchema>;
@@ -184,6 +221,19 @@ export function submissionVacancy(
     salaryPeriod: salary ? data.salaryPeriod : '',
     description: data.description,
     facts: [
+      ...(data.experience
+        ? [{ label: 'გამოცდილება', value: data.experience }]
+        : []),
+      ...(data.languages?.length
+        ? [
+            {
+              label: 'ენები',
+              value: data.languages
+                .map((l) => l.name + (l.level ? ` (${l.level})` : ''))
+                .join(', '),
+            },
+          ]
+        : []),
       ...(dest.email ? [{ label: 'ელფოსტა CV-სთვის', value: dest.email }] : []),
       ...(dest.phone ? [{ label: 'ტელეფონი', value: dest.phone }] : []),
     ],

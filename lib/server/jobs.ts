@@ -1,31 +1,33 @@
-import { confirmInvoice, cancelUnusedInvoice } from './billing';
-import { visitorUrl } from '../visitor-url';
+import { saveJobQuestions } from "./job-questions";
+import type { JobQuestion } from "../job-questions";
+import { confirmInvoice, cancelUnusedInvoice } from "./billing";
+import { visitorUrl } from "../visitor-url";
 import {
   indexingTransition,
   publishIndexingNotifications,
   type IndexingNotification,
-} from './google-indexing';
-import { enqueueIndexingNotifications } from './indexing-queue';
-import { queuePublicationEmail } from './publication-email';
-import { safeEmail } from '../application-contact';
-import { placementTiers } from '../placement';
-import { approvePlacement } from './job-placement';
-import { approveSubmissionLogo } from './submission-logos';
-import { employerlessSources, privateListingLabel } from '../types';
-import { z } from 'zod';
-import type { QueryResultRow } from 'pg';
-import { db, transaction } from './db';
-import { readSearch, listPageSize } from '../search-state';
-import { ApiError } from './auth';
-import { audit } from '../../worker/importer';
-import { reconcileJob } from '../../worker/automation';
-import { fingerprint } from '../../worker/adapters';
-import type { Vacancy } from '../types';
-import { vacancySchema } from '../vacancy-schema';
-export { vacancySchema } from '../vacancy-schema';
-import { companyKey } from '../company-key';
-import { contactAsCompany } from '../employer-identity';
-import { sourceHealth } from '../job-intelligence';
+} from "./google-indexing";
+import { enqueueIndexingNotifications } from "./indexing-queue";
+import { queuePublicationEmail } from "./publication-email";
+import { safeEmail } from "../application-contact";
+import { placementTiers } from "../placement";
+import { approvePlacement } from "./job-placement";
+import { approveSubmissionLogo } from "./submission-logos";
+import { employerlessSources, privateListingLabel } from "../types";
+import { z } from "zod";
+import type { QueryResultRow, PoolClient } from "pg";
+import { db, transaction } from "./db";
+import { readSearch, listPageSize } from "../search-state";
+import { ApiError } from "./auth";
+import { audit } from "../../worker/importer";
+import { reconcileJob } from "../../worker/automation";
+import { fingerprint } from "../../worker/adapters";
+import type { Vacancy } from "../types";
+import { vacancySchema } from "../vacancy-schema";
+export { vacancySchema } from "../vacancy-schema";
+import { companyKey } from "../company-key";
+import { contactAsCompany } from "../employer-identity";
+import { sourceHealth } from "../job-intelligence";
 import {
   searchPlan,
   shorterSearches,
@@ -33,17 +35,17 @@ import {
   filterLabels,
   type FilterKey,
   type SearchMeta,
-} from './search-plan';
+} from "./search-plan";
 import {
   latinGeorgianSearch,
   roleVocabulary,
   suggestSearch,
-} from '../search-language';
-import { titleLexicon } from './title-lexicon';
-import { logoCompanyKey } from '../company-logo-identity';
-import { resolveCompanyLogos } from './company-logos';
-import { employerPages, employerPagesIfReady } from './employers';
-import { createPublicJobsCache, publicJobsCacheKey } from './jobs-cache';
+} from "../search-language";
+import { titleLexicon } from "./title-lexicon";
+import { logoCompanyKey } from "../company-logo-identity";
+import { resolveCompanyLogos } from "./company-logos";
+import { employerPages, employerPagesIfReady } from "./employers";
+import { createPublicJobsCache, publicJobsCacheKey } from "./jobs-cache";
 
 const publicResponses =
   createPublicJobsCache<Awaited<ReturnType<typeof loadPublicJobs>>>();
@@ -84,12 +86,12 @@ export async function publicJobs(
      correction is searched at once and the page says which word it answered,
      the way a search engine does. The reader's own text stays in the field. */
   const correction =
-    answer.search.suggestion?.kind === 'spelling'
+    answer.search.suggestion?.kind === "spelling"
       ? answer.search.suggestion
       : null;
   if (correction) {
     const corrected = new URLSearchParams(params);
-    corrected.set('q', correction.query);
+    corrected.set("q", correction.query);
     const fixed = await again(corrected);
     const named = {
       from: readSearch(params).query.trim(),
@@ -99,7 +101,7 @@ export async function publicJobs(
       return { ...fixed, search: { ...fixed.search, corrected: named } };
     // The corrected word may live only in descriptions, as a misspelt word can.
     if (fixed.search.wider) {
-      corrected.set('deep', 'true');
+      corrected.set("deep", "true");
       const widened = await again(corrected);
       if (widened.total > 0)
         return {
@@ -115,7 +117,7 @@ export async function publicJobs(
   // Not for a bare number: "1500" is in every salary line.
   if (/^[\d\s.,₾$€%-]+$/.test(readSearch(params).query.trim())) return answer;
   const wider = new URLSearchParams(params);
-  wider.set('deep', 'true');
+  wider.set("deep", "true");
   const widened = await again(wider);
   return { ...widened, search: { ...widened.search, widened: true } };
 }
@@ -126,7 +128,7 @@ async function loadPublicJobs(
 ) {
   const page = Math.max(
     1,
-    Math.min(10000, Math.floor(Number(params.get('page'))) || 1),
+    Math.min(10000, Math.floor(Number(params.get("page"))) || 1),
   );
   const limit = listPageSize;
   // The public listing shows one row per identical posting; a lookup by id
@@ -136,24 +138,24 @@ async function loadPublicJobs(
     preview,
     { grouped: true, jobIds: options.jobIds },
   );
-  const summary = params.get('summary') === '1';
+  const summary = params.get("summary") === "1";
   /* The snapshot itself is read from the table, for the twenty rows of this page
      only. Carrying it through the search would detoast every visible vacancy. */
-  const record = preview ? 'record.draft' : 'record.published';
+  const record = preview ? "record.draft" : "record.published";
   const projection = summary
     ? `(${record} - ARRAY['description','facts','applicationLinks','warnings','fullTextUrl'])`
     : record;
-  const countsOnly = params.get('countsOnly') === '1';
+  const countsOnly = params.get("countsOnly") === "1";
   const cut = metrics.indexOf(
-    '\n    SELECT (SELECT count(*)::int FROM matches',
+    "\n    SELECT (SELECT count(*)::int FROM matches",
   );
   /* Whatever the filters and the chosen sort, a matching premium vacancy comes first, then VIP,
      each group newest-published first; everything else follows in the chosen order. A saved
      list (ids) keeps its own order, and the admin preview shows no promotion. */
-  const boosted = !preview && !params.has('ids');
+  const boosted = !preview && !params.has("ids");
   const priority = boosted
-    ? 'j.promotion_rank DESC,CASE WHEN j.promotion_rank>0 THEN COALESCE(j.published_at,j.created_at) END DESC NULLS LAST,'
-    : '';
+    ? "j.promotion_rank DESC,CASE WHEN j.promotion_rank>0 THEN COALESCE(j.published_at,j.created_at) END DESC NULLS LAST,"
+    : "";
   // A card needs one recent link per source; detail retains every original link.
   const sources = summary
     ? `COALESCE((SELECT jsonb_agg(jsonb_build_object('source',recent.source,'url',recent.url,'checkedAt',recent.checked_at,'error',recent.error) ORDER BY recent.posted_at DESC NULLS LAST,recent.source,recent.url) FROM (SELECT * FROM (SELECT DISTINCT ON (s.name) s.name AS source,si.url,CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END AS checked_at,si.error,m.posted_at FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired ORDER BY s.name,m.posted_at DESC NULLS LAST,si.last_checked_at DESC NULLS LAST,si.url) per_source ORDER BY posted_at DESC NULLS LAST,source,url LIMIT 6) recent),'[]'::jsonb)`
@@ -161,7 +163,7 @@ async function loadPublicJobs(
   const statement = countsOnly
     ? metrics
     : metrics.slice(0, cut) +
-      `, ranked AS (SELECT j.id, row_number() OVER (ORDER BY ${priority}${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT r.ord,j.id,j.promotion_rank,j.placement_expires_at,${boosted ? 'j.promotion_rank>0' : 'false'} AS priority_placement,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,${sources} AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id FROM ranked r JOIN searchable j ON j.id=r.id JOIN jobs record ON record.id=r.id WHERE r.ord > $${args.length + 2} AND r.ord <= $${args.length + 2} + $${args.length + 1})` +
+      `, ranked AS (SELECT j.id, row_number() OVER (ORDER BY ${priority}${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT r.ord,j.id,j.promotion_rank,j.placement_expires_at,${boosted ? "j.promotion_rank>0" : "false"} AS priority_placement,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,${sources} AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id FROM ranked r JOIN searchable j ON j.id=r.id JOIN jobs record ON record.id=r.id WHERE r.ord > $${args.length + 2} AND r.ord <= $${args.length + 2} + $${args.length + 1})` +
       metrics.slice(cut) +
       `, (SELECT COALESCE(jsonb_agg(to_jsonb(pg) - 'ord' ORDER BY pg.ord),'[]'::jsonb) FROM page pg) AS page_rows`;
   const measured = (
@@ -192,7 +194,7 @@ async function loadPublicJobs(
      would answer a question nobody asked ("კარიერა" in Kutaisi is not "კურიერი"). */
   const typedCount = async () => {
     const plain = searchPlan(
-      new URLSearchParams({ q: filters.query, deep: 'true' }),
+      new URLSearchParams({ q: filters.query, deep: "true" }),
       preview,
       { grouped: true },
     );
@@ -211,7 +213,7 @@ async function loadPublicJobs(
      statements, one after another. */
   const correctedTotal = async (query: string) => {
     const changed = new URLSearchParams(params);
-    changed.set('q', query);
+    changed.set("q", query);
     const answer = await publicResponses.get(
       publicJobsCacheKey(changed, preview, options.jobIds),
       () => loadPublicJobs(changed, preview, options),
@@ -235,7 +237,7 @@ async function loadPublicJobs(
   if (correction) {
     const n = await correctedTotal(correction);
     if (n > 0)
-      search.suggestion = { query: correction, count: n, kind: 'spelling' };
+      search.suggestion = { query: correction, count: n, kind: "spelling" };
   }
   /* Nothing found and no misspelling to blame: one of the words is the reason.
      Ask what the others would find and offer that, instead of leaving the reader
@@ -264,12 +266,12 @@ async function loadPublicJobs(
     const words = best ? best.option.words : [];
     if (best && words.length)
       search.suggestion = {
-        query: words.join(' '),
+        query: words.join(" "),
         count: best.count,
-        kind: 'fewer-words',
+        kind: "fewer-words",
       };
   }
-  if (params.get('countsOnly') === '1')
+  if (params.get("countsOnly") === "1")
     return {
       jobs: [],
       preview,
@@ -286,19 +288,19 @@ async function loadPublicJobs(
   for (const r of pageRows) r.created_at = new Date(r.created_at);
   const rows = pageRows;
   const companyKeys = [
-    ...new Set(rows.map((r) => companyKey(r.published.company || ''))),
+    ...new Set(rows.map((r) => companyKey(r.published.company || ""))),
   ];
   const [profilesResult, sharedLogos, employers] = await Promise.all([
     companyKeys.length
       ? publicRead(
-          `SELECT company_key,logo_url${summary ? '' : ',website,description'} FROM company_profiles WHERE company_key=ANY($1::text[])`,
+          `SELECT company_key,logo_url${summary ? "" : ",website,description,benefits,why_us"} FROM company_profiles WHERE company_key=ANY($1::text[])`,
           [companyKeys],
         )
       : Promise.resolve({ rows: [] }),
     resolveCompanyLogos(
       rows
         .filter((r) => !r.published.logoUrl)
-        .map((r) => r.published.company || ''),
+        .map((r) => r.published.company || ""),
     ),
     preview
       ? Promise.resolve(null)
@@ -309,30 +311,30 @@ async function loadPublicJobs(
   );
   return {
     jobs: rows.map((r) => ({
-      description: '',
+      description: "",
       ...r.published,
       ...(!r.published.logoUrl &&
-      sharedLogos.has(logoCompanyKey(r.published.company || ''))
+      sharedLogos.has(logoCompanyKey(r.published.company || ""))
         ? {
-            logoUrl: sharedLogos.get(logoCompanyKey(r.published.company || ''))!
+            logoUrl: sharedLogos.get(logoCompanyKey(r.published.company || ""))!
               .logoUrl,
             logoOrigin: sharedLogos.get(
-              logoCompanyKey(r.published.company || ''),
+              logoCompanyKey(r.published.company || ""),
             )!.origin,
           }
         : {}),
       summary,
-      ...(typeof r.published.salaryMin === 'number' &&
+      ...(typeof r.published.salaryMin === "number" &&
       (!Number.isFinite(r.published.salaryMin) ||
         r.published.salaryMin > 100000000 ||
         r.published.salaryMin < 0)
-        ? { salary: '', salaryMin: null, currency: '', salaryPeriod: '' }
+        ? { salary: "", salaryMin: null, currency: "", salaryPeriod: "" }
         : {}),
       // A classified board carries no employer; name the listing honestly instead of
       // leaving the employer line blank or inventing a company.
-      ...((!String(r.published.company || '').trim() &&
-        employerlessSources.includes(String(r.published.source || ''))) ||
-      contactAsCompany(String(r.published.company || ''))
+      ...((!String(r.published.company || "").trim() &&
+        employerlessSources.includes(String(r.published.source || ""))) ||
+      contactAsCompany(String(r.published.company || ""))
         ? { company: privateListingLabel }
         : {}),
       id: r.id,
@@ -340,7 +342,7 @@ async function loadPublicJobs(
       ...(r.promotion_rank > 0 && r.placement_expires_at
         ? {
             placement: {
-              tier: r.promotion_rank === 2 ? 'premium' : 'vip',
+              tier: r.promotion_rank === 2 ? "premium" : "vip",
               expiresAt: r.placement_expires_at,
               priority: !!r.priority_placement,
             },
@@ -365,9 +367,9 @@ async function loadPublicJobs(
           health: sourceHealth(s.checkedAt, s.error),
         }),
       ),
-      ...(companyProfiles.get(companyKey(r.published.company || ''))?.logo_url
+      ...(companyProfiles.get(companyKey(r.published.company || ""))?.logo_url
         ? {
-            logoUrl: companyProfiles.get(companyKey(r.published.company || ''))!
+            logoUrl: companyProfiles.get(companyKey(r.published.company || ""))!
               .logo_url,
           }
         : {}),
@@ -375,11 +377,17 @@ async function loadPublicJobs(
         ? {
             companyProfile: {
               website:
-                companyProfiles.get(companyKey(r.published.company || ''))
-                  ?.website || '',
+                companyProfiles.get(companyKey(r.published.company || ""))
+                  ?.website || "",
               description:
-                companyProfiles.get(companyKey(r.published.company || ''))
-                  ?.description || '',
+                companyProfiles.get(companyKey(r.published.company || ""))
+                  ?.description || "",
+              benefits:
+                companyProfiles.get(companyKey(r.published.company || ""))
+                  ?.benefits || [],
+              whyUs:
+                companyProfiles.get(companyKey(r.published.company || ""))
+                  ?.why_us || "",
             },
           }
         : {}),
@@ -387,8 +395,8 @@ async function loadPublicJobs(
     preview,
     companyLinksPending: !preview && summary && !employers,
     search,
-    ...(params.has('ids') && !preview && !options.skipSavedAvailability
-      ? await savedAvailability(params.get('ids') || '')
+    ...(params.has("ids") && !preview && !options.skipSavedAvailability
+      ? await savedAvailability(params.get("ids") || "")
       : {}),
     total: count,
     page,
@@ -399,9 +407,9 @@ async function loadPublicJobs(
    rejected record, or removed source snapshot through this status lookup. */
 async function savedAvailability(raw: string) {
   const ids = [
-    ...new Set(raw.split(',').filter((id) => z.uuid().safeParse(id).success)),
+    ...new Set(raw.split(",").filter((id) => z.uuid().safeParse(id).success)),
   ].slice(0, 100);
-  const plan = searchPlan(new URLSearchParams({ ids: ids.join(',') }), false);
+  const plan = searchPlan(new URLSearchParams({ ids: ids.join(",") }), false);
   const { rows } = await publicRead(
     `${plan.cte} SELECT j.id::text AS id FROM searchable j WHERE ${plan.where}`,
     plan.args,
@@ -426,8 +434,8 @@ async function savedAvailability(raw: string) {
       const row = known.get(id);
       return {
         id,
-        title: row?.title || 'შენახული ვაკანსია',
-        company: row?.company || '',
+        title: row?.title || "შენახული ვაკანსია",
+        company: row?.company || "",
         expired: row?.expired === true,
       };
     }),
@@ -437,7 +445,7 @@ export async function adminJobs(
   status: string,
   q: string,
   page = 1,
-  source = '',
+  source = "",
   jobId: string | null = null,
 ) {
   // `paused` and `manual` are automation states rather than record statuses: with automatic
@@ -464,13 +472,13 @@ export async function adminJobs(
     AND (${sourceParam}='' OR EXISTS (SELECT 1 FROM source_items f WHERE f.job_id=j.id AND f.source_id=${sourceParam}))`;
   const rows = (
     await db().query(
-      `SELECT j.*,(SELECT notification_email FROM job_submissions sub WHERE sub.job_id=j.id) AS notification_email,(SELECT requested_placement FROM job_submissions sub WHERE sub.job_id=j.id) AS requested_placement,(SELECT created_at FROM job_submissions sub WHERE sub.job_id=j.id) AS submitted_at,(SELECT is_test FROM job_submissions sub WHERE sub.job_id=j.id) AS is_test,(SELECT jsonb_build_object('status',inv.status,'number',inv.number,'created_at',inv.created_at,'token',inv.token,'amount_gel',inv.amount_gel,'placement_tier',inv.placement_tier,'service_days',inv.service_days) FROM job_invoices inv WHERE inv.job_id=j.id) AS invoice,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where('$4', '$5')} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
+      `SELECT j.*,(SELECT notification_email FROM job_submissions sub WHERE sub.job_id=j.id) AS notification_email,(SELECT requested_placement FROM job_submissions sub WHERE sub.job_id=j.id) AS requested_placement,(SELECT created_at FROM job_submissions sub WHERE sub.job_id=j.id) AS submitted_at,(SELECT is_test FROM job_submissions sub WHERE sub.job_id=j.id) AS is_test,(SELECT jsonb_build_object('status',inv.status,'number',inv.number,'created_at',inv.created_at,'token',inv.token,'amount_gel',inv.amount_gel,'placement_tier',inv.placement_tier,'service_days',inv.service_days) FROM job_invoices inv WHERE inv.job_id=j.id) AS invoice,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where("$4", "$5")} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
       [status, q, (page - 1) * 30, source, jobId],
     )
   ).rows;
   const total = (
     await db().query(
-      `SELECT count(*)::int count FROM jobs j WHERE ${where('$3', '$4')}`,
+      `SELECT count(*)::int count FROM jobs j WHERE ${where("$3", "$4")}`,
       [status, q, source, jobId],
     )
   ).rows[0].count;
@@ -512,7 +520,7 @@ export async function bulkPublishJobs(input: unknown) {
   const results: { id: string; published: boolean; reason?: string }[] = [];
   for (const item of items) {
     try {
-      await mutateJob({ ...item, action: 'publish', pendingOnly: true });
+      await mutateJob({ ...item, action: "publish", pendingOnly: true });
       results.push({ id: item.id, published: true });
     } catch (error) {
       if (!(error instanceof ApiError) && !(error instanceof z.ZodError))
@@ -522,7 +530,7 @@ export async function bulkPublishJobs(input: unknown) {
         published: false,
         reason:
           error instanceof z.ZodError
-            ? 'მონაცემები შესასწორებელია'
+            ? "მონაცემები შესასწორებელია"
             : error.message,
       });
     }
@@ -533,26 +541,27 @@ export async function bulkPublishJobs(input: unknown) {
 
 export async function mutateJob(
   input: unknown,
-  owner?: { accountId: string; companyKey: string },
+  owner?: { accountId: string; companyKey: string; questions?: JobQuestion[] },
+  afterSave?: (client: PoolClient) => Promise<void>,
 ) {
-  const actor = owner ? 'company:' + owner.accountId : 'admin';
+  const actor = owner ? "company:" + owner.accountId : "admin";
   const data = z
     .object({
       id: z.uuid(),
       version: z.number().int(),
       pendingOnly: z.boolean().optional(),
       action: z.enum([
-        'save',
-        'publish',
-        'archive',
-        'reject',
-        'restore',
-        'apply-source',
-        'dismiss-update',
-        'merge',
-        'resume-automation',
-        'confirm-payment',
-        'confirm-refund',
+        "save",
+        "publish",
+        "archive",
+        "reject",
+        "restore",
+        "apply-source",
+        "dismiss-update",
+        "merge",
+        "resume-automation",
+        "confirm-payment",
+        "confirm-refund",
       ]),
       draft: vacancySchema.optional(),
       placement: z.enum(placementTiers).optional(),
@@ -560,7 +569,7 @@ export async function mutateJob(
         .string()
         .trim()
         .max(254)
-        .refine((v) => !!safeEmail(v), 'მიუთითე სწორი ელფოსტა შეტყობინებისთვის')
+        .refine((v) => !!safeEmail(v), "მიუთითე სწორი ელფოსტა შეტყობინებისთვის")
         .optional(),
       itemId: z.uuid().optional(),
       targetId: z.uuid().optional(),
@@ -574,37 +583,37 @@ export async function mutateJob(
       owner &&
       !(
         await c.query(
-          'SELECT 1 FROM company_accounts WHERE id=$1 AND company_key=$2 AND enabled AND NOT must_change_password FOR SHARE',
+          "SELECT 1 FROM company_accounts WHERE id=$1 AND company_key=$2 AND enabled AND NOT must_change_password FOR SHARE",
           [owner.accountId, owner.companyKey],
         )
       ).rowCount
     )
-      throw new ApiError('კომპანიის ანგარიშზე წვდომა შეზღუდულია.', 403);
+      throw new ApiError("კომპანიის ანგარიშზე წვდომა შეზღუდულია.", 403);
 
     // Consistent ordering prevents deadlocks for concurrent opposite-direction merges.
     const ids = [data.id, ...(data.targetId ? [data.targetId] : [])].sort();
     const rows = (
       await c.query(
-        'SELECT * FROM jobs WHERE id=ANY($1::uuid[]) ORDER BY id FOR UPDATE',
+        "SELECT * FROM jobs WHERE id=ANY($1::uuid[]) ORDER BY id FOR UPDATE",
         [ids],
       )
     ).rows;
     const job = rows.find((r) => r.id === data.id);
-    if (!job) throw new ApiError('ვაკანსია ვერ მოიძებნა', 404);
+    if (!job) throw new ApiError("ვაკანსია ვერ მოიძებნა", 404);
     if (owner) {
       const allowed = await c.query(
-        'SELECT 1 FROM company_job_ownership WHERE job_id=$1 AND company_key=$2',
+        "SELECT 1 FROM company_job_ownership WHERE job_id=$1 AND company_key=$2",
         [job.id, owner.companyKey],
       );
-      if (!allowed.rowCount) throw new ApiError('ვაკანსია ვერ მოიძებნა', 404);
+      if (!allowed.rowCount) throw new ApiError("ვაკანსია ვერ მოიძებნა", 404);
       if (
-        !['save', 'archive', 'restore'].includes(data.action) ||
+        !["save", "archive", "restore"].includes(data.action) ||
         data.placement ||
         data.targetId ||
         data.itemId ||
         data.notificationEmail
       )
-        throw new ApiError('მოქმედება დაუშვებელია.', 403);
+        throw new ApiError("მოქმედება დაუშვებელია.", 403);
       if (
         data.draft &&
         (companyKey(data.draft.company) !== owner.companyKey ||
@@ -613,45 +622,45 @@ export async function mutateJob(
           data.draft.datePosted !== job.draft.datePosted)
       )
         throw new ApiError(
-          'ვაკანსიის მფლობელისა და წყაროს შეცვლა დაუშვებელია.',
+          "ვაკანსიის მფლობელისა და წყაროს შეცვლა დაუშვებელია.",
           403,
         );
       if (
-        data.action === 'restore' &&
-        !['archived', 'rejected'].includes(job.status)
+        data.action === "restore" &&
+        !["archived", "rejected"].includes(job.status)
       )
         throw new ApiError(
-          'მხოლოდ დახურული ვაკანსია ბრუნდება შესამოწმებლად.',
+          "მხოლოდ დახურული ვაკანსია ბრუნდება შესამოწმებლად.",
           409,
         );
     }
 
     if (
       job.employer_suppression_id &&
-      ['publish', 'restore', 'resume-automation', 'apply-source'].includes(
+      ["publish", "restore", "resume-automation", "apply-source"].includes(
         data.action,
       )
     )
       throw new ApiError(
-        'კომპანიის მოთხოვნით ამოღებულია — ჯერ მოხსენი ბლოკირება „ამოღებულ ვაკანსიებში“',
+        "კომპანიის მოთხოვნით ამოღებულია — ჯერ მოხსენი ბლოკირება „ამოღებულ ვაკანსიებში“",
         409,
       );
     if (job.version !== data.version)
       throw new ApiError(
-        'ჩანაწერი შეიცვალა. განაახლე სია და სცადე ხელახლა.',
+        "ჩანაწერი შეიცვალა. განაახლე სია და სცადე ხელახლა.",
         409,
       );
-    if (data.notificationEmail && ['save', 'publish'].includes(data.action))
+    if (data.notificationEmail && ["save", "publish"].includes(data.action))
       await c.query(
-        'UPDATE job_submissions SET notification_email=$2 WHERE job_id=$1',
+        "UPDATE job_submissions SET notification_email=$2 WHERE job_id=$1",
         [job.id, data.notificationEmail],
       );
-    if (data.action === 'confirm-payment' || data.action === 'confirm-refund') {
+    if (data.action === "confirm-payment" || data.action === "confirm-refund") {
       if (
-        data.action === 'confirm-payment' &&
-        ['rejected', 'archived', 'merged'].includes(job.status)
+        data.action === "confirm-payment" &&
+        ["rejected", "archived", "merged"].includes(job.status)
       )
-        throw new ApiError('ეს განცხადება გაუქმებულია');
+        throw new ApiError("ეს განცხადება გაუქმებულია");
       await confirmInvoice(c, job.id, data.action);
       return { ok: true };
     }
@@ -663,21 +672,21 @@ export async function mutateJob(
         )
       ).rowCount;
       if (
-        job.status !== 'pending' ||
+        job.status !== "pending" ||
         !active ||
         (
-          await c.query('SELECT 1 FROM job_submissions WHERE job_id=$1', [
+          await c.query("SELECT 1 FROM job_submissions WHERE job_id=$1", [
             job.id,
           ])
         ).rowCount
       )
-        throw new ApiError('ჩანაწერი აღარ არის დასადასტურებელი', 409);
+        throw new ApiError("ჩანაწერი აღარ არის დასადასტურებელი", 409);
     }
-    if (job.status === 'merged')
-      throw new ApiError('ვაკანსია უკვე გაერთიანებულია', 409);
+    if (job.status === "merged")
+      throw new ApiError("ვაკანსია უკვე გაერთიანებულია", 409);
     // Handing a record back to automation is the one action that must not pause it again.
     // The source snapshot then decides what the record becomes, exactly as for a new import.
-    if (data.action === 'resume-automation') {
+    if (data.action === "resume-automation") {
       if (
         (
           await c.query(
@@ -687,7 +696,7 @@ export async function mutateJob(
         ).rowCount
       )
         throw new ApiError(
-          'JOBX-ზე დამატებულ განცხადებას ადმინისტრატორი მართავს',
+          "JOBX-ზე დამატებულ განცხადებას ადმინისტრატორი მართავს",
         );
       await c.query(
         `UPDATE jobs SET automation_managed=true,automation_paused=false,needs_review=false,
@@ -697,7 +706,7 @@ export async function mutateJob(
       await audit(
         c,
         job.id,
-        'automation.resumed',
+        "automation.resumed",
         actor,
         {
           automation_managed: job.automation_managed,
@@ -712,32 +721,32 @@ export async function mutateJob(
     let published = job.published;
     let status = job.status;
     let review = job.needs_review;
-    if (data.action === 'save') {
-      if (!data.draft) throw new ApiError('შეავსე ვაკანსიის მონაცემები');
+    if (data.action === "save") {
+      if (!data.draft) throw new ApiError("შეავსე ვაკანსიის მონაცემები");
       review = true;
     }
-    if (data.action === 'publish') {
+    if (data.action === "publish") {
       draft = vacancySchema.parse(draft);
       if (
         draft.deadline &&
         draft.deadline <
-          new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tbilisi' })
+          new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tbilisi" })
       )
-        throw new ApiError('ვაკანსიის ბოლო ვადა გასულია');
-      if (!draft.company) throw new ApiError('მიუთითე კომპანია');
+        throw new ApiError("ვაკანსიის ბოლო ვადა გასულია");
+      if (!draft.company) throw new ApiError("მიუთითე კომპანია");
       const submission = (
         await c.query(
-          'SELECT requested_placement,notification_email,is_test FROM job_submissions WHERE job_id=$1',
+          "SELECT requested_placement,notification_email,is_test FROM job_submissions WHERE job_id=$1",
           [job.id],
         )
       ).rows[0];
       if (
         submission &&
         !submission.is_test &&
-        !safeEmail(submission.notification_email || '')
+        !safeEmail(submission.notification_email || "")
       )
         throw new ApiError(
-          'გამოქვეყნებამდე მიუთითე დამსაქმებლის ელფოსტა შეტყობინებისთვის',
+          "გამოქვეყნებამდე მიუთითე დამსაქმებლის ელფოსტა შეტყობინებისთვის",
         );
       const placement =
         data.placement ||
@@ -748,72 +757,72 @@ export async function mutateJob(
           : undefined);
       if (placement) {
         await approvePlacement(c, job, draft.company, placement);
-        if (placement === 'standard') await cancelUnusedInvoice(c, job.id);
+        if (placement === "standard") await cancelUnusedInvoice(c, job.id);
       }
       // Approve uploads atomically with publication; an invalid upload must not
       // leave a published vacancy pointing at a private or missing image.
       await approveSubmissionLogo(
         c,
         draft.company,
-        draft.logoUrl || '',
-        job.published?.logoUrl || '',
+        draft.logoUrl || "",
+        job.published?.logoUrl || "",
       );
       published = draft;
-      status = 'published';
+      status = "published";
       review = false;
     }
-    if (['archive', 'reject', 'merge'].includes(data.action))
+    if (["archive", "reject", "merge"].includes(data.action))
       await cancelUnusedInvoice(c, job.id);
-    if (data.action === 'archive') {
-      status = 'archived';
+    if (data.action === "archive") {
+      status = "archived";
       review = false;
     }
-    if (data.action === 'reject') {
-      status = 'rejected';
+    if (data.action === "reject") {
+      status = "rejected";
       review = false;
     }
-    if (data.action === 'restore') {
-      status = 'pending';
+    if (data.action === "restore") {
+      status = "pending";
       published = null;
       review = true;
     }
-    if (data.action === 'dismiss-update') review = false;
-    if (data.action === 'apply-source') {
-      if (!data.itemId) throw new ApiError('აირჩიე წყარო');
+    if (data.action === "dismiss-update") review = false;
+    if (data.action === "apply-source") {
+      if (!data.itemId) throw new ApiError("აირჩიე წყარო");
       const item = (
         await c.query(
-          'SELECT raw FROM source_items WHERE id=$1 AND job_id=$2',
+          "SELECT raw FROM source_items WHERE id=$1 AND job_id=$2",
           [data.itemId, job.id],
         )
       ).rows[0];
-      if (!item?.raw) throw new ApiError('წყაროს მონაცემები ვერ მოიძებნა');
+      if (!item?.raw) throw new ApiError("წყაროს მონაცემები ვერ მოიძებნა");
       draft = vacancySchema.parse(item.raw);
       review = true;
     }
-    if (data.action === 'merge') {
+    if (data.action === "merge") {
       const target = rows.find((r) => r.id === data.targetId);
       if (
         !target ||
         target.id === job.id ||
-        ['merged', 'rejected', 'archived'].includes(target.status)
+        ["merged", "rejected", "archived"].includes(target.status)
       )
-        throw new ApiError('აირჩიე სხვა აქტიური ვაკანსია');
-      await c.query('UPDATE source_items SET job_id=$2 WHERE job_id=$1', [
+        throw new ApiError("აირჩიე სხვა აქტიური ვაკანსია");
+      await c.query("UPDATE source_items SET job_id=$2 WHERE job_id=$1", [
         job.id,
         target.id,
       ]);
       await c.query(
-        'UPDATE jobs SET automation_paused=true,needs_review=true,version=version+1,updated_at=now() WHERE id=$1',
+        "UPDATE jobs SET automation_paused=true,needs_review=true,version=version+1,updated_at=now() WHERE id=$1",
         [target.id],
       );
-      status = 'merged';
+      status = "merged";
       published = null;
       review = false;
-      await c.query('UPDATE jobs SET merged_into=$2 WHERE id=$1', [
+      await c.query("UPDATE jobs SET merged_into=$2 WHERE id=$1", [
         job.id,
         target.id,
       ]);
-      await audit(c, target.id, 'merge.received', actor, null, {
+      await audit(c, target.id, "merge.received", actor, null, {
         from: job.id,
       });
     }
@@ -824,12 +833,12 @@ export async function mutateJob(
        queued for review instead. Overriding automation's own refusal (a
        pending record with a reason) still pauses, or it would be undone. */
     const decided =
-      ['save', 'apply-source', 'dismiss-update', 'archive', 'reject'].includes(
+      ["save", "apply-source", "dismiss-update", "archive", "reject"].includes(
         data.action,
       ) ||
-      (job.status === 'pending' && !!job.automation_reason);
+      (job.status === "pending" && !!job.automation_reason);
     const submitted = !!(
-      await c.query('SELECT 1 FROM job_submissions WHERE job_id=$1', [job.id])
+      await c.query("SELECT 1 FROM job_submissions WHERE job_id=$1", [job.id])
     ).rowCount;
     await c.query(
       `UPDATE jobs SET
@@ -862,13 +871,17 @@ export async function mutateJob(
     await enqueueIndexingNotifications(events, c);
     notifications.push(...events);
     const publicationEmailQueued =
-      data.action === 'publish' && !job.published_at && submitted
+      data.action === "publish" && !job.published_at && submitted
         ? await queuePublicationEmail(c, {
             id: job.id,
             title: draft.title,
             company: draft.company,
           })
         : false;
+    if (owner?.questions && ["save", "restore"].includes(data.action))
+      await saveJobQuestions(c, job.id, owner.questions);
+    // Trusted server callers can persist related changes in the same transaction.
+    if (afterSave) await afterSave(c);
     return { ok: true, publicationEmailQueued, jobId: job.id as string };
   });
   clearPublicJobsCache();

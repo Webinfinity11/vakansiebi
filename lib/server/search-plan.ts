@@ -365,8 +365,9 @@ export function searchPlan(
     filters.city !== 'ყველა' && filters.city !== otherCity
       ? bind(cityPattern(filters.city))
       : null;
+  // Pattern changes require a new stored-flags migration; parity is checked by search-filter-flags-integration.
   const employmentPattern =
-    filters.employment === 'all'
+    !preview || filters.employment === 'all'
       ? null
       : bind(
           filters.employment === 'daily'
@@ -377,26 +378,28 @@ export function searchPlan(
               ? '(ნახევარი?|არასრული?|ნაწილობრივი?|½|1/2)[[:space:]]*განაკვეთ|part[ -]?time'
               : 'სტაჟიორ|სტაჟირებ|\\mintern(ship)?\\M',
         );
-  const entryLevelPattern = filters.entryLevel
-    ? bind(
-        'გამოცდილების[[:space:]]+გარეშე|გამოცდილებას[[:space:]]+(არ[[:space:]]+აქვს[[:space:]]+მნიშვნელობა|მნიშვნელობა[[:space:]]+არ[[:space:]]+აქვს)|გამოცდილება[[:space:]:–-]+(არ[[:space:]]+(არის[[:space:]]+)?(სავალდებულო|აუცილებელი|საჭირო)|არ[[:space:]]+მოითხოვება)|no[[:space:]]+(previous[[:space:]]+|prior[[:space:]]+)?experience[[:space:]]+(is[[:space:]]+)?(required|needed|necessary)|experience[[:space:]]+(is[[:space:]]+)?not[[:space:]]+(required|needed|necessary)',
-      )
-    : null;
+  const entryLevelPattern =
+    preview && filters.entryLevel
+      ? bind(
+          'გამოცდილების[[:space:]]+გარეშე|გამოცდილებას[[:space:]]+(არ[[:space:]]+აქვს[[:space:]]+მნიშვნელობა|მნიშვნელობა[[:space:]]+არ[[:space:]]+აქვს)|გამოცდილება[[:space:]:–-]+(არ[[:space:]]+(არის[[:space:]]+)?(სავალდებულო|აუცილებელი|საჭირო)|არ[[:space:]]+მოითხოვება)|no[[:space:]]+(previous[[:space:]]+|prior[[:space:]]+)?experience[[:space:]]+(is[[:space:]]+)?(required|needed|necessary)|experience[[:space:]]+(is[[:space:]]+)?not[[:space:]]+(required|needed|necessary)',
+        )
+      : null;
   const describedPartTime =
-    filters.employment === 'part-time' ? bind(describedPartTimePattern) : null;
+    preview && filters.employment === 'part-time'
+      ? bind(describedPartTimePattern)
+      : null;
   const unavailablePartTime = describedPartTime
     ? bind(unavailablePartTimePattern)
     : null;
   const describedInternship =
-    filters.employment === 'internship'
+    preview && filters.employment === 'internship'
       ? bind(describedInternshipPattern)
       : null;
   /* "Beginner" and "graduate" say entry level only in the experience field itself; in a
      description they as often address graduates of a programme that still wants years. */
   const entryLevelFacts = '(^|[^ა-ჰ])(დამწყებ|კურსდამთავრებულ)';
-  const requiredExperience = filters.entryLevel
-    ? bind(requiredExperiencePattern)
-    : null;
+  const requiredExperience =
+    preview && filters.entryLevel ? bind(requiredExperiencePattern) : null;
   /* Answers the extraction scan gives once per row, so the filters, the facet
      counts and the relaxed counts can all read a boolean instead of a document.
      Each one appears only while its filter is switched on. */
@@ -413,12 +416,16 @@ export function searchPlan(
       cityStemPattern
         ? `(CASE WHEN ${normalized(scalar(alias, 'city'))} IN ('','საქართველო','საქართველო.') THEN ${document(alias)} ~ ${cityStemPattern} ELSE false END) AS city_text`
         : '',
-      entryLevelPattern
-        ? `((${experienceText(alias)} ~ ${entryLevelPattern} OR ${factsText(alias)} ~ ${bind(entryLevelFacts)}) AND NOT (regexp_replace(${experienceText(alias)}, ${bind(negatedRequirement)}, '', 'g') ~ ${requiredExperience})) AS entry_level`
-        : '',
-      employmentPattern
-        ? `(${filters.employment === 'daily' ? `(${employmentText(alias)} || ' ' || ${document(alias)})` : employmentText(alias)} ~ ${employmentPattern}${describedPartTime ? ` OR (${document(alias)} ~ ${describedPartTime} AND ${document(alias)} !~ ${unavailablePartTime})` : ''}${describedInternship ? ` OR ${document(alias)} ~ ${describedInternship}` : ''}) AS employment_match`
-        : '',
+      !preview && filters.entryLevel
+        ? `COALESCE(${alias}.search_entry_level,false) AS entry_level`
+        : entryLevelPattern
+          ? `((${experienceText(alias)} ~ ${entryLevelPattern} OR ${factsText(alias)} ~ ${bind(entryLevelFacts)}) AND NOT (regexp_replace(${experienceText(alias)}, ${bind(negatedRequirement)}, '', 'g') ~ ${requiredExperience})) AS entry_level`
+          : '',
+      !preview && filters.employment !== 'all'
+        ? `COALESCE(${alias}.${{ 'part-time': 'search_part_time', internship: 'search_internship', daily: 'search_daily' }[filters.employment]},false) AS employment_match`
+        : employmentPattern
+          ? `(${filters.employment === 'daily' ? `(${employmentText(alias)} || ' ' || ${document(alias)})` : employmentText(alias)} ~ ${employmentPattern}${describedPartTime ? ` OR (${document(alias)} ~ ${describedPartTime} AND ${document(alias)} !~ ${unavailablePartTime})` : ''}${describedInternship ? ` OR ${document(alias)} ~ ${describedInternship}` : ''}) AS employment_match`
+          : '',
     ]
       .filter(Boolean)
       .map((column) => ',' + column)
@@ -548,8 +555,8 @@ export function searchPlan(
         ? `${salary}<=${bind(filters.salaryTo)}`
         : 'true',
     ].join(' AND '),
-    employment: employmentPattern ? 'j.employment_match' : 'true',
-    entryLevel: entryLevelPattern ? 'j.entry_level' : 'true',
+    employment: filters.employment !== 'all' ? 'j.employment_match' : 'true',
+    entryLevel: filters.entryLevel ? 'j.entry_level' : 'true',
     postedWithin: filters.postedWithin
       ? `j.posted_on BETWEEN to_char((now() AT TIME ZONE 'Asia/Tbilisi')::date-(${bind(filters.postedWithin)}::int-1),'YYYY-MM-DD') AND ${today}`
       : 'true',

@@ -1,27 +1,50 @@
-import { ServerSiteFooter } from '../../server-site-footer';
-import { compactSalary } from '@/lib/vacancy-presentation';
-import { breadcrumbs, jobPosting, jsonLd, vacancyUrl } from '@/lib/seo';
-import type { Metadata } from 'next';
-import { siteName } from '@/lib/site-brand';
-import { notFound } from 'next/navigation';
-import { isAdmin } from '@/lib/server/auth';
-import { getVacancyPage } from '@/lib/server/vacancy-page';
-import { employerPages } from '@/lib/server/employers';
+import { ServerSiteFooter } from "../../server-site-footer";
+import { compactSalary } from "@/lib/vacancy-presentation";
+import { breadcrumbs, jobPosting, jsonLd, vacancyUrl } from "@/lib/seo";
+import type { Metadata } from "next";
+import { siteName } from "@/lib/site-brand";
+import { vacancyTitle } from "@/lib/vacancy-title";
+import { notFound } from "next/navigation";
+import { isAdmin } from "@/lib/server/auth";
+import { getVacancyPage } from "@/lib/server/vacancy-page";
+import { employerPages } from "@/lib/server/employers";
 import {
   safeReturnPath,
   vacancyIdFrom,
   vacancySegment,
-} from '@/lib/vacancy-navigation';
-import VacancyPage from '../../vacancy-page';
-import { Suspense } from 'react';
-import { VacancySearches } from '../../vacancy-searches';
+  vacancySlug,
+} from "@/lib/vacancy-navigation";
+import VacancyPage from "../../vacancy-page";
+import { Suspense } from "react";
+import { VacancySearches } from "../../vacancy-searches";
+import { SimilarVacancies } from "../../similar-vacancies";
+import { cachedSimilarVacancies } from "@/lib/server/similar-vacancies";
+import type { PublicJob } from "@/lib/types";
+
+async function ServerSimilarVacancies({
+  job,
+  returnTo,
+}: {
+  job: PublicJob;
+  returnTo: string;
+}) {
+  const initial = await cachedSimilarVacancies(job);
+  return (
+    <SimilarVacancies
+      id={job.id}
+      returnTo={returnTo}
+      initial={initial ?? undefined}
+    />
+  );
+}
+
 type Props = {
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 async function load({ params, searchParams }: Props) {
   const [{ id: segment }, query] = await Promise.all([params, searchParams]);
-  const preview = query.preview === '1';
+  const preview = query.preview === "1";
   if (preview && !(await isAdmin())) notFound();
   const id = vacancyIdFrom(decodeURIComponent(segment));
   if (!id) notFound();
@@ -35,13 +58,13 @@ async function load({ params, searchParams }: Props) {
     preview,
     companyPath: slug ? `/companies/${encodeURIComponent(slug)}` : null,
     from: safeReturnPath(
-      typeof query.from === 'string' ? query.from : undefined,
+      typeof query.from === "string" ? query.from : undefined,
     ),
   };
 }
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { job, preview } = await load(props);
-  const title = `${job.title} — ${job.company} | ${siteName}`;
+  const title = vacancyTitle(job);
   /* The snippet names the position, then its facts, then the posting's own
      opening words up to ~160 characters. Facts alone ("company · city · pay")
      were the same for every opening one employer had in one city. */
@@ -52,33 +75,37 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     job.employmentType,
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(" · ");
   const lead = `${job.title}: ${facts}.`;
   const room = 160 - lead.length - 1;
-  const opening = job.description.replace(/\s+/g, ' ').trim();
+  const opening = job.description.replace(/\s+/g, " ").trim();
   const excerpt =
     room < 40 || !opening
-      ? ''
+      ? ""
       : opening.length <= room
         ? opening
-        : opening.slice(0, opening.lastIndexOf(' ', room - 1)) + '…';
+        : opening.slice(0, opening.lastIndexOf(" ", room - 1)) + "…";
   const description = (excerpt ? `${lead} ${excerpt}` : lead).slice(0, 200);
   const canonical = vacancyUrl(job);
   return {
     title,
     description,
     alternates: { canonical },
-    robots: preview ? { index: false, follow: false } : undefined,
+    robots: preview
+      ? { index: false, follow: false }
+      : vacancySlug(job.title) === ""
+        ? { index: false, follow: true }
+        : undefined,
     // The picture is this vacancy's own card (opengraph-image.tsx beside this page).
     openGraph: {
       title,
       description,
       url: canonical,
-      type: 'website',
-      locale: 'ka_GE',
+      type: "website",
+      locale: "ka_GE",
       siteName,
     },
-    twitter: { card: 'summary_large_image', title, description },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 export default async function Page(props: Props) {
@@ -87,7 +114,7 @@ export default async function Page(props: Props) {
   const trail = preview
     ? null
     : breadcrumbs([
-        { name: 'ვაკანსიები', path: '/' },
+        { name: "ვაკანსიები", path: "/" },
         ...(companyPath && job.company
           ? [{ name: job.company, path: companyPath }]
           : []),
@@ -121,6 +148,16 @@ export default async function Page(props: Props) {
               <VacancySearches job={job} />
             </Suspense>
           )
+        }
+        similar={
+          !preview ? (
+            <Suspense
+              key={job.id}
+              fallback={<SimilarVacancies id={job.id} returnTo={from} />}
+            >
+              <ServerSimilarVacancies job={job} returnTo={from} />
+            </Suspense>
+          ) : undefined
         }
         footer={<ServerSiteFooter />}
       />

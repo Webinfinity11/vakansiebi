@@ -1,3 +1,4 @@
+// Pattern changes require a new stored-flags migration; search-filter-flags-integration checks parity.
 import type { Vacancy } from './types';
 // Shared by presentation and SQL filtering; a positive requirement beats an entry-level tag.
 export const requiredExperiencePattern =

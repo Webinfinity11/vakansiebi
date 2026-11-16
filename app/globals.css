@@ -1,6 +1,6 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -210,6 +210,7 @@ textarea:focus-visible {
   outline-offset: 3px;
 }
 h1,
+.hero-title,
 h2,
 h3,
 p {
@@ -310,7 +311,8 @@ nav a {
   background: var(--jobx-accent-alt);
   border-radius: var(--jobx-radius-circle);
 }
-h1 {
+h1,
+.hero-title {
   font-size: clamp(var(--jobx-font-size-25px), 3vw, var(--jobx-font-size-38px));
   font-weight: 700;
   letter-spacing: -1.3px;
@@ -324,7 +326,8 @@ h1 > span {
   display: flex;
   align-items: center;
   gap: var(--jobx-space-15px);
-  padding: var(--jobx-space-9px) var(--jobx-space-10px) var(--jobx-space-9px) var(--jobx-space-22px);
+  padding: var(--jobx-space-9px) var(--jobx-space-10px) var(--jobx-space-9px)
+    var(--jobx-space-22px);
   background: var(--jobx-surface);
   border: 1px solid #cdd9ed;
   border-radius: var(--jobx-radius-14px);
@@ -757,7 +760,8 @@ footer > span:last-child {
     padding: var(--jobx-space-30px) 0 var(--jobx-space-24px);
     margin-bottom: var(--jobx-space-24px);
   }
-  h1 {
+  h1,
+  .hero-title {
     letter-spacing: -0.6px;
   }
   .searchbar {
@@ -1291,7 +1295,7 @@ footer > span:last-child {
 .edit-form .choice {
   width: 100%;
 }
-.edit-form input[aria-invalid='true'] {
+.edit-form input[aria-invalid="true"] {
   border-color: var(--jobx-color-ad4440-text);
 }
 .field-problem {
@@ -1453,8 +1457,8 @@ footer > span:last-child {
 /* Complementary ranges keep the full font available without downloading it
    for Georgian, Latin, Cyrillic and the common symbols in the small subset. */
 @font-face {
-  font-family: 'FiraGO';
-  src: url('/fonts/FiraGO-Regular.woff2') format('woff2');
+  font-family: "FiraGO";
+  src: url("/fonts/FiraGO-Regular.woff2") format("woff2");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -1464,8 +1468,8 @@ footer > span:last-child {
     U+25B9-25BB, U+25BD, U+25BF-2CFF, U+2D30-10FFFF;
 }
 @font-face {
-  font-family: 'FiraGO';
-  src: url('/fonts/FiraGO-Regular-subset.woff2') format('woff2');
+  font-family: "FiraGO";
+  src: url("/fonts/FiraGO-Regular-subset.woff2") format("woff2");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -1475,8 +1479,8 @@ footer > span:last-child {
     U+2D00-2D2F;
 }
 @font-face {
-  font-family: 'FiraGO';
-  src: url('/fonts/FiraGO-SemiBold.woff2') format('woff2');
+  font-family: "FiraGO";
+  src: url("/fonts/FiraGO-SemiBold.woff2") format("woff2");
   font-style: normal;
   font-weight: 600;
   font-display: swap;
@@ -1486,8 +1490,8 @@ footer > span:last-child {
     U+25B9-25BB, U+25BD, U+25BF-2CFF, U+2D30-10FFFF;
 }
 @font-face {
-  font-family: 'FiraGO';
-  src: url('/fonts/FiraGO-SemiBold-subset.woff2') format('woff2');
+  font-family: "FiraGO";
+  src: url("/fonts/FiraGO-SemiBold-subset.woff2") format("woff2");
   font-style: normal;
   font-weight: 600;
   font-display: swap;
@@ -1497,8 +1501,8 @@ footer > span:last-child {
     U+2D00-2D2F;
 }
 @font-face {
-  font-family: 'FiraGO';
-  src: url('/fonts/FiraGO-Bold.woff2') format('woff2');
+  font-family: "FiraGO";
+  src: url("/fonts/FiraGO-Bold.woff2") format("woff2");
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -1508,8 +1512,8 @@ footer > span:last-child {
     U+25B9-25BB, U+25BD, U+25BF-2CFF, U+2D30-10FFFF;
 }
 @font-face {
-  font-family: 'FiraGO';
-  src: url('/fonts/FiraGO-Bold-subset.woff2') format('woff2');
+  font-family: "FiraGO";
+  src: url("/fonts/FiraGO-Bold-subset.woff2") format("woff2");
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -1521,8 +1525,8 @@ footer > span:last-child {
 /* Calculated from FiraGO/Arial x-height and FiraGO hhea metrics.
    Reproduce with scripts/subset-fonts.sh. */
 @font-face {
-  font-family: 'FiraGO Fallback';
-  src: local('Arial');
+  font-family: "FiraGO Fallback";
+  src: local("Arial");
   font-style: normal;
   font-weight: 400 700;
   size-adjust: 101.6286%;
@@ -1538,11 +1542,11 @@ footer > span:last-child {
   --border: #e4e4e5;
   --background: #f9f9f9;
   --foreground: #27292c;
-  --font-geist-sans: 'FiraGO', 'FiraGO Fallback';
+  --font-geist-sans: "FiraGO", "FiraGO Fallback";
   --font-geist-mono: monospace;
 }
 body {
-  font-family: 'FiraGO', 'FiraGO Fallback', Arial, sans-serif;
+  font-family: "FiraGO", "FiraGO Fallback", Arial, sans-serif;
   color: #2c2e33;
   background: var(--jobx-page);
 }
@@ -1675,7 +1679,7 @@ button:disabled {
   font-weight: 600;
 }
 .board-shell nav .nav-active:after {
-  content: '';
+  content: "";
   position: absolute;
   height: 3px;
   background: var(--jobx-accent);
@@ -1755,7 +1759,8 @@ button:disabled {
   height: 6px;
   border-radius: var(--jobx-radius-circle);
 }
-.hero h1 {
+.hero h1,
+.hero .hero-title {
   font-size: clamp(var(--jobx-font-size-27px), 3.1vw, 42px);
   font-weight: 800;
   line-height: 1.55;
@@ -1763,7 +1768,8 @@ button:disabled {
   color: #26292f;
   margin: 0 0 var(--jobx-space-15px);
 }
-.hero h1 em {
+.hero h1 em,
+.hero .hero-title em {
   font-style: normal;
   color: var(--jobx-color-5a606d-text);
   position: relative;
@@ -1909,7 +1915,8 @@ button:disabled {
   padding: var(--jobx-space-8px) 0 var(--jobx-space-27px);
 }
 .board-shell .searchbar {
-  padding: var(--jobx-space-9px) var(--jobx-space-10px) var(--jobx-space-9px) var(--jobx-space-23px);
+  padding: var(--jobx-space-9px) var(--jobx-space-10px) var(--jobx-space-9px)
+    var(--jobx-space-23px);
   border: 1px solid var(--jobx-color-dedfe1-surface);
   border-radius: var(--jobx-radius-12px);
   gap: var(--jobx-space-15px);
@@ -2406,7 +2413,7 @@ button:disabled {
   flex-direction: column !important;
   overflow: hidden;
 }
-.detail-sheet > [data-slot='sheet-header'] {
+.detail-sheet > [data-slot="sheet-header"] {
   padding: var(--jobx-space-24px) var(--jobx-space-32px) var(--jobx-space-12px);
   color: #888a8e;
   font-size: var(--jobx-font-size-11px);
@@ -2656,7 +2663,7 @@ button:disabled {
   bottom: 0;
   flex-shrink: 0;
 }
-.mobile-filters-sheet [data-slot='sheet-header'] {
+.mobile-filters-sheet [data-slot="sheet-header"] {
   padding-left: 0;
 }
 /* Shared admin polish. */
@@ -2719,7 +2726,8 @@ button:disabled {
   .hero-inner {
     min-height: 370px;
   }
-  .hero h1 {
+  .hero h1,
+  .hero .hero-title {
     font-size: var(--jobx-font-size-44px);
   }
 }
@@ -2748,7 +2756,8 @@ button:disabled {
   .board-shell .header-inner {
     gap: var(--jobx-space-40px);
   }
-  .hero h1 {
+  .hero h1,
+  .hero .hero-title {
     font-size: 33px;
   }
   .hero-inner {
@@ -2831,7 +2840,8 @@ button:disabled {
     padding: var(--jobx-space-32px) 0 var(--jobx-space-18px);
     min-height: 0;
   }
-  .hero h1 {
+  .hero h1,
+  .hero .hero-title {
     font-size: var(--jobx-font-size-32px);
     letter-spacing: -1.2px;
     line-height: 1.55;
@@ -3061,11 +3071,13 @@ button:disabled {
     gap: var(--jobx-space-12px);
     font-size: var(--jobx-font-size-9px);
   }
-  .detail-sheet > [data-slot='sheet-header'] {
-    padding: var(--jobx-space-22px) var(--jobx-space-20px) var(--jobx-space-10px);
+  .detail-sheet > [data-slot="sheet-header"] {
+    padding: var(--jobx-space-22px) var(--jobx-space-20px)
+      var(--jobx-space-10px);
   }
   .detail-body {
-    padding: var(--jobx-space-12px) var(--jobx-space-20px) var(--jobx-space-25px);
+    padding: var(--jobx-space-12px) var(--jobx-space-20px)
+      var(--jobx-space-25px);
   }
   .detail-title {
     font-size: var(--jobx-font-size-23px);
@@ -3228,7 +3240,8 @@ button:disabled {
   }
 }
 @media (max-width: 760px) {
-  .hero h1 {
+  .hero h1,
+  .hero .hero-title {
     font-size: var(--jobx-font-size-28px);
   }
   .board-shell .searchbar {
@@ -3481,14 +3494,14 @@ h4,
 h5,
 h6,
 button,
-[role='button'],
+[role="button"],
 .job-title,
 .primary-button,
 .secondary-button,
 .masthead nav a,
 .saved-nav {
-  font-family: 'FiraGO', 'FiraGO Fallback', Arial, sans-serif;
-  font-feature-settings: 'case' on;
+  font-family: "FiraGO", "FiraGO Fallback", Arial, sans-serif;
+  font-feature-settings: "case" on;
 }
 
 /* Keep the supplied dark wordmark on a light backing in either theme. */

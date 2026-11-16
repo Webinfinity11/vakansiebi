@@ -1,9 +1,13 @@
 import { siteUrl } from '../seo';
 import { eligibleLandings, landingFor, landingPath } from '../seo-landing';
-import { vacancyPath } from '../vacancy-navigation';
+import { vacancyPath, vacancySlug } from '../vacancy-navigation';
 import { employerPages } from './employers';
 import { publicRead, searchPlan } from './search-plan';
-import { readLandingSnapshot, publicVacancyDates } from './sitemap-data';
+import {
+  readLandingSnapshot,
+  publicVacancyDates,
+  type DatedVacancy,
+} from './sitemap-data';
 
 export function pagesEntries() {
   return [
@@ -40,10 +44,17 @@ export async function searchesEntries() {
 
 export async function vacanciesEntries() {
   const vacancies = await publicVacancyDates();
-  return vacancies.map(({ id, title, lastModified }) => ({
-    url: siteUrl + vacancyPath({ id, title }),
-    lastModified,
-  }));
+  return vacancySitemapEntries(vacancies);
+}
+
+export function vacancySitemapEntries(vacancies: readonly DatedVacancy[]) {
+  return vacancies
+    // Titles with no URL slug have no indexable vacancy page.
+    .filter(({ title }) => vacancySlug(title) !== '')
+    .map(({ id, title, lastModified }) => ({
+      url: siteUrl + vacancyPath({ id, title }),
+      lastModified,
+    }));
 }
 
 export async function companiesEntries() {

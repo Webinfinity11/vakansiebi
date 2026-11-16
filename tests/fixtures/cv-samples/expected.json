@@ -1,0 +1,460 @@
+{
+  "asOf": "2026-11-16T12:00:00Z",
+  "note": "Synthetic people only. Years = floor(union of inclusive calendar months / 12). Year-only dates assume January–December; not exact tenure. Full Professional is retained as a source label, without inventing CEFR equivalence. LinkedIn/hh displayed durations intentionally stale; dates are ground truth.",
+  "fixtures": {
+    "europass-en.pdf": {
+      "name": "Alex Sample",
+      "email": "synthetic1@example.com",
+      "phone": "+995 555 00 00 01",
+      "city": "თბილისი",
+      "roles": [
+        {
+          "label": "Data Analyst — Example Europe",
+          "start": "2022-07",
+          "end": "current"
+        },
+        {
+          "label": "Junior Analyst — Sample Europe",
+          "start": "2019-03",
+          "end": "2022-06"
+        }
+      ],
+      "years": 7,
+      "education": [
+        "Bachelor of Science — Example University"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "Excel",
+        "SQL",
+        "Data visualization"
+      ],
+      "languages": [
+        {
+          "name": "ქართული",
+          "level": "native"
+        },
+        {
+          "name": "ინგლისური",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "Google Data Analytics Certificate"
+      ]
+    },
+    "linkedin-export.pdf": {
+      "name": "Robin Demo",
+      "email": "synthetic2@example.com",
+      "phone": "+995 555 00 00 02",
+      "city": "თბილისი",
+      "roles": [
+        {
+          "label": "Product Analyst — Fictional Network",
+          "start": "2020-01",
+          "end": "current"
+        }
+      ],
+      "years": 6,
+      "education": [
+        "Master of Science — Sample Institute"
+      ],
+      "educationLevel": "master",
+      "skills": [
+        "SQL",
+        "Tableau",
+        "Stakeholder management"
+      ],
+      "languages": [
+        {
+          "name": "ინგლისური",
+          "level": "full professional"
+        }
+      ],
+      "certifications": [
+        "Professional Scrum Master I"
+      ]
+    },
+    "two-column-canva.pdf": {
+      "name": "Dara Fiction",
+      "email": "synthetic3@example.com",
+      "phone": "+995 555 00 00 03",
+      "city": "ბათუმი",
+      "roles": [
+        {
+          "label": "Designer — Imaginary Studio",
+          "start": "2019",
+          "end": "2022"
+        }
+      ],
+      "years": 4,
+      "education": [
+        "Bachelor of Arts — Fictional Academy"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "Figma",
+        "Photoshop",
+        "Typography"
+      ],
+      "languages": [
+        {
+          "name": "ინგლისური",
+          "level": "c1"
+        }
+      ],
+      "certifications": [
+        "Design Foundations Certificate"
+      ]
+    },
+    "us-resume.pdf": {
+      "name": "Mira Example",
+      "email": "synthetic4@example.com",
+      "phone": "+995 555 00 00 04",
+      "city": "Boston",
+      "roles": [
+        {
+          "label": "Senior Analyst — Fictional Labs",
+          "start": "2020-01",
+          "end": "2023-12"
+        },
+        {
+          "label": "Analyst — Example Works",
+          "start": "2018-03",
+          "end": "2021-06"
+        }
+      ],
+      "years": 5,
+      "education": [
+        "Bachelor of Science — Fictional University"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "SQL",
+        "Python",
+        "Tableau"
+      ],
+      "languages": [
+        {
+          "name": "ინგლისური",
+          "level": "native"
+        },
+        {
+          "name": "გერმანული",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "AWS Certified Cloud Practitioner"
+      ]
+    },
+    "hh-ru.pdf": {
+      "name": "Алина Примерова",
+      "email": "synthetic5@example.com",
+      "phone": "+995 555 00 00 05",
+      "city": "ქუთაისი",
+      "roles": [
+        {
+          "label": "Бухгалтер — Пример Компания",
+          "start": "2020-06",
+          "end": "current"
+        }
+      ],
+      "years": 6,
+      "education": [
+        "Магистр экономики — Учебный институт"
+      ],
+      "educationLevel": "master",
+      "skills": [
+        "1C",
+        "Excel",
+        "CRM"
+      ],
+      "languages": [
+        {
+          "name": "რუსული",
+          "level": "native"
+        },
+        {
+          "name": "ინგლისური",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "Сертификат 1С Профессионал"
+      ]
+    },
+    "georgian.pdf": {
+      "name": "ნინა მაგალითაძე",
+      "email": "synthetic6@example.com",
+      "phone": "+995 555 00 00 06",
+      "city": "თბილისი",
+      "roles": [
+        {
+          "label": "ბუღალტერი — სადემო კომპანია",
+          "start": "2021-03",
+          "end": "current"
+        }
+      ],
+      "years": 5,
+      "education": [
+        "ბაკალავრი — სადემო უნივერსიტეტი"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "Excel",
+        "1C",
+        "ბუღალტერია"
+      ],
+      "languages": [
+        {
+          "name": "ქართული",
+          "level": "native"
+        },
+        {
+          "name": "ინგლისური",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "ბუღალტერიის სერტიფიკატი"
+      ]
+    },
+    "georgian-acadnusx.txt": {
+      "name": "ნინა მაგალითაძე",
+      "email": "synthetic6@example.com",
+      "phone": "+995 555 00 00 06",
+      "city": "თბილისი",
+      "roles": [
+        {
+          "label": "ბუღალტერი — სადემო კომპანია",
+          "start": "2021-03",
+          "end": "current"
+        }
+      ],
+      "years": 5,
+      "education": [
+        "ბაკალავრი — სადემო უნივერსიტეტი"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "Excel",
+        "1C",
+        "ბუღალტერია"
+      ],
+      "languages": [
+        {
+          "name": "ქართული",
+          "level": "native"
+        },
+        {
+          "name": "ინგლისური",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "ბუღალტერიის სერტიფიკატი"
+      ]
+    },
+    "georgian-acadnusx.pdf": {
+      "name": "ნინა მაგალითაძე",
+      "email": "synthetic6@example.com",
+      "phone": "+995 555 00 00 06",
+      "city": "თბილისი",
+      "roles": [
+        {
+          "label": "ბუღალტერი — სადემო კომპანია",
+          "start": "2021-03",
+          "end": "current"
+        }
+      ],
+      "years": 5,
+      "education": [
+        "ბაკალავრი — სადემო უნივერსიტეტი"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "Excel",
+        "1C",
+        "ბუღალტერია"
+      ],
+      "languages": [
+        {
+          "name": "ქართული",
+          "level": "native"
+        },
+        {
+          "name": "ინგლისური",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "ბუღალტერიის სერტიფიკატი"
+      ]
+    },
+    "word-table.docx": {
+      "name": "Mira Example",
+      "email": "synthetic4@example.com",
+      "phone": "+995 555 00 00 04",
+      "city": "Boston",
+      "roles": [
+        {
+          "label": "Senior Analyst — Fictional Labs",
+          "start": "2020-01",
+          "end": "2023-12"
+        },
+        {
+          "label": "Analyst — Example Works",
+          "start": "2018-03",
+          "end": "2021-06"
+        }
+      ],
+      "years": 5,
+      "education": [
+        "Bachelor of Science — Fictional University"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "SQL",
+        "Python",
+        "Tableau"
+      ],
+      "languages": [
+        {
+          "name": "ინგლისური",
+          "level": "native"
+        },
+        {
+          "name": "გერმანული",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "AWS Certified Cloud Practitioner"
+      ]
+    },
+    "scanned.pdf": {
+      "name": "Mira Example",
+      "email": "synthetic4@example.com",
+      "phone": "+995 555 00 00 04",
+      "city": "Boston",
+      "roles": [
+        {
+          "label": "Senior Analyst — Fictional Labs",
+          "start": "2020-01",
+          "end": "2023-12"
+        },
+        {
+          "label": "Analyst — Example Works",
+          "start": "2018-03",
+          "end": "2021-06"
+        }
+      ],
+      "years": 5,
+      "education": [
+        "Bachelor of Science — Fictional University"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "SQL",
+        "Python",
+        "Tableau"
+      ],
+      "languages": [
+        {
+          "name": "ინგლისური",
+          "level": "native"
+        },
+        {
+          "name": "გერმანული",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "AWS Certified Cloud Practitioner"
+      ]
+    },
+    "us-resume.rtf": {
+      "name": "Mira Example",
+      "email": "synthetic4@example.com",
+      "phone": "+995 555 00 00 04",
+      "city": "Boston",
+      "roles": [
+        {
+          "label": "Senior Analyst — Fictional Labs",
+          "start": "2020-01",
+          "end": "2023-12"
+        },
+        {
+          "label": "Analyst — Example Works",
+          "start": "2018-03",
+          "end": "2021-06"
+        }
+      ],
+      "years": 5,
+      "education": [
+        "Bachelor of Science — Fictional University"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "SQL",
+        "Python",
+        "Tableau"
+      ],
+      "languages": [
+        {
+          "name": "ინგლისური",
+          "level": "native"
+        },
+        {
+          "name": "გერმანული",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "AWS Certified Cloud Practitioner"
+      ]
+    },
+    "us-resume.odt": {
+      "name": "Mira Example",
+      "email": "synthetic4@example.com",
+      "phone": "+995 555 00 00 04",
+      "city": "Boston",
+      "roles": [
+        {
+          "label": "Senior Analyst — Fictional Labs",
+          "start": "2020-01",
+          "end": "2023-12"
+        },
+        {
+          "label": "Analyst — Example Works",
+          "start": "2018-03",
+          "end": "2021-06"
+        }
+      ],
+      "years": 5,
+      "education": [
+        "Bachelor of Science — Fictional University"
+      ],
+      "educationLevel": "bachelor",
+      "skills": [
+        "SQL",
+        "Python",
+        "Tableau"
+      ],
+      "languages": [
+        {
+          "name": "ინგლისური",
+          "level": "native"
+        },
+        {
+          "name": "გერმანული",
+          "level": "b2"
+        }
+      ],
+      "certifications": [
+        "AWS Certified Cloud Practitioner"
+      ]
+    }
+  }
+}

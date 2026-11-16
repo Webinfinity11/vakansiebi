@@ -125,6 +125,12 @@ export default async function Image({
     </div>,
     {
       ...size,
+      // Cache real cards at the CDN; a missing vacancy must recover quickly.
+      headers: {
+        'Cache-Control': job
+          ? 'public, max-age=0, s-maxage=86400, stale-while-revalidate=604800'
+          : 'public, max-age=0, s-maxage=300, must-revalidate',
+      },
       fonts: [
         { name: 'Noto Sans Georgian', data: georgianMedium, weight: 500 },
         { name: 'Noto Sans Georgian', data: georgianBold, weight: 700 },

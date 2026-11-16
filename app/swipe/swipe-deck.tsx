@@ -392,6 +392,8 @@ export function SwipeDeck() {
           to?: string;
           error?: string;
         };
+        if (response.status === 422)
+          router.push(vacancyPath(job) + '#vacancy-application');
         if (!response.ok && response.status !== 409)
           throw Error(data.error || '');
         if (response.ok) trackAction('swipe_send');
@@ -437,7 +439,7 @@ export function SwipeDeck() {
         setSending(null);
       }
     },
-    [applicant, cv, upload],
+    [applicant, cv, upload, router],
   );
 
   // The held send counts down; at zero the letter leaves for the employer.

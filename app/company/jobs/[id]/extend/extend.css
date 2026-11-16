@@ -1,0 +1,8 @@
+.cp-extend { min-height: 80dvh; padding: clamp(20px, 5vw, 72px); background: var(--cp-canvas); color: var(--cp-ink); }
+.cp-extend-card { margin-top: 24px; padding: clamp(20px, 4vw, 40px); border: 1px solid var(--cp-line); border-radius: var(--cp-radius); background: var(--cp-surface); box-shadow: var(--cp-shadow); }
+.cp-extend h1, .cp-extend h2 { line-height: 1.5; overflow-wrap: anywhere; }
+.cp-extend h1 { font-size: clamp(24px, 3vw, 36px); }
+.cp-extend h2 { font-size: 20px; font-weight: 600; }
+.cp-extend p { margin-block: 20px; line-height: 1.8; }
+.cp-extend .cp-btn { white-space: normal; height: auto; min-height: 44px; text-align: center; }
+.cp-extend a { color: var(--cp-accent); }

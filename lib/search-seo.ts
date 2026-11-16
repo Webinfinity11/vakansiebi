@@ -30,13 +30,27 @@ export function searchSeo(params: URLSearchParams) {
     ? landingHeading(landing)
     : searchHeading(readSearch(base));
   const pageLabel = page > 1 ? ` — გვერდი ${page}` : '';
-  const title = named
-    ? `${named}${pageLabel} | ${siteName}`
-    : `${homeTitle}${pageLabel}`;
+  const full = named ? `${named}${pageLabel}` : '';
+  // A long topic name already fills the visible title; the brand gives way.
+  const title = !named
+    ? `${homeTitle}${pageLabel}`
+    : full.length + siteName.length + 3 <= 70
+      ? `${full} | ${siteName}`
+      : full;
+  const description = landing
+    ? landingDescription(landing)
+    : named
+      ? `${named} ჯობიქსზე: შეადარე ხელფასი, გრაფიკი, მოვალეობები და მოთხოვნები.`
+      : homeDescription;
   return {
     path: '/' + (canonical.size ? '?' + canonical : ''),
     index: !base.size || !!landing,
     title,
-    description: landing ? landingDescription(landing) : homeDescription,
+    description: pagedDescription(description, page),
   };
+}
+
+/** Each page of a list has other vacancies, so its summary names the page. */
+export function pagedDescription(description: string, page: number) {
+  return page > 1 ? `${description} გვერდი ${page}.` : description;
 }

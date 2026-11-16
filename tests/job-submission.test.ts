@@ -233,7 +233,7 @@ void test('non-remote submissions require a city after trimming', () => {
   assert.ok(!parsed.success);
   assert.deepEqual(
     parsed.error.issues.map(({ path, message }) => ({ path, message })),
-    [{ path: ['city'], message: 'აირჩიე ქალაქი' }],
+    [{ path: ['city'], message: 'აირჩიეთ ქალაქი' }],
   );
 });
 
@@ -320,4 +320,22 @@ void test('filled honeypot receives unique acknowledgements without a session se
       else process.env[name] = saved[name];
     }
   }
+});
+
+void test('experience and languages default safely and round trip through vacancy facts', async () => {
+  const { companyJobForm } = await import('../lib/company-job-form');
+  const { experienceConflict } = await import('../lib/experience');
+  const { vacancySummary } = await import('../lib/vacancy-summary');
+  const original = submissionSchema.parse(validSubmission());
+  assert.equal(original.experience, '');
+  assert.deepEqual(original.languages, []);
+  const data = submissionSchema.parse({ ...validSubmission(), experience: '1–3 წელი', languages: [{ name: 'ინგლისური', level: 'B2' }, { name: 'რუსული', level: '' }] });
+  const vacancy = submissionVacancy(data, randomUUID());
+  assert.equal(vacancy.facts?.find(f => f.label === 'ენები')?.value, 'ინგლისური (B2), რუსული');
+  assert.equal(companyJobForm(vacancy).experience, data.experience);
+  assert.deepEqual(companyJobForm(vacancy).languages, data.languages);
+  assert.equal(experienceConflict(vacancy), null);
+  assert.ok(!vacancySummary(vacancy).some(f => f.label.includes('დასაზუსტებელია')));
+  assert.equal(companyJobForm({...vacancy,facts:[{label:'გამოცდილება',value:'უცნობი'},{label:'ენები',value:'უცნობი, ინგლისური (X9)'}]}).experience,'');
+  assert.deepEqual(companyJobForm({...vacancy,facts:[{label:'ენები',value:'უცნობი, ინგლისური (X9)'}]}).languages,[]);
 });

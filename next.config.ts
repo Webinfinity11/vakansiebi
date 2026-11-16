@@ -66,6 +66,15 @@ const config: NextConfig = {
         ],
       },
       {
+        // The company workspace shows a candidate's CV in its own page: same-origin framing only.
+        // Listed after '/:path*' so this value replaces DENY for this one route.
+        source: '/api/company/candidates/cv',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+        ],
+      },
+      {
         source: '/invoices/:path*',
         headers: [
           { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },

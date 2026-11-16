@@ -1,0 +1,88 @@
+.cp-placement {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.cp-placement legend {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.cp-placement-options {
+  display: grid;
+  gap: 8px;
+}
+.cp-placement-options label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.cp-placement-options input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+.cp-placement:disabled label {
+  cursor: default;
+  opacity: 0.65;
+}
+.cp-placement > p {
+  margin-top: 12px;
+  line-height: 1.6;
+}
+.cp-invoice {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.cp-invoice + .cp-invoice {
+  padding-top: 8px;
+}
+.cp-invoice p {
+  margin: 8px 0;
+}
+
+.cp-cell-title > .cp-btn {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+/* The short description sits beside the heading while there is room and moves
+   under it, at full width, on a phone instead of folding into a narrow column. */
+.cp-head-title:has(> p) {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.cp-head-title > p {
+  flex: 1 1 16rem;
+  margin: 0;
+  font-size: 14px;
+  color: var(--cp-ink-3);
+}
+
+/* B billing cards and placement choices. */
+.cp-invoice { padding: 24px 0; border-bottom: 1px solid var(--cp-line-2); }
+.cp-invoice:first-child { padding-top: 0; }
+.cp-invoice:last-child { padding-bottom: 0; border: 0; }
+.cp-invoice h3 { font-size: 18px; margin: 0 0 8px; }
+.cp-invoice p { margin: 8px 0; font-size: 14px; line-height: 1.7; }
+.cp-invoice .cp-subtle { font-size: 13px; }
+.cp-billing-empty { display: grid; justify-items: start; gap: 16px; }
+.cp-billing-empty p { margin: 0; font-size: 14px; color: var(--cp-ink-2); }
+.cp-placement-options { gap: 16px; }
+.cp-placement-options label { padding: 16px; gap: 16px; border: 1px solid var(--cp-line); border-radius: var(--cp-radius-sm); }
+.cp-placement-options label[data-selected=true] { border-color: var(--cp-accent); box-shadow: inset 0 0 0 1px var(--cp-accent); }
+.cp-placement-options label:hover { background: var(--cp-side); }
+.cp-placement-options small, .cp-placement > p { font-size: 13px; line-height: 1.7; color: var(--cp-ink-2); }
+.cp-placement-options input { accent-color: var(--cp-accent); }
+.cp-placement-options label:focus-within { outline: 2px solid var(--cp-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cp-placement-options label { transition: background-color 160ms ease, box-shadow 160ms ease; }
+}
+/* The placement picker also renders in a portal without the wizard stylesheet. */
+.cp-placement-options label > span { display: grid; gap: 8px; min-width: 0; }
+.cp-placement-options label strong { font-size: 14px; }
+.cp-placement-options label b { font-size: 20px; font-weight: 600; }

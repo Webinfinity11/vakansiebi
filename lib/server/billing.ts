@@ -34,7 +34,7 @@ export async function createInvoice(
   ).rows[0];
   if (!billingSettingsSchema.safeParse(settings).success)
     throw new ApiError(
-      'გადახდის რეკვიზიტები ჯერ არ არის დამატებული. შეგიძლია აირჩიო უფასო სტანდარტული განთავსება.',
+      'გადახდის რეკვიზიტები ჯერ არ არის დამატებული. შეგიძლიათ აირჩიოთ უფასო სტანდარტული განთავსება.',
       503,
     );
   const token = randomBytes(32).toString('hex');

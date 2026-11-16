@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { publicRead, searchPlan } from './search-plan';
 import { publicJobs } from './jobs';
 import {
@@ -52,4 +53,28 @@ export async function similarVacancies(
     const candidate = result.jobs.find((j) => j.id === item.id);
     return candidate ? [{ job: candidate, reasons: item.match!.reasons }] : [];
   });
+}
+
+/** Cache public, unfiltered recommendations; reader-specific exclusions stay in the API. */
+export async function cachedSimilarVacancies(
+  job: PublicJob,
+): Promise<SimilarVacancy[] | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const cached = unstable_cache(
+      () => similarVacancies(job),
+      ['similar-vacancies-v1', job.id],
+      { revalidate: 3600 },
+    );
+    return await Promise.race([
+      cached(),
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), 4000);
+      }),
+    ]);
+  } catch {
+    return null;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }

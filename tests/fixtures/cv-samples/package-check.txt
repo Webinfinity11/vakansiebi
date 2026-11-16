@@ -1,0 +1,2 @@
+word-table.docx: ZIP CRC and XML well-formedness PASS
+us-resume.odt: ZIP CRC and XML well-formedness PASS

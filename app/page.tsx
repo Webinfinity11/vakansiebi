@@ -1,34 +1,55 @@
-import type { Metadata } from 'next';
-import { jsonLd, shareImage, siteIdentity, siteUrl } from '@/lib/seo';
-import { siteName } from '@/lib/site-brand';
-import { searchSeo } from '@/lib/search-seo';
-import { cache, Suspense } from 'react';
-import { notFound, redirect, permanentRedirect } from 'next/navigation';
-import { canonicalSearchParams } from '@/lib/search-url';
-import JobBoard from './job-board';
-import { SearchDirectoryProvider } from './search-directory-context';
-import { landingCounts } from '@/lib/server/sitemap-data';
+import type { Metadata } from "next";
+import { jsonLd, shareImage, siteIdentity, siteUrl } from "@/lib/seo";
+import { siteName } from "@/lib/site-brand";
+import { pagedDescription, searchSeo } from "@/lib/search-seo";
+import { cache, Suspense } from "react";
+import { unstable_cache } from "next/cache";
+import { notFound, redirect, permanentRedirect } from "next/navigation";
+import { canonicalSearchParams } from "@/lib/search-url";
+import JobBoard from "./job-board";
+import { SearchDirectoryProvider } from "./search-directory-context";
+import { landingCounts } from "@/lib/server/sitemap-data";
 import {
   landingDescription,
   landingFor,
   landingIndexable,
   landingOf,
-} from '@/lib/seo-landing';
-import { landingFacts } from '@/lib/server/landing-facts';
-import { LandingFactsProvider } from './landing-summary';
-import { vacancyPath, safeReturnPath } from '@/lib/vacancy-navigation';
-import { publicJobs } from '@/lib/server/jobs';
-import type { BoardInitial } from '@/lib/board-return-cache';
+} from "@/lib/seo-landing";
+import { landingFacts } from "@/lib/server/landing-facts";
+import { LandingFactsProvider } from "./landing-summary";
+import { vacancyPath, safeReturnPath } from "@/lib/vacancy-navigation";
+import { publicJobs } from "@/lib/server/jobs";
+import type { BoardInitial } from "@/lib/board-return-cache";
 import {
   boardSearchKey,
   readSearch,
   readSearchPage,
   searchParams as toSearchParams,
-} from '@/lib/search-state';
+} from "@/lib/search-state";
 
-const readBoardJobs = cache((query: string) =>
-  publicJobs(new URLSearchParams(query)),
+/* Topic pages (category, city, part-time…) are a fixed set that search engines
+   revisit; their filters can scan every description. publicJobs' own cache lives
+   in one serverless instance, so these lists are also kept in Vercel's Data
+   Cache for a few minutes and refreshed behind a stale read. Free-form
+   searches stay uncached here. */
+const sharedLandingJobs = unstable_cache(
+  async (query: string) => {
+    const result = await publicJobs(new URLSearchParams(query));
+    // The board never reads source history; keep the stored entry small.
+    return {
+      ...result,
+      jobs: result.jobs.map((job) => ({ ...job, sources: [] })),
+    };
+  },
+  ["landing-board-v1"],
+  { revalidate: 300 },
 );
+const readBoardJobs = cache((query: string) => {
+  const params = new URLSearchParams(query);
+  const base = new URLSearchParams(params);
+  for (const key of ["page", "summary"]) base.delete(key);
+  return landingFor(base) ? sharedLandingJobs(query) : publicJobs(params);
+});
 const readDirectory = cache(async () => {
   try {
     return await landingCounts();
@@ -38,8 +59,8 @@ const readDirectory = cache(async () => {
 });
 function boardJobs(params: URLSearchParams) {
   const request = toSearchParams(readSearch(params));
-  request.set('summary', '1');
-  request.set('page', String(readSearchPage(params)));
+  request.set("summary", "1");
+  request.set("page", String(readSearchPage(params)));
   return readBoardJobs(request.toString());
 }
 
@@ -66,13 +87,13 @@ async function InitialBoard({ params }: { params: URLSearchParams }) {
       pages: result.pages,
       search: result.search,
       companyLinksPending:
-        'companyLinksPending' in result && result.companyLinksPending,
+        "companyLinksPending" in result && result.companyLinksPending,
       key: boardSearchKey(filters),
       page,
     };
   } catch {
     // Keep the shell usable; the client supplies the normal retry/error UI.
-    console.error('Initial vacancy list unavailable');
+    console.error("Initial vacancy list unavailable");
   }
   return (
     <SearchDirectoryProvider rows={directory}>
@@ -100,7 +121,7 @@ export async function generateMetadata({
   const { title, path, index: candidateIndex } = seo;
   let description = seo.description;
   const base = new URLSearchParams(params);
-  base.delete('page');
+  base.delete("page");
   const landing = landingFor(base);
   let index = candidateIndex;
   if (index && landing) {
@@ -110,7 +131,10 @@ export async function generateMetadata({
       const result = await boardJobs(params);
       index = landingIndexable(landing, [{ ...landing, count: result.total }]);
       if (result.total > 0)
-        description = landingDescription(landing, result.total);
+        description = pagedDescription(
+          landingDescription(landing, result.total),
+          readSearchPage(params),
+        );
     } catch {
       // A temporary database failure must not remove existing pages from search.
     }
@@ -131,8 +155,8 @@ export async function generateMetadata({
       description,
       url: siteUrl + path,
       siteName,
-      locale: 'ka_GE',
-      type: 'website',
+      locale: "ka_GE",
+      type: "website",
       images: [shareImage],
     },
   };
@@ -143,18 +167,18 @@ export default async function Home({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const query = await searchParams;
-  if (typeof query.job === 'string' && /^[a-f\d-]{36}$/i.test(query.job)) {
+  if (typeof query.job === "string" && /^[a-f\d-]{36}$/i.test(query.job)) {
     const from = new URLSearchParams();
     for (const [key, value] of Object.entries(query))
-      if (key !== 'job' && typeof value === 'string') from.set(key, value);
+      if (key !== "job" && typeof value === "string") from.set(key, value);
     redirect(
       /* A legacy `?job=` link carries no title; the vacancy's own page sends
          the reader on to the address that has its name in it. */
       vacancyPath(
         { id: query.job },
         {
-          preview: query.preview === '1',
-          from: safeReturnPath('/?' + from),
+          preview: query.preview === "1",
+          from: safeReturnPath("/?" + from),
         },
       ),
     );
@@ -166,7 +190,7 @@ export default async function Home({
   }
   const canonicalParams = canonicalSearchParams(params);
   if (canonicalParams.toString() !== params.toString())
-    permanentRedirect('/?' + canonicalParams.toString());
+    permanentRedirect("/?" + canonicalParams.toString());
   return (
     <>
       {/* Said once, on the front page: what this site is and how it is
@@ -187,7 +211,7 @@ export default async function Home({
         crossOrigin="anonymous"
       />
       <Suspense fallback={<JobBoard pendingInitial />}>
-        {params.get('preview') === '1' || params.get('saved') === '1' ? (
+        {params.get("preview") === "1" || params.get("saved") === "1" ? (
           <JobBoard />
         ) : (
           <InitialBoard params={params} />

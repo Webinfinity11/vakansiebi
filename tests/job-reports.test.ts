@@ -89,7 +89,7 @@ void test('reports reject invalid reasons, notes and vacancy IDs before storage'
   ]) {
     const response = await post(input);
     assert.equal(response.status, 400, JSON.stringify(input));
-    assert.match((await response.json()).error, /შეამოწმე/);
+    assert.match((await response.json()).error, /არასწორია/);
   }
   assert.equal((await post({ reason: 'other' }, 'bad-id')).status, 400);
 });

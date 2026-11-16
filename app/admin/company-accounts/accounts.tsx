@@ -9,6 +9,9 @@ import {
 } from '@/components/ui/dialog';
 import type { CompanyAccount } from '@/lib/company-portal';
 import '../../company/portal.css';
+import './accounts.css';
+
+type Suggestion = { name: string; jobs: number; hasAccount: boolean };
 export function CompanyAccounts() {
   const [accounts, setAccounts] = useState<CompanyAccount[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -24,6 +27,33 @@ export function CompanyAccounts() {
   const [jobId, setJobId] = useState('');
   const [notice, setNotice] = useState('');
   const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [view, setView] = useState<'all' | 'pending'>('all');
+  const [companyName, setCompanyName] = useState('');
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [picked, setPicked] = useState<Suggestion | null>(null);
+  const pending = accounts.filter(
+    (a) => a.approval_status === 'pending' && a.role === 'owner',
+  ).length;
+  useEffect(() => {
+    if (!create || picked || companyName.trim().length < 2) return;
+    let active = true;
+    const timer = setTimeout(() => {
+      fetch(
+        '/api/admin/company-accounts?companies=' +
+          encodeURIComponent(companyName.trim()),
+        { cache: 'no-store' },
+      )
+        .then((r) => (r.ok ? r.json() : []))
+        .then((rows: Suggestion[]) => {
+          if (active) setSuggestions(rows);
+        })
+        .catch(() => {});
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [create, companyName, picked]);
   async function request(data?: unknown) {
     const response = await fetch(
       '/api/admin/company-accounts',
@@ -80,12 +110,18 @@ export function CompanyAccounts() {
     await act(async () => {
       const result = await request({
         action: 'create',
-        name: form.get('name'),
+        name: companyName.trim(),
         username: form.get('username'),
         email: form.get('email'),
         confirmed: form.get('confirmed') === 'on',
+        attachJobs: form.get('attachJobs') === 'on',
       });
       setCreate(false);
+      setCompanyName('');
+      setPicked(null);
+      setSuggestions([]);
+      if (result.attached)
+        setNotice(`ანგარიშს ${result.attached} ვაკანსია მიება.`);
       setSecret({
         username: result.account.username,
         password: result.password,
@@ -93,11 +129,12 @@ export function CompanyAccounts() {
       await load();
     });
   }
-  async function change(action: string) {
+  async function change(action: string, mode?: CompanyAccount['trustedMode']) {
     if (!current) return;
     await act(async () => {
       const result = await request({
         action,
+        ...(mode ? { mode } : {}),
         id: current.id,
         version: current.version,
         ...(action === 'assign-job' ? { jobId } : {}),
@@ -111,7 +148,11 @@ export function CompanyAccounts() {
       setNotice(
         action === 'assign-job'
           ? 'ვაკანსია კომპანიას მიება.'
-          : 'ანგარიში განახლებულია.',
+          : action === 'assign-company-jobs'
+            ? result.attached
+              ? `კომპანიას ${result.attached} ვაკანსია მიება.`
+              : 'ახალი ვაკანსია ვერ მოიძებნა. ყველა უკვე მიბმულია ან სხვა სახელითაა.'
+            : 'ანგარიში განახლებულია.',
       );
     });
   }
@@ -143,6 +184,9 @@ export function CompanyAccounts() {
             onClick={() => {
               setCreate(true);
               setError('');
+              setCompanyName('');
+              setPicked(null);
+              setSuggestions([]);
             }}
           >
             <Plus size={16} />
@@ -156,6 +200,31 @@ export function CompanyAccounts() {
         </p>
       )}
       {notice && <output className="company-notice">{notice}</output>}
+      {loaded && accounts.length > 0 && (
+        <div
+          className="account-views"
+          role="group"
+          aria-label="ანგარიშების ფილტრი"
+        >
+          <button
+            className={view === 'all' ? 'is-active' : ''}
+            aria-pressed={view === 'all'}
+            onClick={() => setView('all')}
+          >
+            ყველა <span>{accounts.length}</span>
+          </button>
+          <button
+            className={
+              (view === 'pending' ? 'is-active ' : '') +
+              (pending ? 'has-pending' : '')
+            }
+            aria-pressed={view === 'pending'}
+            onClick={() => setView('pending')}
+          >
+            ახალი მოთხოვნები <span>{pending}</span>
+          </button>
+        </div>
+      )}
       {!loaded ? (
         <p>იტვირთება…</p>
       ) : !accounts.length ? (
@@ -169,6 +238,11 @@ export function CompanyAccounts() {
       ) : (
         <ul className="company-job-list">
           {accounts
+            .filter(
+              (a) =>
+                view === 'all' ||
+                (a.approval_status === 'pending' && a.role === 'owner'),
+            )
             .filter((a) =>
               `${a.name} ${a.username} ${a.email}`
                 .toLowerCase()
@@ -182,7 +256,13 @@ export function CompanyAccounts() {
                     {account.username} · {account.email}
                   </p>
                   <p>
-                    {account.enabled ? 'აქტიური' : 'გათიშული'}
+                    {account.approval_status === 'pending'
+                      ? 'შემოწმების მოლოდინში'
+                      : account.approval_status === 'rejected'
+                        ? 'უარყოფილია'
+                        : account.enabled
+                          ? 'აქტიური'
+                          : 'გათიშული'}
                     {account.must_change_password
                       ? ' · პაროლი შესაცვლელია'
                       : ''}
@@ -211,8 +291,7 @@ export function CompanyAccounts() {
         <DialogContent className="company-job-dialog">
           <DialogTitle>კომპანიის ანგარიშის შექმნა</DialogTitle>
           <DialogDescription>
-            კომპანია პირველ შესვლაზე შეცვლის დროებით პაროლს. არსებული ვაკანსიები
-            ავტომატურად არ მიებმება.
+            კომპანია პირველ შესვლაზე შეცვლის დროებით პაროლს.
           </DialogDescription>
           <form className="company-form" onSubmit={add}>
             {error && (
@@ -228,7 +307,55 @@ export function CompanyAccounts() {
                 required
                 minLength={2}
                 maxLength={160}
+                autoComplete="off"
+                value={companyName}
+                onChange={(e) => {
+                  setCompanyName(e.target.value);
+                  setPicked(null);
+                  if (e.target.value.trim().length < 2) setSuggestions([]);
+                }}
               />
+              <small>
+                აკრიფე და აირჩიე საიტზე უკვე არსებული კომპანია, ან ჩაწერე ახალი
+                სახელი.
+              </small>
+            </label>
+            {!picked && suggestions.length > 0 && (
+              <ul
+                className="account-suggestions"
+                aria-label="საიტზე არსებული კომპანიები"
+              >
+                {suggestions.map((s) => (
+                  <li key={s.name}>
+                    <button
+                      type="button"
+                      disabled={s.hasAccount}
+                      onClick={() => {
+                        setCompanyName(s.name);
+                        setPicked(s);
+                        setSuggestions([]);
+                      }}
+                    >
+                      <strong>{s.name}</strong>
+                      <span>
+                        {s.hasAccount
+                          ? 'ანგარიში უკვე აქვს'
+                          : `${s.jobs} ვაკანსია`}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {picked && (
+              <p className="account-picked">
+                არჩეულია საიტზე არსებული კომპანია: {picked.name} · {picked.jobs}{' '}
+                ვაკანსია
+              </p>
+            )}
+            <label className="account-confirm">
+              <input type="checkbox" name="attachJobs" defaultChecked />
+              ამ სახელის აქტიური და მოლოდინში მყოფი ვაკანსიების მიბმა
             </label>
             <label>
               მომხმარებლის სახელი
@@ -286,10 +413,67 @@ export function CompanyAccounts() {
             </p>
           )}
           <div className="company-form">
-            <h2>ვაკანსიის მიბმა</h2>
+            <h2>კომპანიის დადასტურება</h2>
             <p>
-              მიუთითე ვაკანსიის ID. მიბმა დაშვებულია მხოლოდ იმავე სახელის
-              კომპანიის განცხადებაზე; სხვა კომპანიაზე არსებული წვდომა არ
+              სტატუსი:{' '}
+              {current?.approval_status === 'pending'
+                ? 'შემოწმების მოლოდინში'
+                : current?.approval_status === 'rejected'
+                  ? 'უარყოფილია'
+                  : 'დადასტურებულია'}
+            </p>
+            <p>
+              კოდი: {current?.registration_code || '—'} ·{' '}
+              {current?.representative_name} · {current?.position} ·{' '}
+              {current?.phone}
+            </p>
+            <p>
+              ელფოსტა:{' '}
+              {current?.email_verified ? 'დადასტურებულია' : 'დასადასტურებელია'}
+            </p>
+            {current?.role === 'owner' && (
+              <div className="company-row-actions">
+                <button
+                  className="ds-btn ds-btn--primary"
+                  disabled={busy || !current.email_verified}
+                  onClick={() => void change('approve')}
+                >
+                  კომპანიის დამტკიცება
+                </button>
+                <button
+                  className="ds-btn ds-btn--secondary"
+                  disabled={busy}
+                  onClick={() => void change('reject')}
+                >
+                  უარყოფა
+                </button>
+              </div>
+            )}
+            <label>
+              ავტომატური გამოქვეყნება
+              <select className="ds-input" value={current?.trustedMode ?? 'auto'} disabled={busy}
+                onChange={(event) => void change('trusted-mode', event.target.value as CompanyAccount['trustedMode'])}>
+                <option value="auto">წესით (3 დამტკიცებული, 0 უარყოფილი 90 დღეში)</option>
+                <option value="on">ყოველთვის</option>
+                <option value="off">არასოდეს</option>
+              </select>
+            </label>
+            <p>{current?.trusted ? 'ახლა: სანდო' : 'ახლა: რიგში დგება'}</p>
+            <h2>ვაკანსიების მიბმა</h2>
+            <p>
+              კომპანიის სახელით მოიძებნება ყველა აქტიური და მოლოდინში მყოფი
+              ვაკანსია, რომელიც სხვა ანგარიშს არ ეკუთვნის.
+            </p>
+            <button
+              className="ds-btn ds-btn--primary"
+              disabled={busy}
+              onClick={() => void change('assign-company-jobs')}
+            >
+              კომპანიის ყველა ვაკანსიის მიბმა
+            </button>
+            <p>
+              ან მიუთითე ერთი ვაკანსიის ID. მიბმა დაშვებულია მხოლოდ იმავე
+              სახელის კომპანიის განცხადებაზე; სხვა კომპანიაზე არსებული წვდომა არ
               გადაიწერება.
             </p>
             <label>

@@ -1,0 +1,178 @@
+/* Shared list, search and dialog layout for the admin accounts screen. These
+   lived in app/company/portal.css before the company portal got its own
+   cp-* styles; the admin screen still uses them. */
+.company-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.company-search {
+  width: 340px;
+  max-width: 100%;
+  position: relative;
+}
+.company-search svg {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  color: var(--ds-ink-3);
+}
+.company-search input {
+  padding-left: 38px;
+}
+.company-job-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--ds-surface);
+}
+.company-job-list:empty {
+  display: none;
+}
+.company-job-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border-bottom: 1px solid var(--ds-line);
+}
+.company-job-list li:last-child {
+  border-bottom: 0;
+}
+.company-job-list h2 {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.7;
+}
+.company-job-list p {
+  color: var(--ds-ink-3);
+  font-size: 12px;
+  margin-top: 8px;
+}
+.company-empty {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--ds-ink-3);
+}
+.company-empty svg {
+  margin: auto;
+}
+.company-empty h2 {
+  margin: 12px 0;
+  color: var(--ds-ink);
+  font-size: 20px;
+}
+.company-empty p {
+  font-size: 14px;
+  line-height: 1.8;
+}
+[data-slot='dialog-content'].company-job-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  padding: 24px;
+  gap: 12px;
+}
+.company-job-dialog .company-form {
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .company-job-list li {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+  .company-toolbar > .ds-btn {
+    width: 100%;
+  }
+  .company-search {
+    width: 100%;
+  }
+}
+.account-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+.account-views button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line, #d9dde5);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.account-views button span {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(127, 140, 160, 0.16);
+  font-size: 12px;
+  text-align: center;
+}
+.account-views button.has-pending span {
+  background: #d9480f;
+  color: #fff;
+}
+.account-views button.is-active {
+  border-color: currentColor;
+  font-weight: 600;
+}
+.account-suggestions {
+  display: grid;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: -4px 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--line, #d9dde5);
+  border-radius: 10px;
+}
+.account-suggestions button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.account-suggestions button:hover:not(:disabled) {
+  background: rgba(127, 140, 160, 0.12);
+}
+.account-suggestions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.account-suggestions span {
+  flex: none;
+  opacity: 0.75;
+  font-size: 13px;
+}
+.account-picked {
+  margin: -4px 0 0;
+  font-size: 13px;
+  opacity: 0.8;
+}

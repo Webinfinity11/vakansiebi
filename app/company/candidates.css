@@ -1,0 +1,270 @@
+/* Communication and interview controls extend the existing company workspace. */
+.cc-message-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cc-detail > .cc-message-actions {
+  padding: 12px 20px;
+}
+.cc-message-actions .cp-btn {
+  white-space: normal;
+  height: auto;
+  min-height: 40px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.cc-delete {
+  color: var(--destructive, #b42318);
+  margin-left: auto;
+}
+[data-slot='dialog-content'].cp-dialog.cc-compose {
+  width: 560px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+.cc-compose label,
+.cc-interview-form > label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.cc-compose .cp-input,
+.cc-interview .cp-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.cc-compose textarea {
+  resize: vertical;
+  line-height: 1.65;
+}
+.cc-compose h2 {
+  padding-right: 28px;
+  line-height: 1.5;
+}
+.cc-compose p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.cc-interview {
+  margin: 0 20px 12px;
+  padding: 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 10px;
+  min-width: 0;
+}
+.cc-interview summary {
+  cursor: pointer;
+  font-weight: 500;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.cc-interview-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.cc-interview-form > .cc-interview-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cc-interview-badge {
+  display: block;
+  color: #175cd3;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.cc-card > .cc-interview-badge {
+  padding: 0 12px 8px;
+}
+.cc-item-meta {
+  flex-wrap: wrap;
+}
+.cc-undo {
+  flex-wrap: wrap;
+  max-width: calc(100vw - 24px);
+}
+.cc-undo > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  /* Centred shrink-to-fit squeezes the toast to half the screen on phones. */
+  .cc-undo.cc-undo {
+    left: 12px;
+    right: 12px;
+    bottom: 16px;
+    transform: none;
+  }
+  .cc-detail > .cc-message-actions {
+    padding: 12px;
+  }
+  .cc-interview {
+    margin: 0 12px 12px;
+  }
+  .cc-delete {
+    margin-left: 0;
+  }
+  [data-slot='dialog-content'].cp-dialog.cc-compose {
+    padding: 16px;
+  }
+  .cc-interview .cc-message-actions {
+    align-items: stretch;
+  }
+  .cc-interview input[type='datetime-local'] {
+    max-width: 100%;
+  }
+  .cc-message-actions .cp-btn {
+    min-height: 44px;
+  }
+}
+
+.cc-rejection-prompt {
+  padding: 0 20px 12px;
+}
+.cc-undo button {
+  height: auto;
+  min-height: 36px;
+  white-space: normal;
+  text-align: left;
+}
+
+.cc-board-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--cp-ink-2);
+  font-size: 13px;
+}
+.cc-board-navigation > span { margin-right: auto; }
+.cc-board-navigation .cp-icon-btn { min-width: 44px; min-height: 44px; }
+@media (max-width: 900px) {
+  .cc-list-wrap { border-right: 0; }
+}
+@media (max-width: 760px) {
+  /* The phone board already stacks stages vertically. */
+  .cc-board-navigation { display: none; }
+}
+
+.cc-edit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--cp-blue);
+  font-size: 12px;
+  text-align: start;
+  cursor: pointer;
+}
+.cc-edit-link:hover { text-decoration: underline; }
+.cc[data-picked] { padding-bottom: calc(180px + env(safe-area-inset-bottom)); }
+.cc .cc-bulk {
+  position: fixed;
+  z-index: 55;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  flex-wrap: wrap;
+  border: 1px solid var(--cp-line);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px #0002;
+  padding: 12px;
+}
+.cc .cc-bulk .cp-btn { white-space: normal; min-height: 40px; }
+.cc[data-picked] .cc-undo { bottom: calc(170px + env(safe-area-inset-bottom)); }
+.cc-table-wrap { border: 1px solid var(--cp-line); border-radius: 12px; }
+.cc-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
+.cc-table th, .cc-table td { padding: 12px 8px; text-align: start; overflow-wrap: anywhere; border-bottom: 1px solid var(--cp-line); }
+.cc-table th { color: var(--cp-ink-2); font-weight: 500; }
+.cc-table .cc-table-check { width: 36px; }
+.cc-table th button, .cc-table-name { background: none; border: 0; padding: 0; text-align: start; color: inherit; cursor: pointer; }
+.cc-table-name { font-weight: 600; }
+.cc-table tbody tr { cursor: pointer; }
+.cc-table tbody tr:hover { background: var(--cp-side); }
+.cc-table-contact { display: flex; gap: 6px; margin-top: 6px; }
+.cc-table-contact a { display: inline-flex; padding: 5px; color: var(--cp-ink-2); }
+.cc-table input { width: 16px; height: 16px; accent-color: var(--cp-blue); }
+@media (max-width: 600px) {
+  .cc .cc-bulk { left: 12px; right: 12px; max-width: none; width: auto; transform: none; }
+}
+
+.cc-compose { overflow-y: auto; max-height: calc(100dvh - 32px); }
+@media (max-width: 600px) {
+  .cc .cc-bulk { flex-wrap: nowrap; justify-content: space-between; gap: 4px; padding: 8px; bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .cc .cc-bulk .cc-bulk-label { display: none; }
+  .cc .cc-bulk .cp-btn, .cc .cc-bulk .cp-icon-btn { min-width: 44px; min-height: 44px; padding: 8px; flex-shrink: 0; }
+}
+
+/* B workspace: calm surfaces, A marks, consistent readable metadata. */
+.cc-switch { border: 0; background: var(--cp-hover); padding: 4px; }
+.cc-switch button { min-height: 36px; height: auto; }
+.cc-flow { background: var(--cp-surface); border: 0; border-radius: var(--cp-radius); padding: 8px; gap: 8px; margin-bottom: 16px; box-shadow: var(--cp-shadow); }
+.cc-flow-step, .cc-flow-all { border: 0; border-radius: 8px; background: transparent; padding: 12px; }
+.cc-flow-step::before, .cc-flow-step::after { display: none; }
+.cc-flow button[aria-pressed='true'] { background: var(--cp-accent-soft); box-shadow: inset 0 -2px var(--cp-accent); }
+.cc-flow strong { font-size: 24px; color: var(--cp-ink); }
+.cc-split { border: 0; border-radius: var(--cp-radius); background: var(--cp-surface); box-shadow: var(--cp-shadow); }
+.cc-detail { background: var(--cp-surface); min-width: 0; }
+.cc-person h2 { font-size: 24px; line-height: 1.4; }
+.cc-person .cp-icon-btn { width: auto; padding: 8px; gap: 8px; font-size: 13px; }
+.cc-person p, .cc-item-sub, .cc-item-top time, .cc-card-text small, .cc-card-foot, .cc-keys, .cc-menu-note, .cc-mini-notes, .cc-mini-rating, .cc-interview-badge, .cc-edit-link, .cc-question-answers small, .cc-question-answers > p { font-size: 13px; color: var(--cp-ink-2); }
+.cc-item-top { flex-wrap: wrap; }
+.cc-item-top strong { white-space: normal; overflow: visible; font-size: 15px; }
+.cc-list li { padding: 8px 16px; border-bottom-color: var(--cp-line-2); }
+.cc-list input[type=checkbox] { opacity: 1; }
+.cc-toolbar { gap: 8px; flex-wrap: wrap; }
+.cc-stagebtn { gap: 8px; border: 0; background: none; }
+.cc-stagebtn .cc-advance { background: var(--cp-accent); color: white; border-radius: var(--cp-radius-sm); }
+.cc-stagebtn .cc-stagebtn-more { border: 0; background: transparent; color: var(--cp-ink-2); border-radius: var(--cp-radius-sm); }
+.cc-stagebtn .cc-advance:hover { background: #1d46bf; }
+.cc-table-wrap { border: 0; background: var(--cp-surface); box-shadow: var(--cp-shadow); overflow: auto; }
+.cc-table { font-size: 13px; }
+.cc-table thead { position: sticky; top: 0; background: var(--cp-hover); z-index: 2; }
+.cc-table th, .cc-table td { padding: 16px; border-bottom-color: var(--cp-line-2); }
+.cc-table tbody tr:has(input:checked) { background: var(--cp-accent-soft); box-shadow: inset 3px 0 var(--cp-accent); }
+.cc-table-contact a { min-width: 32px; min-height: 32px; }
+.cc-column { background: #e9eef6; border-radius: var(--cp-radius); gap: 8px; transition: none; }
+.cc-column h3 { padding: 16px; gap: 8px; }
+.cc-column h3 > span:last-child { font-size: 15px; color: var(--cp-ink); }
+.cc-column-body { padding: 0 8px 8px; gap: 8px; }
+.cc-card { border: 0; box-shadow: var(--cp-shadow); border-radius: var(--cp-radius-sm); transition: none; }
+.cc-card:hover { box-shadow: var(--cp-shadow-md); }
+.cc-card-open { padding: 16px; }
+.cc-card-text strong { font-size: 15px; white-space: normal; }
+.cc-card-next { opacity: 1; width: auto; min-width: 32px; min-height: 32px; transition: none; }
+.cc-drop-hint { font-size: 13px; }
+.cc-fresh { background: none; color: var(--cp-ink-2); font-size: 13px; padding: 0; }
+.cc :is(button,a):focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 3px; }
+.cc :is(button,a):active { box-shadow: inset 0 -2px var(--cp-accent); }
+@media (min-width: 1440px) { .cc-split { grid-template-columns: minmax(360px,.8fr) minmax(0,1.7fr); } }
+@media (max-width: 900px) { .cc-split { grid-template-columns: minmax(0,1fr); } }
+@media (max-width: 600px) {
+  .cc .cc-bulk { flex-wrap: wrap; justify-content: flex-start; gap: 8px; bottom: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 8px); }
+  .cc .cc-bulk .cc-bulk-label { display: inline; }
+  .cc .cc-bulk .cp-btn { padding: 8px; }
+  .cc-person h2 { font-size: 22px; }
+  .cc-undo.cc-undo { bottom: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 8px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cc-card, .cc-column, .cc-switch button, .cc-flow button { transition: background-color 160ms, box-shadow 160ms; }
+}
+
+/* A board card's date stays on one line. With a mouse the next-stage button appears on hover
+   over the card's bottom-right corner, so it reserves no row; touch screens keep it in the flow. */
+.cc .cc-card-foot { flex-wrap: wrap; row-gap: 6px; }
+.cc .cc-card-foot time { white-space: nowrap; }
+@media (hover: hover) and (pointer: fine) {
+  .cc .cc-card { position: relative; }
+  .cc .cc-card-next { position: absolute; right: 12px; bottom: 12px; box-shadow: var(--cp-shadow); }
+}

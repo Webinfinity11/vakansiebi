@@ -10,6 +10,7 @@ import {
 import { vacancyIdFrom } from '../vacancy-navigation';
 import { jobPosting, vacancyUrl } from '../seo';
 import type { Vacancy } from '../types';
+import { searchPlan } from './search-plan';
 
 type Connection = Pick<Pool | PoolClient, 'query'>;
 type Queued = {
@@ -49,6 +50,23 @@ export async function enqueueIndexingNotifications(
 
 export function indexingRetrySeconds(attempts: number) {
   return Math.min(21600, 60 * 2 ** Math.min(9, Math.max(0, attempts - 1)));
+}
+
+/** Use the public detail page's membership and ordering. A raw published row
+ * can be an alias of a newer posting, or no longer have a public source. */
+export async function indexingCanonicalId(
+  id: string,
+  connection: Connection = db(),
+) {
+  const plan = searchPlan(new URLSearchParams({ ids: id }));
+  const result = await connection.query(
+    `${plan.cte} SELECT (
+       SELECT m.id FROM members m WHERE m.group_key=j.group_key
+       ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1
+     ) AS canonical_id FROM searchable j WHERE ${plan.where}`,
+    plan.args,
+  );
+  return (result.rows[0]?.canonical_id as string | undefined) || null;
 }
 
 /** Local queue housekeeping uses no Google quota, even when today's budget is exhausted. */
@@ -158,15 +176,20 @@ export async function drainIndexingQueue({
             sources: [],
           })
         : null;
+    const available =
+      current &&
+      vacancyUrl({ id: row.job_id, title: job!.published!.title }) === row.url;
+    const canonical =
+      row.type === 'URL_UPDATED' && available
+        ? await indexingCanonicalId(row.job_id, c)
+        : null;
     if (
       row.type === 'URL_UPDATED' &&
-      (!current ||
-        vacancyUrl({ id: row.job_id, title: job!.published!.title }) !==
-          row.url)
+      (!available || canonical !== row.job_id)
     ) {
       await c.query(
-        `UPDATE google_indexing_queue SET status='cancelled',lease_token=NULL,locked_until=NULL,last_error='page-unavailable',updated_at=now() WHERE url=$1 AND lease_token=$2`,
-        [row.url, token],
+        `UPDATE google_indexing_queue SET status='cancelled',lease_token=NULL,locked_until=NULL,last_error=$3,updated_at=now() WHERE url=$1 AND lease_token=$2`,
+        [row.url, token, canonical ? 'non-canonical' : 'page-unavailable'],
       );
       result.cancelled++;
       continue;

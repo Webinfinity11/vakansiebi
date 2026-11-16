@@ -1,0 +1,35 @@
+# Deferred 2026-09-25: append under jobs: in .github/workflows/scrape.yml
+
+  # The two government hosts answer only from Georgian networks: from 40 countries checked on
+  # 2026-09-25 every node timed out but one. They are read by a self-hosted runner on a VPS in
+  # Tbilisi (scripts/setup-georgia-runner.sh), on the same schedule as the cloud sources so the
+  # database wakes once for all of them. Until that runner exists the job is switched off with
+  # the repository variable GEORGIA_RUNNER, so runs never queue waiting for a missing machine.
+  scrape-gov:
+    if: github.repository == 'Webinfinity11/vakansiebi' && github.ref == 'refs/heads/main' && vars.GEORGIA_RUNNER == 'true'
+    runs-on: [self-hosted, linux, georgia]
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        source: [hrgov, worknet]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Import, validate and publish due vacancies
+        run: npm run worker -- --source=${{ matrix.source }} --due --once
+        env:
+          DATABASE_URL: ${{ secrets.SCRAPER_DATABASE_URL }}
+          GOOGLE_INDEXING_CLIENT_EMAIL: ${{ secrets.GOOGLE_INDEXING_CLIENT_EMAIL }}
+          GOOGLE_INDEXING_PRIVATE_KEY: ${{ secrets.GOOGLE_INDEXING_PRIVATE_KEY }}
+          SCRAPE_CRON_MINUTES: '180'
+          CRAWL_BATCH_SIZE: '100'
+          SCRAPE_BUDGET_MINUTES: '5'
+          DISCOVERY_PAGE_BUDGET: '3'

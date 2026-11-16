@@ -18,8 +18,14 @@ export type CompanyIdentity = {
   username: string;
   email: string;
   mustChangePassword: boolean;
+  role: CompanyRole;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  emailVerified: boolean;
+  representativeName: string;
 };
 export type CompanyAccount = {
+  trustedMode: 'auto' | 'on' | 'off';
+  trusted: boolean;
   id: string;
   company_key: string;
   name: string;
@@ -28,4 +34,13 @@ export type CompanyAccount = {
   enabled: boolean;
   must_change_password: boolean;
   version: number;
+  approval_status: string;
+  registration_code: string | null;
+  representative_name: string;
+  position: string;
+  phone: string;
+  email_verified: boolean;
+  role: CompanyRole;
 };
+
+export type CompanyRole = 'owner' | 'recruiter' | 'viewer';

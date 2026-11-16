@@ -105,12 +105,12 @@ export function apiError(e: unknown) {
     );
   if (e instanceof Error && e.name === 'ZodError')
     return Response.json(
-      { error: 'შეამოწმე ფორმაში შეყვანილი მონაცემები' },
+      { error: 'ფორმაში შეყვანილი მონაცემები არასწორია.' },
       { status: 400 },
     );
   console.error(e instanceof Error ? e.message : 'Server error');
   return Response.json(
-    { error: 'ოპერაცია ვერ შესრულდა. სცადე ხელახლა.' },
+    { error: 'ოპერაცია ვერ შესრულდა.' },
     { status: 500 },
   );
 }
