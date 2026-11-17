@@ -1,3 +1,4 @@
+import { placeName } from "./places";
 import { candidateStages, educationLabels, educationLevels, languageLevels, stageLabels, type Candidate, type CandidateProfile, type CandidateStage, type EducationLevel } from "./company-candidates";
 export type Person = {
   key: string;
@@ -208,8 +209,18 @@ export function passes(
 }
 
 
+/** The town shown on a card and offered as a filter. A city a person typed in the
+ * JOBX builder (or a recruiter corrected) is trusted; one read from a file must be
+ * a recognisable place. */
+export function personCity(profile: CandidateProfile | null, entries: Candidate[]): string {
+  return placeName(profile?.city, !!profile && profile.origin !== "parsed") ||
+    entries.map(e => placeName(e.city)).find(Boolean) || "";
+}
+/** A position label without stray punctuation such as "მოლარე ()." */
+export const cleanTitle = (t: string) =>
+  t.replace(/\(\s*\)|\[\s*\]/g, "").replace(/^[\s.,;:·•|–—-]+|[\s.,;:·•|–—-]+$/g, "").replace(/\s+/g, " ").trim();
 export function positionTitles(p: Person): string[] {
-  return [...(p.profile?.roles ?? []).map(role => role.split(/\s+[—–]\s+/)[0]), ...p.entries.map(e => e.title)].filter(Boolean);
+  return [...(p.profile?.roles ?? []).map(role => role.split(/\s+[—–]\s+/)[0]), ...p.entries.map(e => e.title)].map(cleanTitle).filter(Boolean);
 }
 export type FacetOption = { key: string; label: string; n: number };
 export type Facets = {

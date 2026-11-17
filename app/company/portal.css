@@ -2042,23 +2042,30 @@ textarea.cp-input {
 .ct-reach a:hover {
   color: var(--cp-accent);
 }
-/* A JOBX CV base person's contact, opened on request. */
-.ct-reach .ct-reveal {
+/* Card contact: a closed CV base contact and an open one share one pill shape. */
+.ct-reach .ct-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  height: 28px;
+  padding: 0 10px;
   border: 1px solid var(--cp-line);
   border-radius: 999px;
   background: var(--cp-surface);
-  color: var(--cp-accent);
+  color: var(--cp-ink-2);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
 }
-.ct-reach .ct-reveal:hover:not(:disabled) {
+.ct-reach .ct-pill:hover:not(:disabled) {
   border-color: var(--cp-accent);
+  color: var(--cp-accent);
+}
+.ct-reach .ct-reveal {
+  color: var(--cp-accent);
 }
 .ct-reach .ct-reveal:disabled {
   opacity: 0.6;
@@ -3577,7 +3584,8 @@ textarea.cp-input {
   font-size: 14px;
 }
 .ct-card-main {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   flex: 1;
   min-width: 0;
@@ -3624,14 +3632,27 @@ textarea.cp-input {
   font-weight: 600;
   color: var(--cp-ink);
 }
+/* Sources on the left, contact on the right, pinned to the card's bottom so
+   neighbouring cards line up. */
 .ct-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.ct-entries {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  min-width: 0;
 }
 .ct-card-foot .ct-reach {
   margin: 0 0 0 auto;
+  gap: 6px;
 }
 
 .ct-panel {
@@ -3856,10 +3877,6 @@ textarea.cp-input {
   }
   .ct-card {
     padding: 14px 0;
-  }
-  .ct-card-foot .ct-reach a:not([aria-label]) {
-    font-size: 0;
-    gap: 0;
   }
 }
 

@@ -1,4 +1,5 @@
 import { candidatePhone } from './company-candidates';
+import { cityAliases, isCityCountry, knownCity, placeName } from './places';
 import type {
   CandidateProfile,
   CandidateLanguageLevel,
@@ -64,25 +65,7 @@ const skills: [string, RegExp][] = [
   ['Front office', /front office|სასტუმროს მიღება/iu],
   ['POS', /\bpos\b/iu],
 ];
-const cities: Record<string, string[]> = {
-  თბილისი: ['თბილისი', 'tbilisi', 'тбилиси'],
-  ბათუმი: ['ბათუმი', 'batumi', 'батуми'],
-  ქუთაისი: ['ქუთაისი', 'kutaisi', 'кутаиси'],
-  რუსთავი: ['რუსთავი', 'rustavi', 'рустави'],
-  ზუგდიდი: ['ზუგდიდი', 'zugdidi', 'зугдиди'],
-  გორი: ['გორი', 'gori', 'гори'],
-  ფოთი: ['ფოთი', 'poti', 'поти'],
-  თელავი: ['თელავი', 'telavi', 'телави'],
-  ახალციხე: ['ახალციხე', 'akhaltsikhe', 'ахалцихе'],
-  მცხეთა: ['მცხეთა', 'mtskheta', 'мцхета'],
-  ოზურგეთი: ['ოზურგეთი', 'ozurgeti', 'озургети'],
-  ქობულეთი: ['ქობულეთი', 'kobuleti', 'кобулети'],
-  ხაშური: ['ხაშური', 'khashuri', 'хашури'],
-  სამტრედია: ['სამტრედია', 'samtredia', 'самтредиа'],
-  სენაკი: ['სენაკი', 'senaki', 'сенаки'],
-  ზესტაფონი: ['ზესტაფონი', 'zestafoni', 'зестафони'],
-  მარნეული: ['მარნეული', 'marneuli', 'марнеули'],
-};
+const cities = cityAliases;
 const contains = (text: string, word: string) =>
   new RegExp(`(?<![\\p{L}])${word}(?![\\p{L}])`, 'u').test(text);
 function canonical(s: string, dict: Record<string, string[]>) {
@@ -136,7 +119,7 @@ export function normalizeProfile<T extends Profile>(p: T): T {
   return {
     ...p,
     skills: canonicalSkills(p.skills),
-    city: canonical(p.city, cities),
+    city: placeName(p.city, true),
     languages: [
       ...new Map(
         p.languages.map((l) => [
@@ -306,15 +289,7 @@ export function parseCvText(input: string): Profile {
   const roles = unique(
     roleEntries.sort((a, b) => b.at - a.at).map((r) => r.label),
   );
-  const foldedText = fold(text);
-  const foundCity =
-    Object.entries(cities)
-      .flatMap(([city, aliases]) =>
-        aliases
-          .filter((a) => contains(foldedText, a))
-          .map((a) => ({ city, index: foldedText.indexOf(a) })),
-      )
-      .sort((a, b) => a.index - b.index)[0]?.city ?? '';
+  const foundCity = knownCity(text);
   const shortSkills = sections.skills
     .flatMap((l) => l.split(/[,;•▪|]/))
     .map((s) => s.trim())
@@ -334,8 +309,9 @@ export function parseCvText(input: string): Profile {
   const name = contact.find(line => /^[\p{L}'’-]+(?:\s+[\p{L}'’-]+){1,3}$/u.test(line) && !headingKey(line) && !Object.values(cities).flat().some(c => contains(fold(line),c))) ?? '';
   const email = /[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.exec(text)?.[0] ?? '';
   const phone = candidatePhone(/(?:\+|00)?\d[\d ()-]{7,}\d/.exec(contact.join('\n'))?.[0] ?? '');
-  const city = foundCity || contact.find(line => /^[\p{L} .'-]+,\s*[\p{L} .'-]+$/u.test(line)) ||
-    contact.find(line => /^[\p{L}][\p{L} .'-]{1,35}$/u.test(line) && line !== name && !headingKey(line)) || '';
+  // Only a known town or a short "City, Country" line; any other short line
+  // (a skill, a sentence) is not a place.
+  const city = foundCity || contact.find(isCityCountry) || '';
   const confidence = [text.trim().length > 20, Boolean(email || phone), positions.length > 0, known.length + shortSkills.length > 0].filter(Boolean).length / 4;
   return normalizeProfile({
     name, email, phone, certifications: sections.certifications.slice(0, 30), positions,

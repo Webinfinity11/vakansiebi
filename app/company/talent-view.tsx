@@ -2,7 +2,7 @@
 import "./talent.css";
 import { StatusMark } from "./status-mark";
 import { Popover, PopoverTrigger, PopoverContent, PopoverTitle } from "@/components/ui/popover";
-import { parseState, parseNotice, type Person, type Filters, type Facets, emptyFilters, storageKey, stageRank, levelLabel, yearsLabel, norm, terms, isNativeGeorgian, matchScore, snippet, passes, countFacets, filterChips, toggle, normalizeFilters, readSavedSearches, saveSearch, deleteSearch, accountStorageKeys, type SavedSearch } from "@/lib/company-talent-filters";
+import { personCity, cleanTitle, parseState, parseNotice, type Person, type Filters, type Facets, emptyFilters, storageKey, stageRank, levelLabel, yearsLabel, norm, terms, isNativeGeorgian, matchScore, snippet, passes, countFacets, filterChips, toggle, normalizeFilters, readSavedSearches, saveSearch, deleteSearch, accountStorageKeys, type SavedSearch } from "@/lib/company-talent-filters";
 import { maxCvBytes } from "@/lib/cv-upload";
 import { CandidateSignals } from "./candidate-answers";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -148,7 +148,7 @@ export function TalentView({
       }
     }
     for (const p of map.values()) {
-      p.city = p.profile?.city || p.latest.city;
+      p.city = personCity(p.profile, [p.latest, ...p.entries]);
       p.haystack = norm(
         [
           ...p.entries.flatMap((c) => [
@@ -562,6 +562,11 @@ function PersonRow({
   const phone = p.entries.find((e) => e.phone)?.phone;
   const email = p.entries.find((e) => e.email)?.email;
   const hidden = !phone && !email ? p.entries.find((e) => e.contactHidden) : undefined;
+  // A person can be in the CV base twice (a JOBX CV and an uploaded one); the card
+  // offers the newest, the detail view keeps the rest.
+  const newestBase = p.entries.filter((e) => e.source === "base")
+    .sort((a, b) => b.appliedAt.localeCompare(a.appliedAt))[0];
+  const entries = p.entries.filter((e) => e.source !== "base" || e === newestBase);
   // Skills that match the filter or the search come first and are marked.
   const hit = (s: string) =>
     skillsOn.includes(norm(s)) || words.some((w) => norm(s).includes(w));
@@ -610,7 +615,7 @@ function PersonRow({
           <span className="ct-card-date">{timeAgo(p.latest.appliedAt)}</span>
         </div>
         <p className="ct-card-role">
-          {[profile?.roles[0] || p.latest.title, p.city]
+          {[cleanTitle(profile?.roles[0] || p.latest.title), p.city]
             .filter(Boolean)
             .join(" · ")}
         </p>
@@ -630,47 +635,56 @@ function PersonRow({
         {quote && <q className="ct-quote">{quote}</q>}
         {notice && <p className="ct-parse-notice">{notice}</p>}
         <div className="ct-card-foot">
-          {state && <span className="ct-origin" title={notice || undefined}>
-            <StatusMark kind="review">{state}</StatusMark>
-          </span>}
-          {p.entries.map((e) => (
-            <span className="ct-entry" key={e.entry}>
-              <button type="button" className="ct-job" onClick={() => onOpen(e.entry)}>
-                {e.source === "base" ? "CV-ის ნახვა" : e.jobTitle || "ვაკანსიის გარეშე"}
-                <CandidateSignals candidate={e} />
-              </button>
-              <span className="ct-source">{e.source === "upload" ? "თქვენ მიერ ატვირთული" : e.source === "cv_box" ? "CV ყუთი" : e.source === "base" ? "JOBX-ის CV ბაზა" : "ვაკანსიაზე გამოგზავნილი"}</span>
+          <div className="ct-entries">
+            {state && <span className="ct-origin" title={notice || undefined}>
+              <StatusMark kind="review">{state}</StatusMark>
+            </span>}
+            {entries.map((e) => (
+              <span className="ct-entry" key={e.entry}>
+                <button type="button" className="ct-job" onClick={() => onOpen(e.entry)}>
+                  {e.source === "base" ? "CV-ის ნახვა" : e.jobTitle || "ვაკანსიის გარეშე"}
+                  <CandidateSignals candidate={e} />
+                </button>
+                <span className="ct-source">{e.source === "upload" ? "თქვენ მიერ ატვირთული" : e.source === "cv_box" ? "CV ყუთი" : e.source === "base" ? "JOBX-ის CV ბაზა" : "ვაკანსიაზე გამოგზავნილი"}</span>
+              </span>
+            ))}
+          </div>
+          {/* One contact slot in the same place on every card: a closed CV base
+              contact and an open one use the same pill. */}
+          {(hidden || phone || email) && (
+            <span className="ct-reach">
+              {hidden ? (
+                <button
+                  type="button"
+                  className="ct-pill ct-reveal"
+                  disabled={revealing}
+                  title="ნახვა აღირიცხება"
+                  onClick={async () => {
+                    setRevealing(true);
+                    await onReveal(hidden.entry);
+                    setRevealing(false);
+                  }}
+                >
+                  <Phone size={13} />
+                  {revealing ? "იხსნება…" : "კონტაქტის ნახვა"}
+                </button>
+              ) : (
+                <>
+                  {phone && (
+                    <a className="ct-pill" href={`tel:${phone.replace(/\s/g, "")}`} title={phone}>
+                      <Phone size={13} />
+                      <span>{phone}</span>
+                    </a>
+                  )}
+                  {email && (
+                    <a className="ct-pill" href={`mailto:${email}`} title={email} aria-label={email}>
+                      <Mail size={13} />
+                    </a>
+                  )}
+                </>
+              )}
             </span>
-          ))}
-          <span className="ct-reach">
-            {hidden && (
-              <button
-                type="button"
-                className="ct-reveal"
-                disabled={revealing}
-                title="ნახვა აღირიცხება"
-                onClick={async () => {
-                  setRevealing(true);
-                  await onReveal(hidden.entry);
-                  setRevealing(false);
-                }}
-              >
-                <Phone size={13} />
-                {revealing ? "იხსნება…" : "კონტაქტის ნახვა"}
-              </button>
-            )}
-            {phone && (
-              <a href={`tel:${phone.replace(/\s/g, "")}`} title={phone}>
-                <Phone size={13} />
-                {phone}
-              </a>
-            )}
-            {email && (
-              <a href={`mailto:${email}`} title={email} aria-label={email}>
-                <Mail size={13} />
-              </a>
-            )}
-          </span>
+          )}
         </div>
       </div>
     </li>
