@@ -2104,13 +2104,17 @@ textarea.cp-input {
 .ct-tag {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  padding: 0 7px;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 2px 7px;
   border-radius: 6px;
   background: var(--cp-side);
   font-size: 12px;
+  line-height: 1.35;
   color: var(--cp-ink-2);
-  white-space: nowrap;
+  /* Skills written as whole sentences wrap inside the card instead of
+     pushing past its edge. */
+  overflow-wrap: anywhere;
 }
 .ct-tag[data-hit] {
   background: color-mix(in srgb, var(--cp-accent) 12%, #fff);
