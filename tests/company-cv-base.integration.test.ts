@@ -89,6 +89,29 @@ void test(
       assert.ok(!(await companyCvBase(company)).some((c) => c.entry === 'base:r:' + other));
       await db().query('DELETE FROM resumes WHERE id=$1', [other]);
 
+      // One person, two CVs: the base offers only the latest; a copy the company
+      // already acted on stays with its stage.
+      const [older, newer] = [randomUUID(), randomUUID()];
+      const dup = (name: string) => JSON.stringify({ fullName: name, email: 'Dup.Base@example.com', summary: 'x'.repeat(40) });
+      await db().query(
+        `INSERT INTO resumes(id,delete_token_hash,cv,updated_at) VALUES
+         ($1,$3,$4,now()-interval '2 days'),($2,$3,$5,now())`,
+        [older, newer, 'x'.repeat(64), dup('ძველი ვერსია'), dup('ახალი ვერსია')],
+      );
+      try {
+        const names = (await companyCvBase(company)).filter((c) => /ვერსია/.test(c.name)).map((c) => c.entry);
+        assert.deepEqual(names, ['base:r:' + newer]);
+        // State saved while the older copy was still the one on offer.
+        await db().query(
+          `INSERT INTO company_candidate_states(company_key,entry,stage) VALUES($1,$2,'shortlist')`,
+          [key, 'base:r:' + older],
+        );
+        const both = (await companyCvBase(company)).filter((c) => /ვერსია/.test(c.name)).map((c) => c.entry).sort();
+        assert.deepEqual(both, ['base:r:' + newer, 'base:r:' + older].sort());
+      } finally {
+        await db().query('DELETE FROM resumes WHERE id=ANY($1)', [[older, newer]]);
+      }
+
       await db().query('UPDATE resumes SET expires_at=now()-interval \'1 day\' WHERE id=$1', [resume]);
       assert.ok(!(await companyCvBase(company)).some((c) => c.entry === entry), 'expired resumes leave the base');
     } finally {

@@ -27,7 +27,31 @@ const baseKey = '__jobx_base';
    Ownership is the only gate: a vacancy the company owns (company_job_ownership) or an upload
    in its own name. Failed or unsent swipe deliveries never reached the company and stay out. */
 const candidatesSql = `
-WITH owned AS (
+WITH base_all AS (
+  -- The JOBX CV base, open to every approved company: resumes built on JOBX...
+  SELECT 'base:r:'||r.id AS entry, 'base' AS source, NULL::uuid AS job_id, '' AS job_title,
+    r.cv->>'fullName' AS name, COALESCE(r.cv->>'email','') AS email,
+    COALESCE(r.cv->>'phone','') AS phone, COALESCE(r.cv->>'title','') AS title,
+    COALESCE(r.cv->>'city','') AS city, r.updated_at AS applied_at, true AS has_cv,
+    CASE WHEN r.photo IS NOT NULL THEN r.id END AS photo_of, r.cv - 'photo' AS cv,
+    '[]'::jsonb AS question_answers
+  FROM resumes r WHERE r.expires_at>now() AND COALESCE(r.cv->>'fullName','')<>''
+    AND COALESCE((r.cv->>'listed')::boolean, true)
+  UNION ALL
+  -- ...and each person's latest uploaded CV sent with a swipe application.
+  SELECT 'base:s:'||a.id, 'base', NULL::uuid, '', a.candidate_name, a.candidate_email,
+    a.candidate_phone, '', '', COALESCE(a.sent_at, a.created_at), true, NULL::uuid, NULL::jsonb, '[]'::jsonb
+  FROM (SELECT DISTINCT ON (lower(candidate_email)) * FROM swipe_applications
+    WHERE status='sent' AND cv_kind='upload' AND cv_file IS NOT NULL
+    ORDER BY lower(candidate_email), COALESCE(sent_at, created_at) DESC) a
+), base AS (
+  -- A person's several CVs (rebuilt on JOBX, or uploaded with a swipe) count once.
+  SELECT b.*, row_number() OVER (
+    PARTITION BY COALESCE(NULLIF(lower(trim(b.email)),''),
+      NULLIF(regexp_replace(b.phone,'\\D','','g'),''), lower(trim(b.name)))
+    ORDER BY b.applied_at DESC) AS rn
+  FROM base_all b
+), owned AS (
   SELECT j.id, COALESCE(j.published->>'title', j.draft->>'title', 'ვაკანსია') AS title
   FROM jobs j JOIN company_job_ownership o ON o.job_id=j.id WHERE o.company_key=$1
 ), entries AS (
@@ -55,20 +79,14 @@ WITH owned AS (
   FROM company_cv_uploads u LEFT JOIN owned o ON o.id=u.job_id
   WHERE u.company_key=$1
   UNION ALL
-  -- The JOBX CV base, open to every approved company: resumes built on JOBX...
-  SELECT 'base:r:'||r.id, 'base', NULL::uuid, '', r.cv->>'fullName',
-    COALESCE(r.cv->>'email',''), COALESCE(r.cv->>'phone',''), COALESCE(r.cv->>'title',''),
-    COALESCE(r.cv->>'city',''), r.updated_at, true, CASE WHEN r.photo IS NOT NULL THEN r.id END,
-    r.cv - 'photo', '[]'::jsonb
-  FROM resumes r WHERE r.expires_at>now() AND COALESCE(r.cv->>'fullName','')<>''
-    AND COALESCE((r.cv->>'listed')::boolean, true)
-  UNION ALL
-  -- ...and each person's latest uploaded CV sent with a swipe application.
-  SELECT 'base:s:'||a.id, 'base', NULL::uuid, '', a.candidate_name, a.candidate_email,
-    a.candidate_phone, '', '', COALESCE(a.sent_at, a.created_at), true, NULL::uuid, NULL::jsonb, '[]'::jsonb
-  FROM (SELECT DISTINCT ON (lower(candidate_email)) * FROM swipe_applications
-    WHERE status='sent' AND cv_kind='upload' AND cv_file IS NOT NULL
-    ORDER BY lower(candidate_email), COALESCE(sent_at, created_at) DESC) a
+  -- The CV base: one entry per person, the most recently updated one, plus any
+  -- older one this company already acted on (its stage and notes stay attached).
+  SELECT entry, source, job_id, job_title, name, email, phone, title, city, applied_at,
+    has_cv, photo_of, cv, question_answers
+  FROM base b WHERE b.rn=1
+    OR EXISTS(SELECT 1 FROM company_candidate_states s WHERE s.company_key=$1 AND s.entry=b.entry
+      AND (s.stage<>'new' OR s.rating IS NOT NULL OR s.interview_at IS NOT NULL))
+    OR EXISTS(SELECT 1 FROM company_candidate_notes n WHERE n.company_key=$1 AND n.entry=b.entry)
 )
 SELECT e.*, COALESCE(s.stage,'new') AS stage, s.rating, s.seen_at IS NOT NULL AS seen,
   s.interview_at, s.interview_note, s.hired_at, COALESCE(p.parsed, pb.parsed) AS parsed, p.edited,
