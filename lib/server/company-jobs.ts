@@ -1,3 +1,4 @@
+import { syncCompanyJobs } from './company-accounts';
 import { autoPublishIfTrusted } from './trusted-companies';
 import type { JobRejection } from '../job-rejection';
 import { removeSubmittedDraft } from './company-job-drafts';
@@ -42,6 +43,7 @@ type ListedJob = OwnedJob & {
   rejection: JobRejection | null;
 };
 export async function companyJobs(company: CompanyIdentity) {
+  if (company.approvalStatus === 'approved') await syncCompanyJobs(company.companyKey).catch(() => 0);
   const { rows } = await db().query<ListedJob>(
     `SELECT j.id,j.version,j.status,j.needs_review,j.draft,j.published,j.created_at,j.published_at,j.placement_tier,j.placement_expires_at,s.requested_placement,(SELECT jsonb_build_object('status',i.status,'token',i.token,'placement_tier',i.placement_tier) FROM job_invoices i WHERE i.job_id=j.id) AS invoice,q.questions,CASE WHEN j.status='rejected' AND r.job_id IS NOT NULL THEN jsonb_build_object('reason',r.reason,'note',r.note,'createdAt',r.created_at) ELSE NULL END AS rejection FROM jobs j JOIN company_job_ownership o ON o.job_id=j.id LEFT JOIN job_submissions s ON s.job_id=j.id LEFT JOIN company_job_questions q ON q.job_id=j.id LEFT JOIN job_rejections r ON r.job_id=j.id WHERE o.company_key=$1 ORDER BY j.created_at DESC LIMIT 300`,
     [company.companyKey],

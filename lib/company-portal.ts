@@ -41,6 +41,8 @@ export type CompanyAccount = {
   phone: string;
   email_verified: boolean;
   role: CompanyRole;
+  /** Other names the company's vacancies appear under. */
+  aliases: string[];
 };
 
 export type CompanyRole = 'owner' | 'recruiter' | 'viewer';

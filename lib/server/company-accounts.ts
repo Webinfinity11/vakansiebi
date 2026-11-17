@@ -30,7 +30,11 @@ export async function companyAccounts() {
   for (const row of rows) {
     if (!trust.has(row.company_key)) trust.set(row.company_key, await companyTrusted(db(), row.company_key));
   }
-  return rows.map(row => ({ ...row, trusted: trust.get(row.company_key) ?? false }));
+  const aliases = new Map<string, string[]>();
+  for (const a of (await db().query<{ company_key: string; alias_name: string }>(
+    'SELECT company_key,alias_name FROM company_name_aliases ORDER BY created_at')).rows)
+    aliases.set(a.company_key, [...(aliases.get(a.company_key) ?? []), a.alias_name]);
+  return rows.map(row => ({ ...row, trusted: trust.get(row.company_key) ?? false, aliases: aliases.get(row.company_key) ?? [] }));
 }
 /* The longest run of letters or digits in a name: a cheap ILIKE pre-filter
    before the exact companyKey comparison, which SQL cannot reproduce. */
@@ -77,19 +81,22 @@ export async function companySuggestions(query: string) {
     .slice(0, 12);
 }
 
-/* Every live or waiting vacancy carrying the account's company name that no
-   other account owns. Returns how many were newly attached. */
-async function assignCompanyJobs(c: PoolClient, key: string, name: string) {
-  const probe = companyNameProbe(name);
-  if (!probe) return 0;
+/* Every live or waiting vacancy carrying one of the company's names (its own and any
+   alias) that no other account owns. Returns how many were newly attached. */
+async function assignCompanyJobs(c: PoolClient, key: string, names: string[]) {
+  const keys = new Set(names.map(companyKey).filter(Boolean));
+  keys.add(key);
+  const probes = [...new Set(names.map(companyNameProbe).filter((p) => p.length >= 2))];
+  if (!probes.length) return 0;
   const { rows } = await c.query(
     `SELECT j.id, ${jobCompany} AS name, o.company_key AS owner
        FROM jobs j LEFT JOIN company_job_ownership o ON o.job_id=j.id
-      WHERE j.status IN ('published','pending') AND ${jobCompany} ILIKE $1`,
-    ['%' + likeEscape(probe) + '%'],
+      WHERE j.status IN ('published','pending') AND o.job_id IS NULL
+        AND ${jobCompany} ILIKE ANY($1::text[])`,
+    [probes.map((p) => '%' + likeEscape(p) + '%')],
   );
-  const ids = (rows as { id: string; name: string; owner: string | null }[])
-    .filter((r) => !r.owner && companyKey(r.name || '') === key)
+  const ids = (rows as { id: string; name: string }[])
+    .filter((r) => keys.has(companyKey(r.name || '')))
     .map((r) => r.id);
   if (!ids.length) return 0;
   const result = await c.query(
@@ -97,6 +104,43 @@ async function assignCompanyJobs(c: PoolClient, key: string, name: string) {
     [ids, key],
   );
   return result.rowCount || 0;
+}
+async function companyNames(c: PoolClient, key: string) {
+  const { rows } = await c.query<{ name: string }>(
+    `SELECT name FROM company_profiles WHERE company_key=$1
+     UNION ALL SELECT alias_name FROM company_name_aliases WHERE company_key=$1`,
+    [key],
+  );
+  return rows.map((r) => r.name);
+}
+/* Vacancies that reach the site later under any of the company's names join its
+   account the next time it opens the workspace. */
+export async function syncCompanyJobs(key: string) {
+  const client = await db().connect();
+  try {
+    return await assignCompanyJobs(client, key, await companyNames(client, key));
+  } finally {
+    client.release();
+  }
+}
+/* Another spelling of a company joins it only if no other company already uses it. */
+async function addAlias(c: PoolClient, key: string, name: string) {
+  const alias = companyKey(name);
+  if (!alias || isGenericCompanyName(name))
+    throw new ApiError('მიუთითე კომპანიის სრული სახელი.');
+  if (alias === key) return;
+  const taken = await c.query(
+    `SELECT 1 FROM company_accounts WHERE company_key=$1
+     UNION ALL SELECT 1 FROM company_name_aliases WHERE alias_key=$1 AND company_key<>$2`,
+    [alias, key],
+  );
+  if (taken.rowCount)
+    throw new ApiError(`სახელი „${name}“ სხვა კომპანიის ანგარიშს ეკუთვნის.`, 409);
+  await c.query(
+    `INSERT INTO company_name_aliases(alias_key,company_key,alias_name) VALUES($1,$2,$3)
+     ON CONFLICT (alias_key) DO NOTHING`,
+    [alias, key, name.trim().slice(0, 160)],
+  );
 }
 
 const createSchema = z.object({
@@ -109,14 +153,19 @@ const createSchema = z.object({
     .refine((s) => !!safeEmail(s)),
   confirmed: z.literal(true),
   attachJobs: z.boolean().optional(),
+  // Empty: a password is generated. Given: the admin hands it over themselves.
+  password: z.preprocess((v) => (v === '' ? undefined : v), companyPassword.optional()),
+  mustChangePassword: z.boolean().default(true),
+  aliases: z.array(z.string().trim().min(2).max(160)).max(10).default([]),
 });
 export async function createCompanyAccount(input: unknown) {
   const data = createSchema.parse(input),
     key = companyKey(data.name);
   if (!key || isGenericCompanyName(data.name))
     throw new ApiError('მიუთითე კომპანიის სრული სახელი.');
-  const password = newCompanyPassword(),
-    hash = await hashCompanyPassword(password);
+  const password = data.password ?? newCompanyPassword(),
+    hash = await hashCompanyPassword(password),
+    mustChange = data.password ? data.mustChangePassword : true;
   try {
     const account = await transaction(async (c) => {
       await c.query(
@@ -124,19 +173,20 @@ export async function createCompanyAccount(input: unknown) {
         [key, data.name],
       );
       const { rows } = await c.query(
-        'INSERT INTO company_accounts(company_key,username,email,password_hash) VALUES($1,$2,$3,$4) RETURNING id,username,company_key',
-        [key, data.username, data.email, hash],
+        'INSERT INTO company_accounts(company_key,username,email,password_hash,must_change_password) VALUES($1,$2,$3,$4,$5) RETURNING id,username,email,company_key',
+        [key, data.username, data.email, hash, mustChange],
       );
+      for (const alias of data.aliases) await addAlias(c, key, alias);
       await c.query(
         "INSERT INTO audit_log(action,actor,after_data) VALUES('company.account_created','admin',$1)",
         [{ id: rows[0].id, companyKey: key, username: data.username }],
       );
       const attached = data.attachJobs
-        ? await assignCompanyJobs(c, key, data.name)
+        ? await assignCompanyJobs(c, key, await companyNames(c, key))
         : 0;
       return { ...rows[0], attached };
     });
-    return { account, password, attached: account.attached };
+    return { account, password, mustChangePassword: mustChange, attached: account.attached };
   } catch (error) {
     if (
       error &&
@@ -145,7 +195,7 @@ export async function createCompanyAccount(input: unknown) {
       error.code === '23505'
     )
       throw new ApiError(
-        'ამ კომპანიას უკვე აქვს ანგარიში ან მომხმარებლის სახელი დაკავებულია.',
+        'ამ კომპანიას უკვე აქვს ანგარიში, ან მომხმარებლის სახელი ან ელფოსტა დაკავებულია.',
         409,
       );
     throw error;
@@ -165,13 +215,24 @@ export async function changeCompanyAccount(input: unknown) {
         'assign-company-jobs',
         'approve',
         'reject',
+        'add-alias',
+        'remove-alias',
+        'set-login',
       ]),
       jobId: z.uuid().optional(),
       mode: z.enum(['auto', 'on', 'off']).optional(),
+      name: z.string().trim().min(2).max(160).optional(),
+      email: z.string().trim().max(254).refine((s) => !!safeEmail(s)).optional(),
+      password: z.preprocess((v) => (v === '' ? undefined : v), companyPassword.optional()),
+      mustChangePassword: z.boolean().optional(),
     })
     .parse(input);
   const password =
-    data.action === 'reset-password' ? newCompanyPassword() : null;
+    data.action === 'reset-password'
+      ? newCompanyPassword()
+      : data.action === 'set-login'
+        ? (data.password ?? null)
+        : null;
   const hash = password ? await hashCompanyPassword(password) : null;
   let attached: number | undefined;
   return transaction(async (c) => {
@@ -210,7 +271,8 @@ export async function changeCompanyAccount(input: unknown) {
       if (
         !job ||
         job.status === 'merged' ||
-        companyKey(job.draft.company) !== account.company_key
+        !new Set([account.company_key, ...(await companyNames(c, account.company_key)).map(companyKey)])
+          .has(companyKey(job.draft.company))
       )
         throw new ApiError(
           'ვაკანსიის კომპანიის სახელი ანგარიშს არ ემთხვევა. შეამოწმე ვაკანსია და კომპანიის მონაცემები.',
@@ -229,17 +291,34 @@ export async function changeCompanyAccount(input: unknown) {
         [data.jobId, account.company_key],
       );
     } else if (data.action === 'assign-company-jobs') {
-      const profile = (
-        await c.query(
-          'SELECT name FROM company_profiles WHERE company_key=$1',
-          [account.company_key],
-        )
-      ).rows[0];
-      attached = await assignCompanyJobs(
-        c,
+      attached = await assignCompanyJobs(c, account.company_key, await companyNames(c, account.company_key));
+    } else if (data.action === 'add-alias') {
+      if (!data.name) throw new ApiError('მიუთითე კომპანიის სახელი.');
+      await addAlias(c, account.company_key, data.name);
+      attached = await assignCompanyJobs(c, account.company_key, await companyNames(c, account.company_key));
+    } else if (data.action === 'remove-alias') {
+      // Vacancies already attached stay; only future ones stop joining.
+      await c.query('DELETE FROM company_name_aliases WHERE company_key=$1 AND alias_key=$2', [
         account.company_key,
-        profile?.name || '',
-      );
+        companyKey(data.name ?? ''),
+      ]);
+    } else if (data.action === 'set-login') {
+      if (!data.email && !hash) throw new ApiError('მიუთითე ახალი ელფოსტა ან პაროლი.');
+      try {
+        await c.query(
+          `UPDATE company_accounts SET email=coalesce($2,email), email_verified=true,
+             password_hash=coalesce($3,password_hash),
+             must_change_password=CASE WHEN $3::text IS NULL THEN must_change_password ELSE $4 END
+           WHERE id=$1`,
+          [data.id, data.email ?? null, hash, data.mustChangePassword ?? true],
+        );
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error && error.code === '23505')
+          throw new ApiError('ეს ელფოსტა სხვა ანგარიშს აქვს.', 409);
+        throw error;
+      }
+      if (hash)
+        await c.query('DELETE FROM company_sessions WHERE account_id=$1', [data.id]);
     } else {
       await c.query(
         `UPDATE company_accounts SET password_hash=coalesce($2,password_hash),must_change_password=CASE WHEN $2 IS NOT NULL THEN true ELSE must_change_password END,enabled=CASE WHEN $3='disable' THEN false WHEN $3='enable' THEN true ELSE enabled END WHERE id=$1`,
@@ -259,13 +338,16 @@ export async function changeCompanyAccount(input: unknown) {
         data.action === 'trusted-mode' ? 'company.trusted_mode' : 'company.account_' + data.action,
         data.action === 'trusted-mode'
           ? { id: data.id, companyKey: account.company_key, mode: data.mode }
-          : { id: data.id, jobId: data.jobId, attached },
+          : { id: data.id, jobId: data.jobId, attached, name: data.name, email: data.email, passwordChanged: !!hash },
       ],
     );
     return {
       ok: true,
       ...(attached !== undefined ? { attached } : {}),
-      ...(password ? { password, username: account.username } : {}),
+      ...(password
+        ? { password, username: account.username, email: data.email ?? account.email,
+            mustChangePassword: data.action === 'reset-password' || (data.mustChangePassword ?? true) }
+        : {}),
     };
   });
 }

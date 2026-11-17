@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, type SubmitEvent } from 'react';
-import { Plus, Search, Copy, RefreshCw } from 'lucide-react';
+import { Plus, Search, Copy, RefreshCw, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,97 @@ import '../../company/portal.css';
 import './accounts.css';
 
 type Suggestion = { name: string; jobs: number; hasAccount: boolean };
+type Secret = {
+  username: string;
+  email: string;
+  password: string;
+  mustChangePassword: boolean;
+};
+
+/* Employer names already on the site, typed and picked: another spelling of the same company. */
+function NameSearch({
+  label,
+  hint,
+  exclude,
+  disabled,
+  onPick,
+}: {
+  label: string;
+  hint: string;
+  exclude: string[];
+  disabled?: boolean;
+  onPick: (s: Suggestion) => void;
+}) {
+  const [text, setText] = useState('');
+  const [rows, setRows] = useState<Suggestion[]>([]);
+  useEffect(() => {
+    if (text.trim().length < 2) return;
+    let active = true;
+    const timer = setTimeout(() => {
+      fetch('/api/admin/company-accounts?companies=' + encodeURIComponent(text.trim()), {
+        cache: 'no-store',
+      })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((list: Suggestion[]) => {
+          if (active) setRows(list.filter((s) => !exclude.includes(s.name)));
+        })
+        .catch(() => {});
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [text, exclude]);
+  return (
+    <div className="account-name-search">
+      <label>
+        {label}
+        <input
+          className="ds-input"
+          autoComplete="off"
+          value={text}
+          disabled={disabled}
+          onChange={(e) => {
+            setText(e.target.value);
+            if (e.target.value.trim().length < 2) setRows([]);
+          }}
+        />
+        <small>{hint}</small>
+      </label>
+      {text.trim().length >= 2 && rows.length > 0 && (
+        <ul className="account-suggestions" aria-label="საიტზე არსებული კომპანიები">
+          {rows.map((s) => (
+            <li key={s.name}>
+              <button
+                type="button"
+                disabled={s.hasAccount || disabled}
+                onClick={() => {
+                  onPick(s);
+                  setText('');
+                  setRows([]);
+                }}
+              >
+                <strong>{s.name}</strong>
+                <span>{s.hasAccount ? 'ანგარიში უკვე აქვს' : `${s.jobs} ვაკანსია`}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* hr@tbc.ge → "tbc": a shared mailbox name says nothing about the company, its domain does. */
+const sharedMailboxes = new Set(['hr', 'info', 'jobs', 'job', 'career', 'careers', 'contact', 'office', 'mail', 'admin', 'recruitment', 'vacancy']);
+export function usernameFromEmail(email: string) {
+  const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9._-]/g, '').replace(/^[._-]+/, '');
+  const [local = '', domain = ''] = email.trim().split('@');
+  const name = clean(local);
+  const company = clean(domain.split('.')[0] ?? '');
+  return (name.length < 3 || sharedMailboxes.has(name) ? company || name : name).slice(0, 64);
+}
+
 export function CompanyAccounts() {
   const [accounts, setAccounts] = useState<CompanyAccount[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -20,10 +111,10 @@ export function CompanyAccounts() {
   const [busy, setBusy] = useState(false);
   const [create, setCreate] = useState(false);
   const [current, setCurrent] = useState<CompanyAccount | null>(null);
-  const [secret, setSecret] = useState<{
-    username: string;
-    password: string;
-  } | null>(null);
+  const [secret, setSecret] = useState<Secret | null>(null);
+  const [aliases, setAliases] = useState<Suggestion[]>([]);
+  const [username, setUsername] = useState('');
+  const [usernameEdited, setUsernameEdited] = useState(false);
   const [jobId, setJobId] = useState('');
   const [notice, setNotice] = useState('');
   const [confirmation, setConfirmation] = useState<string | null>(null);
@@ -113,6 +204,9 @@ export function CompanyAccounts() {
         name: companyName.trim(),
         username: form.get('username'),
         email: form.get('email'),
+        password: form.get('password'),
+        mustChangePassword: form.get('mustChangePassword') === 'on',
+        aliases: aliases.map((a) => a.name),
         confirmed: form.get('confirmed') === 'on',
         attachJobs: form.get('attachJobs') === 'on',
       });
@@ -120,39 +214,59 @@ export function CompanyAccounts() {
       setCompanyName('');
       setPicked(null);
       setSuggestions([]);
+      setAliases([]);
       if (result.attached)
         setNotice(`ანგარიშს ${result.attached} ვაკანსია მიება.`);
       setSecret({
         username: result.account.username,
+        email: result.account.email,
         password: result.password,
+        mustChangePassword: result.mustChangePassword,
       });
       await load();
     });
   }
-  async function change(action: string, mode?: CompanyAccount['trustedMode']) {
+  async function change(action: string, extra: Record<string, unknown> = {}) {
     if (!current) return;
     await act(async () => {
       const result = await request({
         action,
-        ...(mode ? { mode } : {}),
+        ...extra,
         id: current.id,
         version: current.version,
         ...(action === 'assign-job' ? { jobId } : {}),
       });
       if (result.password)
-        setSecret({ username: current.username, password: result.password });
+        setSecret({
+          username: current.username,
+          email: result.email || current.email,
+          password: result.password,
+          mustChangePassword: result.mustChangePassword,
+        });
       setConfirmation(null);
-      setCurrent(null);
       setJobId('');
-      await load();
+      const rows: CompanyAccount[] = await request();
+      setAccounts(rows);
+      // Name changes keep the dialog open on the refreshed account; the rest close it.
+      setCurrent(
+        action === 'add-alias' || action === 'remove-alias'
+          ? (rows.find((a) => a.id === current.id) ?? null)
+          : null,
+      );
       setNotice(
         action === 'assign-job'
           ? 'ვაკანსია კომპანიას მიება.'
-          : action === 'assign-company-jobs'
+          : action === 'assign-company-jobs' || action === 'add-alias'
             ? result.attached
               ? `კომპანიას ${result.attached} ვაკანსია მიება.`
-              : 'ახალი ვაკანსია ვერ მოიძებნა. ყველა უკვე მიბმულია ან სხვა სახელითაა.'
-            : 'ანგარიში განახლებულია.',
+              : action === 'add-alias'
+                ? 'სახელი დაემატა. ამ სახელით ახალი ვაკანსიებიც ავტომატურად მიებმება.'
+                : 'ახალი ვაკანსია ვერ მოიძებნა. ყველა უკვე მიბმულია ან სხვა სახელითაა.'
+            : action === 'remove-alias'
+              ? 'სახელი მოიხსნა. უკვე მიბმული ვაკანსიები დარჩა.'
+              : action === 'set-login'
+                ? 'შესვლის მონაცემები შეიცვალა.'
+                : 'ანგარიში განახლებულია.',
       );
     });
   }
@@ -187,6 +301,9 @@ export function CompanyAccounts() {
               setCompanyName('');
               setPicked(null);
               setSuggestions([]);
+              setAliases([]);
+              setUsername('');
+              setUsernameEdited(false);
             }}
           >
             <Plus size={16} />
@@ -267,6 +384,9 @@ export function CompanyAccounts() {
                       ? ' · პაროლი შესაცვლელია'
                       : ''}
                   </p>
+                  {account.aliases?.length > 0 && (
+                    <p>სხვა სახელები: {account.aliases.join(', ')}</p>
+                  )}
                 </div>
                 <button
                   className="ds-btn ds-btn--secondary ds-btn--sm"
@@ -291,7 +411,8 @@ export function CompanyAccounts() {
         <DialogContent className="company-job-dialog">
           <DialogTitle>კომპანიის ანგარიშის შექმნა</DialogTitle>
           <DialogDescription>
-            კომპანია პირველ შესვლაზე შეცვლის დროებით პაროლს.
+            მიუთითეთ ელფოსტა და პაროლი, რომლითაც კომპანია შევა. მისი ვაკანსიები
+            ამ ანგარიშზე გადავა.
           </DialogDescription>
           <form className="company-form" onSubmit={add}>
             {error && (
@@ -353,9 +474,67 @@ export function CompanyAccounts() {
                 ვაკანსია
               </p>
             )}
+            <NameSearch
+              label="სხვა სახელები (არასავალდებულო)"
+              hint="თუ კომპანიის ვაკანსიები სხვა დაწერილობითაც ჩანს (მაგ. TBC Bank), დაამატეთ ისიც."
+              exclude={[companyName, ...aliases.map((a) => a.name)]}
+              onPick={(s) => setAliases((list) => [...list, s])}
+            />
+            {aliases.length > 0 && (
+              <ul className="account-aliases" aria-label="დამატებული სახელები">
+                {aliases.map((a) => (
+                  <li key={a.name}>
+                    {a.name} · {a.jobs} ვაკანსია
+                    <button
+                      type="button"
+                      aria-label={`${a.name} — მოხსნა`}
+                      onClick={() => setAliases((list) => list.filter((x) => x.name !== a.name))}
+                    >
+                      <X size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <label className="account-confirm">
               <input type="checkbox" name="attachJobs" defaultChecked />
-              ამ სახელის აქტიური და მოლოდინში მყოფი ვაკანსიების მიბმა
+              ამ სახელების აქტიური და მოლოდინში მყოფი ვაკანსიების მიბმა. ახალი
+              ვაკანსიებიც ავტომატურად მიებმება.
+            </label>
+            <label>
+              კომპანიის ელფოსტა
+              <input
+                className="ds-input"
+                name="email"
+                type="email"
+                required
+                maxLength={254}
+                onChange={(e) => {
+                  if (usernameEdited) return;
+                  setUsername(usernameFromEmail(e.target.value));
+                }}
+              />
+              <small>კომპანია ამ ელფოსტით ან მომხმარებლის სახელით შევა.</small>
+            </label>
+            <label>
+              პაროლი
+              <input
+                className="ds-input"
+                name="password"
+                type="text"
+                autoComplete="new-password"
+                minLength={12}
+                maxLength={128}
+                spellCheck={false}
+              />
+              <small>
+                მინიმუმ 12 სიმბოლო. თუ ცარიელს დატოვებთ, პაროლი ავტომატურად
+                შეიქმნება.
+              </small>
+            </label>
+            <label className="account-confirm">
+              <input type="checkbox" name="mustChangePassword" defaultChecked />
+              პირველ შესვლაზე კომპანიამ პაროლი შეცვალოს
             </label>
             <label>
               მომხმარებლის სახელი
@@ -366,20 +545,16 @@ export function CompanyAccounts() {
                 required
                 pattern="[a-z0-9][a-z0-9._\-]{2,63}"
                 maxLength={64}
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setUsernameEdited(true);
+                }}
               />
               <small>
-                ლათინური პატარა ასოები და ციფრები; მინიმუმ 3 სიმბოლო
+                ელფოსტიდან ივსება. ლათინური პატარა ასოები და ციფრები; მინიმუმ 3
+                სიმბოლო.
               </small>
-            </label>
-            <label>
-              კომპანიის ელფოსტა
-              <input
-                className="ds-input"
-                name="email"
-                type="email"
-                required
-                maxLength={254}
-              />
             </label>
             <label className="account-confirm">
               <input type="checkbox" name="confirmed" required />
@@ -387,7 +562,7 @@ export function CompanyAccounts() {
               ვაძლევ.
             </label>
             <button className="ds-btn ds-btn--primary" disabled={busy}>
-              {busy ? 'იქმნება…' : 'შექმნა და დროებითი პაროლის მიღება'}
+              {busy ? 'იქმნება…' : 'ანგარიშის შექმნა'}
             </button>
           </form>
         </DialogContent>
@@ -452,16 +627,44 @@ export function CompanyAccounts() {
             <label>
               ავტომატური გამოქვეყნება
               <select className="ds-input" value={current?.trustedMode ?? 'auto'} disabled={busy}
-                onChange={(event) => void change('trusted-mode', event.target.value as CompanyAccount['trustedMode'])}>
+                onChange={(event) => void change('trusted-mode', { mode: event.target.value as CompanyAccount['trustedMode'] })}>
                 <option value="auto">წესით (3 დამტკიცებული, 0 უარყოფილი 90 დღეში)</option>
                 <option value="on">ყოველთვის</option>
                 <option value="off">არასოდეს</option>
               </select>
             </label>
             <p>{current?.trusted ? 'ახლა: სანდო' : 'ახლა: რიგში დგება'}</p>
+            <h2>კომპანიის სახელები</h2>
+            <p>
+              ამ სახელებით გამოქვეყნებული ვაკანსიები, ახლაც და მომავალშიც, ამ
+              ანგარიშს მიებმება. სხვა ანგარიშის ვაკანსიები არ გადაიწერება.
+            </p>
+            <ul className="account-aliases" aria-label="კომპანიის სახელები">
+              <li>{current?.name} · მთავარი</li>
+              {current?.aliases?.map((name) => (
+                <li key={name}>
+                  {name}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    aria-label={`${name} — მოხსნა`}
+                    onClick={() => void change('remove-alias', { name })}
+                  >
+                    <X size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <NameSearch
+              label="სახელის დამატება"
+              hint="აკრიფეთ, როგორ წერია კომპანია სხვა ვაკანსიებში (მაგ. TBC Bank), და აირჩიეთ."
+              exclude={[current?.name ?? '', ...(current?.aliases ?? [])]}
+              disabled={busy}
+              onPick={(s) => void change('add-alias', { name: s.name })}
+            />
             <h2>ვაკანსიების მიბმა</h2>
             <p>
-              კომპანიის სახელით მოიძებნება ყველა აქტიური და მოლოდინში მყოფი
+              კომპანიის ყველა სახელით მოიძებნება აქტიური და მოლოდინში მყოფი
               ვაკანსია, რომელიც სხვა ანგარიშს არ ეკუთვნის.
             </p>
             <button
@@ -488,10 +691,58 @@ export function CompanyAccounts() {
             <button
               className="ds-btn ds-btn--secondary"
               disabled={busy || !jobId.trim()}
-              onClick={() => void change('assign-job')}
+              onClick={() => void change('assign-job', { jobId })}
             >
               მიბმა
             </button>
+            <h2>შესვლის მონაცემები</h2>
+            <form
+              className="company-form account-login-form"
+              key={current?.id + ':' + current?.version}
+              onSubmit={(event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                const email = String(form.get('email') ?? '').trim();
+                void change('set-login', {
+                  ...(email && email !== current?.email ? { email } : {}),
+                  password: form.get('password'),
+                  mustChangePassword: form.get('mustChangePassword') === 'on',
+                });
+              }}
+            >
+              <label>
+                ელფოსტა
+                <input
+                  className="ds-input"
+                  name="email"
+                  type="email"
+                  maxLength={254}
+                  defaultValue={current?.email}
+                />
+              </label>
+              <label>
+                ახალი პაროლი
+                <input
+                  className="ds-input"
+                  name="password"
+                  type="text"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={128}
+                  spellCheck={false}
+                />
+                <small>
+                  მინიმუმ 12 სიმბოლო. ცარიელი ნიშნავს, რომ პაროლი არ იცვლება.
+                </small>
+              </label>
+              <label className="account-confirm">
+                <input type="checkbox" name="mustChangePassword" defaultChecked />
+                პირველ შესვლაზე კომპანიამ პაროლი შეცვალოს
+              </label>
+              <button className="ds-btn ds-btn--primary" disabled={busy}>
+                შენახვა
+              </button>
+            </form>
             <h2>შესვლის მართვა</h2>
             <div className="company-row-actions">
               <button
@@ -548,15 +799,18 @@ export function CompanyAccounts() {
         <DialogContent>
           <DialogTitle>შესვლის მონაცემები</DialogTitle>
           <DialogDescription>
-            დროებითი პაროლი მხოლოდ ამ ფანჯარაში ჩანს. გადასცე კომპანიის
-            წარმომადგენელს დაცული გზით; პირველი შესვლისას შეცვლის.
+            პაროლი მხოლოდ ამ ფანჯარაში ჩანს. გადაეცით კომპანიის წარმომადგენელს
+            დაცული გზით
+            {secret?.mustChangePassword ? '; პირველ შესვლაზე შეცვლის.' : '.'}
           </DialogDescription>
           <dl className="account-credentials">
             <dt>შესვლა</dt>
             <dd>/company</dd>
+            <dt>ელფოსტა</dt>
+            <dd>{secret?.email}</dd>
             <dt>მომხმარებელი</dt>
             <dd>{secret?.username}</dd>
-            <dt>დროებითი პაროლი</dt>
+            <dt>{secret?.mustChangePassword ? 'დროებითი პაროლი' : 'პაროლი'}</dt>
             <dd>
               <code>{secret?.password}</code>
             </dd>
@@ -566,7 +820,7 @@ export function CompanyAccounts() {
             onClick={() =>
               void act(async () => {
                 await navigator.clipboard.writeText(
-                  `${location.origin}/company\nმომხმარებელი: ${secret?.username}\nდროებითი პაროლი: ${secret?.password}`,
+                  `${location.origin}/company\nელფოსტა: ${secret?.email}\nმომხმარებელი: ${secret?.username}\nპაროლი: ${secret?.password}`,
                 );
                 setNotice('მონაცემები დაკოპირებულია.');
               })

@@ -176,3 +176,43 @@
   font-size: 13px;
   opacity: 0.8;
 }
+
+/* Other names of one company: removable chips under its main name. */
+.account-aliases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.account-aliases li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--ds-line);
+  border-radius: 999px;
+  background: var(--ds-surface);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.account-aliases button {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--ds-ink-3);
+}
+.account-aliases button:hover {
+  background: var(--ds-line);
+  color: var(--ds-ink);
+}
+.account-name-search {
+  display: grid;
+  gap: 8px;
+}
+.company-form .account-login-form {
+  padding: 0;
+}
