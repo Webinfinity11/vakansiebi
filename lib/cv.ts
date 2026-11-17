@@ -97,6 +97,8 @@ export const cvSchema = z.object({
   education: z.array(cvEducationSchema).max(20),
   skills: z.array(z.string().max(60)).max(40),
   languages: z.array(cvLanguageSchema).max(10),
+  /** Shown to approved employers in the JOBX CV base; the person can turn it off. */
+  listed: z.boolean().default(true),
   updatedAt: z.iso.datetime(),
 });
 export type Cv = z.infer<typeof cvSchema>;
@@ -145,6 +147,7 @@ export function emptyCv(language: CvLanguage = 'ka'): Cv {
     education: [],
     skills: [],
     languages: [],
+    listed: true,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -381,6 +384,8 @@ export type CvText = {
   atsNote: string;
   languageLevels: Record<LanguageLevel, string>;
   storageNote: string;
+  listed: string;
+  listedNote: string;
   cleared: string;
   saved: string;
   printHint: string;
@@ -513,6 +518,9 @@ export const cvText: Record<CvLanguage, CvText> = {
     },
     storageNote:
       'რეზიუმე ინახება ამ ბრაუზერში, PDF-ად შენახვისას კი მისი ასლი JOBX-ზეც ინახება 12 თვემდე და „გასუფთავებით“ წაიშლება. JOBX-ზე დამატებულ ვაკანსიაზე დარეკვისას ან CV-ის გაგზავნისას ეს ასლი იმ ვაკანსიასთან აღირიცხება.',
+    listed: 'რეზიუმე ჩანდეს დამსაქმებლებისთვის JOBX-ის CV ბაზაში',
+    listedNote:
+      'შემოწმებულ კომპანიებს შეუძლიათ შენი რეზიუმის ნახვა და შენთან დაკავშირება. ვინ ნახა შენი კონტაქტი, JOBX-ზე აღირიცხება. მონიშვნის მოხსნისას რეზიუმე ბაზიდან მაშინვე ქრება.',
     cleared: 'რეზიუმე გასუფთავდა.',
     saved: 'რეზიუმე შენახულია.',
     printHint: 'ჯერ შეავსე ერთი ველი მაინც',
@@ -644,6 +652,9 @@ export const cvText: Record<CvLanguage, CvText> = {
     },
     storageNote:
       'Your resume is saved in this browser; saving a PDF also stores a copy on JOBX for up to 12 months, and Clear deletes that copy. Calling or sending your CV about a vacancy posted on JOBX links that copy to the vacancy.',
+    listed: 'Show my CV to employers in the JOBX CV base',
+    listedNote:
+      'Verified companies can view your CV and contact you. JOBX records who opened your contact details. Untick this and your CV leaves the base at once.',
     cleared: 'Resume cleared.',
     saved: 'Resume saved.',
     printHint: 'Fill in at least one field first',

@@ -34,6 +34,7 @@ import { SearchFilterFields } from '../search-filter-fields';
 import { FiltersSheet } from '../filters-sheet';
 import { employmentLabels } from '../advanced-filters';
 import { subcategoryFor } from '@/lib/subcategories';
+import { baseUploadNote } from '../vacancy-application-form';
 import { CV_STORAGE_KEY, cvMissingForSending, readCv, type Cv } from '@/lib/cv';
 import { createResumeSync, savedResumeIdentity } from '@/lib/resume-client';
 import { safeEmail } from '@/lib/application-contact';
@@ -884,7 +885,9 @@ export function SwipeDeck() {
             )}
             {cvReady && !upload
               ? ui(' JOBX-ზე შექმნილი CV-ის ასლი JOBX-ზე 12 თვემდე ინახება.')
-              : ''}
+              : upload
+                ? ui(baseUploadNote)
+                : ''}
           </span>
         </label>
         <button

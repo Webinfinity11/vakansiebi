@@ -23,7 +23,7 @@ import { hashCompanyPassword, newCompanyPassword } from './company-auth';
 export async function companyAccounts() {
   const rows = (
     await db().query(
-      'SELECT a.id,a.company_key,p.name,a.username,a.email,a.enabled,a.must_change_password,a.version,p.approval_status,p.trusted_mode AS "trustedMode",p.registration_code,a.representative_name,a.position,a.phone,a.email_verified,a.role FROM company_accounts a JOIN company_profiles p USING(company_key) ORDER BY a.created_at DESC LIMIT 500',
+      'SELECT a.id,a.company_key,p.name,a.username,a.email,a.enabled,a.must_change_password,a.version,p.approval_status,p.trusted_mode AS "trustedMode",p.registration_code,a.representative_name,a.position,a.phone,a.email_verified,a.role,(SELECT count(DISTINCT v.entry)::int FROM company_cv_base_views v WHERE v.company_key=a.company_key AND v.created_at>now()-interval \'30 days\') AS "baseViews" FROM company_accounts a JOIN company_profiles p USING(company_key) ORDER BY a.created_at DESC LIMIT 500',
     )
   ).rows;
   const trust = new Map<string, boolean>();

@@ -198,6 +198,7 @@ export function VacancyApplicationForm({ job }: { job: PublicJob }) {
                   'ვეთანხმები, რომ ჩემი რეზიუმე მიიღოს კომპანიამ „{0}“ და შეინახოს JOBX-ზე ამ დამსაქმებლისთვის.',
                   [job.company],
                 )}
+                {mode === 'upload' && ui(baseUploadNote)}
               </span>
             </label>
             {error && <p role="alert">{ui(error)}</p>}
@@ -246,3 +247,7 @@ export function CvDraftNote({ missing }: { missing: string[] }) {
     </p>
   );
 }
+
+/** Uploaded CVs also appear in the JOBX CV base; the consent says so. */
+export const baseUploadNote =
+  ' ატვირთული რეზიუმე ასევე ჩანს JOBX-ის CV ბაზაში შემოწმებული დამსაქმებლებისთვის.';

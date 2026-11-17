@@ -56,12 +56,14 @@ export function TalentView({
   loaded,
   onOpen,
   onUploaded,
+  onReveal,
 }: {
   canEdit: boolean;
   candidates: Candidate[];
   jobs: CompanyJob[];
   loaded: boolean;
   onOpen: (entry: string) => void;
+  onReveal: (entry: string) => Promise<void>;
   onUploaded: (entry: string, duplicate: boolean) => Promise<void>;
 }) {
   const [f, setF] = useState<Filters>(emptyFilters);
@@ -358,6 +360,7 @@ export function TalentView({
                     words={words}
                     skillsOn={f.skills}
                     onOpen={onOpen}
+                    onReveal={onReveal}
                   />
                 ))}
               </ul>
@@ -544,17 +547,21 @@ function PersonRow({
   words,
   skillsOn,
   onOpen,
+  onReveal,
 }: {
   p: Person;
   words: string[];
   skillsOn: string[];
   onOpen: (entry: string) => void;
+  onReveal: (entry: string) => Promise<void>;
 }) {
+  const [revealing, setRevealing] = useState(false);
   const profile = p.profile;
   const state = parseState(profile, p.entries.some(e=>e.hasCv));
   const notice = p.entries.some(e=>e.hasCv) ? parseNotice(profile) : "";
   const phone = p.entries.find((e) => e.phone)?.phone;
   const email = p.entries.find((e) => e.email)?.email;
+  const hidden = !phone && !email ? p.entries.find((e) => e.contactHidden) : undefined;
   // Skills that match the filter or the search come first and are marked.
   const hit = (s: string) =>
     skillsOn.includes(norm(s)) || words.some((w) => norm(s).includes(w));
@@ -636,6 +643,22 @@ function PersonRow({
             </span>
           ))}
           <span className="ct-reach">
+            {hidden && (
+              <button
+                type="button"
+                className="ct-reveal"
+                disabled={revealing}
+                title="ნახვა აღირიცხება"
+                onClick={async () => {
+                  setRevealing(true);
+                  await onReveal(hidden.entry);
+                  setRevealing(false);
+                }}
+              >
+                <Phone size={13} />
+                {revealing ? "იხსნება…" : "კონტაქტის ნახვა"}
+              </button>
+            )}
             {phone && (
               <a href={`tel:${phone.replace(/\s/g, "")}`} title={phone}>
                 <Phone size={13} />

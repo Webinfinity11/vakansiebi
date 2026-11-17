@@ -387,6 +387,12 @@ export function CompanyAccounts() {
                   {account.aliases?.length > 0 && (
                     <p>სხვა სახელები: {account.aliases.join(', ')}</p>
                   )}
+                  {account.baseViews > 0 && (
+                    <p>
+                      CV ბაზა: {account.baseViews} კანდიდატის კონტაქტი ნახა
+                      ბოლო 30 დღეში
+                    </p>
+                  )}
                 </div>
                 <button
                   className="ds-btn ds-btn--secondary ds-btn--sm"

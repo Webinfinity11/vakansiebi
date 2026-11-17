@@ -43,6 +43,8 @@ export type CompanyAccount = {
   role: CompanyRole;
   /** Other names the company's vacancies appear under. */
   aliases: string[];
+  /** JOBX CV base people whose contact or CV the company opened in the last 30 days. */
+  baseViews: number;
 };
 
 export type CompanyRole = 'owner' | 'recruiter' | 'viewer';

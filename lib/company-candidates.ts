@@ -98,6 +98,10 @@ export type Candidate = {
   profile: CandidateProfile | null;
   answers?: ApplicationAnswer[];
   requirementsMatch?: boolean | null;
+  /** Opaque key of the email, to tell the same person apart without showing the address. */
+  person?: string;
+  /** A JOBX CV base person whose phone and email the company has not opened yet. */
+  contactHidden?: boolean;
 };
 export type CandidateNote = {
   id: string;
@@ -106,8 +110,8 @@ export type CandidateNote = {
   createdAt: string;
 };
 /** Who a person is across entries: the same address on several vacancies is one person. */
-export function personKey(c: Pick<Candidate, 'email' | 'name' | 'entry'>) {
-  return c.email.trim().toLowerCase() || c.entry;
+export function personKey(c: Pick<Candidate, 'email' | 'name' | 'entry' | 'person'>) {
+  return c.person || c.email.trim().toLowerCase() || c.entry;
 }
 
 /** Georgian mobile numbers are often entered without the country code. */

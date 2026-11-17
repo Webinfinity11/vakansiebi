@@ -177,6 +177,16 @@ export function CompanyPortal({
       ),
     [],
   );
+  /* A JOBX CV base person's phone and email, opened on request; the server logs it. */
+  const revealContact = useCallback(async (entry: string) => {
+    try {
+      const shown: Candidate = await request("candidates", { action: "reveal", entry });
+      setCandidates((list) => list.map((c) => (c.entry === entry ? shown : c)));
+      setCvBase((list) => list?.map((c) => (c.entry === entry ? shown : c)) ?? list);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "კონტაქტი ვერ გაიხსნა.");
+    }
+  }, []);
   const approved =
     identity?.approvalStatus === "approved" && identity.emailVerified;
   const ready = identity && !identity.mustChangePassword;
@@ -811,6 +821,7 @@ export function CompanyPortal({
               setSelected((value) => (value === entry ? null : value));
             }}
             onPatch={patchCandidates}
+            onReveal={revealContact}
             onError={setError}
           />
         )}
@@ -824,6 +835,7 @@ export function CompanyPortal({
             }
             jobs={jobs}
             loaded={candidatesLoaded && !!cvBase}
+            onReveal={revealContact}
             onOpen={(entry) => {
               const fromBase = cvBase?.find((b) => b.entry === entry);
               if (fromBase && !candidates.some((c) => c.entry === entry))

@@ -2,7 +2,7 @@ import { isDocx, isOdt, isRtf, isTxt } from '../cv-upload';
 import { requirementsMatch, type ApplicationAnswer } from '../job-questions';
 import { parseCvText, normalizeProfile } from '../cv-parse';
 import { blankCvMessage, extractCv, isBlankCv, maxCvBytes } from './cv-text';
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { del, get, put } from '@vercel/blob';
 import { db, transaction } from './db';
@@ -61,6 +61,7 @@ WITH owned AS (
     COALESCE(r.cv->>'city',''), r.updated_at, true, CASE WHEN r.photo IS NOT NULL THEN r.id END,
     r.cv - 'photo', '[]'::jsonb
   FROM resumes r WHERE r.expires_at>now() AND COALESCE(r.cv->>'fullName','')<>''
+    AND COALESCE((r.cv->>'listed')::boolean, true)
   UNION ALL
   -- ...and each person's latest uploaded CV sent with a swipe application.
   SELECT 'base:s:'||a.id, 'base', NULL::uuid, '', a.candidate_name, a.candidate_email,
@@ -71,7 +72,9 @@ WITH owned AS (
 )
 SELECT e.*, COALESCE(s.stage,'new') AS stage, s.rating, s.seen_at IS NOT NULL AS seen,
   s.interview_at, s.interview_note, s.hired_at, COALESCE(p.parsed, pb.parsed) AS parsed, p.edited,
-  (SELECT count(*)::int FROM company_candidate_notes n WHERE n.company_key=$1 AND n.entry=e.entry) AS notes
+  (SELECT count(*)::int FROM company_candidate_notes n WHERE n.company_key=$1 AND n.entry=e.entry) AS notes,
+  (e.source<>'base' OR EXISTS(SELECT 1 FROM company_cv_base_views v
+    WHERE v.company_key=$1 AND v.entry=e.entry)) AS revealed
 FROM entries e LEFT JOIN company_candidate_states s ON s.company_key=$1 AND s.entry=e.entry
 LEFT JOIN company_cv_profiles p ON p.company_key=$1 AND p.entry=e.entry
 LEFT JOIN company_cv_profiles pb ON e.source='base' AND pb.company_key='${baseKey}' AND pb.entry=e.entry`;
@@ -104,8 +107,41 @@ type Row = {
   parsed: Omit<CandidateProfile, 'origin'> | null;
   edited: Record<string, unknown> | null;
   question_answers: ApplicationAnswer[];
+  revealed: boolean;
 };
+/* Same person across entries without handing out the address: an opaque key per email. */
+const personHash = (email: string) =>
+  email.trim()
+    ? createHmac('sha256', process.env.SESSION_SECRET || 'jobx-person')
+        .update(email.trim().toLowerCase())
+        .digest('base64url')
+        .slice(0, 22)
+    : '';
+const hiddenContact = '•••';
+const redact = (text: string) =>
+  text
+    .replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, hiddenContact)
+    .replace(/\+?\d[\d\s().-]{6,}\d/g, (run) => {
+      // A phone has 9–13 digits; "2019-01 – 2023-05" or "2019 - 2023" are dates.
+      const digits = run.replace(/\D/g, '').length;
+      const years = run.match(/(?:19|20)\d{2}/g)?.length ?? 0;
+      return digits >= 9 && digits <= 13 && years < 2 ? hiddenContact : run;
+    });
 function candidate(row: Row): Candidate {
+  const c = shownCandidate(row);
+  if (row.revealed) return c;
+  // A JOBX CV base person's contact shows only once the company asks for it (and it is logged).
+  return {
+    ...c,
+    email: '',
+    phone: '',
+    contactHidden: true,
+    profile: c.profile
+      ? { ...c.profile, email: '', phone: '', text: redact(c.profile.text ?? '') }
+      : null,
+  };
+}
+function shownCandidate(row: Row): Candidate {
   let profile: CandidateProfile | null = row.cv
     ? candidateProfile(row.cv)
     : row.parsed
@@ -143,6 +179,7 @@ function candidate(row: Row): Candidate {
     profile,
     answers: row.question_answers ?? [],
     requirementsMatch: requirementsMatch(row.question_answers ?? []),
+    person: personHash(row.email),
   };
 }
 
@@ -263,6 +300,47 @@ async function ownedRow(company: CompanyIdentity, entry: string) {
 }
 async function ownedEntry(company: CompanyIdentity, entry: string) {
   return candidate(await ownedRow(company, entry));
+}
+
+/** New JOBX CV base people a company may open in 24 hours: enough for hiring, not for copying the base. */
+export const baseDailyLimit = 100;
+/* Logs a CV base view. A person the company already opened is not counted again. */
+async function recordBaseView(company: CompanyIdentity, entry: string, kind: 'contact' | 'cv') {
+  if (!entry.startsWith('base:')) return;
+  await transaction(async (c) => {
+    await c.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['cv-base:' + company.companyKey]);
+    const seen = await c.query(
+      'SELECT 1 FROM company_cv_base_views WHERE company_key=$1 AND entry=$2 LIMIT 1',
+      [company.companyKey, entry],
+    );
+    if (!seen.rowCount) {
+      const today = await c.query<{ n: number }>(
+        `SELECT count(DISTINCT entry)::int n FROM company_cv_base_views
+         WHERE company_key=$1 AND created_at>now()-interval '24 hours'`,
+        [company.companyKey],
+      );
+      if (today.rows[0].n >= baseDailyLimit)
+        throw new ApiError(
+          `დღეში ${baseDailyLimit} ახალი კანდიდატის ნახვაა შესაძლებელი JOBX-ის CV ბაზიდან. სცადეთ ხვალ.`,
+          429,
+        );
+    }
+    // The same look repeated within minutes (a reload, a reopened panel) is one view.
+    await c.query(
+      `INSERT INTO company_cv_base_views(company_key,account_id,entry,kind)
+       SELECT $1,$2,$3,$4 WHERE NOT EXISTS (SELECT 1 FROM company_cv_base_views
+         WHERE company_key=$1 AND account_id IS NOT DISTINCT FROM $2 AND entry=$3 AND kind=$4
+           AND created_at>now()-interval '10 minutes')`,
+      [company.companyKey, company.id, entry, kind],
+    );
+  });
+}
+/* Shows a CV base person's phone and email to the company, and records that it looked. */
+export async function revealCandidate(company: CompanyIdentity, entry: string) {
+  const row = await ownedRow(company, entry);
+  if (row.source !== 'base') return candidate(row);
+  await recordBaseView(company, row.entry, 'contact');
+  return ownedEntry(company, entry);
 }
 
 /* The photo from the candidate's JOBX resume, already reduced to a small WebP when saved.
@@ -487,6 +565,8 @@ export async function candidateCv(
   entry: string,
 ): Promise<{ body: BodyInit; type: string; name: string } | null> {
   const c = await ownedEntry(company, entry);
+  // The CV carries the contact details, so opening it counts as a view.
+  await recordBaseView(company, c.entry, 'cv');
   const fileName = (c.name || 'CV').replace(/[^\p{L}\p{N} ._-]/gu, '').trim();
   if (c.source === 'base') {
     const [, kind, id] = entry.split(':');

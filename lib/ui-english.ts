@@ -1048,4 +1048,10 @@ export const englishUi: Readonly<Record<string, string>> = {
   'რეზიუმე ჯერ შევსებული არ არის': 'Your CV is not filled in yet',
   'დაამატე:': 'Add:',
   'ახალ ჩანართში გაიხსნება და შევსების შემდეგ აქ თავისით მიემაგრება': 'It opens in a new tab and attaches here once completed',
+  // JOBX CV base visibility.
+  ' ატვირთული რეზიუმე ასევე ჩანს JOBX-ის CV ბაზაში შემოწმებული დამსაქმებლებისთვის.':
+    ' An uploaded CV is also visible to verified employers in the JOBX CV base.',
+  'ვეთანხმები, რომ ჩემი რეზიუმე მიიღოს კომპანიამ „{0}“ და შეინახოს JOBX-ზე ამ დამსაქმებლისთვის.':
+    'I agree that “{0}” receives my CV and that JOBX stores it for this employer.',
+  'კონტაქტის ნახვა': 'Show contact',
 };

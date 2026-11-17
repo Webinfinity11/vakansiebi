@@ -106,6 +106,7 @@ export function CandidatesView({
   onSelect,
   onRemoved,
   onPatch,
+  onReveal,
   onError,
   initialFilter,
 }: {
@@ -119,6 +120,7 @@ export function CandidatesView({
   onSelect: (entry: string | null) => void;
   onRemoved: (entry: string) => void;
   onPatch: (entries: string[], patch: Partial<Candidate>) => void;
+  onReveal: (entry: string) => Promise<void>;
   onError: (message: string) => void;
 }) {
   const [savedView, setViewState] = useState<'list' | 'board' | 'table'>('list');
@@ -375,6 +377,7 @@ export function CandidatesView({
       onRemoved(entry);
     },
     onPatch,
+    onReveal,
     onError,
     onCompose: (channel: Channel, template: TemplateKey = 'received') =>
       setComposer({ entries: [c.entry], template, channel }),
@@ -791,6 +794,7 @@ function Detail({
   onOpen,
   onMove,
   onPatch,
+  onReveal,
   onError,
 }: {
   canEdit: boolean;
@@ -803,9 +807,15 @@ function Detail({
   onOpen: (entry: string) => void;
   onMove: (stage: CandidateStage) => void;
   onPatch: (entries: string[], patch: Partial<Candidate>) => void;
+  onReveal: (entry: string) => Promise<void>;
   onError: (message: string) => void;
 }) {
   const [tab, setTab] = useState<'cv' | 'notes'>('cv');
+  // Opening a CV base person shows their CV, contacts included: it is one logged view.
+  const hidden = !!c.contactHidden;
+  useEffect(() => {
+    if (hidden) void onReveal(c.entry);
+  }, [c.entry, hidden, onReveal]);
   const [notes, setNotes] = useState<CandidateNote[] | null>(null);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);

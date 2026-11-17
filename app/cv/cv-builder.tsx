@@ -34,7 +34,7 @@ import {
   type LanguageLevel,
 } from '../../lib/cv';
 import { track } from '../../lib/analytics-client';
-import { createResumeSync } from '../../lib/resume-client';
+import { createResumeSync, savedResumeIdentity } from '../../lib/resume-client';
 import { PhotoEditor } from './photo-editor';
 import { SelectField } from '../select-field';
 import { SkeletonRows } from '../skeleton';
@@ -657,6 +657,7 @@ export function CvBuilder() {
       'photoShape',
       'showPhoto',
       'language',
+      'listed',
     ];
     if (
       Object.keys(patch).some((key) => !appearanceKeys.includes(key)) &&
@@ -1030,6 +1031,23 @@ export function CvBuilder() {
               <progress max={100} value={cvProgress(cv)} />
             </div>
             <p className="cv-note cv-storage-note">{t.storageNote}</p>
+            <label className="cv-check" htmlFor="cv-listed">
+              <Checkbox
+                id="cv-listed"
+                checked={cv.listed}
+                onCheckedChange={(checked) => {
+                  const listed = checked === true;
+                  update({ listed });
+                  // A copy already on JOBX follows the choice straight away.
+                  try {
+                    if (savedResumeIdentity(window.localStorage))
+                      void resumeSync.current?.save({ ...cv, listed });
+                  } catch {}
+                }}
+              />
+              {t.listed}
+            </label>
+            <p className="cv-note">{t.listedNote}</p>
             <Section
               title={t.contact}
               id="contact"
