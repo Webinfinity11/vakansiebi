@@ -1,7 +1,7 @@
 import { isDocx, isOdt, isRtf, isTxt } from '../cv-upload';
 import { requirementsMatch, type ApplicationAnswer } from '../job-questions';
 import { parseCvText, normalizeProfile } from '../cv-parse';
-import { extractCv, maxCvBytes } from './cv-text';
+import { blankCvMessage, extractCv, isBlankCv, maxCvBytes } from './cv-text';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { del, get, put } from '@vercel/blob';
@@ -615,6 +615,7 @@ export async function uploadCandidate(
   const bytes = Buffer.from(await file.arrayBuffer());
   if (!uploadTypes[ext] || !looksLike(bytes, ext))
     throw new ApiError('ატვირთეთ PDF, Word (DOC, DOCX), ODT, RTF ან TXT ფაილი.');
+  if (await isBlankCv(bytes, file.name)) throw new ApiError(blankCvMessage(true));
   const data = uploadSchema.parse({
     name: form.get('name') || file.name.replace(/\.[^.]+$/, ''),
     email: form.get('email') ?? '',

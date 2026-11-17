@@ -206,6 +206,11 @@ void test(
         0,
       );
       await saveResume(input);
+      // Emptied in the builder: the server copy goes and nothing new is stored.
+      await saveResume({ ...input, cv: { ...emptyCv('ka'), updatedAt: new Date().toISOString() } });
+      assert.equal(await resumeDetail(id), null);
+      await saveResume({ ...input, id: randomUUID(), cv: { ...emptyCv('ka'), updatedAt: new Date().toISOString() } });
+      await saveResume(input);
       await deleteResume({ id, token });
       assert.equal(await resumeDetail(id), null);
     } finally {

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
 import { z } from 'zod';
-import { cvSchema, emptyCv, type Cv } from '../cv';
+import { cvMissingForSending, cvSchema, emptyCv, type Cv } from '../cv';
 import { maxPhotoBytes } from '../cv-photo';
 import { db } from './db';
 import { ApiError } from './auth';
@@ -66,6 +66,14 @@ const tokenHash = (token: string) =>
 
 export async function saveResume(input: unknown) {
   const data = resumeInput.parse(input);
+  // An unfinished resume stays only on the person's device; a copy kept earlier goes.
+  if (cvMissingForSending({ ...data.cv, photo: '' }).length) {
+    await db().query('DELETE FROM resumes WHERE id=$1 AND delete_token_hash=$2', [
+      data.id,
+      tokenHash(data.token),
+    ]);
+    return data.id;
+  }
   const photo = await resumePhoto(data.photo);
   const result = await db().query(
     `INSERT INTO resumes(id,delete_token_hash,cv,photo) VALUES($1,$2,$3,$4)

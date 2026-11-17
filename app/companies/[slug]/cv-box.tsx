@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type SubmitEvent } from 'react';
-import { readCv, type Cv } from '@/lib/cv';
+import { cvMissingForSending, readCv, type Cv } from '@/lib/cv';
+import { CvDraftNote } from '../../vacancy-application-form';
 import { useUi } from '@/app/ui-language';
 import '@/app/vacancy-application-form.css';
 export function CompanyCvBox({
@@ -25,6 +26,8 @@ export function CompanyCvBox({
     }, 0);
     return () => clearTimeout(timer);
   }, []);
+  const missing = cv ? cvMissingForSending(cv) : [];
+  const cvDraft = mode === 'jobx' && missing.length > 0;
   async function submit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (sending.current) return;
@@ -117,6 +120,8 @@ export function CompanyCvBox({
                   required
                 />
               </label>
+            ) : cvDraft ? (
+              <CvDraftNote missing={missing} />
             ) : (
               <p>{ui('გაიგზავნება ამ მოწყობილობაზე შენახული JOBX რეზიუმე.')}</p>
             )}
@@ -130,7 +135,7 @@ export function CompanyCvBox({
               </span>
             </label>
             {error && <p role="alert">{ui(error)}</p>}
-            <button className="primary" type="submit">
+            <button className="primary" type="submit" disabled={cvDraft}>
               {ui(busy ? 'იგზავნება…' : 'რეზიუმეს გაგზავნა')}
             </button>
           </fieldset>

@@ -4,6 +4,9 @@ import { maxCvBytes } from '../cv-upload';
 import { legacyGeorgian, legacyGeorgianText } from '../cv-legacy-georgian';
 export { maxCvBytes } from '../cv-upload';
 const maxText = 60000;
+/* Below this much text, with no image and almost no drawing, a CV is an empty page. */
+const blankTextChars = 25;
+const blankPaths = 40;
 const maxXml = 8 * 1024 * 1024;
 const xmlText = (xml: string) =>
   xml
@@ -92,7 +95,13 @@ async function readCvText(
   const bytes = Buffer.from(input);
   const ext = filename.split('.').pop()?.toLowerCase();
   try {
-    if (ext === 'docx' || ext === 'odt') return docx(bytes, ext === 'odt');
+    if (ext === 'docx' || ext === 'odt') {
+      const text = docx(bytes, ext === 'odt');
+      // Media parts are named in the zip directory, which is never compressed.
+      if (text.replace(/\s/g, '').length < blankTextChars && !/word\/media\/|Pictures\//.test(bytes.toString('latin1')))
+        state.reason = 'blank';
+      return text;
+    }
     if (ext === 'txt') return legacyGeorgianText(new TextDecoder().decode(bytes).slice(0, maxText));
     if (ext === 'rtf') return rtf(bytes).slice(0, maxText);
     if (ext === 'doc') {
@@ -104,7 +113,11 @@ async function readCvText(
       return chunks.join('\n').slice(0, maxText);
     }
     if (ext !== 'pdf') return '';
-    const { getDocument, PDFWorker } =
+    // pdf.js builds a DOMMatrix while loading, for drawing only. Where its canvas package is
+    // missing from a server bundle that throws and no PDF is read at all; text needs no drawing.
+    const g = globalThis as { DOMMatrix?: unknown };
+    g.DOMMatrix ??= class DOMMatrix {};
+    const { getDocument, PDFWorker, OPS } =
       await import('pdfjs-dist/legacy/build/pdf.mjs');
     // Explicitly load the in-process worker handler so server bundlers do not resolve
     // pdf.js's relative dynamic worker import against a generated Next chunk.
@@ -218,7 +231,26 @@ async function readCvText(
           }
           page.cleanup();
         }
-        if (pdf.numPages > 0 && result.replace(/\s/g, '').length < 10) { state.reason = 'scanned'; return ''; }
+        const chars = result.replace(/\s/g, '').length;
+        if (pdf.numPages > 0 && chars < blankTextChars) {
+          // Little or no text: a scan or a CV drawn as outlines still paints images
+          // or many shapes; a blank page (or one saying only "CV") paints neither.
+          let images = 0, paths = 0;
+          const imageOps = new Set([
+            OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject,
+            OPS.paintImageXObjectRepeat, OPS.paintImageMaskXObjectRepeat,
+            OPS.paintInlineImageXObjectGroup, OPS.paintImageMaskXObjectGroup,
+          ]);
+          for (let p = 1; p <= Math.min(pdf.numPages, 5); p++) {
+            const ops = await (await pdf.getPage(p)).getOperatorList();
+            for (const fn of ops.fnArray) {
+              if (imageOps.has(fn)) images++;
+              else if (fn === OPS.constructPath) paths++;
+            }
+          }
+          if (!images && paths < blankPaths) { state.reason = 'blank'; return ''; }
+          if (chars < 10) { state.reason = 'scanned'; return ''; }
+        }
         const repeated = new Set([...footers].filter(([,pages]) => pages.size > 1).map(([text]) => text));
         return result.split('\n').filter(line => !repeated.has(line.trim())).join('\n').slice(0, maxText).trim();
       } finally {
@@ -235,12 +267,15 @@ async function readCvText(
         }, 5000);
       }),
     ]).finally(() => clearTimeout(timer));
-  } catch {
+  } catch (e) {
+    // A reader failure is not an empty CV: say so, and leave a trace in the server log.
+    state.reason = 'unsupported';
+    console.error('[cv-text] could not read', ext, e instanceof Error ? e.stack?.slice(0, 600) : e);
     return '';
   }
 }
 
-export type CvExtractionReason = null | 'scanned' | 'unsupported' | 'empty' | 'too_large' | 'timeout';
+export type CvExtractionReason = null | 'blank' | 'scanned' | 'unsupported' | 'empty' | 'too_large' | 'timeout';
 export type CvExtraction = { text: string; reason: CvExtractionReason };
 export async function extractCv(input: Uint8Array, filename: string): Promise<CvExtraction> {
   if (input.byteLength > maxCvBytes) return { text: '', reason: 'too_large' };
@@ -249,6 +284,12 @@ export async function extractCv(input: Uint8Array, filename: string): Promise<Cv
   const text = await readCvText(input, filename, state);
   return { text, reason: state.reason ?? (text.trim() ? null : 'empty') };
 }
+/* True only when the file is certainly empty; unreadable or slow files are not. */
+export async function isBlankCv(input: Uint8Array, filename: string): Promise<boolean> {
+  return (await extractCv(input, filename)).reason === 'blank';
+}
+export const blankCvMessage = (formal = false) =>
+  `ფაილი ცარიელია: მასში არც ტექსტი ჩანს და არც სურათი. ${formal ? 'ატვირთეთ' : 'ატვირთე'} შევსებული რეზიუმე.`;
 export async function extractCvText(input: Uint8Array, filename: string): Promise<string> {
   return (await extractCv(input, filename)).text;
 }

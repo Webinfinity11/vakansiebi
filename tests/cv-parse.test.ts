@@ -354,7 +354,7 @@ void test('extraction reports scan, unsupported, empty and oversize distinctly',
   const {extractCv, maxCvBytes} = await import('../lib/server/cv-text');
   const pdf = await PDFDocument.create();
   pdf.addPage();
-  assert.equal((await extractCv(await pdf.save(), 'scan.pdf')).reason, 'scanned');
+  assert.equal((await extractCv(await pdf.save(), 'scan.pdf')).reason, 'blank');
   assert.equal((await extractCv(Buffer.from('x'), 'file.exe')).reason, 'unsupported');
   assert.equal((await extractCv(Buffer.alloc(0), 'empty.txt')).reason, 'empty');
   assert.equal((await extractCv(Buffer.alloc(maxCvBytes + 1), 'large.txt')).reason, 'too_large');

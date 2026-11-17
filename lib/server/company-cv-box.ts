@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { cvSchema } from '../cv';
+import { cvMissingForSending, cvNotReadyMessage, cvSchema } from '../cv';
 import { ApiError } from './auth';
 import { db } from './db';
 import { renderCvPdf } from './cv-pdf';
@@ -46,6 +46,8 @@ export async function submitCvBox(form: FormData, client: string) {
     } catch {
       throw new ApiError('რეზიუმეს მონაცემები არასწორია.');
     }
+    const missing = cvMissingForSending(cv);
+    if (missing.length) throw new ApiError(cvNotReadyMessage(missing, true));
     file = new File(
       [Uint8Array.from(await renderCvPdf(cv)).buffer],
       'JOBX-CV.pdf',

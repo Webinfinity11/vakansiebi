@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { ApplicationQuestions } from './application-questions';
 import { useUi } from './ui-language';
-import { readCv, type Cv } from '@/lib/cv';
+import { cvMissingForSending, readCv, type Cv } from '@/lib/cv';
 import { savedResumeIdentity } from '@/lib/resume-client';
 import { readSwipeApplicant } from '@/lib/swipe-history';
 import { track } from '@/lib/analytics-client';
@@ -37,7 +37,7 @@ export function VacancyApplicationForm({ job }: { job: PublicJob }) {
       try {
         const saved = readCv(window.localStorage);
         setCv(saved);
-        if (saved) setMode('jobx');
+        if (saved && !cvMissingForSending(saved).length) setMode('jobx');
         setApplicant(
           readSwipeApplicant(window.localStorage) ??
             (saved
@@ -51,6 +51,9 @@ export function VacancyApplicationForm({ job }: { job: PublicJob }) {
   useEffect(() => {
     if (sent) result.current?.focus();
   }, [sent]);
+
+  const missing = cv ? cvMissingForSending(cv) : [];
+  const cvDraft = mode === 'jobx' && missing.length > 0;
 
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -180,6 +183,8 @@ export function VacancyApplicationForm({ job }: { job: PublicJob }) {
                   required
                 />
               </label>
+            ) : cvDraft ? (
+              <CvDraftNote missing={missing} />
             ) : (
               <p className="quick-apply-note">
                 {ui('გაიგზავნება ამ მოწყობილობაზე შენახული JOBX რეზიუმე.')}
@@ -199,7 +204,7 @@ export function VacancyApplicationForm({ job }: { job: PublicJob }) {
             <button
               className="primary"
               type="submit"
-              disabled={!questionsReady}
+              disabled={!questionsReady || cvDraft}
             >
               {ui(busy ? 'იგზავნება…' : 'CV-ის გაგზავნა')}
             </button>
@@ -224,5 +229,20 @@ export function VacancyApplicationForm({ job }: { job: PublicJob }) {
         </a>
       ))}
     </section>
+  );
+}
+
+/* A JOBX resume that is still empty is not sent: the employer would get a blank page. */
+export function CvDraftNote({ missing }: { missing: string[] }) {
+  const { ui } = useUi();
+  return (
+    <p className="quick-apply-note cv-draft-note" role="status">
+      {ui('შენი JOBX რეზიუმე ჯერ შევსებული არ არის. დაამატე:')}{' '}
+      {missing.map((item) => ui(item)).join('; ')}.{' '}
+      <a href="/cv" target="_blank" rel="noopener">
+        {ui('რეზიუმეს შევსება')}
+      </a>{' '}
+      {ui('ან ატვირთე PDF.')}
+    </p>
   );
 }

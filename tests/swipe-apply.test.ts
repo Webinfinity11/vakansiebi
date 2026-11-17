@@ -4,7 +4,8 @@ import {
   cvAttachmentName,
   swipeApplicationEmail,
 } from '../lib/swipe-apply-email';
-import { swipeRecipient, resendSink } from '../lib/server/swipe-apply';
+import { swipeRecipient, resendSink, readSwipeForm } from '../lib/server/swipe-apply';
+import { emptyCv, sampleCv } from '../lib/cv';
 
 const job = {
   id: '00000000-0000-4000-8000-000000000002',
@@ -81,4 +82,24 @@ void test('outside production every letter goes to the delivery sink unless an a
     if (previous.to === undefined) delete process.env.SWIPE_APPLY_TO;
     else process.env.SWIPE_APPLY_TO = previous.to;
   }
+});
+
+void test('an empty JOBX resume is refused before it reaches the employer', async () => {
+  const request = (cv: unknown) => {
+    const body = new FormData();
+    body.set('job', job.id);
+    body.set('name', 'თამარ ბერიძე');
+    body.set('email', 'tamar@example.com');
+    body.set('cv', JSON.stringify(cv));
+    return new Request('http://localhost/api/swipe/apply', { method: 'POST', body });
+  };
+  const now = new Date().toISOString();
+  await assert.rejects(readSwipeForm(request({ ...emptyCv('ka'), updatedAt: now })), (e: Error & { status?: number }) => {
+    assert.equal(e.status, 400);
+    assert.match(e.message, /რეზიუმე ჯერ შევსებული არ არის/);
+    assert.match(e.message, /სახელი და გვარი/);
+    return true;
+  });
+  const form = await readSwipeForm(request({ ...sampleCv('ka'), updatedAt: now }));
+  assert.equal(form.cv.kind, 'jobx');
 });

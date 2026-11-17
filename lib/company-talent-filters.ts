@@ -437,6 +437,7 @@ export function deleteSearch(list: SavedSearch[], id: string): SavedSearch[] {
 export function parseNotice(profile: CandidateProfile | null | undefined): string {
   if (profile?.origin !== 'parsed') return '';
   const reasons: Record<string, string> = {
+    blank: 'ფაილი ცარიელია: მასში არც ტექსტი ჩანს და არც სურათი.',
     scanned: 'ფაილი სკანირებული სურათია, ტექსტი ვერ ამოიკითხა. მონაცემები შეგიძლიათ ხელით შეავსოთ.',
     unsupported: 'ამ ფაილიდან ტექსტის ამოკითხვა ვერ მოხერხდა. მონაცემები შეგიძლიათ ხელით შეავსოთ.',
     empty: 'ფაილში ტექსტი ვერ მოიძებნა. მონაცემები შეგიძლიათ ხელით შეავსოთ.',

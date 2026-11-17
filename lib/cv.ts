@@ -239,6 +239,26 @@ export function cvProgress(cv: Cv): number {
   return Math.round((completed / 8) * 100);
 }
 
+/* What a JOBX resume still lacks before it may be sent to an employer. An empty
+   resume would reach the company as a blank page with only "CV" on it. */
+export function cvMissingForSending(cv: Cv): string[] {
+  const missing: string[] = [];
+  if (!cv.fullName.trim()) missing.push('სახელი და გვარი');
+  if (!cv.phone.trim() && !cv.email.trim()) missing.push('ტელეფონი ან ელფოსტა');
+  const content =
+    cv.experience.some((e) => e.role.trim() || e.company.trim()) ||
+    cv.education.some((e) => e.school.trim() || e.degree.trim()) ||
+    cv.summary.trim().length >= 30;
+  if (!content) missing.push('სამუშაო გამოცდილება, განათლება ან მოკლე აღწერა');
+  return missing;
+}
+
+export function cvNotReadyMessage(missing: string[], formal = false): string {
+  return formal
+    ? `რეზიუმე ჯერ შევსებული არ არის. დაამატეთ: ${missing.join('; ')}. შეავსეთ რეზიუმე ან ატვირთეთ ფაილი.`
+    : `რეზიუმე ჯერ შევსებული არ არის. დაამატე: ${missing.join('; ')}. შეავსე რეზიუმე ან ატვირთე PDF.`;
+}
+
 export function readCv(storage: CvStorage): Cv | null {
   try {
     const raw = storage.getItem(CV_STORAGE_KEY);

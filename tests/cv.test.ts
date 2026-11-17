@@ -5,6 +5,8 @@ import {
   contrastRatio,
   cvSchema,
   cvProgress,
+  cvMissingForSending,
+  cvNotReadyMessage,
   sampleCv,
   cvText,
   emptyCv,
@@ -367,4 +369,23 @@ void test('contrastRatio calculates WCAG relative luminance contrast', () => {
     contrastRatio('#ffffff', '#111111'),
     contrastRatio('#111111', '#ffffff'),
   );
+});
+
+test('an empty JOBX resume cannot be sent; name, contact and content are enough', () => {
+  const empty = emptyCv('ka');
+  assert.deepEqual(cvMissingForSending(empty), [
+    'სახელი და გვარი',
+    'ტელეფონი ან ელფოსტა',
+    'სამუშაო გამოცდილება, განათლება ან მოკლე აღწერა',
+  ]);
+  assert.deepEqual(cvMissingForSending(sampleCv('ka')), []);
+  const named = { ...empty, fullName: 'თამარ ბერიძე', email: 'tamar@example.com' };
+  // A blank experience row or a one-word summary is still an empty resume.
+  const blankRow = { id: 'e1', company: ' ', role: '', from: '', to: '', current: false, description: '' };
+  assert.equal(cvMissingForSending({ ...named, experience: [blankRow], summary: 'გამარჯობა' }).length, 1);
+  assert.deepEqual(cvMissingForSending({ ...named, experience: [{ ...blankRow, role: 'ბუღალტერი' }] }), []);
+  assert.deepEqual(cvMissingForSending({ ...named, education: [{ id: 'd1', school: 'თსუ', degree: '', from: '', to: '', description: '' }] }), []);
+  assert.deepEqual(cvMissingForSending({ ...named, summary: 'ვარ ბუღალტერი ხუთწლიანი გამოცდილებით.' }), []);
+  assert.match(cvNotReadyMessage(['სახელი და გვარი']), /დაამატე: სახელი და გვარი\./);
+  assert.match(cvNotReadyMessage(['სახელი და გვარი'], true), /დაამატეთ:/);
 });

@@ -1039,4 +1039,13 @@ export const englishUi: Readonly<Record<string, string>> = {
   "აირჩიეთ": "Select",
   გამოცდილება: 'Experience',
   ენები: 'Languages',
+  // Empty JOBX resumes are not sent to employers.
+  'ტელეფონი ან ელფოსტა': 'Phone or email',
+  'სამუშაო გამოცდილება, განათლება ან მოკლე აღწერა': 'Work experience, education or a short summary',
+  'შენი JOBX რეზიუმე ჯერ შევსებული არ არის. დაამატე:': 'Your JOBX CV is not filled in yet. Add:',
+  'რეზიუმეს შევსება': 'Complete your CV',
+  'ან ატვირთე PDF.': 'or upload a PDF.',
+  'რეზიუმე ჯერ შევსებული არ არის': 'Your CV is not filled in yet',
+  'დაამატე:': 'Add:',
+  'ახალ ჩანართში გაიხსნება და შევსების შემდეგ აქ თავისით მიემაგრება': 'It opens in a new tab and attaches here once completed',
 };

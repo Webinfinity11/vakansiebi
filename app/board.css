@@ -4395,3 +4395,11 @@
 .vacancy-page .vacancy-company-benefits p {
   margin: 16px 0 0;
 }
+
+/* An unfinished JOBX resume: say what is missing and link to the builder. */
+.cv-draft-note a {
+  color: var(--jobx-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

@@ -7,7 +7,8 @@ import { db } from './db';
 import { ApiError } from './auth';
 import { getVacancyPage } from './vacancy-page';
 import { renderCvPdf } from './cv-pdf';
-import { cvSchema, type Cv } from '../cv';
+import { blankCvMessage, isBlankCv } from './cv-text';
+import { cvMissingForSending, cvNotReadyMessage, cvSchema, type Cv } from '../cv';
 import { safeEmail } from '../application-contact';
 import { vacancyContacts } from '../vacancy-details';
 import { swipeApplicationEmail } from '../swipe-apply-email';
@@ -100,6 +101,7 @@ export async function readSwipeForm(request: Request): Promise<SwipeForm> {
       throw new ApiError('PDF 4 მბ-ზე დიდია — უფრო პატარა ფაილი ატვირთე', 413);
     const pdf = new Uint8Array(await file.arrayBuffer());
     if (!isPdf(pdf)) throw new ApiError('ატვირთული ფაილი PDF არ არის');
+    if (await isBlankCv(pdf, 'cv.pdf')) throw new ApiError(blankCvMessage());
     return { ...parsed, answers, cv: { kind: 'upload', pdf } };
   }
   const raw = text('cv');
@@ -112,7 +114,10 @@ export async function readSwipeForm(request: Request): Promise<SwipeForm> {
   } catch {
     throw new ApiError('არასწორი მოთხოვნა');
   }
-  return { ...parsed, answers, cv: { kind: 'jobx', cv: cvSchema.parse(json) } };
+  const cv = cvSchema.parse(json);
+  const missing = cvMissingForSending(cv);
+  if (missing.length) throw new ApiError(cvNotReadyMessage(missing));
+  return { ...parsed, answers, cv: { kind: 'jobx', cv } };
 }
 
 type Sent = { id: string; to: string };

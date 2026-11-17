@@ -32,7 +32,7 @@ void test(
     };
     const pdf = await PDFDocument.create();
     const page = pdf.addPage();
-    page.drawText('Candidate QA - Excel', {
+    page.drawText('Candidate QA - accountant, Excel, SQL, 5 years', {
       font: await pdf.embedFont(StandardFonts.Helvetica),
     });
     const bytes = Uint8Array.from(await pdf.save()).buffer;

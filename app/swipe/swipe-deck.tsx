@@ -34,7 +34,7 @@ import { SearchFilterFields } from '../search-filter-fields';
 import { FiltersSheet } from '../filters-sheet';
 import { employmentLabels } from '../advanced-filters';
 import { subcategoryFor } from '@/lib/subcategories';
-import { CV_STORAGE_KEY, readCv, type Cv } from '@/lib/cv';
+import { CV_STORAGE_KEY, cvMissingForSending, readCv, type Cv } from '@/lib/cv';
 import { createResumeSync, savedResumeIdentity } from '@/lib/resume-client';
 import { safeEmail } from '@/lib/application-contact';
 import {
@@ -379,7 +379,7 @@ export function SwipeDeck() {
         body.set('email', applicant.email.trim());
         body.set('phone', applicant.phone.trim());
         if (upload) body.set('file', upload, upload.name);
-        else if (cv) {
+        else if (cv && !cvMissingForSending(cv).length) {
           body.set('cv', JSON.stringify(cv));
           const identity = savedResumeIdentity(window.localStorage);
           if (identity) body.set('resume', identity.id);
@@ -519,9 +519,11 @@ export function SwipeDeck() {
     },
     [],
   );
+  const cvMissing = cv ? cvMissingForSending(cv) : [];
+  const cvReady = !!cv && !cvMissing.length;
   const ready =
     consent &&
-    (!!cv || !!upload) &&
+    (cvReady || !!upload) &&
     !!applicant.name.trim() &&
     !!safeEmail(applicant.email);
   const decide = useCallback(
@@ -764,7 +766,7 @@ export function SwipeDeck() {
         </button>
       </div>
       <div className="swipe-attach-body">
-        {cv && !upload ? (
+        {cvReady && !upload ? (
           <div className="swipe-cv swipe-cv-chosen">
             <FileText size={20} aria-hidden="true" />
             <div>
@@ -786,14 +788,25 @@ export function SwipeDeck() {
         ) : (
           <Link className="swipe-cv" href="/cv" target="_blank" rel="noopener">
             <FileText size={20} aria-hidden="true" />
-            <div>
-              <b>{ui('CV ჯერ არ გაქვს')}</b>
-              <span>
-                {ui(
-                  'შექმენი JOBX-ზე — 3 წუთი; ახალ ჩანართში გაიხსნება და აქ თავისით მიემაგრება',
-                )}
-              </span>
-            </div>
+            {cv ? (
+              <div>
+                <b>{ui('რეზიუმე ჯერ შევსებული არ არის')}</b>
+                <span>
+                  {ui('დაამატე:')}{' '}
+                  {cvMissing.map((item) => ui(item)).join('; ')}.{' '}
+                  {ui('ახალ ჩანართში გაიხსნება და შევსების შემდეგ აქ თავისით მიემაგრება')}
+                </span>
+              </div>
+            ) : (
+              <div>
+                <b>{ui('CV ჯერ არ გაქვს')}</b>
+                <span>
+                  {ui(
+                    'შექმენი JOBX-ზე — 3 წუთი; ახალ ჩანართში გაიხსნება და აქ თავისით მიემაგრება',
+                  )}
+                </span>
+              </div>
+            )}
           </Link>
         )}
         <label className="swipe-upload">
@@ -869,7 +882,7 @@ export function SwipeDeck() {
             {ui(
               'ვეთანხმები, რომ JOBX ჩემი სახელით, hr@jobx.ge-დან, გაუგზავნის ჩემს CV-ს და ზემოთ მითითებულ კონტაქტს იმ კომპანიებს, რომლებზეც მარჯვნივ გადავწევ. კომპანიის პასუხი ჩემს ელფოსტაზე მოვა. CV ინახება JOBX-ზე, რომ გაგზავნის ისტორია შენარჩუნდეს.',
             )}
-            {cv && !upload
+            {cvReady && !upload
               ? ui(' JOBX-ზე შექმნილი CV-ის ასლი JOBX-ზე 12 თვემდე ინახება.')
               : ''}
           </span>
@@ -887,7 +900,7 @@ export function SwipeDeck() {
                 phone: applicant.phone.trim(),
               });
               // A JOBX-built CV keeps its copy here, the same way a PDF press does.
-              if (cv && !upload)
+              if (cvReady && cv && !upload)
                 void createResumeSync(window.localStorage).save(cv);
             } catch {}
             setAskCv(false);
