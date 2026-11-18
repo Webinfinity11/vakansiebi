@@ -219,9 +219,28 @@ export function personCity(profile: CandidateProfile | null, entries: Candidate[
 /** A position label without stray punctuation such as "მოლარე ()." */
 export const cleanTitle = (t: string) =>
   t.replace(/\(\s*\)|\[\s*\]/g, "").replace(/^[\s.,;:·•|–—-]+|[\s.,;:·•|–—-]+$/g, "").replace(/\s+/g, " ").trim();
-export function positionTitles(p: Person): string[] {
-  return [...(p.profile?.roles ?? []).map(role => role.split(/\s+[—–]\s+/)[0]), ...p.entries.map(e => e.title)].map(cleanTitle).filter(Boolean);
+/** Text a person can read: mostly letters, not a PDF font's mis-decoded symbols
+ * such as "(*3'+4(&+'35(". */
+export function readable(t: string): boolean {
+  const chars = t.replace(/\s/g, "");
+  const letters = (chars.match(/\p{L}/gu) ?? []).length;
+  return letters >= 2 && letters / chars.length >= 0.75;
 }
+/** A job title fit for a filter, or "": readable, short, and not a sentence or a
+ * list ("10 წელია კურიერის პოზიციაზე ვმუშაობ", "administration, sales, ..."). */
+export function positionLabel(raw: string): string {
+  const t = cleanTitle(raw);
+  const words = t.split(" ").length;
+  if (!t || t.length > 60 || words > 6 || !readable(t) || /^\d/.test(t)) return "";
+  if ((t.match(/,/g) ?? []).length >= 2 || (t.includes(",") && words > 3)) return "";
+  return t;
+}
+export function positionTitles(p: Person): string[] {
+  return [...(p.profile?.roles ?? []).map(role => role.split(/\s+[—–]\s+/)[0]), ...p.entries.map(e => e.title)].map(positionLabel).filter(Boolean);
+}
+/** Skills worth showing and filtering on. */
+export const readableSkills = (p: { profile: CandidateProfile | null }) =>
+  (p.profile?.skills ?? []).filter(s => readable(s) && s.length <= 70);
 export type FacetOption = { key: string; label: string; n: number };
 export type Facets = {
   positions: FacetOption[]; skills: FacetOption[]; years: FacetOption[];
@@ -251,7 +270,7 @@ export function countFacets(people: Person[], f: Filters, jobs: {id: string; tit
   f.languages.forEach(l => {if(!langs.has(l.key)) langs.set(l.key,l.key);});
   return {
     positions: options("positions", positionTitles),
-    skills: options("skills", p => p.profile?.skills ?? []),
+    skills: options("skills", readableSkills),
     cities: options("cities", p => [p.city]),
     years: ordered(yearBands.map(b => ({...b, n:count({years:[b.key]})})), f.years, o=>o.label),
     languages: ordered([...langs].map(([key,label]) => ({key,label,n:count({languages:f.languages.some(l=>l.key===key) ? f.languages : [...f.languages,{key,min:""}]})})), f.languages.map(l=>l.key), o=>o.label),

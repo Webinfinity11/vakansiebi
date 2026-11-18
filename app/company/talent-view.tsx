@@ -2,8 +2,9 @@
 import "./talent.css";
 import { StatusMark } from "./status-mark";
 import { Popover, PopoverTrigger, PopoverContent, PopoverTitle } from "@/components/ui/popover";
-import { personCity, cleanTitle, parseState, parseNotice, type Person, type Filters, type Facets, emptyFilters, storageKey, stageRank, levelLabel, yearsLabel, norm, terms, isNativeGeorgian, matchScore, snippet, passes, countFacets, filterChips, toggle, normalizeFilters, readSavedSearches, saveSearch, deleteSearch, accountStorageKeys, type SavedSearch } from "@/lib/company-talent-filters";
+import { personCity, positionLabel, readableSkills, parseState, parseNotice, type Person, type Filters, type Facets, emptyFilters, storageKey, stageRank, levelLabel, yearsLabel, norm, terms, isNativeGeorgian, matchScore, snippet, passes, countFacets, filterChips, toggle, normalizeFilters, readSavedSearches, saveSearch, deleteSearch, accountStorageKeys, type SavedSearch } from "@/lib/company-talent-filters";
 import { maxCvBytes } from "@/lib/cv-upload";
+import { companyHref, plainClick } from "@/lib/company-portal-navigation";
 import { CandidateSignals } from "./candidate-answers";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -570,7 +571,7 @@ function PersonRow({
   // Skills that match the filter or the search come first and are marked.
   const hit = (s: string) =>
     skillsOn.includes(norm(s)) || words.some((w) => norm(s).includes(w));
-  const skills = [...(profile?.skills ?? [])].sort(
+  const skills = [...readableSkills(p)].sort(
     (a, b) => Number(hit(b)) - Number(hit(a)),
   );
   const shown = skills.slice(0, 5);
@@ -588,10 +589,14 @@ function PersonRow({
   ].filter(Boolean);
   return (
     <li className="ct-card">
-      <button
-        type="button"
+      <a
         className="ct-card-open"
-        onClick={() => onOpen(p.latest.entry)}
+        href={companyHref({ tab: "talent", entry: p.latest.entry })}
+        onClick={(event) => {
+          if (!plainClick(event)) return;
+          event.preventDefault();
+          onOpen(p.latest.entry);
+        }}
         aria-label={`${p.latest.name} — გახსნა`}
       />
       <Avatar
@@ -615,7 +620,7 @@ function PersonRow({
           <span className="ct-card-date">{timeAgo(p.latest.appliedAt)}</span>
         </div>
         <p className="ct-card-role">
-          {[cleanTitle(profile?.roles[0] || p.latest.title), p.city]
+          {[(profile?.roles ?? []).find((r) => positionLabel(r.split(/\s+[—–]\s+/)[0])) || positionLabel(p.latest.title), p.city]
             .filter(Boolean)
             .join(" · ")}
         </p>

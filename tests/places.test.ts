@@ -39,3 +39,13 @@ void test('position labels lose stray punctuation', () => {
   assert.equal(cleanTitle(' - მენეჯერი;'), 'მენეჯერი');
   assert.equal(cleanTitle('ჰოთ - ქარდი'), 'ჰოთ - ქარდი');
 });
+void test('positions: mis-decoded symbols, sentences and lists never become filters', async () => {
+  const { positionLabel, readable } = await import('../lib/company-talent-filters');
+  for (const bad of ["(*3'+4(&+'35('", '*', '/0//1 2/3/4/', "&'*+,-'. /+/0./ (1.2+'", "63')37./ 36,.8./5'35('", '9(8/-*5385',
+    '10 წელია კურიერის პოზიციაზე ვმუშაობ', 'administration, sales consultation, real estate, tourism promotion and retail'])
+    assert.equal(positionLabel(bad), '', bad);
+  for (const good of ['Administrative Assistant', 'შუ-ეკლერის სპეციალისტი', 'მოლარე-კონსულტანტი', 'HR მენეჯერი', 'სტუდენტი ფსიქოლოგიის ფაკულტეტზე'])
+    assert.equal(positionLabel(good), good);
+  assert.equal(readable('Excel'), true);
+  assert.equal(readable("(*3'+4("), false);
+});

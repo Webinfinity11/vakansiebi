@@ -4,6 +4,7 @@ import { SelectField } from '../select-field';
 import { defaultTemplates, render, templateKinds, templateLabels, validTemplate, type MessageTemplates, type TemplateKey } from '@/lib/company-message-templates';
 import { TemplateFields, TemplatePreview } from './message-templates';
 import { parseNotice } from '@/lib/company-talent-filters';
+import { companyHref, plainClick } from '@/lib/company-portal-navigation';
 import { CandidateAnswers, CandidateSignals } from './candidate-answers';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -109,8 +110,11 @@ export function CandidatesView({
   onReveal,
   onError,
   initialFilter,
+  sheetOnly = false,
 }: {
   initialFilter?: { jobId?: string; stage?: CandidateStage };
+  /** Only the selected person's details, in a side sheet over another view (the CV base). */
+  sheetOnly?: boolean;
   canEdit: boolean;
   companyName: string;
   candidates: Candidate[];
@@ -196,9 +200,9 @@ export function CandidatesView({
     [byJob, stage, sort],
   );
   useEffect(() => {
-    if (desktop && view === 'list' && visible.length > 0 && !visible.some((c) => c.entry === selected))
+    if (!sheetOnly && desktop && view === 'list' && visible.length > 0 && !visible.some((c) => c.entry === selected))
       onSelect(visible[0]?.entry ?? null);
-  }, [desktop, view, visible, selected, onSelect]);
+  }, [sheetOnly, desktop, view, visible, selected, onSelect]);
   useEffect(() => { setPicked([]); }, [job, stage, source, query, onlyMatching, canEdit]);
   const sourceLabel = (c: Candidate) => c.source === 'upload' ? 'თქვენ მიერ ატვირთული' : c.source === 'cv_box' ? 'CV ყუთი' : c.source === 'base' ? 'JOBX-ის CV ბაზიდან' : 'ვაკანსიაზე გამოგზავნილი';
   const togglePick = (entry: string) => setPicked((all) => all.includes(entry) ? all.filter((id) => id !== entry) : [...all, entry]);
@@ -288,7 +292,7 @@ export function CandidatesView({
   // Keyboard: J/K walk the list, → and ← move a stage, X rejects, Z undoes.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (composer || document.querySelector('[data-slot="dialog-content"]'))
+      if (sheetOnly || composer || document.querySelector('[data-slot="dialog-content"]'))
         return;
       if (
         event.metaKey ||
@@ -382,6 +386,72 @@ export function CandidatesView({
     onCompose: (channel: Channel, template: TemplateKey = 'received') =>
       setComposer({ entries: [c.entry], template, channel }),
   });
+  const overlays = (
+    <>
+      {composer && (
+        <MessageComposer
+          candidates={candidates.filter((c) =>
+            composer.entries.includes(c.entry),
+          )}
+          companyName={companyName}
+          initialTemplate={composer.template}
+          initialChannel={composer.channel}
+          onClose={() => setComposer(null)}
+        />
+      )}
+      {undo && !composer && (
+        <div className="cc-undo" role="status">
+          <span>{undo.label}</span>
+          {undo.rejection && (
+            <button
+              type="button"
+              onClick={() =>
+                setComposer({
+                  entries: undo.rejection!,
+                  template: 'rejected',
+                  channel: 'email',
+                })
+              }
+            >
+               გავუგზავნოთ უარის წერილი? </button>
+          )}
+          <button type="button" onClick={() => void revert()}>
+            <Undo2 size={14} />
+             დაბრუნება </button>
+          <button
+            type="button"
+            className="cc-undo-close"
+            aria-label="დახურვა"
+            onClick={() => setUndo(null)}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+    </>
+  );
+  if (sheetOnly)
+    return (
+      <div className="cc cc--sheet-only">
+        <Sheet
+          open={!!current}
+          onOpenChange={(o) => {
+            if (!o) onSelect(null);
+          }}
+        >
+          <SheetContent side="right" className="cc-sheet" closeLabel="დახურვა">
+            <SheetTitle className="sr-only">{current?.name ?? ''}</SheetTitle>
+            <SheetDescription className="sr-only">
+              კანდიდატის დეტალები
+            </SheetDescription>
+            {current && (
+              <Detail key={current.entry} {...detailProps(current)} onOpen={onSelect} />
+            )}
+          </SheetContent>
+        </Sheet>
+        {overlays}
+      </div>
+    );
   return (
     <div
       className="cc"
@@ -559,7 +629,14 @@ export function CandidatesView({
                           }
                         />
                       )}
-                      <button type="button" onClick={() => onSelect(c.entry)}>
+                      <a
+                        href={companyHref({ tab: 'candidates', entry: c.entry })}
+                        onClick={(event) => {
+                          if (!plainClick(event)) return;
+                          event.preventDefault();
+                          onSelect(c.entry);
+                        }}
+                      >
                         <Avatar {...face(c)} />
                         <span className="cc-item">
                           <span className="cc-item-top">
@@ -589,7 +666,7 @@ export function CandidatesView({
                             )}
                           </span>
                         </span>
-                      </button>
+                      </a>
                       {canEdit && <GripVertical size={14} className="cc-grip" aria-hidden />}
                     </li>
                   ))}
@@ -682,46 +759,7 @@ export function CandidatesView({
         </SheetContent>
       </Sheet>
 
-      {composer && (
-        <MessageComposer
-          candidates={candidates.filter((c) =>
-            composer.entries.includes(c.entry),
-          )}
-          companyName={companyName}
-          initialTemplate={composer.template}
-          initialChannel={composer.channel}
-          onClose={() => setComposer(null)}
-        />
-      )}
-      {undo && !composer && (
-        <div className="cc-undo" role="status">
-          <span>{undo.label}</span>
-          {undo.rejection && (
-            <button
-              type="button"
-              onClick={() =>
-                setComposer({
-                  entries: undo.rejection!,
-                  template: 'rejected',
-                  channel: 'email',
-                })
-              }
-            >
-               გავუგზავნოთ უარის წერილი? </button>
-          )}
-          <button type="button" onClick={() => void revert()}>
-            <Undo2 size={14} />
-             დაბრუნება </button>
-          <button
-            type="button"
-            className="cc-undo-close"
-            aria-label="დახურვა"
-            onClick={() => setUndo(null)}
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+      {overlays}
     </div>
   );
 }

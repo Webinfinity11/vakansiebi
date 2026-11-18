@@ -2,7 +2,7 @@
 import { NotificationSettings } from "./notification-settings";
 import { MessageTemplatesSettings } from "./message-templates";
 import { ProfileBranding } from "./profile-branding";
-import { useCallback, useEffect, useState, type SubmitEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type SubmitEvent } from "react";
 import Link from "next/link";
 import {
   CreditCard,
@@ -26,7 +26,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import type { CompanyIdentity } from "@/lib/company-portal";
-import { initialCompanyTab } from "@/lib/company-portal-navigation";
+import { companyHref, plainClick, readCompanyLocation } from "@/lib/company-portal-navigation";
 import {
   companyRequest as request,
   type CompanyJob,
@@ -137,11 +137,18 @@ export function CompanyPortal({
     null,
   );
   const [tab, setTab] = useState<Tab>("jobs");
+  // The address is read once on arrival; until then it must not be overwritten.
+  const [urlReady, setUrlReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setTab(initialCompanyTab(params.get("tab"), identity?.role));
+    const place = readCompanyLocation(window.location.search, identity?.role);
+    setTab(place.tab);
+    setSelected(place.entry);
+    if (place.job || place.stage)
+      setCandidateFilter({ jobId: place.job, stage: place.stage as CandidateStage | undefined });
+    setUrlReady(true);
     setInviteToken(params.get("invite") || "");
     if (params.get("register") === "1") setRegistering(true);
     const googleState = params.get("google");
@@ -170,13 +177,64 @@ export function CompanyPortal({
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<CompanyJobStats[]>([]);
   const [statsLoaded, setStatsLoaded] = useState(false);
+  /* A CV base person handled from the side sheet joins the company's candidates as
+     soon as the company acts on them, as it does on the server. */
   const patchCandidates = useCallback(
-    (entries: string[], patch: Partial<Candidate>) =>
-      setCandidates((list) =>
-        list.map((c) => (entries.includes(c.entry) ? { ...c, ...patch } : c)),
-      ),
+    (entries: string[], patch: Partial<Candidate>) => {
+      setCvBase((base) => {
+        const next = base?.map((c) => (entries.includes(c.entry) ? { ...c, ...patch } : c)) ?? base;
+        const acted = "stage" in patch || "rating" in patch || "interviewAt" in patch;
+        setCandidates((list) => {
+          const patched = list.map((c) => (entries.includes(c.entry) ? { ...c, ...patch } : c));
+          const joining = acted
+            ? (next ?? []).filter((b) => entries.includes(b.entry) && !patched.some((c) => c.entry === b.entry))
+            : [];
+          return [...joining, ...patched];
+        });
+        return next;
+      });
+    },
     [],
   );
+  /* Keep the tab and the open candidate in the address: links, new tabs and the
+     browser's back button then work. Opening a person over the CV base (or on a
+     phone, where the detail is its own screen) is a step back can undo. */
+  const shown = useRef<{ tab: Tab; entry: string | null } | null>(null);
+  const pushedEntry = useRef<string | null>(null);
+  useEffect(() => {
+    if (!urlReady || !identity) return;
+    const entry = tab === "candidates" || tab === "talent" ? selected : null;
+    const href = companyHref({
+      tab,
+      entry,
+      job: tab === "candidates" ? candidateFilter?.jobId : undefined,
+      stage: tab === "candidates" ? candidateFilter?.stage : undefined,
+    });
+    const prev = shown.current;
+    shown.current = { tab, entry };
+    if (href === window.location.pathname + window.location.search) return;
+    const overlay =
+      tab === "talent" || !window.matchMedia("(min-width: 901px)").matches;
+    if (prev?.tab === tab && overlay && prev.entry && !entry && pushedEntry.current === prev.entry) {
+      pushedEntry.current = null;
+      window.history.back();
+      return;
+    }
+    const push = !prev || prev.tab !== tab || (overlay && !!entry && entry !== prev.entry);
+    pushedEntry.current = push && overlay && entry ? entry : null;
+    window.history[push ? "pushState" : "replaceState"](null, "", href);
+  }, [urlReady, identity, tab, selected, candidateFilter]);
+  useEffect(() => {
+    const onPop = () => {
+      const place = readCompanyLocation(window.location.search, identity?.role);
+      shown.current = { tab: place.tab, entry: place.entry };
+      pushedEntry.current = null;
+      setTab(place.tab);
+      setSelected(place.entry);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [identity?.role]);
   /* A JOBX CV base person's phone and email, opened on request; the server logs it. */
   const revealContact = useCallback(async (entry: string) => {
     try {
@@ -660,13 +718,16 @@ export function CompanyPortal({
                 identity.role === "owner",
             )
             .map(({ id, label, Icon }) => (
-              <button
+              <a
                 key={id}
-                type="button"
+                href={companyHref({ tab: id, entry: null })}
                 data-nav={id}
                 aria-current={tab === id ? "page" : undefined}
-                onClick={() => {
+                onClick={(event) => {
+                  if (!plainClick(event)) return;
+                  event.preventDefault();
                   setTab(id);
+                  setSelected(null);
                   if (id === "candidates") setCandidateFilter(undefined);
                   setError("");
                 }}
@@ -677,7 +738,7 @@ export function CompanyPortal({
                 {id === "candidates" && unseen > 0 && (
                   <span className="cp-nav-badge">{unseen}</span>
                 )}
-              </button>
+              </a>
             ))}
         </nav>
         <div className="cp-side-foot">
@@ -836,14 +897,7 @@ export function CompanyPortal({
             jobs={jobs}
             loaded={candidatesLoaded && !!cvBase}
             onReveal={revealContact}
-            onOpen={(entry) => {
-              const fromBase = cvBase?.find((b) => b.entry === entry);
-              if (fromBase && !candidates.some((c) => c.entry === entry))
-                setCandidates((list) => [fromBase, ...list]);
-              setCandidateFilter(undefined);
-              setSelected(entry);
-              setTab("candidates");
-            }}
+            onOpen={(entry) => setSelected(entry)}
             onUploaded={async (entry, duplicate) => {
               setCandidates(await request("candidates"));
               setNotice(
@@ -853,6 +907,29 @@ export function CompanyPortal({
               );
               setSelected(entry);
             }}
+          />
+        )}
+        {tab === "talent" && approved && (
+          <CandidatesView
+            sheetOnly
+            canEdit={canEdit}
+            companyName={identity.name}
+            candidates={
+              cvBase
+                ? [...candidates, ...cvBase.filter((b) => !candidates.some((c) => c.entry === b.entry))]
+                : candidates
+            }
+            jobs={jobs}
+            loaded={candidatesLoaded}
+            selected={selected}
+            onSelect={setSelected}
+            onRemoved={(entry) => {
+              setCandidates((list) => list.filter((c) => c.entry !== entry));
+              setSelected((value) => (value === entry ? null : value));
+            }}
+            onPatch={patchCandidates}
+            onReveal={revealContact}
+            onError={setError}
           />
         )}
         {tab === "analytics" && (

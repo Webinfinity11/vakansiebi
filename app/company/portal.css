@@ -123,7 +123,10 @@
   display: grid;
   gap: 1px;
 }
-.cp-nav button,
+.cp-nav a {
+  text-decoration: none;
+}
+.cp-nav :is(button, a),
 .cp-nav-soon,
 .cp-side-link {
   display: flex;
@@ -146,12 +149,12 @@
   flex: none;
   color: var(--cp-ink-3);
 }
-.cp-nav button:hover,
+.cp-nav :is(button, a):hover,
 .cp-side-link:hover {
   background: var(--cp-hover);
   color: var(--cp-ink);
 }
-.cp-nav button[aria-current='page'] {
+.cp-nav :is(button, a)[aria-current='page'] {
   background: #fff;
   color: var(--cp-ink);
   font-weight: 600;
@@ -159,10 +162,10 @@
     0 0 0 1px var(--cp-line),
     0 1px 2px rgba(17, 24, 39, 0.04);
 }
-.cp-nav button[aria-current='page'] svg {
+.cp-nav :is(button, a)[aria-current='page'] svg {
   color: var(--cp-ink);
 }
-.cp-nav button > span {
+.cp-nav :is(button, a) > span {
   margin-left: auto;
   font-size: 12px;
   font-weight: 500;
@@ -1227,7 +1230,7 @@ textarea.cp-input {
   .cp-nav-soon {
     display: none;
   }
-  .cp-nav button {
+  .cp-nav :is(button, a) {
     flex: none;
     width: auto;
     height: 44px;
@@ -1236,7 +1239,7 @@ textarea.cp-input {
     box-shadow: none !important;
     border-bottom: 2px solid transparent;
   }
-  .cp-nav button[aria-current='page'] {
+  .cp-nav :is(button, a)[aria-current='page'] {
     border-bottom-color: var(--cp-ink);
   }
   .cp-settings-row {
@@ -1467,7 +1470,9 @@ textarea.cp-input {
 .cc-list input[type='checkbox']:focus-visible {
   opacity: 1;
 }
-.cc-list li > button {
+.cc-list li > :is(button, a) {
+  text-decoration: none;
+  color: inherit;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -2879,7 +2884,7 @@ textarea.cp-input {
 }
 
 /* Navigation: neutral icons; only the current page takes the brand accent. */
-.cp-nav button[data-nav] svg {
+.cp-nav :is(button, a)[data-nav] svg {
   box-sizing: content-box;
   width: 15px;
   height: 15px;
@@ -2887,11 +2892,11 @@ textarea.cp-input {
   border-radius: 8px;
   color: var(--cp-ink-3);
 }
-.cp-nav button[data-nav] {
+.cp-nav :is(button, a)[data-nav] {
   height: 40px;
   padding: 0 8px;
 }
-.cp-nav button[aria-current='page'][data-nav] svg {
+.cp-nav :is(button, a)[aria-current='page'][data-nav] svg {
   background: color-mix(in srgb, var(--cp-accent) 12%, #fff);
   color: var(--cp-accent);
 }
@@ -3925,15 +3930,15 @@ textarea.cp-input {
 .cp-workspace span:not(.cp-avatar) { color: var(--cp-nav-ink); }
 .cp-workspace .cp-avatar { width: 38px; height: 38px; border-radius: var(--cp-radius-sm); background: #fff; color: #254ba9; }
 .cp-nav { gap: 8px; }
-.cp-nav button[data-nav], .cp-side-link { position: relative; height: auto; min-height: 48px; padding: 12px; border-radius: var(--cp-radius-sm); color: var(--cp-nav-ink); }
-.cp-nav button[data-nav] svg, .cp-side-link svg { color: inherit; padding: 0; width: 18px; height: 18px; }
-.cp-nav button:hover, .cp-side-link:hover { background: #ffffff18; color: #fff; }
-.cp-nav button[aria-current='page'] { background: #ffffff22; color: #fff; box-shadow: inset 0 0 0 1px #ffffff15; }
-.cp-nav button[aria-current='page']::before { content: ''; position: absolute; left: -16px; width: 4px; height: 24px; border-radius: 0 4px 4px 0; background: #91b9ff; }
-.cp-nav button[aria-current='page'][data-nav] svg { color: #fff; background: none; }
-.cp-nav button > span { padding: 1px 7px; border-radius: 6px; background: #ffffff22; color: #fff; }
-.cp-nav button[data-nav='profile'] { margin-top: 16px; }
-.cp-nav button[data-nav='profile']::after { content: ''; position: absolute; left: 12px; right: 12px; top: -12px; height: 1px; background: #ffffff26; }
+.cp-nav :is(button, a)[data-nav], .cp-side-link { position: relative; height: auto; min-height: 48px; padding: 12px; border-radius: var(--cp-radius-sm); color: var(--cp-nav-ink); }
+.cp-nav :is(button, a)[data-nav] svg, .cp-side-link svg { color: inherit; padding: 0; width: 18px; height: 18px; }
+.cp-nav :is(button, a):hover, .cp-side-link:hover { background: #ffffff18; color: #fff; }
+.cp-nav :is(button, a)[aria-current='page'] { background: #ffffff22; color: #fff; box-shadow: inset 0 0 0 1px #ffffff15; }
+.cp-nav :is(button, a)[aria-current='page']::before { content: ''; position: absolute; left: -16px; width: 4px; height: 24px; border-radius: 0 4px 4px 0; background: #91b9ff; }
+.cp-nav :is(button, a)[aria-current='page'][data-nav] svg { color: #fff; background: none; }
+.cp-nav :is(button, a) > span { padding: 1px 7px; border-radius: 6px; background: #ffffff22; color: #fff; }
+.cp-nav :is(button, a)[data-nav='profile'] { margin-top: 16px; }
+.cp-nav :is(button, a)[data-nav='profile']::after { content: ''; position: absolute; left: 12px; right: 12px; top: -12px; height: 1px; background: #ffffff26; }
 
 .cp-side :is(button,a):focus-visible { outline: 3px solid #a9c6ff; outline-offset: 2px; }
 .cp-main { min-width: 0; max-width: 1600px; padding: 28px 32px 80px; }
@@ -4017,7 +4022,7 @@ textarea.cp-input {
 .cp-setup-next strong { font-size: 14px; }
 .cp-setup-next p { font-size: 13px; color: var(--cp-ink-2); margin: 4px 0 0; }
 @media (prefers-reduced-motion: no-preference) {
-  .cp-btn, .cp-input, .cp-search, .cp-row, .cp-nav button { transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+  .cp-btn, .cp-input, .cp-search, .cp-row, .cp-nav :is(button, a) { transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
   .cp-toast { animation: cp-toast-in 200ms ease-out; }
 }
 @media (max-width: 1250px) and (min-width: 861px) {
@@ -4032,11 +4037,11 @@ textarea.cp-input {
   .cp-workspace { border: 0; background: none; padding: 0; }
 
   .cp-nav { position: fixed; inset: auto 0 0; z-index: 40; height: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom)); padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); margin: 0; background: #112653; gap: 6px; overflow-x: auto; flex-wrap: nowrap; box-shadow: 0 -4px 16px #0d1b4420; }
-  .cp-nav button[data-nav] { display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 5px 10px; min-width: 84px; min-height: 0; border: 0; border-radius: 8px; font-size: 12px; }
-  .cp-nav button[data-nav='profile'] { margin: 0; }
-  .cp-nav button[aria-current='page'] { background: #ffffff22 !important; }
-  .cp-nav button::before, .cp-nav button[data-nav='profile']::after { display: none; }
-  .cp-nav button > span { position: absolute; top: 0; right: 2px; font-size: 12px; padding: 0 4px; }
+  .cp-nav :is(button, a)[data-nav] { display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 5px 10px; min-width: 84px; min-height: 0; border: 0; border-radius: 8px; font-size: 12px; }
+  .cp-nav :is(button, a)[data-nav='profile'] { margin: 0; }
+  .cp-nav :is(button, a)[aria-current='page'] { background: #ffffff22 !important; }
+  .cp-nav :is(button, a)::before, .cp-nav :is(button, a)[data-nav='profile']::after { display: none; }
+  .cp-nav :is(button, a) > span { position: absolute; top: 0; right: 2px; font-size: 12px; padding: 0 4px; }
   .cp-main { padding: 24px 16px calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 28px); }
   .cp-toast { bottom: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 12px); }
   .cp-jobs-list .cp-row { grid-template-columns: minmax(160px,2fr) 120px 120px 32px; }
@@ -4087,7 +4092,7 @@ textarea.cp-input {
 .cp-btn--ghost:hover:not(:disabled) { background: var(--cp-hover); }
 .cp-btn:active:not(:disabled), .cp-chip:active, .cp-icon-btn:active { box-shadow: inset 0 0 0 2px var(--cp-accent); }
 .cp-btn--primary:active:not(:disabled) { background: #173aa5; box-shadow: inset 0 2px 4px #0d1b4440; }
-.cp-nav button:active, .cp-side-link:active { background: #ffffff30; }
+.cp-nav :is(button, a):active, .cp-side-link:active { background: #ffffff30; }
 .cp-metrics button:hover { background: var(--cp-hover); }
 .cp-metrics button:active { background: var(--cp-accent-soft); }
 .cp-tabs button:hover { background: var(--cp-hover); }
@@ -4189,7 +4194,7 @@ textarea.cp-input {
 }
 .cp-stage-counts > button + button::before { content: none; }
 .cp-stage-counts b { font-weight: 600; }
-.cp-nav button > span { background: none; border-radius: 0; padding-inline: 4px; }
+.cp-nav :is(button, a) > span { background: none; border-radius: 0; padding-inline: 4px; }
 
 /* ── Direction B: settings and account forms ────────── */
 .cp-settings { display: grid; gap: 16px; border: 0; }
