@@ -106,7 +106,14 @@ const intervalOptions = [180, 360, 720, 1440].map((m) => ({
   value: String(m),
   label: `${m / 60} საათი`,
 }));
-const time = (v: string | null) => (v ? adminTime(v) : 'ჯერ არ შემოწმებულა');
+/* Postgres sends 'infinity' for "never" (source items that are no longer
+   re-checked); an unreadable date must not take the whole admin page down. */
+const time = (v: string | null) =>
+  !v
+    ? 'ჯერ არ შემოწმებულა'
+    : Number.isFinite(Date.parse(v))
+      ? adminTime(v)
+      : '—';
 /* The marks a row carries beside its status, most telling first; the row shows one and a count. */
 function jobFlags(j: AdminJob) {
   const flags: { label: string; tone?: 'warning' | 'violet' }[] = [];
@@ -2257,8 +2264,10 @@ export default function AdminPanel() {
                           {listingSourceNames[
                             i.source_id as keyof typeof listingSourceNames
                           ] || i.source_id}{' '}
-                          · შემოწმდა {time(i.last_checked_at)} · შემდეგი{' '}
-                          {time(i.next_check_at)}
+                          · შემოწმდა {time(i.last_checked_at)}
+                          {Number.isFinite(Date.parse(i.next_check_at ?? ''))
+                            ? ` · შემდეგი ${time(i.next_check_at)}`
+                            : ' · ხელახლა აღარ მოწმდება'}
                           {i.failures
                             ? ` · წარუმატებელი ცდა: ${i.failures}`
                             : ''}
