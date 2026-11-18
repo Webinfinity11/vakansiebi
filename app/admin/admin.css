@@ -3498,11 +3498,40 @@ body:has(.admin-shell) .job-choice-options {
 .admin-shell .admin-table-head,
 .admin-shell .admin-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
 }
 .admin-shell .admin-table.is-selectable :is(.admin-table-head, .admin-row) {
-  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+}
+/* Edit and remove, at the end of every row. */
+.admin-shell .admin-row-actions,
+.admin-shell .admin-row-actions-head {
+  box-sizing: border-box;
+  width: 88px;
+  padding-right: var(--ds-space-3);
+}
+.admin-shell .admin-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+.admin-shell .admin-row-actions-head {
+  text-align: right;
+}
+.admin-shell .admin-row-actions .ds-btn {
+  width: 32px;
+  height: 32px;
+}
+/* The confirm dialog renders outside .admin-shell. */
+.ds-btn.ds-btn--primary.admin-danger-btn {
+  background: var(--ds-danger);
+  border-color: var(--ds-danger);
+  color: #fff;
+}
+.ds-btn.ds-btn--primary.admin-danger-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ds-danger) 88%, #000);
 }
 .admin-shell .admin-table-head {
   position: sticky;

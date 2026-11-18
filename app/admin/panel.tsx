@@ -19,9 +19,11 @@ import {
   ExternalLink,
   History,
   Layers3,
+  Pencil,
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Trash2,
   X,
 } from 'lucide-react';
 import './admin-ops.css';
@@ -307,6 +309,8 @@ export default function AdminPanel() {
     [selected, setSelected] = useState<AdminJob | null>(null),
     [placement, setPlacement] = useState<PlacementTier>('standard'),
     [draft, setDraft] = useState<Vacancy | null>(null),
+    /* A vacancy being taken off the site straight from its list row. */
+    [removing, setRemoving] = useState<AdminJob | null>(null),
     [confirm, setConfirm] = useState<{
       action: string;
       itemId?: string;
@@ -612,6 +616,26 @@ export default function AdminPanel() {
       await load();
     }
   };
+  /* "Delete" from the list archives: the vacancy leaves the site, automation stops
+     touching it, so the scraper does not bring it back, and it can be restored from
+     the archive. A hard delete would let the next import create it again. */
+  const removeRow = async (job: AdminJob) => {
+    setBusy(true);
+    setError('');
+    try {
+      await request('/api/admin/jobs', { id: job.id, version: job.version, action: 'archive' });
+      setMessage(`„${job.draft.title}“ საიტიდან წაიშალა. აღდგენა „არქივიდან“ შეგიძლია.`);
+      if (selected?.id === job.id) setSelected(null);
+      setRemoving(null);
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+      setRemoving(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const removable = (j: AdminJob) => !['archived', 'rejected', 'merged'].includes(j.status);
   const jobList = () => (
     <>
       {loading ? (
@@ -659,6 +683,7 @@ export default function AdminPanel() {
               <span className="num">ხელფასი</span>
               <span>სტატუსი</span>
             </div>
+            <span className="admin-row-actions-head">მოქმედება</span>
           </div>
           {jobs.map((j) => {
             const flags = jobFlags(j);
@@ -743,6 +768,29 @@ export default function AdminPanel() {
                     )}
                   </span>
                 </button>
+                <span className="admin-row-actions">
+                  <button
+                    type="button"
+                    className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm"
+                    aria-label={`${j.draft.title} — რედაქტირება`}
+                    title="რედაქტირება"
+                    onClick={() => openJob(j)}
+                  >
+                    <Pencil size={16} aria-hidden="true" />
+                  </button>
+                  {removable(j) && (
+                    <button
+                      type="button"
+                      className="ds-btn ds-btn--ghost ds-btn--icon ds-btn--sm admin-ghost-danger"
+                      aria-label={`${j.draft.title} — საიტიდან წაშლა`}
+                      title="საიტიდან წაშლა"
+                      disabled={busy}
+                      onClick={() => setRemoving(j)}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  )}
+                </span>
                 {tab === 'submissions' && submissionView === 'submissions-published' && <AutoPublishMark key={j.id} id={j.id} value={(j as AdminJob & AutoPublishedJob).autoPublished} />}
                 {tab === 'submissions' && submissionView === 'submissions' && <QuickModeration disabled={busy} onPublish={() => moderateRow(j, 'publish')} onReject={value => moderateRow(j, 'reject', value)} />}
               </div>
@@ -2549,6 +2597,39 @@ export default function AdminPanel() {
               }
             >
               დადასტურება
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!removing}
+        onOpenChange={(open) => {
+          if (!open && !busy) setRemoving(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ვაკანსია საიტიდან წავშალოთ?</DialogTitle>
+            <DialogDescription>
+              „{removing?.draft.title}“{removing?.draft.company ? ` (${removing.draft.company})` : ''} საიტზე
+              აღარ გამოჩნდება და წყაროდან ხელახლა აღარ შემოვა. ჩანაწერი არქივში
+              გადავა, საიდანაც საჭიროების შემთხვევაში აღდგება.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="confirm-actions">
+            <button
+              className="ds-btn ds-btn--secondary"
+              disabled={busy}
+              onClick={() => setRemoving(null)}
+            >
+              გაუქმება
+            </button>
+            <button
+              className="ds-btn ds-btn--primary admin-danger-btn"
+              disabled={busy}
+              onClick={() => removing && void removeRow(removing)}
+            >
+              წაშლა
             </button>
           </div>
         </DialogContent>
