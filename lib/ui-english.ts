@@ -1051,6 +1051,8 @@ export const englishUi: Readonly<Record<string, string>> = {
   // JOBX CV base visibility.
   ' ატვირთული რეზიუმე ასევე ჩანს JOBX-ის CV ბაზაში შემოწმებული დამსაქმებლებისთვის.':
     ' An uploaded CV is also visible to verified employers in the JOBX CV base.',
+  'გაგზავნით ეთანხმები, რომ შენი რეზიუმე მიიღოს კომპანიამ „{0}“ და შეინახოს JOBX-ზე.':
+    'By sending, you agree that “{0}” receives your CV and that JOBX stores it.',
   'ვეთანხმები, რომ ჩემი რეზიუმე მიიღოს კომპანიამ „{0}“ და შეინახოს JOBX-ზე ამ დამსაქმებლისთვის.':
     'I agree that “{0}” receives my CV and that JOBX stores it for this employer.',
   'კონტაქტის ნახვა': 'Show contact',

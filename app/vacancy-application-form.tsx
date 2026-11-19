@@ -191,16 +191,6 @@ export function VacancyApplicationForm({ job }: { job: PublicJob }) {
               </p>
             )}
             <ApplicationQuestions jobId={job.id} onReady={setQuestionsReady} />
-            <label className="vacancy-application-consent">
-              <input type="checkbox" name="consent" required />
-              <span>
-                {ui(
-                  'ვეთანხმები, რომ ჩემი რეზიუმე მიიღოს კომპანიამ „{0}“ და შეინახოს JOBX-ზე ამ დამსაქმებლისთვის.',
-                  [job.company],
-                )}
-                {mode === 'upload' && ui(baseUploadNote)}
-              </span>
-            </label>
             {error && <p role="alert">{ui(error)}</p>}
             <button
               className="primary"
@@ -209,6 +199,12 @@ export function VacancyApplicationForm({ job }: { job: PublicJob }) {
             >
               {ui(busy ? 'იგზავნება…' : 'CV-ის გაგზავნა')}
             </button>
+            <p className="vacancy-application-terms">
+              {ui('გაგზავნით ეთანხმები, რომ შენი რეზიუმე მიიღოს კომპანიამ „{0}“ და შეინახოს JOBX-ზე.', [
+                job.company,
+              ])}
+              {mode === 'upload' && ui(baseUploadNote)}
+            </p>
           </fieldset>
         </form>
       )}

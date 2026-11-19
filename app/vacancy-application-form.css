@@ -41,6 +41,12 @@
   height: 18px;
   margin: 4px 0;
 }
+.vacancy-application .vacancy-application-terms {
+  margin: 0;
+  color: var(--jobx-color-606c80-text);
+  font-size: var(--jobx-font-size-11px);
+  line-height: 1.5;
+}
 .vacancy-application button {
   width: 100%;
   white-space: normal;
