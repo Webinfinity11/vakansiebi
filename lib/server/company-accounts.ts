@@ -1,7 +1,7 @@
 import { companyTrusted } from './trusted-companies';
 import { invoiceContact } from '../billing';
 import { randomBytes } from 'node:crypto';
-import { registrationSchema, invitationSchema } from '../company-registration';
+import { registrationSchema, invitationSchema, companyDetailsSchema } from '../company-registration';
 import { companyPassword, type CompanyIdentity } from '../company-portal';
 import { verifiedCompanyInfo } from './verified-company-info';
 import {
@@ -352,6 +352,46 @@ export async function changeCompanyAccount(input: unknown) {
   });
 }
 
+/* The details a company review needs, given at registration or later from the
+   account page. They live on the owner's account and on the company profile. */
+export async function updateCompanyDetails(company: CompanyIdentity, input: unknown) {
+  if (company.role !== 'owner')
+    throw new ApiError('მონაცემების შეცვლა მხოლოდ ანგარიშის მფლობელს შეუძლია.', 403);
+  const data = companyDetailsSchema.parse(input);
+  try {
+    return await transaction(async (c) => {
+      const profile = (
+        await c.query(
+          'SELECT registration_code,approval_status FROM company_profiles WHERE company_key=$1 FOR UPDATE',
+          [company.companyKey],
+        )
+      ).rows[0];
+      // An approved company's code was checked; only JOBX changes it afterwards.
+      const code =
+        profile?.approval_status === 'approved' && profile.registration_code
+          ? profile.registration_code
+          : data.code || null;
+      await c.query('UPDATE company_profiles SET registration_code=$2 WHERE company_key=$1', [
+        company.companyKey,
+        code,
+      ]);
+      await c.query(
+        `UPDATE company_accounts SET representative_name=$2,position=$3,phone=$4,version=version+1,updated_at=now()
+         WHERE company_key=$1 AND role='owner'`,
+        [company.companyKey, data.representativeName, data.position, data.phone],
+      );
+      return { code: code ?? '', representativeName: data.representativeName, position: data.position, phone: data.phone };
+    });
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === '23505')
+      throw new ApiError(
+        'ეს საიდენტიფიკაციო კოდი სხვა კომპანიაზეა რეგისტრირებული. დაგვიკავშირდით.',
+        409,
+      );
+    throw error;
+  }
+}
+
 // Tokens are stored as hashes; links are logged only in development without Resend.
 export async function sendCompanyLink(
   email: string,
@@ -427,7 +467,7 @@ export async function registerCompany(
         [
           key,
           data.name,
-          data.code,
+          data.code || null,
           info?.description ?? '',
           info?.website ?? '',
         ],

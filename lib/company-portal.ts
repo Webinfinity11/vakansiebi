@@ -22,6 +22,8 @@ export type CompanyIdentity = {
   approvalStatus: 'pending' | 'approved' | 'rejected';
   emailVerified: boolean;
   representativeName: string;
+  /** The details a review needs; blank ones are still to be filled in. */
+  details?: { code: string; representativeName: string; position: string; phone: string };
 };
 export type CompanyAccount = {
   trustedMode: 'auto' | 'on' | 'off';

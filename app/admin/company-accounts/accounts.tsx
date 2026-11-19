@@ -604,10 +604,18 @@ export function CompanyAccounts() {
                   : 'დადასტურებულია'}
             </p>
             <p>
-              კოდი: {current?.registration_code || '—'} ·{' '}
-              {current?.representative_name} · {current?.position} ·{' '}
-              {current?.phone}
+              კოდი: {current?.registration_code || 'არ არის შევსებული'} · საკონტაქტო
+              პირი: {current?.representative_name || 'არ არის შევსებული'}
+              {current?.position ? ` (${current.position})` : ''} · ტელეფონი:{' '}
+              {current?.phone || 'არ არის შევსებული'}
             </p>
+            {current?.approval_status === 'pending' &&
+              !(current.representative_name && current.position && current.phone) && (
+                <p className="company-form-note">
+                  კომპანიას მონაცემები ჯერ ბოლომდე არ შეუვსია; შეუძლია „ანგარიშის“
+                  გვერდზე შეავსოს.
+                </p>
+              )}
             <p>
               ელფოსტა:{' '}
               {current?.email_verified ? 'დადასტურებულია' : 'დასადასტურებელია'}

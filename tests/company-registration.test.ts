@@ -13,16 +13,19 @@ const valid = {
   phone: '+995 555 12 34 56',
   password: 'strong-password-2026',
 };
-test('registration requires nine digits, contact information and strong password', () => {
+test('registration needs only a name, an email and a strong password; details may follow', () => {
   assert.equal(registrationSchema.safeParse(valid).success, true);
+  const short = registrationSchema.parse({ name: valid.name, email: valid.email, password: valid.password });
+  assert.deepEqual([short.code, short.representativeName, short.position, short.phone], ['', '', '', '']);
+  assert.equal(registrationSchema.safeParse({ ...valid, representativeName: '', position: '' }).success, true);
   for (const patch of [
     { code: '12345678' },
     { code: '12345678x' },
     { code: '1234567890' },
     { email: 'invalid' },
     { password: 'short' },
-    { representativeName: '' },
-    { position: '' },
+    { name: '' },
+    { representativeName: 'a' },
     { phone: 'abc' },
   ])
     assert.equal(
@@ -41,4 +44,13 @@ test('invitation cannot grant ownership and normalizes email', () => {
     invitationSchema.parse({ email: 'TEST@example.com', role: 'viewer' }),
     { email: 'test@example.com', role: 'viewer' },
   );
+});
+test('missing details are named for the review notice', async () => {
+  const { missingCompanyDetails, companyDetailsSchema } = await import('../lib/company-registration');
+  assert.deepEqual(missingCompanyDetails({ code: '123456789', representativeName: 'ანა', position: '', phone: null }), ['თანამდებობა', 'ტელეფონი']);
+  // The identification code is optional.
+  assert.deepEqual(missingCompanyDetails({ ...valid, code: '' }), []);
+  assert.deepEqual(missingCompanyDetails(valid), []);
+  assert.equal(companyDetailsSchema.safeParse({ code: '12' }).success, false);
+  assert.equal(companyDetailsSchema.safeParse({}).success, true);
 });

@@ -4338,12 +4338,12 @@ textarea.cp-input {
 }
 
 /* Account: the password form is one card; its save button sits inside it, not on a card of its own. */
-.cp-main > .cp-password-settings { gap: 0; border-radius: var(--cp-radius); background: var(--cp-surface); box-shadow: var(--cp-shadow); }
-.cp-main > .cp-password-settings .cp-settings-row { box-shadow: none; background: none; }
-.cp-main > .cp-password-settings .cp-settings-foot { display: flex; justify-content: flex-end; padding: 0 24px 24px; background: none; box-shadow: none; }
+.cp-main > :is(.cp-password-settings, .cp-details-settings) { gap: 0; border-radius: var(--cp-radius); background: var(--cp-surface); box-shadow: var(--cp-shadow); }
+.cp-main > :is(.cp-password-settings, .cp-details-settings) .cp-settings-row { box-shadow: none; background: none; }
+.cp-main > :is(.cp-password-settings, .cp-details-settings) .cp-settings-foot { display: flex; align-items: center; gap: 16px; justify-content: flex-end; padding: 0 24px 24px; background: none; box-shadow: none; }
 @media (max-width: 600px) {
-  .cp-main > .cp-password-settings .cp-settings-foot { padding: 0 16px 24px; }
-  .cp-main > .cp-password-settings .cp-settings-foot .cp-btn { width: 100%; }
+  .cp-main > :is(.cp-password-settings, .cp-details-settings) .cp-settings-foot { padding: 0 16px 24px; }
+  .cp-main > :is(.cp-password-settings, .cp-details-settings) .cp-settings-foot .cp-btn { width: 100%; }
 }
 
 /* Sign-in and registration: the form on the site's light canvas, the logo without a white chip,
@@ -4371,3 +4371,20 @@ textarea.cp-input {
   .cp-auth-aside p { margin: 8px 0 0; padding-top: 20px; border-top: 1px solid rgb(255 255 255 / 0.16); font-size: 13px; color: var(--cp-nav-ink); }
   .cp-auth-panel { min-width: 0; }
 }
+
+/* The company details form groups its inputs in a fieldset so it can be disabled
+   for non-owners; it keeps the look of the other settings. */
+fieldset.cp-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.cp-settings-foot [role='status'] {
+  margin-right: auto;
+  color: var(--cp-ink-2);
+  font-size: 14px;
+}
+
+.cp-details-settings .cp-details-error { margin: 0 24px 16px; }
+.cp-main > .cp-details-settings { margin-bottom: 16px; }

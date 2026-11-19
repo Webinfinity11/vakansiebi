@@ -34,6 +34,8 @@ import {
 } from "./company-api";
 import type { Candidate, CandidateStage } from "@/lib/company-candidates";
 import { BillingView } from "./billing-view";
+import { CompanyDetailsForm } from "./company-details";
+import { missingCompanyDetails, type CompanyDetails } from "@/lib/company-registration";
 import { JobsView } from "./jobs-view";
 import { SetupGuide } from "./setup-guide";
 import { CandidatesView } from "./candidates-view";
@@ -163,6 +165,10 @@ export function CompanyPortal({
         .catch(() => {});
   }, []);
   const [notice, setNotice] = useState("");
+  const [details, setDetails] = useState<CompanyDetails>(
+    identity?.details ?? { code: "", representativeName: "", position: "", phone: "" },
+  );
+  const missing = missingCompanyDetails(details);
   const [jobs, setJobs] = useState<CompanyJob[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
@@ -510,7 +516,7 @@ export function CompanyPortal({
                       <GoogleMark />
                       <span>
                          Google ანგარიში: <strong>{google.email}</strong>
-                        <small>შეავსეთ დარჩენილი ველები.</small>
+                        <small>მიუთითეთ კომპანიის დასახელება.</small>
                       </span>
                       <button
                         type="button"
@@ -521,30 +527,6 @@ export function CompanyPortal({
                         }
                       >
                          გაუქმება </button>
-                    </div>
-                  )}
-                  {!inviteToken && (
-                    <div className="cp-auth-grid">
-                      <label>
-                         კომპანიის დასახელება <input
-                          className="cp-input"
-                          name="name"
-                          required
-                          minLength={2}
-                          maxLength={160}
-                        />
-                      </label>
-                      <label>
-                         საიდენტიფიკაციო კოდი <input
-                          className="cp-input"
-                          name="code"
-                          inputMode="numeric"
-                          pattern="[0-9]{9}"
-                          minLength={9}
-                          maxLength={9}
-                          required
-                        />
-                      </label>
                     </div>
                   )}
                   {inviteToken ? (
@@ -560,62 +542,40 @@ export function CompanyPortal({
                     </label>
                   ) : (
                     <>
-                      <div className="cp-auth-grid">
-                        <label>
-                           საკონტაქტო პირი (სახელი, გვარი) <input
-                            key={google?.name ?? ""}
+                      <label>
+                         კომპანიის დასახელება <input
+                          className="cp-input"
+                          name="name"
+                          autoComplete="organization"
+                          required
+                          minLength={2}
+                          maxLength={160}
+                        />
+                      </label>
+                      <label>
+                         ელფოსტა {google ? (
+                          <input
+                            key="google-email"
                             className="cp-input"
-                            name="representativeName"
-                            autoComplete="name"
-                            defaultValue={google?.name}
-                            required
-                            minLength={2}
-                            maxLength={120}
+                            type="email"
+                            value={google.email}
+                            readOnly
                           />
-                        </label>
-                        <label>
-                           თანამდებობა <input
+                        ) : (
+                          <input
+                            key="email"
                             className="cp-input"
-                            name="position"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
                             required
-                            minLength={2}
-                            maxLength={120}
+                            maxLength={254}
                           />
-                        </label>
-                      </div>
-                      <div className="cp-auth-grid">
-                        <label>
-                           ელფოსტა {google ? (
-                            <input
-                              key="google-email"
-                              className="cp-input"
-                              type="email"
-                              value={google.email}
-                              readOnly
-                            />
-                          ) : (
-                            <input
-                              key="email"
-                              className="cp-input"
-                              name="email"
-                              type="email"
-                              autoComplete="email"
-                              required
-                              maxLength={254}
-                            />
-                          )}
-                        </label>
-                        <label>
-                           ტელეფონი <input
-                            className="cp-input"
-                            name="phone"
-                            type="tel"
-                            autoComplete="tel"
-                            required
-                            maxLength={25}
-                          />
-                        </label>
-                      </div>
+                        )}
+                      </label>
+                      {google?.name && (
+                        <input type="hidden" name="representativeName" value={google.name} />
+                      )}
                     </>
                   )}
                   {!(google && !inviteToken) && (
@@ -625,7 +585,7 @@ export function CompanyPortal({
                   )}
                   {!inviteToken && (
                     <p className="cp-auth-note">
-                       რეგისტრაციის შემდეგ ვაკანსიის მომზადებას შეძლებთ. კანდიდატებზე წვდომასა და გამოქვეყნებას კომპანიის დადასტურება სჭირდება. </p>
+                       რეგისტრაციის შემდეგ ვაკანსიის მომზადებას შეძლებთ. საკონტაქტო პირსა და ტელეფონს „ანგარიშის“ გვერდზე შეავსებთ: ისინი კომპანიის დასადასტურებლად გვჭირდება. </p>
                   )}
                   <button
                     className="cp-btn cp-btn--primary cp-btn--block"
@@ -773,6 +733,29 @@ export function CompanyPortal({
             </strong>
             <p>
                ვაკანსიის მომზადება შეგიძლიათ. გამოქვეყნება და კანდიდატებზე წვდომა შესაძლებელი გახდება ელფოსტისა და კომპანიის დადასტურების შემდეგ. </p>
+            {identity.approvalStatus === "pending" && missing.length > 0 && (
+              <>
+                <p>
+                  შემოწმების დასაწყებად შეავსეთ: {missing.join(", ")}.
+                </p>
+                {identity.role === "owner" && tab !== "security" && (
+                  <a
+                    className="cp-btn"
+                    href={companyHref({ tab: "security", entry: null }) + "#company-details"}
+                    onClick={(event) => {
+                      if (!plainClick(event)) return;
+                      event.preventDefault();
+                      setTab("security");
+                      requestAnimationFrame(() =>
+                        document.getElementById("company-details")?.scrollIntoView({ block: "start" }),
+                      );
+                    }}
+                  >
+                    მონაცემების შევსება
+                  </a>
+                )}
+              </>
+            )}
             {!identity.emailVerified && (
               <>
                 <p>ელფოსტის დასადასტურებლად გახსენით გამოგზავნილი ბმული.</p>
@@ -1077,6 +1060,15 @@ export function CompanyPortal({
                 <dd>{identity.email}</dd>
               </div>
             </dl>
+            <CompanyDetailsForm
+              details={details}
+              canEdit={identity.role === "owner"}
+              codeLocked={identity.approvalStatus === "approved" && !!details.code}
+              onSaved={(next) => {
+                setDetails(next);
+                setNotice("კომპანიის მონაცემები შენახულია.");
+              }}
+            />
             {passwordForm}
             <NotificationSettings canEdit={identity.role === "owner"} />
             <MessageTemplatesSettings canEdit={identity.role !== "viewer"} companyName={identity.name} />

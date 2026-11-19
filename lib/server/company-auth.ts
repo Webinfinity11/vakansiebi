@@ -144,7 +144,8 @@ export async function companyIdentity(
   const { rows } = await db().query(
     `UPDATE company_sessions s SET last_seen_at=now() FROM company_accounts a JOIN company_profiles p ON p.company_key=a.company_key JOIN company_accounts owner ON owner.company_key=a.company_key AND owner.role='owner' AND owner.enabled
     WHERE s.token_hash=$1 AND s.account_id=a.id AND a.enabled AND s.expires_at>now() AND s.last_seen_at>now()-interval '2 hours'
-    RETURNING a.id,a.company_key AS "companyKey",p.name,a.username,a.email,a.must_change_password AS "mustChangePassword",a.role,p.approval_status AS "approvalStatus",a.email_verified AS "emailVerified",a.representative_name AS "representativeName"`,
+    RETURNING a.id,a.company_key AS "companyKey",p.name,a.username,a.email,a.must_change_password AS "mustChangePassword",a.role,p.approval_status AS "approvalStatus",a.email_verified AS "emailVerified",a.representative_name AS "representativeName",
+      jsonb_build_object('code',COALESCE(p.registration_code,''),'representativeName',owner.representative_name,'position',owner.position,'phone',owner.phone) AS details`,
     [digest(token)],
   );
   return rows[0] ?? null;
