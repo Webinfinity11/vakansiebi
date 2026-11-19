@@ -15,7 +15,9 @@ let lastGood: DatedVacancy[] | null = null;
    sitemaps share this list, so a server builds it once every five minutes. */
 export function publicVacancyDates(now = Date.now()) {
   if (held && now - held.at < 300_000) return held.value;
-  const plan = searchPlan(new URLSearchParams(), false, { grouped: true });
+  const plan = searchPlan(new URLSearchParams(), false, {
+    grouped: 'canonical',
+  });
   const value = db()
     // The title travels with the identifier: the address it builds carries it.
     .query<{ id: string; title: string | null; modified: Date }>(

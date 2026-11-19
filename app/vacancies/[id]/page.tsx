@@ -1,6 +1,12 @@
 import { ServerSiteFooter } from "../../server-site-footer";
 import { compactSalary } from "@/lib/vacancy-presentation";
-import { breadcrumbs, jobPosting, jsonLd, vacancyUrl } from "@/lib/seo";
+import {
+  breadcrumbs,
+  canonicalVacancyPath,
+  jobPosting,
+  jsonLd,
+  vacancyUrl,
+} from "@/lib/seo";
 import type { Metadata } from "next";
 import { siteName } from "@/lib/site-brand";
 import { vacancyTitle } from "@/lib/vacancy-title";
@@ -11,7 +17,6 @@ import { employerPages } from "@/lib/server/employers";
 import {
   safeReturnPath,
   vacancyIdFrom,
-  vacancySegment,
   vacancySlug,
 } from "@/lib/vacancy-navigation";
 import VacancyPage from "../../vacancy-page";
@@ -120,7 +125,7 @@ export default async function Page(props: Props) {
           : []),
         {
           name: job.title,
-          path: `/vacancies/${encodeURIComponent(vacancySegment({ id: job.canonicalId || job.id, title: job.title }))}`,
+          path: canonicalVacancyPath(job),
         },
       ]);
   return (

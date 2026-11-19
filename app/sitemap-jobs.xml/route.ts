@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 export const GET = createSitemapHandler(
-  persistentSitemap('jobs', vacanciesEntries),
+  persistentSitemap('jobs-v2', vacanciesEntries),
   25_000,
   undefined,
   'jobs',

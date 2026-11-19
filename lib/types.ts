@@ -74,6 +74,7 @@ export type PublicJob = Vacancy & {
     priority?: boolean;
   };
   canonicalId?: string;
+  canonicalTitle?: string;
   companyPath?: string;
   logoOrigin?: string;
   summary?: boolean;

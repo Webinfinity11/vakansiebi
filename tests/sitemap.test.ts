@@ -8,7 +8,11 @@ import { GET as categoriesGET } from '../app/sitemap-categories.xml/route';
 import { GET as companiesGET } from '../app/sitemap-companies.xml/route';
 import { GET as jobsGET } from '../app/sitemap-jobs.xml/route';
 import robots from '../app/robots';
-import { vacancySitemapEntries } from '../lib/server/sitemap-entries';
+import {
+  vacanciesEntries,
+  vacancySitemapEntries,
+} from '../lib/server/sitemap-entries';
+import { vacancyUrl } from '../lib/seo';
 import { GET as contentGET } from '../app/sitemap-content.xml/route';
 import {
   createSitemapHandler,
@@ -56,6 +60,72 @@ void test('vacancy sitemap omits titles with no slug and preserves normal entrie
     [{ url: `https://jobx.ge/vacancies/developeri-${id}`, lastModified }],
   );
 });
+
+void test(
+  'vacancy sitemap and detail agree on the canonical URL even when an alias is promoted',
+  { skip: process.env.RUN_SEO_DB_TESTS !== '1' },
+  async () => {
+    const database = new URL(process.env.DATABASE_URL!);
+    assert.ok(['localhost', '127.0.0.1'].includes(database.hostname));
+    assert.equal(database.pathname, '/jobx_company_local');
+    const { db, transaction } = await import('../lib/server/db');
+    const { publicJobs } = await import('../lib/server/jobs');
+    const alias = { id: randomUUID(), title: 'WarehouseLead' };
+    const canonical = { id: randomUUID(), title: 'Warehouse Lead' };
+    const ids = [alias.id, canonical.id];
+    const company = `Canonical SEO fixture ${canonical.id}`;
+    try {
+      await transaction(async (client) => {
+        for (const job of [alias, canonical]) {
+          const promoted = job === alias;
+          const url = `https://example.invalid/${job.id}`;
+          const vacancy = {
+            title: job.title,
+            company,
+            city: 'თბილისი',
+            deadline: '2099-01-01',
+            description: 'Help lead warehouse operations.',
+            source: 'hr.ge',
+            url,
+          };
+          await client.query(
+            `INSERT INTO jobs(id,draft,published,status,fingerprint,published_at,placement_tier,placement_expires_at)
+             VALUES($1,$2,$2,'published',$3,now()-CASE WHEN $4 THEN interval '1 day' ELSE interval '0' END,
+                    CASE WHEN $4 THEN 'premium' ELSE 'standard' END,CASE WHEN $4 THEN now()+interval '1 day' END)`,
+            [job.id, vacancy, canonical.id, promoted],
+          );
+          await client.query(
+            `INSERT INTO source_items(id,source_id,external_id,url,job_id,raw)
+             VALUES($1::uuid,'hr',$1::text,$2,$1::uuid,$3)`,
+            [job.id, url, vacancy],
+          );
+        }
+      });
+      const { jobs } = await publicJobs(new URLSearchParams({ ids: alias.id }));
+      assert.equal(jobs[0]?.id, alias.id);
+      assert.equal(vacancyUrl(jobs[0]), vacancyUrl(canonical));
+      assert.notEqual(
+        vacancyUrl(jobs[0]),
+        vacancyUrl({
+          id: canonical.id,
+          title: alias.title,
+        }),
+      );
+      const urls = (await vacanciesEntries()).map(({ url }) => url);
+      assert.ok(urls.includes(vacancyUrl(canonical)));
+      assert.ok(!urls.includes(vacancyUrl(alias)));
+    } finally {
+      await transaction(async (client) => {
+        await client.query(
+          'DELETE FROM source_items WHERE job_id=ANY($1::uuid[])',
+          [ids],
+        );
+        await client.query('DELETE FROM jobs WHERE id=ANY($1::uuid[])', [ids]);
+      });
+      await db().end();
+    }
+  },
+);
 
 async function withoutDatabase(run: () => Promise<void>) {
   const previous = process.env.DATABASE_URL;
@@ -139,14 +209,9 @@ void test('sitemap-categories.xml, sitemap-companies.xml and sitemap-jobs.xml re
       const response = await get();
       assert.equal(response.headers.get('Cache-Control'), 'no-store');
       const body = await response.text();
-      if (get === categoriesGET) {
-        assert.equal(response.status, 200);
-        assert.match(body, /<url><loc>/);
-      } else {
-        assert.equal(response.status, 503);
-        assert.equal(response.headers.get('Retry-After'), '300');
-        assert.doesNotMatch(body, /<urlset/);
-      }
+      assert.equal(response.status, 503);
+      assert.equal(response.headers.get('Retry-After'), '300');
+      assert.doesNotMatch(body, /<urlset/);
     }
   });
 });
@@ -222,13 +287,12 @@ void test('an oversized catalogue is truncated to 50000 URLs', async () => {
   assert.ok(!body.includes('<loc>https://jobx.ge/companies/50000</loc>'));
 });
 
-void test('categories sitemap reads stored counts and uses curated fallback for stale, empty or thin snapshots', async (t) => {
+void test('categories sitemap omits unverified landings when the stored counts are stale, empty or thin', async (t) => {
   const { db } = await import('../lib/server/db');
   const { clearLandingCountsCache } =
     await import('../lib/server/sitemap-data');
-  const { landingLinks } = await import('../lib/seo-landing');
   const previous = process.env.DATABASE_URL;
-  process.env.DATABASE_URL = 'postgresql://kapana@localhost:5432/ertad_test';
+  process.env.DATABASE_URL ??= 'postgresql://localhost:5432/jobx_company_local';
   const computedAt = new Date(Date.now() - 60_000);
   const row = {
     category: null,
@@ -262,11 +326,9 @@ void test('categories sitemap reads stored counts and uses curated fallback for 
       rows = unavailable;
       clearLandingCountsCache();
       const response = await categoriesGET();
+      assert.equal(response.status, 503);
       assert.equal(response.headers.get('Cache-Control'), 'no-store');
-      assert.equal(
-        (await response.text()).match(/<loc>/g)?.length,
-        landingLinks().length,
-      );
+      assert.doesNotMatch(await response.text(), /<loc>/);
     }
     rows = [row];
     clearLandingCountsCache();

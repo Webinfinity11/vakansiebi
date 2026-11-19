@@ -5,7 +5,7 @@ import { tbilisiDistricts } from './street-address';
 import { safeExternalUrl } from './vacancy-media';
 import { isGenericCompanyName } from './company-logo-identity';
 import { companyVacancyTitle } from './company-vacancy-title';
-import { vacancySegment } from './vacancy-navigation';
+import { vacancyPath } from './vacancy-navigation';
 import { salaryFacts } from './salary-summary';
 import { vacancySummary } from './vacancy-summary';
 import { siteSocialProfiles, siteName, siteAlternateNames } from './site-brand';
@@ -25,14 +25,17 @@ export const shareImage = {
   height: 630,
   alt: 'JOBX',
 } as const;
-export const vacancyUrl = (
-  job: Pick<PublicJob, 'id' | 'canonicalId'> & { title?: string },
+export const canonicalVacancyPath = (
+  job: Pick<PublicJob, 'id' | 'canonicalId' | 'canonicalTitle'> & {
+    title?: string;
+  },
 ) =>
-  siteUrl +
-  '/vacancies/' +
-  encodeURIComponent(
-    vacancySegment({ id: job.canonicalId || job.id, title: job.title }),
-  );
+  vacancyPath({
+    id: job.canonicalId || job.id,
+    title: job.canonicalTitle || job.title,
+  });
+export const vacancyUrl = (job: Parameters<typeof canonicalVacancyPath>[0]) =>
+  siteUrl + canonicalVacancyPath(job);
 export const jsonLd = (value: unknown) =>
   JSON.stringify(value).replace(/</g, '\\u003c');
 

@@ -160,10 +160,19 @@ async function loadPublicJobs(
   const sources = summary
     ? `COALESCE((SELECT jsonb_agg(jsonb_build_object('source',recent.source,'url',recent.url,'checkedAt',recent.checked_at,'error',recent.error) ORDER BY recent.posted_at DESC NULLS LAST,recent.source,recent.url) FROM (SELECT * FROM (SELECT DISTINCT ON (s.name) s.name AS source,si.url,CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END AS checked_at,si.error,m.posted_at FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired ORDER BY s.name,m.posted_at DESC NULLS LAST,si.last_checked_at DESC NULLS LAST,si.url) per_source ORDER BY posted_at DESC NULLS LAST,source,url LIMIT 6) recent),'[]'::jsonb)`
     : `COALESCE((SELECT jsonb_agg(jsonb_build_object('source',s.name,'url',si.url,'checkedAt',CASE WHEN si.quality_warning IS NOT NULL THEN si.last_verified_at ELSE si.last_checked_at END,'error',si.error) ORDER BY (m.id=j.id) DESC,m.posted_at DESC,s.name,si.url) FROM members m JOIN source_items si ON si.job_id=m.id JOIN sources s ON s.id=si.source_id WHERE m.group_key=j.group_key AND NOT s.retired),'[]'::jsonb)`;
+  const canonicalFields = summary
+    ? ""
+    : ", canonical.id AS canonical_id, canonical.p_title AS canonical_title";
+  const canonicalJoin = summary
+    ? ""
+    : `LEFT JOIN LATERAL (
+        SELECT m.id,m.p_title FROM members m WHERE m.group_key=j.group_key
+        ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1
+      ) canonical ON true`;
   const statement = countsOnly
     ? metrics
     : metrics.slice(0, cut) +
-      `, ranked AS (SELECT j.id, row_number() OVER (ORDER BY ${priority}${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT r.ord,j.id,j.promotion_rank,j.placement_expires_at,${boosted ? "j.promotion_rank>0" : "false"} AS priority_placement,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,${sources} AS sources, (SELECT m.id FROM members m WHERE m.group_key=j.group_key ORDER BY m.posted_at DESC NULLS LAST,m.id LIMIT 1) AS canonical_id FROM ranked r JOIN searchable j ON j.id=r.id JOIN jobs record ON record.id=r.id WHERE r.ord > $${args.length + 2} AND r.ord <= $${args.length + 2} + $${args.length + 1})` +
+      `, ranked AS (SELECT j.id, row_number() OVER (ORDER BY ${priority}${ordering},j.id) AS ord FROM searchable j WHERE ${where}), page AS (SELECT r.ord,j.id,j.promotion_rank,j.placement_expires_at,${boosted ? "j.promotion_rank>0" : "false"} AS priority_placement,(j.needs_review AND EXISTS(SELECT 1 FROM audit_log changed WHERE changed.job_id=j.id AND changed.action='source.changed' AND changed.created_at>j.published_at)) AS source_changed,${projection} AS published,j.created_at,${sources} AS sources${canonicalFields} FROM ranked r JOIN searchable j ON j.id=r.id JOIN jobs record ON record.id=r.id ${canonicalJoin} WHERE r.ord > $${args.length + 2} AND r.ord <= $${args.length + 2} + $${args.length + 1})` +
       metrics.slice(cut) +
       `, (SELECT COALESCE(jsonb_agg(to_jsonb(pg) - 'ord' ORDER BY pg.ord),'[]'::jsonb) FROM page pg) AS page_rows`;
   const measured = (
@@ -349,6 +358,9 @@ async function loadPublicJobs(
           }
         : {}),
       ...(!summary ? { canonicalId: r.canonical_id || r.id } : {}),
+      ...(!summary && r.canonical_id && r.canonical_id !== r.id
+        ? { canonicalTitle: r.canonical_title ?? "" }
+        : {}),
       companyPath: employers?.byJob.has(r.id)
         ? `/companies/${encodeURIComponent(employers.byJob.get(r.id)!)}`
         : undefined,

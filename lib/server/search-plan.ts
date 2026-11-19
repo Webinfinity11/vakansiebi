@@ -107,11 +107,12 @@ export type SearchMeta = {
 export type SearchPlanOptions = {
   /**
    * Public listing mode: one row per identical posting (normalized title,
-   * employer and city) survives — the most recently published — and the
+   * employer and city) survives, with paid placement first, and the
    * others fold their source links into it. Employer-less classifieds are
-   * never grouped. Direct lookups by id keep every row reachable.
+   * never grouped. The sitemap uses the canonical (newest) representative.
+   * Direct lookups by id keep every row reachable.
    */
-  grouped?: boolean;
+  grouped?: boolean | 'canonical';
   /**
    * Compute the comparable salary columns even when the query does not filter
    * or sort by pay. They are skipped by default because each one detoasts the
@@ -458,7 +459,10 @@ export function searchPlan(
   const salaryAmount = `(${p('salaryMin')}#>>'{}')::numeric`;
   const unless = (needed: boolean, sql: string, empty = "''::text") =>
     needed ? sql : empty;
-  const groupPosition = `row_number() OVER (PARTITION BY ${groupKey} ORDER BY ${promotionRank('j')} DESC,${posted} DESC NULLS LAST,j.id)`;
+  // Promotion changes what the board shows, never the URL the detail page indexes.
+  const groupPriority =
+    options.grouped === 'canonical' ? '' : `${promotionRank('j')} DESC,`;
+  const groupPosition = `row_number() OVER (PARTITION BY ${groupKey} ORDER BY ${groupPriority}${posted} DESC NULLS LAST,j.id)`;
   /* Relevance, read off the title and the employer only, and only for the rows a
      search returns. The word the reader typed outranks a reviewed equivalent, a
      title that opens with it outranks one that mentions it later, and — for a
@@ -595,8 +599,8 @@ export function searchPlan(
   // same three fields, taken from the draft) narrows that scan to candidates.
   // Membership needs no filter answers, only the key.
   const members = params.has('ids')
-    ? `SELECT j.id,${groupKey} AS group_key,${posted} AS posted_at FROM (${extraction('j', false)} FROM jobs j ${scalarRecord('j')} WHERE ${visible} AND j.fingerprint IN (SELECT fingerprint FROM searchable) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
-    : `SELECT j.id,j.group_key,${posted} AS posted_at FROM searchable j`;
+    ? `SELECT j.id,${groupKey} AS group_key,j.p_title,${posted} AS posted_at FROM (${extraction('j', false)} FROM jobs j ${scalarRecord('j')} WHERE ${visible} AND j.fingerprint IN (SELECT fingerprint FROM searchable) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
+    : `SELECT j.id,j.group_key,j.p_title,${posted} AS posted_at FROM searchable j`;
   /* Candidates first, so the rest of the plan only asks whether a row is in that
      set. The visibility a candidate needs is its own — retired sources, deadlines
      and grouping are decided on the page, where they are decided for every row. */
