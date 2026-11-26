@@ -80,7 +80,7 @@ export function CvViewer({ url, name }: { url: string; name: string }) {
       <span className="cv-pages">
         {doc ? `${doc.numPages} გვერდი` : 'იტვირთება…'}
       </span>
-      <span className="cv-zoom">
+      {inReader && <span className="cv-zoom">
         <button
           type="button"
           className="cp-icon-btn"
@@ -116,7 +116,7 @@ export function CvViewer({ url, name }: { url: string; name: string }) {
         >
           <Plus size={15} /><span>გადიდება</span>
         </button>
-      </span>
+      </span>}
       <a
         className="cp-icon-btn"
         href={url + '&download=1'}

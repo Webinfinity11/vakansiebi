@@ -31,6 +31,28 @@ void test('bulk stage changes are owned, role restricted, bounded and atomic; hi
       await assert.rejects(move(Array(201).fill(entries[0]), 'hired'));
       await assert.rejects(move([entries[0], entries[2]], 'hired'), (error) => error instanceof ApiError && error.status === 404);
       assert.equal((await state()).length, 0, 'foreign entry aborts all writes');
+      // Stored legacy values are normalized on read without rewriting the stored rows.
+      for (const legacy of ['review', 'shortlist']) {
+        await db().query(`INSERT INTO company_candidate_states(company_key,entry,stage) VALUES($1,$2,$3)
+          ON CONFLICT(company_key,entry) DO UPDATE SET stage=EXCLUDED.stage`, [key, entries[0], legacy]);
+        assert.equal((await companyCandidates(owner)).find((c) => c.entry === entries[0])?.stage, 'new');
+        assert.equal((await state())[0].stage, legacy);
+        await move([entries[0]], legacy);
+        assert.equal((await state())[0].stage, 'new', 'old clients harmlessly submit the new initial stage');
+      }
+      const notes = async () => (await db().query('SELECT id,entry,body,author FROM company_candidate_notes WHERE company_key=$1 ORDER BY entry', [key])).rows;
+      await assert.rejects(changeCandidate({ ...owner, role: 'viewer' }, { action: 'stage', entries: [entries[0]], stage: 'rejected', reason: 'private' }));
+      const rejection = await changeCandidate(owner, { action: 'stage', entries: entries.slice(0, 2), stage: 'rejected' });
+      assert.equal('reasonNotes' in rejection, false);
+      assert.equal((await notes()).length, 0, 'one rejection call creates no notes');
+      assert.ok((await companyCandidates(owner)).every(c => c.stage === 'rejected'));
+      await changeCandidate(owner, { action: 'stage', entries: [entries[0]], stage: 'rejected', reason: 'x'.repeat(301) });
+      assert.equal((await notes()).length, 0, 'legacy reason is accepted and ignored');
+      await changeCandidate(owner, { action: 'note', entry: entries[0], body: 'უარის მიზეზი: x' });
+      const originalNotes = await notes();
+      await move(entries.slice(0, 2), 'rejected');
+      await changeCandidate(owner, { action: 'stage', entries: entries.slice(0, 2), stage: 'new', undoReasonNoteIds: originalNotes.map(n => n.id) });
+      assert.deepEqual(await notes(), originalNotes, 'existing rejection notes survive rejection and legacy undo');
       await move(Array(200).fill(entries[0]), 'hired');
       await move(entries.slice(0, 2), 'hired');
       let rows = await state();
@@ -54,9 +76,9 @@ void test('bulk stage changes are owned, role restricted, bounded and atomic; hi
       await db().query(`ALTER TABLE company_candidate_states ADD CONSTRAINT ${constraint} CHECK (NOT (company_key='${key}' AND entry='${entries[1]}' AND stage='offer'))`);
       constraintAdded = true;
       await assert.rejects(move(entries.slice(0, 2), 'offer'));
-      assert.ok((await state()).every((row) => row.stage === 'review'));
+      assert.ok((await state()).every((row) => row.stage === 'new'));
       await changeCandidate({ ...owner, role: 'recruiter' }, { action: 'stage', entries: [entries[0]], stage: 'shortlist' });
-      assert.ok((await state()).some((row) => row.stage === 'shortlist'));
+      assert.ok((await state()).some((row) => row.stage === 'new'));
     } finally {
       if (constraintAdded) await db().query(`ALTER TABLE company_candidate_states DROP CONSTRAINT ${constraint}`);
       await db().query('DELETE FROM company_cv_profiles WHERE company_key=ANY($1::text[])', [[key, other]]);

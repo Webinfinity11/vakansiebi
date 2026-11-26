@@ -1,0 +1,21 @@
+.cp-promote {
+  min-height: 100dvh;
+  padding: 32px max(20px, calc((100vw - 1100px) / 2));
+  background: var(--cp-canvas);
+  color: var(--cp-ink);
+  overflow-wrap: anywhere;
+}
+.cp-promote header { display: grid; gap: 16px; margin-bottom: 28px; }
+.cp-promote header a { justify-self: start; color: var(--cp-accent); }
+.cp-promote h1 { margin: 0; font-size: clamp(24px, 4vw, 36px); }
+.cp-promote header p { margin: 0; line-height: 1.7; }
+.cp-promote-content { padding: 28px; background: var(--cp-surface); border: 1px solid var(--cp-line); border-radius: var(--cp-radius); }
+.cp-promote-content h2 { margin: 0 0 24px; font-size: 22px; }
+.cp-promote-content form { display: grid; gap: 24px; }
+.cp-promote .cp-btn { white-space: normal; height: auto; min-height: 44px; padding: 10px 14px; text-align: center; }
+.cp-promote-content form > button { justify-self: start; }
+@media (max-width: 600px) {
+  .cp-promote { padding: 24px 16px; }
+  .cp-promote-content { padding: 20px 16px; }
+  .cp-promote-content form > button { width: 100%; }
+}

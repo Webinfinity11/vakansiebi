@@ -5,9 +5,25 @@ import { ApiError } from './auth';
 import { queueInvoiceEmail } from './invoice-email';
 import {
   billingSettingsSchema,
+  invoiceDetails,
   premiumDays,
+  vipDays,
   paidPlacementPrices,
 } from '../billing';
+
+/** Internal SQL aliases only. Pending wins; identity breaks timestamp ties deterministically. */
+export function currentInvoiceOrder(alias = '') {
+  const prefix = alias ? `${alias}.` : '';
+  return `ORDER BY (${prefix}status='pending') DESC,${prefix}created_at DESC,${prefix}number DESC LIMIT 1`;
+}
+
+/** Callers that mutate an order first lock the job, then select and lock its current invoice. */
+export async function currentJobInvoice(c: PoolClient, jobId: string) {
+  return (await c.query(
+    `SELECT * FROM job_invoices WHERE job_id=$1 ${currentInvoiceOrder()} FOR UPDATE`,
+    [jobId],
+  )).rows[0];
+}
 
 export async function billingSettings() {
   const row = (
@@ -17,7 +33,7 @@ export async function billingSettings() {
   ).rows[0];
   return billingSettingsSchema.safeParse(row).success ? row : null;
 }
-export async function createInvoice(
+export async function createInvoiceDetails(
   c: PoolClient,
   job: {
     id: string;
@@ -25,6 +41,7 @@ export async function createInvoice(
     title: string;
     billingEmail: string;
     placement: 'vip' | 'premium';
+    renewalForExpiresAt?: Date;
   },
 ) {
   const settings = (
@@ -40,25 +57,34 @@ export async function createInvoice(
   const token = randomBytes(32).toString('hex');
   const invoice = (
     await c.query(
-      `INSERT INTO job_invoices(id,token,job_id,amount_gel,service_days,payer_name,vacancy_title,payee_name,bank_name,iban,placement_tier)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      `INSERT INTO job_invoices(id,token,job_id,amount_gel,service_days,payer_name,vacancy_title,payee_name,bank_name,iban,placement_tier,renewal_for_expires_at)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
       [
         randomUUID(),
         token,
         job.id,
         paidPlacementPrices[job.placement],
-        premiumDays,
+        job.placement === 'vip' ? vipDays : premiumDays,
         job.company,
         job.title,
         settings.payee_name,
         settings.bank_name,
         settings.iban,
         job.placement,
+        job.renewalForExpiresAt ?? null,
       ],
     )
   ).rows[0];
-  await queueInvoiceEmail(c, invoice, job.billingEmail);
-  return `/invoices/${token}`;
+  // Renewals have one combined reminder/invoice email in the notification queue.
+  if (!job.renewalForExpiresAt) await queueInvoiceEmail(c, invoice, job.billingEmail);
+  return invoiceDetails(invoice, `/invoices/${token}`);
+}
+/** Preserve the URL-only contract for public submissions. */
+export async function createInvoice(
+  c: PoolClient,
+  job: Parameters<typeof createInvoiceDetails>[1],
+) {
+  return (await createInvoiceDetails(c, job)).url;
 }
 export async function getInvoice(token: string) {
   if (!/^[a-f0-9]{64}$/.test(token)) return null;
@@ -69,16 +95,19 @@ export async function getInvoice(token: string) {
 }
 export async function confirmInvoice(
   c: PoolClient,
-  jobId: string,
+  invoiceId: string,
   action: 'confirm-payment' | 'confirm-refund',
 ) {
   const invoice = (
-    await c.query('SELECT * FROM job_invoices WHERE job_id=$1 FOR UPDATE', [
-      jobId,
+    await c.query('SELECT * FROM job_invoices WHERE id=$1 FOR UPDATE', [
+      invoiceId,
     ])
   ).rows[0];
   if (!invoice) throw new ApiError('ინვოისი ვერ მოიძებნა');
+  const jobId = invoice.job_id;
   if (action === 'confirm-payment') {
+    if (invoice.renewal_for_expires_at && Date.now() >= new Date(invoice.renewal_for_expires_at).getTime() + 7 * 86400000)
+      throw new ApiError('განახლების ინვოისის გადახდის ვადა დასრულდა');
     if (invoice.status !== 'pending')
       throw new ApiError('ინვოისი აღარ ელოდება გადახდას');
     await c.query(
@@ -104,9 +133,11 @@ export async function confirmInvoice(
 }
 /** A rejected order never leaves an unpaid invoice payable. A paid, unused order requires a manual refund. */
 export async function cancelUnusedInvoice(c: PoolClient, jobId: string) {
+  const invoice = await currentJobInvoice(c, jobId);
+  if (!invoice) return;
   await c.query(
-    "UPDATE job_invoices SET status=CASE WHEN status='paid' THEN 'refund_required' ELSE 'cancelled' END WHERE job_id=$1 AND activated_at IS NULL AND status IN ('pending','paid')",
-    [jobId],
+    "UPDATE job_invoices SET status=CASE WHEN status='paid' THEN 'refund_required' ELSE 'cancelled' END WHERE id=$1 AND activated_at IS NULL AND status IN ('pending','paid')",
+    [invoice.id],
   );
 }
 
@@ -119,7 +150,7 @@ export async function billingOverview() {
       `SELECT j.id, coalesce(j.published->>'title', j.draft->>'title') title,
          coalesce(j.published->>'company', j.draft->>'company') company,
          j.placement_tier tier, j.placement_expires_at expires_at, i.status invoice_status
-       FROM jobs j LEFT JOIN job_invoices i ON i.job_id=j.id
+       FROM jobs j LEFT JOIN LATERAL (SELECT * FROM job_invoices WHERE job_id=j.id ${currentInvoiceOrder()}) i ON true
        WHERE j.placement_tier<>'standard' AND j.placement_expires_at>now()
          AND NOT EXISTS (SELECT 1 FROM job_submissions s WHERE s.job_id=j.id AND s.is_test)
        ORDER BY j.placement_expires_at, j.id LIMIT 200`,

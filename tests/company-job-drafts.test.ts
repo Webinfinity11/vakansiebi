@@ -8,6 +8,7 @@ import {
   save,
   get,
   getForJob,
+  getLatestNew,
   list,
   remove,
 } from '../lib/server/company-job-drafts';
@@ -87,7 +88,10 @@ test(
           const rows = await list(company);
           assert.equal(rows[0].title, 'ახალი სათაური');
           assert.equal(rows[0].updatedBy, 'ტესტ ავტორი');
-          assert.equal(rows[0].step, 3);
+          assert.equal(rows[0].step, 1);
+          assert.equal((await getLatestNew(company))?.id, id);
+          assert.equal(await getLatestNew({ ...company, id: randomUUID() }), null);
+          assert.equal(await getLatestNew(other), null);
           assert.equal((await list({ ...company, role: 'viewer' })).length, 1);
         },
       );
@@ -192,18 +196,22 @@ test(
             action: 'create',
             requestId: draftId,
             draftId,
-            form,
+            form: { ...form, deadline: '', category: '', contact: '' },
           };
           const created = await changeCompanyJob(company, request);
           assert.ok('id' in created);
           jobId = created.id;
+          const createdDraft = (await db().query('SELECT draft FROM jobs WHERE id=$1', [jobId])).rows[0].draft;
+          assert.equal(createdDraft.deadline, submissionDate(new Date(Date.now() + 30 * 86400000)));
+          assert.ok(createdDraft.category);
+          assert.equal(createdDraft.facts.find((fact: { label: string }) => fact.label === 'ელფოსტა CV-სთვის')?.value, company.email);
           await assert.rejects(() => get(company, draftId), { status: 404 });
           await changeCompanyJob(company, request);
           assert.equal((await companyJobs(company)).length, 1);
         },
       );
       await t.test(
-        'job draft ownership, uniqueness, save deletion and native fact clearing',
+        'job draft ownership, uniqueness, save deletion and hidden-field preservation',
         async () => {
           const draftId = randomUUID();
           await assert.rejects(
@@ -217,25 +225,56 @@ test(
             () => save(company, { id: randomUUID(), jobId, form, step: 1 }),
             { status: 409 },
           );
+          const hidden = {
+            category: 'ძველი კატეგორია', deadline: '2000-01-01', salaryPeriod: 'დღე',
+            salary: '100 ₾ / დღე (დარიცხული)', salaryMin: 100, currency: 'GEL',
+            applicationLinks: [{ label: 'არსებული ბმული', url: 'https://example.com/apply' }],
+            facts: [{ label: 'გამოცდილება', value: 'ძველი ტექსტი' }, { label: 'ენები', value: 'ფრანგული, ინგლისური' }, { label: 'ელფოსტა CV-სთვის', value: 'old@example.com' }],
+          };
+          await db().query('UPDATE jobs SET draft=draft || $2::jsonb WHERE id=$1', [jobId, JSON.stringify(hidden)]);
+          const questions = [{ id: randomUUID(), text: 'გაქვთ გამოცდილება?', kind: 'yes_no', options: [], preferred: '' }];
+          await db().query('INSERT INTO company_job_questions(job_id,questions) VALUES($1,$2) ON CONFLICT(job_id) DO UPDATE SET questions=EXCLUDED.questions', [jobId, JSON.stringify(questions)]);
+          await db().query("UPDATE job_submissions SET requested_placement='vip' WHERE job_id=$1", [jobId]);
           const current = (await companyJobs(company))[0];
           await changeCompanyJob(company, {
             action: 'save',
             id: jobId,
             version: current.version,
             draftId,
-            form: { ...form, experience: '', languages: [] },
+            form: { ...form, experience: '', languages: [], category: '', deadline: '', contact: '', salaryFrom: '120', salaryPeriod: 'თვე', salaryBasis: 'ხელზე', placement: 'premium', questions: [] },
           });
           assert.equal(await getForJob(company, jobId), null);
           const stored = (
             await db().query('SELECT draft FROM jobs WHERE id=$1', [jobId])
           ).rows[0].draft;
-          assert.ok(
-            !stored.facts.some((f: { label: string }) =>
-              ['გამოცდილება', 'ენები'].includes(f.label),
-            ),
-          );
+          assert.deepEqual(stored.facts, hidden.facts);
+          assert.deepEqual(stored.applicationLinks, hidden.applicationLinks);
+          assert.equal(stored.category, hidden.category);
+          assert.equal(stored.deadline, hidden.deadline);
+          assert.equal(stored.salaryPeriod, hidden.salaryPeriod);
+          assert.match(stored.salary, /დარიცხული/);
+          assert.equal(stored.salaryMin, 120);
+          assert.deepEqual((await db().query('SELECT questions FROM company_job_questions WHERE job_id=$1', [jobId])).rows[0].questions, questions);
+          assert.equal((await db().query('SELECT requested_placement FROM job_submissions WHERE job_id=$1', [jobId])).rows[0].requested_placement, 'vip');
+          assert.equal((await db().query('SELECT count(*)::int AS n FROM job_invoices WHERE job_id=$1', [jobId])).rows[0].n, 0);
         },
       );
+      await t.test('save preserves stored past and more-than-90-day deadlines', async () => {
+        for (const offset of [-30, 180]) {
+          const deadline = submissionDate(new Date(Date.now() + offset * 86400000));
+          await db().query("UPDATE jobs SET draft=jsonb_set(draft,'{deadline}',to_jsonb($2::text)) WHERE id=$1", [jobId, deadline]);
+          const current = (await companyJobs(company))[0];
+          await changeCompanyJob(company, {
+            action: 'save', id: jobId, version: current.version,
+            form: { ...form, deadline, title: `კონსულტანტი ${offset}` },
+          });
+          const stored = (await db().query('SELECT draft FROM jobs WHERE id=$1', [jobId])).rows[0].draft;
+          assert.equal(stored.deadline, deadline);
+          assert.equal(stored.title, `კონსულტანტი ${offset}`);
+        }
+        // Subsequent restore test exercises resetting an expired deadline.
+        await db().query("UPDATE jobs SET draft=jsonb_set(draft,'{deadline}',to_jsonb($2::text)) WHERE id=$1", [jobId, "2000-01-01"]);
+      });
       await t.test(
         'imported experience and languages remain unchanged on save',
         async () => {
@@ -302,6 +341,8 @@ test(
             form,
           });
           assert.equal(await getForJob(company, jobId), null);
+          const restored = (await db().query('SELECT draft FROM jobs WHERE id=$1', [jobId])).rows[0].draft;
+          assert.equal(restored.deadline, submissionDate(new Date(Date.now() + 30 * 86400000)));
         },
       );
     } finally {

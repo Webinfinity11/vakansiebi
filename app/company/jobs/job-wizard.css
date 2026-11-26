@@ -7,14 +7,8 @@
 .jw-top { display: flex; align-items: center; gap: 24px; padding: 22px max(24px, calc((100vw - 1200px)/2)); border-bottom: 1px solid var(--cp-line); flex-wrap: wrap; }
 .jw-top h1 { flex: 1 1 300px; }
 .jw-back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--cp-ink-2); text-decoration: none; }
-.jw-save { color: var(--cp-ink-2); font-size: 12px; display: flex; align-items: center; gap: 8px; }
+.jw-save { color: var(--cp-ink-2); font-size: 12px; display: flex; flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; align-items: center; gap: 8px; }
 .jw-wrap { max-width: 1200px; margin: auto; padding: 28px 24px 64px; }
-.jw-steps { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border-bottom: 1px solid var(--cp-line); margin-bottom: 32px; gap: 12px; }
-.jw-steps button { display: flex; align-items: center; gap: 8px; padding: 14px 0 20px; text-align: left; color: var(--cp-ink-2); border: 0; border-bottom: 2px solid transparent; background: none; min-height: 56px; }
-.jw-steps button > span { border-radius: 50%; width: 28px; height: 28px; flex: 0 0 28px; display: grid; place-items: center; background: var(--cp-hover); }
-.jw-steps button[aria-current] { color: var(--cp-accent); border-bottom-color: var(--cp-accent); }
-.jw-steps button[aria-current] > span { background: var(--cp-accent); color: white; }
-.jw-steps button[data-error=true] b { color: var(--cp-bad); }
 .jw-layout { display: grid; grid-template-columns: minmax(0,640fr) minmax(0,440fr); gap: 48px; align-items: start; }
 .jw-main, .jw-field, .jw-form, .jw-preview, .jw-language > label { min-width: 0; }
 .jw-form { display: grid; gap: 24px; padding: 0; margin: 0; border: 0; }
@@ -37,10 +31,6 @@
 .jw-error { color: var(--cp-bad); font-size: 13px; line-height: 1.7; margin: 0; }
 .jw-note { background: var(--cp-side); border-radius: 10px; padding: 16px; line-height: 1.8; margin: 16px 0; overflow-wrap: anywhere; }
 .jw-restored { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.jw-author { margin: 0 0 18px; }
-.jw-missing { margin-top: 24px; padding: 20px; border: 1px solid var(--cp-line); border-radius: 12px; }
-.jw-missing ul { padding-left: 20px; }
-.jw-missing button { border: 0; background: none; text-align: left; color: var(--cp-bad); min-height: 44px; text-decoration: underline; }
 .jw-footer { display: flex; justify-content: space-between; gap: 12px; margin-top: 32px; border-top: 1px solid var(--cp-line); padding-top: 24px; }
 .jw .cp-btn, .jw-preview-sheet .cp-btn { min-height: 44px; white-space: normal; text-align: center; }
 .jw-desktop-preview { position: sticky; top: 24px; max-height: calc(100dvh - 48px); overflow-y: auto; scrollbar-width: thin; }
@@ -64,7 +54,7 @@
 .jw-quality li { display: flex; gap: 10px; line-height: 1.7; color: var(--cp-ink-2); }
 .jw-quality li span { flex-shrink: 0; }
 .jw-quality li[data-done=true] span { color: var(--cp-ok); }
-.jw-preview-toggle, .jw-mobile-progress { display: none; }
+.jw-preview-toggle { display: none; }
 .jw-preview-sheet[data-slot=sheet-content] { width: 100%; max-width: none; height: 100dvh; padding: 20px; overflow-y: auto; color: var(--cp-ink); }
 .jw-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .jw-success { max-width: 1000px; margin: auto; padding: 80px 24px; }
@@ -96,9 +86,6 @@
   .jw-back { font-size: 12px; flex: 1; }
   .jw-preview-toggle { padding-inline: 10px; }
   .jw-wrap { padding: 24px 16px calc(140px + env(safe-area-inset-bottom)); }
-  .jw-steps { display: none; }
-  .jw-mobile-progress { display: grid; gap: 12px; margin-bottom: 28px; color: var(--cp-ink-2); font-size: 12px; }
-  .jw-mobile-progress progress { width: 100%; height: 5px; accent-color: var(--cp-accent); }
   .jw-main h2 { font-size: 22px; }
   .jw-grid { grid-template-columns: minmax(0,1fr); gap: 24px; }
   .jw .cp-input { font-size: 16px; }
@@ -124,10 +111,6 @@
 .jw .jw-question-card .jw-question-head { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
 .jw .jw-question-head .cp-icon-btn { width: 44px; height: 44px; font-size: 22px; }
 .jw .ds-select { width: 100%; min-width: 0; min-height: 44px; white-space: normal; }
-.jw-mobile-progress progress { appearance: none; border: none; border-radius: 8px; overflow: hidden; background: var(--cp-line); }
-.jw-mobile-progress progress::-webkit-progress-bar { background: var(--cp-line); }
-.jw-mobile-progress progress::-webkit-progress-value { background: var(--cp-accent); }
-.jw-mobile-progress progress::-moz-progress-bar { background: var(--cp-accent); }
 @media (max-width: 600px) { .jw-success-wrap { padding: 24px 16px; } .jw-success { padding: 28px 20px; } }
 
 /* Direction B: focused authoring flow, using the portal's shared contract. */
@@ -144,15 +127,6 @@
 .jw-top .cp-btn--ghost:hover { background: #ffffff24; }
 .jw-top :is(a,button):focus-visible { outline-color: #b8ceff; }
 .jw-wrap { max-width: 1280px; padding: 32px 24px 64px; }
-.jw-steps { gap: 16px; border: 0; margin-bottom: 32px; }
-.jw-steps button { padding: 16px; gap: 12px; border: 0; border-radius: var(--cp-radius); background: var(--cp-surface); box-shadow: var(--cp-shadow-sm); font-size: 14px; }
-.jw-steps button > span:first-child { flex: 0 0 32px; width: 32px; height: 32px; border-radius: 8px; background: var(--cp-side); color: var(--cp-ink-2); font-weight: 600; }
-.jw-steps button > .jw-step-label { width: auto; height: auto; flex: 1; display: block; border-radius: 0; background: none; color: inherit; line-height: 1.5; }
-.jw-steps button[aria-current] { outline: 2px solid var(--cp-accent); outline-offset: -2px; color: var(--cp-ink); font-weight: 600; }
-.jw-steps button[aria-current] > span:first-child { background: var(--cp-accent); color: #fff; }
-.jw-steps button[data-complete] > span:first-child { background: none; color: var(--cp-ink); border: 1px solid var(--cp-line); border-radius: 50%; }
-.jw-steps button:hover { background: var(--cp-hover); }
-.jw-steps button:active { box-shadow: inset 0 0 0 2px var(--cp-accent); }
 .jw-layout { grid-template-columns: minmax(0,1.45fr) minmax(0,1fr); gap: 32px; }
 .jw-main { padding: 32px; border-radius: var(--cp-radius); background: var(--cp-surface); box-shadow: var(--cp-shadow); }
 .jw-form { gap: 24px; }
@@ -162,7 +136,7 @@
 .jw-languages legend { margin-bottom: 16px; }
 .jw-language { gap: 8px; }
 .jw-form .cp-btn--ghost { justify-self: start; }
-.jw-note, .jw-author, .jw-preview-label, .jw-preview dt, .jw-question-card legend, .cp-placement-options small { font-size: 13px; color: var(--cp-ink-2); }
+.jw-note, .jw-preview-label, .jw-preview dt, .jw-question-card legend, .cp-placement-options small { font-size: 13px; color: var(--cp-ink-2); }
 .jw-note { border-radius: var(--cp-radius-sm); padding: 16px; margin-block: 16px; }
 .jw-restored { flex-wrap: wrap; }
 .jw-footer { position: sticky; bottom: 16px; z-index: 10; padding: 16px; margin: 32px -16px -16px; border: 1px solid var(--cp-line-2); border-radius: var(--cp-radius); background: var(--cp-surface); box-shadow: var(--cp-shadow-lg); gap: 16px; }
@@ -190,7 +164,7 @@
 .jw-sheet-head { margin-bottom: 8px; }
 .jw-preview-sheet > [data-slot=sheet-description] { margin-bottom: 24px; font-size: 13px; color: var(--cp-ink-2); }
 @media (prefers-reduced-motion: no-preference) {
-  .jw-steps button, .jw .cp-placement-options label, .jw-back { transition: background-color 160ms ease, box-shadow 160ms ease, color 160ms ease; }
+  .jw .cp-placement-options label, .jw-back { transition: background-color 160ms ease, box-shadow 160ms ease, color 160ms ease; }
 }
 @media (max-width:1023px) {
   .jw-layout { grid-template-columns: minmax(0,1fr); }
@@ -203,17 +177,12 @@
   .jw-wrap { padding: 24px 16px calc(128px + env(safe-area-inset-bottom)); }
   .jw-main { padding: 24px 16px; }
   .jw-main h2 { font-size: 22px; }
-  .jw-mobile-progress { font-size: 13px; gap: 8px; margin-bottom: 24px; }
-  .jw-steps { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-bottom: 16px; }
-  .jw-steps button { padding: 12px 8px; font-size: 13px; gap: 8px; }
-  .jw-steps button > span:first-child { width: 24px; height: 24px; flex-basis: 24px; }
   .jw-footer { position: fixed; inset: auto 0 0; margin: 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); border: 0; border-radius: 0; gap: 8px; box-shadow: 0 -4px 24px #162b5014; }
   .jw-keyboard .jw-footer { position: static; margin: 24px 0 0; padding: 16px 0 0; }
   .jw .cp-placement-options label { padding: 16px; }
   .jw-preview-card, .jw-quality { padding: 24px 16px; }
   .jw-preview-sheet[data-slot=sheet-content] { padding: 24px 16px; }
 }
-.jw-steps button[aria-current] > .jw-step-label { background: none; color: inherit; }
 
 /* R10: the authoring surface gets two thirds, preview one third. */
 .jw-wrap { max-width: 1280px; }
@@ -223,7 +192,6 @@
 @media (max-width:600px) { .jw-main { padding: 24px 16px; } }
 
 /* R11/R12: two steps, optional details, profile context. */
-.jw-steps { grid-template-columns: repeat(2,minmax(0,1fr)); }
 .jw-additional { border-top: 1px solid var(--cp-line); padding-top: 24px; min-width: 0; }
 .jw-additional summary { cursor: pointer; font-weight: 600; line-height: 1.7; padding: 8px 0; }
 .jw-additional summary span { display: block; font-weight: 400; font-size: 13px; margin-top: 8px; overflow-wrap: anywhere; }
@@ -232,16 +200,10 @@
 .jw-profile-hint a { color: var(--cp-accent); text-decoration: underline; }
 .jw-benefits { display: flex; flex-wrap: wrap; gap: 12px 16px; }
 .jw-company-about { border-top: 1px solid var(--cp-line); padding-top: 24px; }
-.jw-review-preview { display: none; }
 .jw .cp-placement-options { gap: 8px; }
 .jw .cp-placement-options label { padding: 16px; }
 .jw .cp-placement-options label > span { gap: 4px; }
 .jw .cp-placement-options b { font-size: 16px; }
-@media (max-width:1023px) {
-  .jw-review-preview:not([hidden]) { display: block; }
-  .jw-review-preview .jw-quality { display: none; }
-  .jw-review-preview .jw-preview-card { padding: 0; box-shadow: none; }
-}
 /* Keep desktop fields unobstructed; only the preview sticks while scrolling. */
 @media (min-width:601px) {
   .jw-footer { position: static; margin: 32px 0 0; }
@@ -255,3 +217,9 @@
   mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent);
 }
 .jw-company-about > h3:not(:first-child) { margin-top: 24px; }
+
+/* Single-page vacancy form. */
+.jw-part-time { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.jw-part-time input { width: 20px; height: 20px; accent-color: var(--cp-accent); }
+.jw-form .jw-chips { margin-bottom: 16px; }
+.jw-footer { justify-content: flex-end; }

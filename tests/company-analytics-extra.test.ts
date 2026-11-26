@@ -77,7 +77,7 @@ test('average uses recorded nonnegative durations, excludes legacy and other sta
     candidate({ stage: 'hired', hiredAt: '2026-11-03T12:00:00Z' }),
     candidate({ source: 'upload', stage: 'hired', hiredAt: '2026-11-05T12:00:00Z' }),
     candidate({ stage: 'hired' }),
-    candidate({ stage: 'review', hiredAt: '2026-11-10T12:00:00Z' }),
+    candidate({ stage: 'new', hiredAt: '2026-11-10T12:00:00Z' }),
     candidate({ stage: 'hired', hiredAt: 'invalid' }),
     candidate({ stage: 'hired', hiredAt: '2026-10-31T12:00:00Z' }),
     candidate({ stage: 'hired', jobId: 'other', hiredAt: '2026-11-10T12:00:00Z' }),

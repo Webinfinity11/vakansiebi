@@ -1,3 +1,5 @@
+export { untilDate as adminUntil } from './date-until';
+
 /* One way to write a date across the admin, in Tbilisi time.
 
    Written out rather than left to Intl: browsers without full Georgian locale data print

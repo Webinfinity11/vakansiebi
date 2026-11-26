@@ -37,10 +37,14 @@ export type PurgeResult = {
 };
 
 /* Applications have an ON DELETE CASCADE foreign key: explicitly protect them
-   too, including failed attempts. Cleanup must not erase delivery history. */
+   too, including failed attempts. Cleanup must not erase delivery history.
+   A vacancy owned by a company account is that company's history: it leaves
+   the site when it ends but is never deleted. Only anonymous submissions'
+   and scraped vacancies are removed. */
 const keep = `NOT EXISTS (SELECT 1 FROM job_submissions s WHERE s.job_id=j.id)
     AND NOT EXISTS (SELECT 1 FROM job_invoices i WHERE i.job_id=j.id)
-    AND NOT EXISTS (SELECT 1 FROM swipe_applications a WHERE a.job_id=j.id)`;
+    AND NOT EXISTS (SELECT 1 FROM swipe_applications a WHERE a.job_id=j.id)
+    AND NOT EXISTS (SELECT 1 FROM company_job_ownership o WHERE o.job_id=j.id)`;
 const candidates = `SELECT id, CASE
     WHEN automation_managed AND NOT automation_paused AND automation_reason IN ('expired','removed','unverified') THEN automation_reason
     ELSE 'editor' END AS kind FROM jobs j

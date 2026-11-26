@@ -3,31 +3,8 @@ import type { CompanyJobForm } from './company-job-form';
 import { submissionSchema, submissionDate } from './job-submission';
 import { jobQuestionsSchema, type JobQuestion } from './job-questions';
 
-export const companyJobSteps = [
-  { id: 'position', title: 'ვაკანსია' },
-  { id: 'placement', title: 'გადახედვა და გამოქვეყნება' },
-] as const;
-export type CompanyJobStep = (typeof companyJobSteps)[number]['id'];
 export type CompanyJobErrors = Record<string, string>;
-export type ValidationOptions = { imported?: boolean; today?: string };
-export const fieldSteps: Record<keyof CompanyJobForm, CompanyJobStep> = {
-  title: 'position',
-  city: 'position',
-  category: 'position',
-  mode: 'position',
-  employmentType: 'position',
-  salaryFrom: 'position',
-  salaryTo: 'position',
-  salaryPeriod: 'position',
-  salaryBasis: 'position',
-  experience: 'position',
-  languages: 'position',
-  description: 'position',
-  contact: 'position',
-  deadline: 'position',
-  questions: 'position',
-  placement: 'placement',
-};
+export type ValidationOptions = { imported?: boolean; editing?: boolean; today?: string };
 export function companyJobIssueMessage(issue: ZodIssue): string {
   const path = issue.path.filter((p) => p !== 'form');
   const field = String(path[0] ?? 'form');
@@ -91,10 +68,11 @@ export function companyJobIssueFields(
 }
 export function validateAll(
   form: CompanyJobForm,
-  { imported = false, today = submissionDate() }: ValidationOptions = {},
+  { imported = false, editing = false, today = submissionDate() }: ValidationOptions = {},
 ): CompanyJobErrors {
   const result = submissionSchema.safeParse({
     ...form,
+    ...(editing ? { category: '', experience: '', languages: [], contact: 'hr@example.com', deadline: today, salaryPeriod: form.salaryPeriod === 'დღე' ? 'დღე' : 'თვე', salaryBasis: form.salaryBasis === 'დარიცხული' ? 'დარიცხული' : 'ხელზე', placement: 'standard' } : {}),
     ...(imported
       ? { salaryFrom: '', salaryTo: '', experience: '', languages: [] }
       : {}),
@@ -107,16 +85,11 @@ export function validateAll(
   const issues = result.success
     ? []
     : result.error.issues.filter(
-        (i) => !(i.path[0] === 'deadline' && i.message.includes('90')),
+        (i) => i.path[0] !== 'deadline' && (!editing || ['title', 'city', 'mode', 'employmentType', 'salaryFrom', 'salaryTo', 'description'].includes(String(i.path[0]))),
       );
   const fields = companyJobIssueFields(issues);
-  const latest = new Date(Date.parse(today) + 90 * 86400000)
-    .toISOString()
-    .slice(0, 10);
-  if (form.deadline < today || form.deadline > latest)
-    fields.deadline = 'აირჩიეთ ვადა დღეიდან 90 დღის ფარგლებში';
   const questions = jobQuestionsSchema.safeParse(form.questions ?? []);
-  if (!questions.success)
+  if (!editing && !questions.success)
     Object.assign(
       fields,
       companyJobIssueFields(
@@ -128,29 +101,7 @@ export function validateAll(
     );
   return fields;
 }
-export function validateStep(
-  form: CompanyJobForm,
-  step: CompanyJobStep,
-  options: ValidationOptions = {},
-): CompanyJobErrors {
-  return Object.fromEntries(
-    Object.entries(validateAll(form, options)).filter(
-      ([field]) => fieldSteps[field as keyof CompanyJobForm] === step,
-    ),
-  );
-}
-export function firstInvalidStep(
-  errors: CompanyJobErrors,
-): CompanyJobStep | null {
-  return (
-    companyJobSteps.find((s) =>
-      Object.keys(errors).some(
-        (f) => fieldSteps[f as keyof CompanyJobForm] === s.id,
-      ),
-    )?.id ?? null
-  );
-}
-export function qualityHints(form: CompanyJobForm, today = submissionDate()) {
+export function qualityHints(form: CompanyJobForm) {
   return [
     { id: 'salary', done: !!form.salaryFrom, text: 'მიუთითეთ ანაზღაურება' },
     {
@@ -159,17 +110,6 @@ export function qualityHints(form: CompanyJobForm, today = submissionDate()) {
         form.description.trim().length >= 400 ||
         (/მოვალეობ/.test(form.description) && /მოთხოვნ/.test(form.description)),
       text: 'აღწერეთ მოვალეობები და მოთხოვნები',
-    },
-    { id: 'category', done: !!form.category, text: 'აირჩიეთ კატეგორია' },
-    {
-      id: 'deadline',
-      done: Date.parse(form.deadline) - Date.parse(today) >= 14 * 86400000,
-      text: 'განაცხადების მისაღებად გამოყავით მინიმუმ 14 დღე',
-    },
-    {
-      id: 'experience',
-      done: !!form.experience,
-      text: 'მიუთითეთ საჭირო გამოცდილება',
     },
   ];
 }
@@ -213,8 +153,8 @@ export const questionPresets: Omit<JobQuestion, 'id'>[] = [
 
 // Version is stored in the draft JSON, so old rows need no database migration.
 export function restoreJobStep(step: number, wizardVersion?: number): number {
-  if (wizardVersion === 2) return step === 2 ? 2 : 1;
-  return step === 3 || step === 4 ? 2 : 1;
+  void step; void wizardVersion;
+  return 1;
 }
 export function visibleJobErrors(errors: CompanyJobErrors, touched: readonly string[], submitted: boolean): CompanyJobErrors {
   return Object.fromEntries(Object.entries(errors).filter(([field]) => submitted || touched.includes(field)));

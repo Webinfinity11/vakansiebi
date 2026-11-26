@@ -101,6 +101,16 @@ void test(
       VALUES($1::uuid,$1::text,$2,10,30,'Fixture','Fixture','Fixture','Fixture','Fixture')`,
       [randomUUID(), invoiced],
     );
+    // A company account's own vacancy is its history and is never removed.
+    const owned = await job(40);
+    protectedIds.push(owned);
+    await db().query(
+      "INSERT INTO company_profiles(company_key,name) VALUES('purge-fixture','Fixture') ON CONFLICT DO NOTHING",
+    );
+    await db().query(
+      "INSERT INTO company_job_ownership(job_id,company_key) VALUES($1,'purge-fixture')",
+      [owned],
+    );
     for (const id of [expired, removed, unverified, editor]) {
       await db().query(
         `INSERT INTO source_items(id,source_id,external_id,url,job_id,raw,next_check_at)
@@ -125,7 +135,7 @@ void test(
     );
     assert.equal(
       (await db().query('SELECT count(*)::int n FROM jobs')).rows[0].n,
-      11,
+      12,
     );
     await assert.rejects(
       purgeEnded({ apply: true, batchSize: 201 }),

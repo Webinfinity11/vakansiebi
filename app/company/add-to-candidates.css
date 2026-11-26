@@ -1,0 +1,34 @@
+.ct-add,.ct-add-result{position:relative;z-index:2;max-width:100%}
+.ct-add .cp-btn{white-space:normal;text-align:left;height:auto}
+.ct-add-result{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px}
+.ct-add-result span{color:var(--cp-ink-3)}
+.ct-add-menu{width:320px;max-width:calc(100vw - 32px);max-height:320px;overflow:auto;display:grid;gap:4px}
+.ct-add-menu button{padding:10px;text-align:left;border:0;background:transparent;color:inherit;cursor:pointer;border-radius:6px;overflow-wrap:anywhere}
+.ct-add-menu button:hover{background:var(--cp-hover)}
+
+.ct-save{position:relative;z-index:2;display:inline-flex;align-items:center;flex-wrap:wrap;max-width:100%}
+.ct-save button{min-width:44px;min-height:44px}
+
+/* Card foot: vacancies and source on their own line, then one action row:
+   save and "add to vacancy" on the left, contact on the right. */
+.ct-card-foot .ct-entries{flex:1 1 100%}
+.ct-card-acts{flex:1 1 100%;display:flex;align-items:center;gap:4px 8px;min-width:0;flex-wrap:wrap}
+.ct-card-acts .ct-add,.ct-card-acts .ct-add-result{flex:0 1 auto;min-width:0}
+.ct-card-acts .ct-save{flex:none;margin-left:-10px}
+.ct-card-acts .ct-reach{flex:none;margin-left:auto}
+.ct-saved-toggle[aria-pressed="true"]{color:var(--cp-accent);font-weight:600}
+
+/* Candidate detail header: the bookmark sits beside the name; vacancy,
+   call and invite share one left-aligned row of equal small buttons. */
+.cc-name-row{display:flex;align-items:center;gap:2px;min-width:0}
+.cc-name-row h2{min-width:0;overflow-wrap:anywhere}
+.cc-name-row .ct-save button{color:var(--cp-ink-3)}
+.cc-person-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.cc-person-acts:empty{display:none}
+.cc-person-acts .ct-add .cp-btn{white-space:nowrap}
+.cc-person .cc-invite-state{margin-top:6px;overflow-wrap:anywhere}
+.cc-person-acts .cp-btn{font-size:13px;min-height:36px}
+/* Keep the rating clear of the sheet close button. */
+@media (min-width:761px){.cc-sheet .cc-person{padding-right:36px}}
+/* On phones the rating drops below: line it up with the text column. */
+@media (max-width:760px){.cc-person .cc-rating{width:100%;padding-left:70px;box-sizing:border-box}}

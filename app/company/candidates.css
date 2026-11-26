@@ -37,6 +37,11 @@
   min-width: 0;
   box-sizing: border-box;
 }
+.cc-compose-fields {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
 .cc-compose textarea {
   resize: vertical;
   line-height: 1.65;
@@ -124,9 +129,6 @@
   }
 }
 
-.cc-rejection-prompt {
-  padding: 0 20px 12px;
-}
 .cc-undo button {
   height: auto;
   min-height: 36px;
@@ -183,18 +185,6 @@
 }
 .cc .cc-bulk .cp-btn { white-space: normal; min-height: 40px; }
 .cc[data-picked] .cc-undo { bottom: calc(170px + env(safe-area-inset-bottom)); }
-.cc-table-wrap { border: 1px solid var(--cp-line); border-radius: 12px; }
-.cc-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
-.cc-table th, .cc-table td { padding: 12px 8px; text-align: start; overflow-wrap: anywhere; border-bottom: 1px solid var(--cp-line); }
-.cc-table th { color: var(--cp-ink-2); font-weight: 500; }
-.cc-table .cc-table-check { width: 36px; }
-.cc-table th button, .cc-table-name { background: none; border: 0; padding: 0; text-align: start; color: inherit; cursor: pointer; }
-.cc-table-name { font-weight: 600; }
-.cc-table tbody tr { cursor: pointer; }
-.cc-table tbody tr:hover { background: var(--cp-side); }
-.cc-table-contact { display: flex; gap: 6px; margin-top: 6px; }
-.cc-table-contact a { display: inline-flex; padding: 5px; color: var(--cp-ink-2); }
-.cc-table input { width: 16px; height: 16px; accent-color: var(--cp-blue); }
 @media (max-width: 600px) {
   .cc .cc-bulk { left: 12px; right: 12px; max-width: none; width: auto; transform: none; }
 }
@@ -228,12 +218,6 @@
 .cc-stagebtn .cc-advance { background: var(--cp-accent); color: white; border-radius: var(--cp-radius-sm); }
 .cc-stagebtn .cc-stagebtn-more { border: 0; background: transparent; color: var(--cp-ink-2); border-radius: var(--cp-radius-sm); }
 .cc-stagebtn .cc-advance:hover { background: #1d46bf; }
-.cc-table-wrap { border: 0; background: var(--cp-surface); box-shadow: var(--cp-shadow); overflow: auto; }
-.cc-table { font-size: 13px; }
-.cc-table thead { position: sticky; top: 0; background: var(--cp-hover); z-index: 2; }
-.cc-table th, .cc-table td { padding: 16px; border-bottom-color: var(--cp-line-2); }
-.cc-table tbody tr:has(input:checked) { background: var(--cp-accent-soft); box-shadow: inset 3px 0 var(--cp-accent); }
-.cc-table-contact a { min-width: 32px; min-height: 32px; }
 .cc-column { background: #e9eef6; border-radius: var(--cp-radius); gap: 8px; transition: none; }
 .cc-column h3 { padding: 16px; gap: 8px; }
 .cc-column h3 > span:last-child { font-size: 15px; color: var(--cp-ink); }
@@ -250,8 +234,8 @@
 @media (min-width: 1440px) { .cc-split { grid-template-columns: minmax(360px,.8fr) minmax(0,1.7fr); } }
 @media (max-width: 900px) { .cc-split { grid-template-columns: minmax(0,1fr); } }
 @media (max-width: 600px) {
-  .cc .cc-bulk { flex-wrap: wrap; justify-content: flex-start; gap: 8px; bottom: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 8px); }
-  .cc .cc-bulk .cc-bulk-label { display: inline; }
+  .cc .cc-bulk { flex-wrap: nowrap; justify-content: space-between; gap: 4px; bottom: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 8px); }
+  .cc .cc-bulk .cc-bulk-label { display: none; }
   .cc .cc-bulk .cp-btn { padding: 8px; }
   .cc-person h2 { font-size: 22px; }
   .cc-undo.cc-undo { bottom: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 8px); }
@@ -314,3 +298,27 @@
 
 .cc-profile-edit .cc-field-error { color: var(--cp-bad); font-size: 13px; line-height: 1.5; }
 .cc-profile-edit [aria-invalid="true"] { border-color: var(--cp-bad); }
+
+/* Selection stays reachable by keyboard and touch without crowding mouse-driven lists. */
+@media (hover: hover) and (pointer: fine) {
+  .cc-list input[type=checkbox] { opacity: 0; }
+  .cc-list li:hover input[type=checkbox], .cc-list li:focus-within input[type=checkbox],
+  .cc[data-picked] .cc-list input[type=checkbox] { opacity: 1; }
+}
+.cc .cc-card-text strong { overflow: visible; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .cc[data-detail] > .cc-head, .cc[data-detail] > .cc-flow { display: none; }
+}
+
+.cc .cc-flow { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.cc .cc-flow button span { white-space: normal; overflow: visible; text-overflow: clip; }
+@media (max-width: 600px) {
+  .cc .cc-flow { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.cc-base-invite { margin-block: 8px; }
+.cc-base-invite p { margin-block: 4px; overflow-wrap: anywhere; }
+.cc-base-invite button { white-space: normal; text-align: start; min-height: 44px; }
+
+/* Five stages fit a 1440 screen without sideways scrolling. */
+@media (min-width: 761px) { .cc .cc-board { grid-auto-columns: minmax(200px, 1fr); } }

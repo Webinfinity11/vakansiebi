@@ -1,0 +1,42 @@
+.ji {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px dashed var(--cp-line);
+  border-radius: 12px;
+  background: var(--cp-side);
+}
+.ji-upload,
+.ji-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ji .cp-btn {
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.ji p {
+  margin: 0;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.ji-note {
+  display: grid;
+  gap: 4px;
+}
+.ji button:focus-visible {
+  outline: 2px solid var(--cp-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 480px) {
+  .ji-upload,
+  .ji-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

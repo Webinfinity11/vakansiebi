@@ -10,10 +10,10 @@ const profile: CandidateProfile = {
 const entry: Candidate = {
   entry:'entry-1', source:'upload', jobId:'job-1', jobTitle:'Engineer', name:'Example', email:'example@example.test',
   phone:'+995555000000', title:'Engineer', city:'თბილისი', appliedAt:'2026-11-15T12:00:00Z', interviewAt:null,
-  interviewNote:'', stage:'shortlist', rating:4, seen:true, notes:0, hasCv:true, photo:false, profile, requirementsMatch:true,
+  interviewNote:'', stage:'interview', rating:4, seen:true, notes:0, hasCv:true, photo:false, profile, requirementsMatch:true,
 };
 function person(patch: Partial<Person> = {}): Person {
-  return {key:'one',latest:entry, entries:[entry],stage:'shortlist',rating:4,profile,city:'თბილისი',haystack:'engineer react sql research',...patch};
+  return {key:'one',latest:entry, entries:[entry],stage:'interview',rating:4,profile,city:'თბილისი',haystack:'engineer react sql research',...patch};
 }
 function accepts(patch: Partial<Filters>, p=person(), since=0) {
   const f={...emptyFilters,...patch};
@@ -31,7 +31,7 @@ test('each filter accepts matching data and rejects a mismatch',()=>{
     [{education:'bachelor'},{education:'phd'}],
     [{cities:['თბილისი']},{cities:['ბათუმი']}],
     [{jobs:['job-1']},{jobs:['job-2']}],
-    [{stages:['shortlist']},{stages:['new']}],
+    [{stages:['interview']},{stages:['new']}],
     [{source:'upload'},{source:'applied'}],
     [{query:'react research'},{query:'react missing'}],
   ];
@@ -43,8 +43,6 @@ test('each filter accepts matching data and rejects a mismatch',()=>{
   assert.equal(accepts({rated:true},person({rating:null})),false);
   assert.equal(accepts({phone:true}),true);
   assert.equal(accepts({phone:true},person({entries:[{...entry,phone:''}]})),false);
-  assert.equal(accepts({requirementsMatch:true}),true);
-  assert.equal(accepts({requirementsMatch:true},person({entries:[{...entry,requirementsMatch:null}]})),false);
   assert.equal(accepts({hideRejected:true}),true);
   assert.equal(accepts({hideRejected:true},person({stage:'rejected'})),false);
   assert.equal(accepts({unchecked:true}),true);
@@ -60,7 +58,7 @@ test('all sources, no-vacancy uploads and conditions on any entry',()=>{
     assert.equal(accepts({jobs:['none']},p),true);
   }
   const p=person({entries:[{...entry,phone:'',jobId:null,requirementsMatch:false},{...entry,source:'cv_box'}]});
-  assert.equal(accepts({jobs:['job-1'],phone:true,requirementsMatch:true,source:'cv_box'},p),true);
+  assert.equal(accepts({jobs:['job-1'],phone:true,source:'cv_box'},p),true);
 });
 
 test('experience boundaries, unknown values, language AND and unknown level',()=>{
@@ -189,7 +187,7 @@ test('OR groups ignore their selection but retain every other group filter', () 
     profile:{...profile,roles:['Designer'],years:2,skills:['SQL']}});
   const rows = [person(), other, person({key:'three',city:'ქუთაისი'})];
   const jobs = [{id:'job-1',title:'Engineer'}];
-  for (const [key, selected] of [['positions','engineer'],['cities','თბილისი'],['years','5'],['jobs','job-1'],['stages','shortlist'],['skills','react']] as const) {
+  for (const [key, selected] of [['positions','engineer'],['cities','თბილისი'],['years','5'],['jobs','job-1'],['stages','interview'],['skills','react']] as const) {
     const base = {...emptyFilters, skillMode:'any' as const, query:'research'};
     const before = countFacets(rows,base,jobs)[key];
     const after = countFacets(rows,{...base,[key]:[selected]},jobs)[key];
@@ -233,4 +231,60 @@ test('AND language additions retain the current minimum level', () => {
   const rows = [person({profile:{...profile,languages:[{name:'English',level:'b2'},{name:'German',level:'b1'}]}}),person({key:'two',profile:{...profile,languages:[{name:'English',level:'a2'},{name:'German',level:'c1'}]}})];
   const f = {...emptyFilters,languages:[{key:'english',min:'b2'}]};
   assert.equal(countFacets(rows,f,[]).languages.find(l=>l.key==='german')?.n,1);
+});
+
+test('server talent search preserves full-text, multi-entry and facet semantics while omitting heavy data',async()=>{
+  const {talentPeople,talentResults,talentCard}=await import('../lib/company-talent-filters');
+  const rows: Candidate[]=[
+    {...entry,entry:'upload:one',email:'one@example.com',profile:{...profile,text:'ქართული კვლევა RESEARCH alpha',skills:Array.from({length:15},(_,i)=>`Skill ${i}`)}},
+    {...entry,entry:'upload:two',email:'two@example.com',profile:{...profile,text:'ქართული beta research'}},
+    {...entry,entry:'upload:three',email:'one@example.com',title:'Designer'},
+  ];
+  for(const query of ['ქართული','RESEARCH','ქართული alpha','research;beta','missing','Ｄｅｓｉｇｎｅｒ','a']) {
+    const f={...emptyFilters,query};
+    const people=talentPeople(rows);
+    const expected=people.filter(p=>passes(p,f,terms(query),0));
+    const result=talentResults(rows,f);
+    assert.deepEqual(result.people.map(p=>p.key).sort(),expected.map(p=>p.key).sort(),query);
+    assert.deepEqual(result.facets,countFacets(people,f,[{id:entry.jobId!,title:entry.jobTitle}]),query);
+    const json=JSON.stringify(result);
+    assert.equal(json.includes('"text":'),false);
+    assert.equal(json.includes('ქართული კვლევა'),false);
+    for(const p of result.people) assert.ok(p.skills.length<=12);
+  }
+  // Skills beyond the twelve displayed still contribute to filters and facet counts.
+  assert.equal(talentResults(rows,{...emptyFilters,skills:['skill 14']}).people.length,1);
+  assert.equal(talentResults(rows,{...emptyFilters,query:'alpha',skills:['skill 14']}).people.length,1);
+  assert.equal('text' in talentCard(rows[0]).profile!,false);
+  assert.equal(rows[0].profile?.text,'ქართული კვლევა RESEARCH alpha');
+});
+
+
+test('retired requirements filter is discarded from persisted searches', () => {
+  const normalized = normalizeFilters({requirementsMatch:true});
+  assert.equal('requirementsMatch' in normalized,false);
+});
+
+test('400 people are paged with stable order, full-text matches, bounded flat payload and whole-set counts', async (t) => {
+  const {talentResults}=await import('../lib/company-talent-filters');
+  const rows: Candidate[]=Array.from({length:400},(_,i)=>({...entry,entry:`upload:${String(i).padStart(36,'0')}`,email:`person${i}@example.test`,saved:i%2===0,
+    profile:{...profile,text:'searchable-only-in-full-cv '.repeat(400)}}));
+  const first=talentResults(rows,emptyFilters);
+  assert.equal(first.total,400);assert.equal(first.matched,400);assert.equal(first.people.length,40);
+  assert.equal(first.facets.positions[0].n,400);
+  const json=JSON.stringify(first);
+  const bytes=Buffer.byteLength(json);
+  const average=Buffer.byteLength(JSON.stringify(first.people))/first.people.length;
+  t.diagnostic(`first page ${bytes} bytes; ${average.toFixed(1)} bytes/person`);
+  assert.ok(bytes<60000);assert.ok(average<=700);
+  assert.ok(!json.includes('searchable-only-in-full-cv'));
+  for(const person of first.people) for(const field of ['entries','latest','profile','text','haystack']) assert.equal(field in person,false);
+  const second=talentResults(rows,emptyFilters,Date.now(),40);
+  assert.equal(second.people.length,40);
+  assert.equal(new Set([...first.people,...second.people].map(p=>p.key)).size,80);
+  assert.deepEqual(talentResults([...rows].reverse(),emptyFilters).people,first.people);
+  assert.equal(talentResults(rows,{...emptyFilters,query:'searchable-only-in-full-cv'}).matched,400);
+  const saved=talentResults(rows,{...emptyFilters,saved:true});
+  assert.equal(saved.matched,200);assert.equal(saved.facets.positions[0].n,200);
+  assert.ok(saved.people.every(p=>p.saved));
 });

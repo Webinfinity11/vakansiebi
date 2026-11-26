@@ -1,10 +1,13 @@
-import { apiError, checkOrigin, readBody } from '@/lib/server/auth';
+import { normalizeFilters } from '@/lib/company-talent-filters';
+import { apiError, ApiError, checkOrigin, readBody } from '@/lib/server/auth';
 import { requireCompanyRole } from '@/lib/server/company-auth';
 import {
   candidateNotes,
   changeCandidate,
   companyCandidates,
-  companyCvBase,
+  companyCvBaseList,
+  companyTalentList,
+  companyCandidateDetail,
   revealCandidate,
 } from '@/lib/server/company-candidates';
 export const dynamic = 'force-dynamic';
@@ -17,11 +20,18 @@ export async function GET(req: Request) {
     );
     const params = new URL(req.url).searchParams;
     const entry = params.get('entry');
+    let filters: unknown = {};
+    if (params.get('talent') === '1') {
+      try { filters = JSON.parse(params.get('filters') || '{}'); }
+      catch { throw new ApiError('ძებნის პარამეტრები არასწორია.', 400); }
+    }
     return Response.json(
-      entry
+      params.has('detail') ? await companyCandidateDetail(company, params.get('detail')!)
+      : params.get('talent') === '1' ? await companyTalentList(company, normalizeFilters(filters), Math.max(0, Math.floor(Number(params.get('offset')) || 0)))
+      : entry
         ? await candidateNotes(company, entry)
         : params.get('base') === '1'
-          ? await companyCvBase(company)
+          ? await companyCvBaseList(company, params.get('q') ?? '')
           : await companyCandidates(company),
       { headers },
     );

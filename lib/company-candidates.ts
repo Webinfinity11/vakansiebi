@@ -2,18 +2,18 @@ import type { ApplicationAnswer } from './job-questions';
 /* Shared between the company workspace UI and its API: hiring stages and the candidate shape. */
 export const candidateStages = [
   'new',
-  'review',
-  'shortlist',
   'interview',
   'offer',
   'hired',
   'rejected',
 ] as const;
+/** Legacy stages remain stored unchanged; every read and stage request uses this mapping. */
+export function normalizeCandidateStage(stage: string): CandidateStage {
+  return stage === 'review' || stage === 'shortlist' ? 'new' : stage as CandidateStage;
+}
 export type CandidateStage = (typeof candidateStages)[number];
 export const stageLabels: Record<CandidateStage, string> = {
   new: 'ახალი',
-  review: 'განხილული',
-  shortlist: 'შერჩეული',
   interview: 'გასაუბრება',
   offer: 'შეთავაზება',
   hired: 'აყვანილი',
@@ -50,7 +50,7 @@ export type CandidateProfile = {
   phone?: string;
   certifications?: string[];
   positions?: { title: string; company: string; start: string; end: string }[];
-  parse?: { confidence: number; reason: string | null };
+  parse?: { confidence: number; reason: string | null; nameMissing?: boolean };
   /** Total work experience in whole years, overlapping jobs counted once. */
   years: number | null;
   /** Most recent first: "role — company". */
@@ -68,13 +68,16 @@ export type CandidateProfile = {
   text: string;
 };
 /** Fields a company may correct on a candidate's profile. */
-export type CandidateProfileEdit = Partial<
+export type CandidateProfileEdit = { name?: string; title?: string } & Partial<
   Pick<
     CandidateProfile,
     'years' | 'skills' | 'languages' | 'educationLevel' | 'city' | 'roles'
   >
 >;
 export type Candidate = {
+  invite?: { expiresAt: string; consentedAt: string | null; withdrawnAt: string | null } | null;
+  saved?: boolean;
+  added?: { jobId: string | null; jobTitle: string } | null;
   entry: string;
   source: CandidateSource;
   jobId: string | null;

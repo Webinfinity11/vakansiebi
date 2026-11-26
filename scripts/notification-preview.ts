@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { applicationsEmail, deadlineEmail, candidateAckEmail } from '../lib/notification-emails';
+import { applicationsEmail, placementRenewalEmail } from '../lib/notification-emails';
+import { paidPlacementPrices } from '../lib/billing';
 import { jobRejectionEmail } from '../lib/job-rejection-email';
-import { defaultTemplates, render } from '../lib/company-message-templates';
 import { db } from '../lib/server/db';
 import { runNotificationJobs } from '../lib/server/notification-jobs';
 
@@ -22,8 +22,7 @@ async function main() {
   const origin = 'https://jobx.ge', recipient = 'delivered@resend.dev';
   const samples = {
     applications: applicationsEmail([{ title: 'ბუღალტერი', count: 3 }], recipient, origin),
-    deadline: deadlineEmail({ id: '00000000-0000-4000-8000-000000000001', title: 'ბუღალტერი', deadline: '2026-11-19' }, recipient, origin),
-    candidate_ack: candidateAckEmail(render(defaultTemplates.received, { name: 'ნინო', companyName: 'ნიმუში კომპანია', jobTitle: 'ბუღალტერი' }), recipient, origin),
+    placement_renewal: placementRenewalEmail({ placementTier: 'vip', amountGel: paidPlacementPrices.vip, token: '0'.repeat(64) }, 'ბუღალტერი <ტესტი>', new Date('2026-12-26T10:00:00Z'), recipient, origin),
     job_rejected: jobRejectionEmail({ id: '00000000-0000-4000-8000-000000000001', title: 'ბუღალტერი', owned: true }, { reason: 'other', note: 'გთხოვთ, დააზუსტოთ სამუშაო საათები.' }, recipient, origin),
   };
   for (const [kind, email] of Object.entries(samples)) if (!rows.some(row => row.kind === kind))

@@ -2,12 +2,13 @@
 import { rejectionText, rejectionGuidance } from '@/lib/job-rejection';
 import './job-rejection.css';
 import Link from 'next/link';
+import { canPromoteJob } from './jobs/placement-eligibility';
 import { StatusMark } from './status-mark';
 import { candidateStages, stageLabels, type Candidate, type CandidateStage } from '@/lib/company-candidates';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { companyRequest, formatTime } from './company-api';
 type Draft = { id: string; jobId: string | null; title: string; updatedBy: string; updatedAt: string };
-import { PlacementUpgrade } from './placement-upgrade';
+import './billing.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Plus,
@@ -19,6 +20,7 @@ import {
   Pencil,
   RotateCcw,
   ArrowDownUp,
+  ArrowUpRight,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -32,6 +34,7 @@ import {
   daysLeft,
   deadlineText,
   formatDate,
+  formatUntilDate,
   inGroup,
   isClosed,
   isExpired,
@@ -76,7 +79,7 @@ export function JobsView({
   onClose,
   intro,
   canManageBilling = false,
-  onRefresh,
+  approved = false,
 }: {
   candidates: Candidate[];
   onCandidates: (id: string, stage?: CandidateStage) => void;
@@ -84,6 +87,7 @@ export function JobsView({
   onError: (message: string) => void;
   canEdit: boolean;
   canManageBilling?: boolean;
+  approved?: boolean;
   onRefresh?: () => Promise<void>;
   intro?: React.ReactNode;
   jobs: CompanyJob[];
@@ -356,7 +360,7 @@ export function JobsView({
               onError={onError}
               canEdit={canEdit}
               canManageBilling={canManageBilling}
-              onRefresh={onRefresh}
+              approved={approved}
               onEdit={onEdit}
               onCopy={onCopy}
               onClose={onClose}
@@ -385,7 +389,7 @@ function JobRow({
   candidates, hasDraft, onCandidates, onNotice, onError,
   canEdit,
   canManageBilling,
-  onRefresh,
+  approved,
   job,
   onEdit,
   onCopy,
@@ -398,13 +402,14 @@ function JobRow({
   onError: (message: string) => void;
   canEdit: boolean;
   canManageBilling?: boolean;
+  approved: boolean;
   onRefresh?: () => Promise<void>;
   job: CompanyJob;
   onEdit: (job: CompanyJob) => void;
   onCopy: (job: CompanyJob) => void;
   onClose: (job: CompanyJob) => void;
 }) {
-  const upgradeTrigger = useRef<HTMLDivElement>(null);
+  const canPromote = canPromoteJob(job, !!canManageBilling, approved, new Date());
   const rejection = job.rejection;
   const status = jobStatus(job);
   const closed = isClosed(job);
@@ -472,31 +477,27 @@ function JobRow({
           job.placementExpiresAt &&
           new Date(job.placementExpiresAt).getTime() > Date.now() && (
             <span>
-              {job.placement === 'vip' ? 'VIP' : 'პრემიუმი'}  აქტიურია{' '}
-              {formatDate(job.placementExpiresAt)}-მდე </span>
+              {job.placement === 'vip' ? 'VIP' : 'პრემიუმი'} აქტიურია{' '}
+              {formatUntilDate(job.placementExpiresAt)}</span>
           )}
         {job.invoice?.status === 'pending' && (
-          <a
-            href={`/invoices/${job.invoice.token}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-             ინვოისი გადასახდელია </a>
+          <div className="cp-payment-pending">
+            <strong>{job.invoice.renewal_for_expires_at ? 'გასაგრძელებლად გადასახდელია' : 'გადასახდელია'} — {job.invoice.amount_gel} ₾</strong>
+            <Link href={`/company/jobs/${job.id}/promote`}>გადახდის მონაცემები</Link>
+          </div>
         )}
         {job.invoice?.status === 'paid' && job.placement === 'standard' && (
           <span>გადახდილია · ელოდება განთავსების დადასტურებას</span>
         )}
-        {canEdit && canManageBilling &&
-          job.status === 'published' &&
-          job.canOrderPlacement && (
-            <div hidden ref={upgradeTrigger}><PlacementUpgrade job={job} onRefresh={onRefresh} /></div>
+        {canPromote && (
+            <Link className="cp-btn cp-btn--ghost cp-btn--sm" href={`/company/jobs/${job.id}/promote`}>წინ წამოწევა</Link>
           )}
       </div>
       <div role="cell" className="cp-cell-status">
         <StatusMark kind={expired ? 'expiring' : job.status} className="cp-status" data-tone={status.tone}>
           {status.label}
         </StatusMark>
-        {job.needsReview && job.status === 'published' && (
+        {job.needsReview && job.status === 'published' && job.invoice?.status !== 'pending' && (
           <StatusMark kind="update" className="cp-subtle">ცვლილება განხილვაშია</StatusMark>
         )}
       </div>
@@ -538,7 +539,7 @@ function JobRow({
                   <Copy />
                    ასლის შექმნა </DropdownMenuItem>}
                 {job.publicPath && <><DropdownMenuItem onClick={() => window.open(job.publicPath!, '_blank', 'noopener,noreferrer')}><ExternalLink />საიტზე ნახვა</DropdownMenuItem><DropdownMenuItem onClick={async () => { try { await navigator.clipboard.writeText(new URL(job.publicPath!, window.location.origin).href); onNotice('ბმული დაკოპირდა'); } catch { onError('ბმულის კოპირება ვერ მოხერხდა'); } }}><Copy />ბმულის კოპირება</DropdownMenuItem></>}
-                {canEdit && canManageBilling && job.status === 'published' && job.canOrderPlacement && <DropdownMenuItem onClick={() => upgradeTrigger.current?.querySelector('button')?.click()}>VIP-ად აწევა</DropdownMenuItem>}
+                {canPromote && <DropdownMenuItem render={<Link href={`/company/jobs/${job.id}/promote`} />}><ArrowUpRight aria-hidden="true" size={16} />წინ წამოწევა</DropdownMenuItem>}
                 {canEdit && !closed && (
                   <DropdownMenuItem
                     variant="destructive"

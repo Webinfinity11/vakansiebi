@@ -147,13 +147,13 @@ export function AnalyticsView({
         out.push({
           id: j.id + 'rate',
           job: j,
-          text: `„${j.title}“ ბევრი ნახულობს, მაგრამ ცოტა გიკავშირდებათ. გადახედეთ ხელფასს, მოთხოვნებს და იმას, რამდენად ნათლად წერია, რას აკეთებს თანამშრომელი.`,
+          text: `„${j.title}“ ბევრს უნახავს, მაგრამ ცოტა გიკავშირდებათ — გადახედეთ ხელფასსა და მოთხოვნებს.`,
         });
       if (!j.imported && !j.form.salaryFrom && !j.form.salaryTo)
         out.push({
           id: j.id + 'salary',
           job: j,
-          text: `„${j.title}“: ხელფასი მითითებული არ არის. ანაზღაურების დიაპაზონი კანდიდატს გადაწყვეტილებას უადვილებს.`,
+          text: `„${j.title}“: მიუთითეთ ანაზღაურების დიაპაზონი.`,
         });
       if (left !== null && left >= 0 && left <= 3)
         out.push({
@@ -166,7 +166,7 @@ export function AnalyticsView({
         out.push({
           id: j.id + 'quiet',
           job: j,
-          text: `„${j.title}“ ბოლო კვირაში არავის უნახავს. სცადეთ უფრო მარტივი, ხშირად მოძებნილი დასახელება.`,
+          text: `„${j.title}“ ბოლო კვირაში არავის უნახავს — სცადეთ უფრო მარტივი სათაური.`,
         });
     }
     return out.slice(0, 5);
@@ -189,25 +189,19 @@ export function AnalyticsView({
 
   const extraCards = (
         <div className="an-extra">
-          <section className="an-card" aria-labelledby="an-hire-heading">
+          {hireTime.averageDays !== null && <section className="an-card" aria-labelledby="an-hire-heading">
             <div className="an-card-head">
               <div>
                 <h2 id="an-hire-heading"><StatusMark kind="hired">საშუალო დრო განაცხადიდან აყვანამდე</StatusMark></h2>
-                <p>ბოლო 30 დღე · {selectedTitle}</p>
               </div>
             </div>
-            {hireTime.averageDays === null ? (
-              <p className="an-none">მონაცემი დაგროვდება პირველი აყვანის შემდეგ.</p>
-            ) : <>
               <p className="an-hire-value">{Number(hireTime.averageDays.toFixed(1))}  დღე</p>
               <p className="an-none">{num(hireTime.measuredHires)}  აყვანილი კანდიდატის მიხედვით</p>
-            </>}
-          </section>
+          </section>}
           <section className="an-card" aria-labelledby="an-sources-heading">
             <div className="an-card-head">
               <div>
                 <h2 id="an-sources-heading">კანდიდატები წყაროს მიხედვით</h2>
-                <p>ბოლო 30 დღეში მიღებული განაცხადები და ატვირთული რეზიუმეები</p>
               </div>
             </div>
             {sources.some((source) => source.count > 0) ? (
@@ -235,7 +229,7 @@ export function AnalyticsView({
         </div>
         {jobs.length > 0 && perJob.length > 0 && <div className="cp-head-actions">
           <DropdownMenu>
-            <DropdownMenuTrigger className="cp-btn cp-btn--primary an-filter">
+            <DropdownMenuTrigger className="cp-btn cp-btn--ghost an-filter">
               {selectedTitle}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-64">
@@ -298,6 +292,33 @@ export function AnalyticsView({
               </span>
             </div>
           </div>
+
+            <section className="an-card an-card--tips">
+              <div className="an-card-head">
+                <div>
+                  <h2>რჩევები</h2>
+                </div>
+              </div>
+              {tips.length ? (
+                <ul className="an-tips">
+                  {tips.map((t) => (
+                    <li key={t.id}>
+                      {t.id.endsWith('deadline') ? <StatusMark kind="expiring">{null}</StatusMark> : <Lightbulb size={16} aria-hidden />}
+                      <div>
+                        <p>{t.text}</p>
+                        {canEdit && (
+                          <button type="button" onClick={() => onOpenJob(t.job)}>
+                             რედაქტირება: {t.job.title} </button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="an-none">
+                   ყველაფერი რიგზეა: საყურადღებო ვაკანსია ახლა არ გაქვთ. </p>
+              )}
+            </section>
 
           <section className="an-card">
             <div className="an-card-head">
@@ -399,12 +420,10 @@ export function AnalyticsView({
 
           {extraCards}
 
-          <div className="an-split">
             <section className="an-card">
               <div className="an-card-head">
                 <div>
                   <h2>რას აკეთებენ ნახვის შემდეგ</h2>
-                  <p>ბოლო 30 დღე, {selectedTitle.toLowerCase()}</p>
                 </div>
               </div>
               <ul className="an-actions">
@@ -419,40 +438,11 @@ export function AnalyticsView({
                 ))}
               </ul>
             </section>
-            <section className="an-card">
-              <div className="an-card-head">
-                <div>
-                  <h2>რჩევები</h2>
-                  <p>თქვენი ვაკანსიების მონაცემებიდან</p>
-                </div>
-              </div>
-              {tips.length ? (
-                <ul className="an-tips">
-                  {tips.map((t) => (
-                    <li key={t.id}>
-                      {t.id.endsWith('deadline') ? <StatusMark kind="expiring">{null}</StatusMark> : <Lightbulb size={16} aria-hidden />}
-                      <div>
-                        <p>{t.text}</p>
-                        {canEdit && (
-                          <button type="button" onClick={() => onOpenJob(t.job)}>
-                             ვაკანსიის რედაქტირება </button>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="an-none">
-                   ყველაფერი რიგზეა: საყურადღებო ვაკანსია ახლა არ გაქვთ. </p>
-              )}
-            </section>
-          </div>
 
           <section className="an-card an-card--table">
             <div className="an-card-head">
               <div>
                 <h2>ვაკანსიების მიხედვით</h2>
-                <p>დააჭირეთ მწკრივს, რომ მხოლოდ ის ვაკანსია ნახოთ</p>
               </div>
             </div>
             <div className="cp-table an-table" role="table">
@@ -507,8 +497,9 @@ export function AnalyticsView({
             </div>
           </section>
           <p className="an-foot">
-             მონაცემები ანონიმურია: ვითვლით ქმედებებს და არა ადამიანებს. ერთმა ადამიანმა რამდენჯერმე ნახვა შეიძლება ცალკე ჩაითვალოს. სულ{' '}
-            {num(total.view)}  ნახვა გამოქვეყნებიდან. </p>
+            მონაცემები ანონიმურია: ითვლება ქმედებები, მათ შორის განმეორებითი ნახვები.
+            <span> სულ {num(total.view)} ნახვა გამოქვეყნებიდან.</span>
+          </p>
         </>
       )}
     </>

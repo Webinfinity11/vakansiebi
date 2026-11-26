@@ -1,6 +1,6 @@
 'use client';
 import './branding.css';
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type { CompanyProfile } from './company-api';
 export function ProfileBranding({
   profile,
@@ -10,6 +10,8 @@ export function ProfileBranding({
   onChange: Dispatch<SetStateAction<CompanyProfile | null>>;
 }) {
   const [busy, setBusy] = useState(false);
+  const coverInput = useRef<HTMLInputElement>(null);
+  const [coverName, setCoverName] = useState('');
   const [error, setError] = useState('');
   const [preview, setPreview] = useState('');
   useEffect(
@@ -47,7 +49,6 @@ export function ProfileBranding({
     <div className="cp-settings-row">
       <div className="cp-settings-label">
         <h2>კომპანიის საჯარო გვერდი</h2>
-        <p>ქავერი, სამუშაო გარემო და რეზიუმეების მიღება.</p>
       </div>
       <div className="cp-fields">
         {(preview || profile.coverUrl) && (
@@ -57,16 +58,24 @@ export function ProfileBranding({
             alt="კომპანიის ქავერი"
           />
         )}
-        <label>
-          ქავერის სურათი — JPG, PNG ან WebP, მაქსიმუმ 4 მბ
+        <div className="cp-cover-pick">
+          <span>ქავერის სურათი — JPG, PNG ან WebP, მაქსიმუმ 4 მბ</span>
+          <div>
+            <button type="button" className="cp-btn cp-btn--secondary" disabled={busy} onClick={() => coverInput.current?.click()}>
+              სურათის არჩევა
+            </button>
+            {coverName && <span className="cp-subtle">{coverName}</span>}
+          </div>
           <input
-            className="cp-input"
+            ref={coverInput}
             type="file"
+            aria-label="ქავერის სურათი"
             accept="image/jpeg,image/png,image/webp"
+            hidden
             disabled={busy}
-            onChange={(e) => void upload(e.target.files?.[0])}
+            onChange={(e) => { const file = e.target.files?.[0]; setCoverName(file?.name ?? ''); void upload(file); }}
           />
-        </label>
+        </div>
         {busy && (
           <p role="status">
             სურათი იტვირთება… ატვირთვის შემდეგ შეინახეთ ცვლილებები.

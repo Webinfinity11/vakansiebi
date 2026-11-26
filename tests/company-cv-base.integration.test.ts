@@ -10,7 +10,7 @@ void test(
     assert.ok(['localhost', '127.0.0.1'].includes(url.hostname));
     assert.equal(url.pathname, '/jobx_company_local');
     const { db } = await import('../lib/server/db');
-    const { companyCvBase: loadCompanyCvBase, companyCandidates, changeCandidate, candidateCv, revealCandidate, baseDailyLimit } =
+    const { companyCvBase: loadCompanyCvBase, companyCvBaseList, companyCandidateDetail, companyCandidates, changeCandidate, candidateCv, revealCandidate, baseDailyLimit } =
       await import('../lib/server/company-candidates');
     // Direct DB tests do not have a Next request lifecycle. Other assertions need no backfill.
     const companyCvBase = (company: Parameters<typeof loadCompanyCvBase>[0]) =>
@@ -43,6 +43,17 @@ void test(
         })],
       );
       const entry = 'base:r:' + resume;
+      const {talentPeople,matchScore,terms}=await import('../lib/company-talent-filters');
+      const full=await companyCvBase(company);
+      for(const query of ['', 'ბუღალტერი', 'EXCEL', 'ბუღალტერი excel', 'no-such-person']) {
+        const expected=talentPeople(full).filter(p=>!terms(query).length || matchScore(p,terms(query))).flatMap(p=>p.entries.map(c=>c.entry)).sort();
+        const list=await companyCvBaseList(company,query,{schedule:()=>{}});
+        assert.deepEqual(list.map(c=>c.entry).sort(),expected);
+        assert.equal(JSON.stringify(list).includes('"text":'),false);
+        assert.ok(list.every(c=>(c.profile?.skills.length??0)<=12));
+      }
+      assert.equal(typeof (await companyCandidateDetail(company,entry)).profile?.text,'string');
+
 
       // The list must resolve even while scheduled PDF parsing is still pending.
       let releaseBackfill!: (value: number) => void;

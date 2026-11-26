@@ -1,3 +1,5 @@
+import { untilDate } from './date-until';
+import { classify } from '../worker/categories';
 import type { JobQuestion } from './job-questions';
 import type { JobSubmission } from './job-submission';
 import {
@@ -100,26 +102,39 @@ export function newCompanyJobDefaults({ accountEmail = '', lastJob, today = subm
     ...newCompanyJob(),
     city: lastJob?.city ?? newCompanyJob().city,
     mode: lastJob?.mode ?? newCompanyJob().mode,
-    category: lastJob?.category ?? '',
+    category: '',
     contact: lastJob?.contact.trim() || accountEmail,
     deadline: new Date(Date.parse(today) + 30 * 86400000).toISOString().slice(0, 10),
   };
 }
 export function suggestJobCategory(title: string): CompanyJobForm['category'] {
-  const rules: [RegExp, CompanyJobForm['category']][] = [
-    [/დეველოპერ|პროგრამისტ|\b(developer|programmer)\b/i, 'ტექნოლოგიები'],
-    [/ბუღალტერ|ფინანსისტ|\baccountant\b/i, 'ფინანსები'],
-    [/გაყიდვ|\bsales\b/i, 'გაყიდვები'],
-    [/მასწავლებელ|პედაგოგ|\bteacher\b/i, 'განათლება'],
-    [/ექთან|ექიმ|\bnurse\b/i, 'სამედიცინო'],
-    [/იურისტ|ადვოკატ|\blawyer\b/i, 'იურიდიული'],
-  ];
-  return rules.find(([pattern]) => pattern.test(title))?.[1] ?? '';
+  return classify(title);
 }
+
+/** Apply automatic values without rewriting hidden fields on existing vacancies. */
+export function prepareCompanyJob(form: CompanyJobForm, { editing = false, reopening = false, today = submissionDate() }: { editing?: boolean; reopening?: boolean; today?: string } = {}): CompanyJobForm {
+  return {
+    ...form,
+    category: form.category || suggestJobCategory(form.title),
+    ...(!editing ? { placement: 'standard' as const } : {}),
+    ...((!editing || reopening) && (!form.deadline || form.deadline < today)
+      ? { deadline: new Date(Date.parse(today) + 30 * 86400000).toISOString().slice(0, 10) } : {}),
+  };
+}
+
 export function shortCompanyDescription(text: string, limit = 200): string {
   const value = text.trim();
   if (value.length <= limit) return value;
   const excerpt = value.slice(0, limit + 1);
   const boundary = excerpt.lastIndexOf(' ');
   return (boundary > 0 ? excerpt.slice(0, boundary) : value.slice(0, limit)).trimEnd() + '…';
+}
+
+/** Georgian deadline label; pass today explicitly for deterministic callers/tests. */
+export function formatUntil(date: string, today = submissionDate()): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? untilDate(date, new Date(today)) : '';
+}
+
+export function visibleJobDeadline(date: string, today = submissionDate()): string {
+  return date >= today ? formatUntil(date, today) : '';
 }

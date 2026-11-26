@@ -101,6 +101,7 @@ export type AdminJob = {
     | 'amount_gel'
     | 'placement_tier'
     | 'service_days'
+    | 'renewal_for_expires_at'
   > | null;
   requested_placement?: PlacementTier;
   /** Set only for a vacancy an employer sent through the posting form. */

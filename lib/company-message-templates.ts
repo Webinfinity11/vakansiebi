@@ -1,4 +1,3 @@
-export const autoReplyKinds = ['received', 'information', 'interview'] as const;
 export const templateKinds = ['received', 'interview', 'information', 'rejected', 'accepted'] as const;
 export type TemplateKey = (typeof templateKinds)[number];
 export type MessageTemplate = { subject: string; body: string };
@@ -7,7 +6,6 @@ export const templateLabels: Record<TemplateKey, string> = {
   received: 'განაცხადი მივიღეთ', interview: 'გასაუბრებაზე მოწვევა',
   information: 'დამატებითი ინფორმაცია', rejected: 'უარი', accepted: 'მიღება',
 };
-export const templateVariables = ['{სახელი}', '{ვაკანსია}', '{კომპანია}'] as const;
 export const templateLimits = { subject: 200, body: 5000 };
 export const defaultTemplates: MessageTemplates = {
   received: { subject: 'განაცხადი მივიღეთ — {ვაკანსია}', body: 'გამარჯობა, {სახელი}!\n\nმადლობა ინტერესისთვის. თქვენი განაცხადი ვაკანსიაზე „{ვაკანსია}“ მივიღეთ. შერჩევის შემდეგ დაგიკავშირდებით.\n\nპატივისცემით,\n{კომპანია}' },
@@ -30,7 +28,8 @@ export function render(template: Partial<MessageTemplate> | null | undefined, da
   return { subject: fill(template?.subject), body: fill(template?.body) };
 }
 
-export function autoReplyReady(template: MessageTemplate): boolean {
-  const filled = render(template, { name: 'კანდიდატი', jobTitle: 'ვაკანსია', companyName: 'კომპანია' });
-  return !/\{[^{}]*\}|\[[^\[\]]*\]/.test(filled.subject + '\n' + filled.body);
+/** Invitation is composed explicitly, never offered in the ordinary message-kind selector. */
+export function cvBaseInvitation(name: string, companyName: string, link: string): MessageTemplate {
+  const firstName=name.trim().split(/\s+/)[0];
+  return {subject:'მოწვევა JOBX-ის CV ბაზაში',body:`გამარჯობა, ${firstName}!\n\nკომპანია „${companyName}“ გიწვევთ JOBX-ის CV ბაზაში, რომ თქვენი რეზიუმე სხვა შემოწმებულ დამსაქმებლებსაც შეეძლოთ ნახონ. ბაზაში დამატება მხოლოდ თქვენი თანხმობით მოხდება. პირობების სანახავად და თანხმობის მისაცემად გახსენით ბმული:\n\n${link}\n\nბმული მოქმედებს 30 დღე. თანხმობის შემდეგ ამავე ბმულით მისი გაუქმება ნებისმიერ დროს შეგიძლიათ.\n\nპატივისცემით,\n${companyName}`};
 }

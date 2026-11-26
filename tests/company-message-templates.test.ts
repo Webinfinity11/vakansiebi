@@ -15,3 +15,9 @@ test('limits, blank content and subject line breaks are validated', () => {
   assert.equal(validTemplate({ subject: 'x'.repeat(200), body: 'x'.repeat(5000) }), true);
   for (const v of [null, {}, { subject: 'x'.repeat(201), body: 'x' }, { subject: 'x', body: 'x'.repeat(5001) }, { subject: ' ', body: 'x' }, { subject: 'x\ny', body: 'x' }, { subject: 'x', body: ' ' }]) assert.equal(validTemplate(v), false);
 });
+test('every default message renders without unresolved variables', () => {
+  for (const template of Object.values(defaultTemplates)) {
+    const message = render(template, { name: 'ნინო მაისურაძე', jobTitle: 'დეველოპერი', companyName: 'კომპანია', date: 'ხვალ, 12:00-ზე' });
+    assert.doesNotMatch(message.subject + '\n' + message.body, /\{/);
+  }
+});

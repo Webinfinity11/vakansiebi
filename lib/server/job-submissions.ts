@@ -1,6 +1,6 @@
 import { saveJobQuestions } from './job-questions';
 import type { JobQuestion } from '../job-questions';
-import { createInvoice } from './billing';
+import { createInvoice, currentInvoiceOrder } from './billing';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { db, transaction } from './db';
@@ -29,7 +29,7 @@ export async function priorSubmission(
   ).rows[0];
   if (!prior) return null;
   const invoice = (
-    await client.query('SELECT token FROM job_invoices WHERE job_id=$1', [
+    await client.query(`SELECT token FROM job_invoices WHERE job_id=$1 ${currentInvoiceOrder()}`, [
       prior.job_id,
     ])
   ).rows[0];

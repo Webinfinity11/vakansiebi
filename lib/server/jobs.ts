@@ -1,6 +1,6 @@
 import { saveJobQuestions } from "./job-questions";
 import type { JobQuestion } from "../job-questions";
-import { confirmInvoice, cancelUnusedInvoice } from "./billing";
+import { confirmInvoice, cancelUnusedInvoice, currentInvoiceOrder, currentJobInvoice } from "./billing";
 import { visitorUrl } from "../visitor-url";
 import {
   indexingTransition,
@@ -484,7 +484,7 @@ export async function adminJobs(
     AND (${sourceParam}='' OR EXISTS (SELECT 1 FROM source_items f WHERE f.job_id=j.id AND f.source_id=${sourceParam}))`;
   const rows = (
     await db().query(
-      `SELECT j.*,(SELECT notification_email FROM job_submissions sub WHERE sub.job_id=j.id) AS notification_email,(SELECT requested_placement FROM job_submissions sub WHERE sub.job_id=j.id) AS requested_placement,(SELECT created_at FROM job_submissions sub WHERE sub.job_id=j.id) AS submitted_at,(SELECT is_test FROM job_submissions sub WHERE sub.job_id=j.id) AS is_test,(SELECT jsonb_build_object('status',inv.status,'number',inv.number,'created_at',inv.created_at,'token',inv.token,'amount_gel',inv.amount_gel,'placement_tier',inv.placement_tier,'service_days',inv.service_days) FROM job_invoices inv WHERE inv.job_id=j.id) AS invoice,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where("$4", "$5")} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
+      `SELECT j.*,(SELECT notification_email FROM job_submissions sub WHERE sub.job_id=j.id) AS notification_email,(SELECT requested_placement FROM job_submissions sub WHERE sub.job_id=j.id) AS requested_placement,(SELECT created_at FROM job_submissions sub WHERE sub.job_id=j.id) AS submitted_at,(SELECT is_test FROM job_submissions sub WHERE sub.job_id=j.id) AS is_test,(SELECT jsonb_build_object('status',inv.status,'number',inv.number,'created_at',inv.created_at,'token',inv.token,'amount_gel',inv.amount_gel,'placement_tier',inv.placement_tier,'service_days',inv.service_days,'renewal_for_expires_at',inv.renewal_for_expires_at) FROM job_invoices inv WHERE inv.job_id=j.id ${currentInvoiceOrder("inv")}) AS invoice,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',si.id,'source_id',si.source_id,'url',si.url,'raw',si.raw,'last_checked_at',si.last_checked_at,'next_check_at',si.next_check_at,'failures',si.failures,'quality_warning',si.quality_warning,'error',si.error)) FROM source_items si WHERE si.job_id=j.id),'[]'::jsonb) AS items,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',d.id,'title',d.draft->>'title','company',d.draft->>'company')) FROM jobs d WHERE d.fingerprint=j.fingerprint AND d.id<>j.id AND d.status NOT IN ('merged','rejected','archived')),'[]'::jsonb) AS duplicates FROM jobs j WHERE ${where("$4", "$5")} ORDER BY j.needs_review DESC,j.updated_at DESC LIMIT 30 OFFSET $3`,
       [status, q, (page - 1) * 30, source, jobId],
     )
   ).rows;
@@ -673,7 +673,9 @@ export async function mutateJob(
         ["rejected", "archived", "merged"].includes(job.status)
       )
         throw new ApiError("ეს განცხადება გაუქმებულია");
-      await confirmInvoice(c, job.id, data.action);
+      const invoice = await currentJobInvoice(c, job.id);
+      if (!invoice) throw new ApiError("ინვოისი ვერ მოიძებნა");
+      await confirmInvoice(c, invoice.id, data.action);
       return { ok: true };
     }
     if (data.pendingOnly) {
@@ -739,12 +741,6 @@ export async function mutateJob(
     }
     if (data.action === "publish") {
       draft = vacancySchema.parse(draft);
-      if (
-        draft.deadline &&
-        draft.deadline <
-          new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tbilisi" })
-      )
-        throw new ApiError("ვაკანსიის ბოლო ვადა გასულია");
       if (!draft.company) throw new ApiError("მიუთითე კომპანია");
       const submission = (
         await c.query(
@@ -768,9 +764,18 @@ export async function mutateJob(
             : submission.requested_placement
           : undefined);
       if (placement) {
-        await approvePlacement(c, job, draft.company, placement);
+        const deadline = await approvePlacement(
+          c, job, draft.company, placement, draft.deadline,
+        );
+        if (deadline) draft = { ...draft, deadline };
         if (placement === "standard") await cancelUnusedInvoice(c, job.id);
       }
+      if (
+        draft.deadline &&
+        draft.deadline <
+          new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tbilisi" })
+      )
+        throw new ApiError("ვაკანსიის ბოლო ვადა გასულია");
       // Approve uploads atomically with publication; an invalid upload must not
       // leave a published vacancy pointing at a private or missing image.
       await approveSubmissionLogo(

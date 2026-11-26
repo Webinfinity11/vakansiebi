@@ -8,8 +8,8 @@ const maxText = 60000;
 const blankTextChars = 25;
 const blankPaths = 40;
 const maxXml = 8 * 1024 * 1024;
-const xmlText = (xml: string) =>
-  xml
+export const xmlText = (xml: string, preserveListMarkers = false) =>
+  (preserveListMarkers ? xml.replace(/<w:p\b[^>]*>[\s\S]*?<\/w:p>/g, paragraph => /<w:numPr\b/.test(paragraph) ? '• ' + paragraph : paragraph) : xml)
     .replace(/<w:tab\b[^>]*\/>/g, '\t')
     .replace(/<\/w:p>/g, '\n')
     .replace(/<w:br\b[^>]*\/>/g, '\n')
@@ -26,7 +26,7 @@ const xmlText = (xml: string) =>
 
 // Read only selected text XML parts with a combined inflation cap. Embedded files,
 // macros and external relationships are ignored.
-function docx(bytes: Buffer, odt = false) {
+function docx(bytes: Buffer, odt = false, preserveListMarkers = false) {
   const parts: {name: string; text: string}[] = [];
   let total = 0;
   let eocd = -1;
@@ -77,9 +77,9 @@ function docx(bytes: Buffer, odt = false) {
       });
       source = source.replace(/<w:tr\b[^>]*>[\s\S]*?<\/w:tr>/g, row =>
         [...row.matchAll(/<w:tc\b[^>]*>([\s\S]*?)<\/w:tc>/g)]
-          .map(cell => xmlText(cell[1]).trim().replace(/\n/g, ' ')).join('\t') + '\n');
+          .map(cell => xmlText(cell[1], preserveListMarkers).trim().replace(/\n/g, ' ')).join('\t') + '\n');
       source = source.replace(/<\/text:[ph]>/g, '\n').replace(/<text:tab\b[^>]*\/>/g, '\t');
-      parts.push({name, text: xmlText(source)});
+      parts.push({name, text: xmlText(source, preserveListMarkers)});
     }
     pos += 46 + nameLen + extra + comment;
   }
@@ -90,13 +90,14 @@ async function readCvText(
   input: Uint8Array,
   filename: string,
   state: { reason: CvExtractionReason },
+  preserveListMarkers = false,
 ): Promise<string> {
   if (input.byteLength > maxCvBytes) return '';
   const bytes = Buffer.from(input);
   const ext = filename.split('.').pop()?.toLowerCase();
   try {
     if (ext === 'docx' || ext === 'odt') {
-      const text = docx(bytes, ext === 'odt');
+      const text = docx(bytes, ext === 'odt', preserveListMarkers);
       // Media parts are named in the zip directory, which is never compressed.
       if (text.replace(/\s/g, '').length < blankTextChars && !/word\/media\/|Pictures\//.test(bytes.toString('latin1')))
         state.reason = 'blank';
@@ -277,11 +278,11 @@ async function readCvText(
 
 export type CvExtractionReason = null | 'blank' | 'scanned' | 'unsupported' | 'empty' | 'too_large' | 'timeout';
 export type CvExtraction = { text: string; reason: CvExtractionReason };
-export async function extractCv(input: Uint8Array, filename: string): Promise<CvExtraction> {
+export async function extractCv(input: Uint8Array, filename: string, options: { preserveListMarkers?: boolean } = {}): Promise<CvExtraction> {
   if (input.byteLength > maxCvBytes) return { text: '', reason: 'too_large' };
   if (!/\.(pdf|docx|doc|odt|rtf|txt)$/i.test(filename)) return { text: '', reason: 'unsupported' };
   const state: { reason: CvExtractionReason } = { reason: null };
-  const text = await readCvText(input, filename, state);
+  const text = await readCvText(input, filename, state, options.preserveListMarkers);
   return { text, reason: state.reason ?? (text.trim() ? null : 'empty') };
 }
 /* True only when the file is certainly empty; unreadable or slow files are not. */

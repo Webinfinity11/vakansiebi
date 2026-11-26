@@ -1,5 +1,5 @@
 import { placeName } from "./places";
-import { candidateStages, educationLabels, educationLevels, languageLevels, stageLabels, type Candidate, type CandidateProfile, type CandidateStage, type EducationLevel } from "./company-candidates";
+import { candidateStages, educationLabels, educationLevels, languageLevels, stageLabels, personKey, type Candidate, type CandidateProfile, type CandidateStage, type EducationLevel } from "./company-candidates";
 export type Person = {
   key: string;
   latest: Candidate;
@@ -13,8 +13,8 @@ export type Person = {
 };
 /** A CV base person is in the company's process only once moved past "new";
     applications, uploads and CV box entries always are. Stages mean nothing outside it. */
-export const inProcess = (c: Pick<Candidate, "source" | "stage">) =>
-  c.source !== "base" || c.stage !== "new";
+export const inProcess = (c: Pick<Candidate, "source" | "stage" | "added">) =>
+  c.source !== "base" || !!c.added || c.stage !== "new";
 // The furthest a person got with this company, for the "best stage" column.
 export const stageRank = (s: Candidate["stage"]) =>
   s === "rejected" ? -1 : candidateStages.indexOf(s);
@@ -50,12 +50,12 @@ export type Filters = {
   cities: string[];
   jobs: string[]; // job ids, 'none' for uploads without a vacancy
   stages: CandidateStage[];
+  saved: boolean;
   rated: boolean;
   phone: boolean;
   hideRejected: boolean;
   unchecked: boolean;
   source: "all" | "applied" | "upload" | "cv_box" | "base" | "own";
-  requirementsMatch: boolean;
   period: number;
   sort: "match" | "recent" | "years" | "rating";
 };
@@ -72,12 +72,12 @@ export const emptyFilters: Filters = {
   cities: [],
   jobs: [],
   stages: [],
+  saved: false,
   rated: false,
   phone: false,
   hideRejected: false,
   unchecked: false,
   source: "all",
-  requirementsMatch: false,
   period: 0,
   sort: "match",
 };
@@ -185,17 +185,14 @@ export function passes(
   if (skip !== "stages" && f.stages.length && (!p.entries.some(inProcess) || !f.stages.includes(p.stage)))
     return false;
   if (f.hideRejected && p.entries.some(inProcess) && p.stage === "rejected") return false;
+  if (f.saved && !p.entries.some(e => e.saved)) return false;
   if (f.rated && !p.rating) return false;
   if (f.phone && !p.entries.some((e) => e.phone)) return false;
   if (f.unchecked && !(p.profile === null || p.profile.origin === "parsed"))
     return false;
   if (f.source === "upload" && !p.entries.some((e) => e.source === "upload"))
     return false;
-  if (
-    f.requirementsMatch &&
-    !p.entries.some((e) => e.requirementsMatch === true)
-  )
-    return false;
+
   if (f.source === "cv_box" && !p.entries.some((e) => e.source === "cv_box"))
     return false;
   if (f.source === "base" && !p.entries.some((e) => e.source === "base"))
@@ -357,15 +354,7 @@ export function filterChips(f: Filters, facets: Facets, set: <K extends keyof Fi
           f.stages.filter((x) => x !== s),
         ),
     })),
-    ...(f.requirementsMatch
-      ? [
-          {
-            key: "requirements",
-            text: "ემთხვევა მოთხოვნებს",
-            clear: () => set("requirementsMatch", false),
-          },
-        ]
-      : []),
+    ...(f.saved ? [{key:"saved",text:"შენახულები",clear:()=>set("saved",false)}] : []),
     ...(f.rated
       ? [{ key: "rated", text: "შეფასებული", clear: () => set("rated", false) }]
       : []),
@@ -436,7 +425,7 @@ export function normalizeFilters(value: unknown): Filters {
   }).filter((l,i,a)=>a.findIndex(x=>x.key===l.key)===i) : [];
   if (typeof v.query === 'string') f.query = v.query;
   if (educationLevels.includes(v.education as EducationLevel)) f.education = v.education as EducationLevel;
-  for (const key of ['rated','phone','hideRejected','unchecked','requirementsMatch'] as const) f[key] = v[key] === true;
+  for (const key of ['saved','rated','phone','hideRejected','unchecked'] as const) f[key] = v[key] === true;
   if (v.skillMode === 'any') f.skillMode = 'any';
   if (['all','applied','upload','cv_box','base','own'].includes(v.source as string)) f.source = v.source as Filters['source'];
   if ([7,30,90].includes(v.period as number)) f.period = v.period as number;
@@ -469,6 +458,7 @@ export function deleteSearch(list: SavedSearch[], id: string): SavedSearch[] {
 
 /** Only machine-read profiles need extraction/review notices. Manual corrections win. */
 export function parseNotice(profile: CandidateProfile | null | undefined): string {
+  if (profile?.parse?.nameMissing && !profile.name?.trim()) return 'სახელი ვერ ამოიკითხა — შეასწორეთ';
   if (profile?.origin !== 'parsed') return '';
   const reasons: Record<string, string> = {
     blank: 'ფაილი ცარიელია: მასში არც ტექსტი ჩანს და არც სურათი.',
@@ -489,8 +479,127 @@ export function parseState(profile: CandidateProfile | null, hasCv: boolean): st
   if (!hasCv && profile?.origin !== 'edited') return '';
   if (profile?.origin === 'edited') return 'შემოწმებული';
   if (profile?.origin === 'jobx') return '';
-  const usable = profile && (profile.text.trim() || profile.roles.length || profile.skills.length ||
+  const usable = profile && ((profile as CandidateProfile & {hasText?: boolean}).hasText || profile.text?.trim() || profile.roles.length || profile.skills.length ||
     profile.languages.length || profile.education.length || profile.educationLevel || profile.years != null || profile.city);
   if (!usable) return hasCv ? 'ტექსტი ვერ ამოიკითხა' : '';
   return profile?.origin === 'parsed' ? 'ავტომატურად ამოკითხული' : '';
+}
+
+/** Shared grouping keeps multi-entry search and profile precedence identical. */
+export function talentPeople(candidates: Candidate[]): Person[] {
+    const map = new Map<string, Person>();
+    for (const c of candidates) {
+      const key = personKey(c);
+      const p = map.get(key);
+      if (!p)
+        map.set(key, {
+          key,
+          latest: c,
+          entries: [c],
+          stage: c.stage,
+          rating: c.rating,
+          profile: c.profile,
+          city: "",
+          haystack: "",
+        });
+      else {
+        p.entries.push(c);
+        if (c.appliedAt > p.latest.appliedAt) p.latest = c;
+        // The stage is the furthest the person got in the company's own process.
+        if (inProcess(c) && (!p.entries.some((e) => e !== c && inProcess(e)) || stageRank(c.stage) > stageRank(p.stage))) p.stage = c.stage;
+        p.rating = Math.max(p.rating ?? 0, c.rating ?? 0) || null;
+        // A corrected profile wins over a JOBX one, which wins over one read from a file.
+        const rank = (x: CandidateProfile | null) =>
+          !x ? 0 : x.origin === "edited" ? 3 : x.origin === "jobx" ? 2 : 1;
+        if (rank(c.profile) > rank(p.profile)) p.profile = c.profile;
+      }
+    }
+    for (const p of map.values()) {
+      p.city = personCity(p.profile, [p.latest, ...p.entries]);
+      p.haystack = norm(
+        [
+          ...p.entries.flatMap((c) => [
+            c.name,
+            c.title,
+            c.email,
+            c.phone,
+            c.jobTitle,
+            c.city,
+          ]),
+          p.profile?.text ?? "",
+          ...(p.profile?.skills ?? []),
+          ...(p.profile?.roles ?? []),
+        ].join(" \n "),
+      );
+    }
+    return [...map.values()];
+}
+
+/** Wire cards intentionally omit text, contacts extracted into profiles, and parse blobs.
+ * Filtering and facets always run on the complete server-side profiles first. */
+export function talentCard(c: Candidate): Candidate {
+  const p = c.profile;
+  return {...c, interviewNote: '', answers: [], profile: p ? {
+    origin: p.origin, name: p.name, years: p.years, roles: p.roles, skills: p.skills.slice(0, 12),
+    languages: p.languages, education: p.education.slice(0, 3),
+    educationLevel: p.educationLevel, city: p.city, parse: p.parse, hasText: !!p.text?.trim(),
+  } as CandidateProfile & {hasText: boolean} : null};
+}
+export type TalentPerson = Pick<Candidate, 'entry' | 'source' | 'name' | 'title' | 'email' | 'phone' | 'contactHidden' | 'hasCv' | 'photo' | 'appliedAt' | 'added' | 'saved' | 'stage' | 'rating'> & {
+  key: string; city: string; years: number | null; education: string[];
+  educationLevel: CandidateProfile['educationLevel']; languages: CandidateProfile['languages'];
+  skills: string[]; nameMissing: boolean; jobTitle: string;
+};
+export type TalentResult = {total: number; matched: number; people: TalentPerson[]; facets: Facets};
+export function talentResults(candidates: Candidate[], f: Filters, now = Date.now(), offset = 0): TalentResult {
+  const people = talentPeople(candidates);
+  const words = terms(f.query);
+  const since = f.period ? now - f.period * 86400000 : 0;
+  const jobs = [...new Map(candidates.filter(c => c.jobId).map(c => [c.jobId!, {id:c.jobId!, title:c.jobTitle}])).values()];
+  const visible = people.filter(p => passes(p, f, words, since));
+  const recent = (a: Person, b: Person) => b.latest.appliedAt.localeCompare(a.latest.appliedAt) || a.key.localeCompare(b.key);
+  visible.sort((a,b) => f.sort === 'years' ? (b.profile?.years ?? -1) - (a.profile?.years ?? -1) || recent(a,b)
+    : f.sort === 'rating' ? (b.rating ?? 0) - (a.rating ?? 0) || recent(a,b)
+    : f.sort === 'match' && words.length ? matchScore(b,words)-matchScore(a,words) || recent(a,b) : recent(a,b));
+  return {total:people.length, matched:visible.length, facets:countFacets(people,f,jobs,since), people:visible.slice(offset, offset + 40).map(p => {
+    const c = p.entries.find(e => e.saved) ?? p.entries.find(e => e.added?.jobId) ?? p.latest;
+    return {
+      key:p.key, entry:c.entry, source:c.source, name:c.name, title:(p.profile?.origin === "edited" && c.title) || positionTitles(p)[0] || c.title,
+      city:p.city, years:p.profile?.years ?? null, education:p.profile?.education.slice(0,3) ?? [],
+      educationLevel:p.profile?.educationLevel ?? null, languages:p.profile?.languages ?? [],
+      skills:readableSkills(p).slice(0,12), photo:c.photo, hasCv:c.hasCv,
+      stage:p.stage, rating:p.rating, jobTitle:c.jobTitle,
+      email:p.entries.find(e => e.email)?.email || '', phone:p.entries.find(e => e.phone)?.phone || '',
+      contactHidden:c.contactHidden, nameMissing:!!p.profile?.parse?.nameMissing,
+      saved:p.entries.some(e => e.saved), added:c.added, appliedAt:c.appliedAt,
+    };
+  })};
+}
+
+export const maxCvBatch = 30;
+export type UploadState = 'queued' | 'uploading' | 'done' | 'error';
+export type UploadResult = {entry: string; duplicate: boolean};
+export type UploadRow<T> = {file:T; state:UploadState; error?:string; result?:UploadResult};
+/** A bounded queue: individual failures do not cancel other files. Also used for retries. */
+export async function runCvUploadQueue<T>(
+  files: T[], upload: (file:T) => Promise<UploadResult>,
+  update: (index:number, row:UploadRow<T>) => void,
+): Promise<UploadRow<T>[]> {
+  if (files.length > maxCvBatch) throw new Error('ერთ ჯერზე მაქსიმუმ 30 ფაილი');
+  const rows: UploadRow<T>[] = files.map(file => ({file, state:'queued'}));
+  let next = 0;
+  await Promise.all(Array.from({length:Math.min(3,files.length)}, async () => {
+    while (next < files.length) {
+      const index = next++;
+      const file = files[index];
+      update(index, {file,state:'uploading'});
+      try { rows[index] = {file,state:'done',result:await upload(file)}; }
+      catch (error) { rows[index] = {file,state:'error',error:error instanceof Error ? error.message : 'ატვირთვა ვერ მოხერხდა.'}; }
+      update(index, rows[index]);
+    }
+  }));
+  return rows;
+}
+export function uploadSummary(rows: UploadRow<unknown>[]) {
+  return {uploaded:rows.filter(r => r.state === 'done').length, failed:rows.filter(r => r.state === 'error').length};
 }

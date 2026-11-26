@@ -64,7 +64,7 @@ export function CompanyDetailsForm({
       <div className="cp-settings-row">
         <div className="cp-settings-label">
           <h2>კომპანიის მონაცემები</h2>
-          <p>კომპანიის დასადასტურებლად.</p>
+          <p>საჭიროა კომპანიის დასადასტურებლად.</p>
         </div>
         <fieldset className="cp-fields" disabled={!canEdit || busy}>
           <label>

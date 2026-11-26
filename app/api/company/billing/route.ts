@@ -5,6 +5,7 @@ import {
   companyBilling,
   upgradeCompanyJob,
 } from '@/lib/server/company-billing';
+import { deliverInvoiceEmailsAfterResponse } from '@/lib/server/invoice-email-after';
 export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
@@ -29,8 +30,10 @@ export async function POST(req: Request) {
         placement: z.enum(['vip', 'premium']),
       })
       .parse(await readBody(req));
+    const result = await upgradeCompanyJob(company, data.id, data.version, data.placement);
+    deliverInvoiceEmailsAfterResponse();
     return Response.json(
-      await upgradeCompanyJob(company, data.id, data.version, data.placement),
+      result,
       {
         headers: { 'Cache-Control': 'private, no-store' },
       },

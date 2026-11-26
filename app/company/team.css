@@ -61,3 +61,6 @@
   .cp-team-invite .cp-fields { grid-template-columns: minmax(0,1fr); }
   .cp-team-invite .cp-fields > p, .cp-team-invite .cp-fields > .cp-btn { grid-column: auto; grid-row: auto; }
 }
+
+.cp-team-status:empty { display: none; }
+.cp-team-invite .cp-fields { align-items: start; }

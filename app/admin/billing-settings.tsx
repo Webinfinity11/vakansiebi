@@ -1,5 +1,5 @@
 'use client';
-import { adminDate } from '@/lib/admin-format';
+import { adminUntil } from '@/lib/admin-format';
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { ChevronDown, ExternalLink, Pencil } from 'lucide-react';
 import { SkeletonRows } from '../skeleton';
@@ -209,7 +209,7 @@ export function BillingSettings({
                         className="records-cell records-num"
                         data-soon={left <= 3 || undefined}
                       >
-                        დარჩა {left} დღე · {adminDate(p.expires_at)}-მდე
+                        დარჩა {left} დღე · {adminUntil(p.expires_at)}
                       </span>
                       <span className="records-actions">
                         <button

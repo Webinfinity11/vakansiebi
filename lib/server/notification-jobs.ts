@@ -1,8 +1,8 @@
 import type { PoolClient } from 'pg';
 import { safeEmail } from '../application-contact';
-import { autoReplyKinds, autoReplyReady, defaultTemplates, render, type TemplateKey } from '../company-message-templates';
-import { applicationsEmail, candidateAckEmail, deadlineEmail } from '../notification-emails';
+import { applicationsEmail, placementRenewalEmail } from '../notification-emails';
 import { db, transaction } from './db';
+import { createInvoiceDetails } from './billing';
 import { deliverNotifications, queueNotification } from './notification-email';
 
 // Same source and ownership rules as company-candidates; never include staff uploads.
@@ -25,8 +25,8 @@ const entriesSql = `WITH owned AS (
 type Entry = { entry: string; job_id: string | null; title: string; name: string; email: string; applied_at: Date };
 type SettingsRow = {
   application_mode: 'instant' | 'digest' | 'off'; deadline_reminders: boolean;
-  auto_reply: boolean; auto_reply_template: TemplateKey; applications_seen_until: Date;
-  auto_reply_since: Date | null; last_digest_on: string | null;
+  applications_seen_until: Date;
+  last_digest_on: string | null;
 };
 export function notificationDay(now: Date) {
   // Tbilisi has no DST: UTC+04. ISO format also sorts as a calendar date.
@@ -42,8 +42,8 @@ async function queueCompany(client: PoolClient, companyKey: string, now: Date, i
   await client.query(`INSERT INTO company_notification_settings(company_key,applications_seen_until)
     SELECT p.company_key,COALESCE((SELECT min(a.created_at) FROM company_accounts a WHERE a.company_key=p.company_key),$2)
     FROM company_profiles p WHERE p.company_key=$1 ON CONFLICT DO NOTHING`, [companyKey, now]);
-  const s = (await client.query<SettingsRow>(`SELECT application_mode,deadline_reminders,auto_reply,auto_reply_template,
-    applications_seen_until,auto_reply_since,last_digest_on::text FROM company_notification_settings
+  const s = (await client.query<SettingsRow>(`SELECT application_mode,deadline_reminders,
+    applications_seen_until,last_digest_on::text FROM company_notification_settings
     WHERE company_key=$1 FOR UPDATE`, [companyKey])).rows[0];
   if (!s) return 0;
   const owner = (await client.query(`SELECT a.email,p.name FROM company_accounts a
@@ -80,30 +80,64 @@ async function queueCompany(client: PoolClient, companyKey: string, now: Date, i
       last_digest_on=CASE WHEN application_mode='digest' THEN $3::date ELSE last_digest_on END WHERE company_key=$1`,
     [companyKey, now, notificationDay(now)]);
   }
-  if (s.auto_reply && s.auto_reply_since) {
-    const kind = (autoReplyKinds as readonly string[]).includes(s.auto_reply_template) ? s.auto_reply_template : 'received';
-    const template = (await client.query('SELECT subject,body FROM company_message_templates WHERE company_key=$1 AND kind=$2', [companyKey, kind])).rows[0] ?? defaultTemplates[kind];
-    const entries = (await client.query<Entry>(entriesSql, [companyKey, s.auto_reply_since, now])).rows;
-    for (const entry of entries) {
-      if (!safeEmail(entry.email || '')) continue;
-      await enqueue(client, { kind: 'candidate_ack', dedupeKey: `ack:${companyKey}:${entry.entry}`,
-        payload: candidateAckEmail(render(autoReplyReady(template) ? template : defaultTemplates.received, { name: entry.name, jobTitle: entry.title, companyName: owner.name }), entry.email, appUrl, owner.name) });
-    }
-  }
   if (!instantOnly && s.deadline_reminders) {
-    const today = notificationDay(now);
-    const deadline = notificationDay(new Date(now.getTime() + 3 * 86400000));
-    const jobs = (await client.query(`SELECT j.id,j.published->>'title' title,j.published->>'deadline' deadline
+    // Lock jobs before invoices, matching manual ordering/moderation. Recheck under
+    // that lock so concurrent orders cannot race the one-pending constraint.
+    const jobs = (await client.query(`SELECT j.id,j.published->>'title' title,
+        j.placement_tier,j.placement_expires_at
       FROM jobs j JOIN company_job_ownership o ON o.job_id=j.id
-      WHERE o.company_key=$1 AND j.status='published' AND j.published->>'deadline'>=$2 AND j.published->>'deadline'<=$3`, [companyKey, today, deadline])).rows;
-    for (const job of jobs) await enqueue(client, { kind: 'deadline', dedupeKey: `deadline:${job.id}:${job.deadline}`,
-      payload: deadlineEmail(job, owner.email, appUrl, today) });
+      JOIN company_profiles p ON p.company_key=o.company_key
+      WHERE o.company_key=$1 AND p.approval_status='approved' AND j.status='published'
+        AND j.placement_tier IN ('vip','premium')
+        AND j.placement_expires_at>$2 AND j.placement_expires_at<=$2::timestamptz+interval '3 days'
+      ORDER BY j.id FOR UPDATE OF j`, [companyKey, now])).rows;
+    for (const job of jobs) {
+      const blocked = (await client.query(`SELECT 1 FROM job_invoices WHERE job_id=$1
+        AND (status='pending' OR renewal_for_expires_at=$2
+          OR (status='paid' AND activated_at IS NULL)) LIMIT 1`, [job.id, job.placement_expires_at])).rowCount;
+      if (blocked) continue;
+      const invoice = await createInvoiceDetails(client, {
+        id: job.id, company: owner.name, title: job.title, billingEmail: owner.email,
+        placement: job.placement_tier, renewalForExpiresAt: job.placement_expires_at,
+      });
+      await enqueue(client, { kind: 'deadline',
+        dedupeKey: `placement-renewal:${job.id}:${job.placement_expires_at.toISOString()}`,
+        payload: placementRenewalEmail(invoice, job.title, job.placement_expires_at, owner.email, appUrl) });
+      await client.query(`INSERT INTO audit_log(job_id,action,actor,after_data)
+        VALUES($1,'placement.renewal_requested','system',$2)`,
+      [job.id, { invoiceNumber: invoice.number, expiresAt: job.placement_expires_at }]);
+    }
   }
   return queued;
 }
 
+/** Cancellation must also run for disabled owners/settings and unapproved companies. */
+async function cancelExpiredRenewals(now: Date, options: { companyKey?: string; jobId?: string }) {
+  await transaction(async c => {
+    const jobs = (await c.query(`SELECT j.id FROM jobs j
+      WHERE ($1::text IS NULL OR EXISTS (SELECT 1 FROM company_job_ownership o WHERE o.job_id=j.id AND o.company_key=$1))
+        AND ($2::uuid IS NULL OR j.id=$2)
+        AND EXISTS (SELECT 1 FROM job_invoices i WHERE i.job_id=j.id AND i.status='pending'
+          AND i.renewal_for_expires_at<=$3::timestamptz-interval '7 days')
+      ORDER BY j.id FOR UPDATE`, [options.companyKey ?? null, options.jobId ?? null, now])).rows;
+    for (const job of jobs) {
+      const invoices = (await c.query(`UPDATE job_invoices SET status='cancelled'
+        WHERE job_id=$1 AND status='pending' AND renewal_for_expires_at<=$2::timestamptz-interval '7 days'
+        RETURNING id,renewal_for_expires_at`, [job.id, now])).rows;
+      for (const invoice of invoices) {
+        await c.query(`INSERT INTO audit_log(job_id,action,actor,after_data)
+          VALUES($1,'placement.renewal_cancelled','system',$2)`, [job.id, { invoiceId: invoice.id }]);
+        await c.query(`UPDATE notification_emails SET status='cancelled',locked_until=NULL
+          WHERE dedupe_key=$1 AND status IN ('pending','sending')`,
+        [`placement-renewal:${job.id}:${invoice.renewal_for_expires_at.toISOString()}`]);
+      }
+    }
+  });
+}
+
 export type NotificationJobOptions = { companyKey?: string; jobId?: string; instantOnly?: boolean; deliver?: boolean };
 export async function runNotificationJobs(now = new Date(), options: NotificationJobOptions = {}) {
+  if (!options.instantOnly) await cancelExpiredRenewals(now, options);
   const companies = (await db().query<{ company_key: string }>(`SELECT p.company_key FROM company_profiles p
     WHERE ($1::text IS NULL OR p.company_key=$1)
       AND ($2::uuid IS NULL OR EXISTS(SELECT 1 FROM company_job_ownership o WHERE o.company_key=p.company_key AND o.job_id=$2))

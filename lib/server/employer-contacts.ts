@@ -1,3 +1,4 @@
+import { currentInvoiceOrder } from './billing';
 import { z } from 'zod';
 import { companyKey } from '../company-key';
 import { safeEmail } from '../application-contact';
@@ -17,7 +18,7 @@ export async function employerContacts(): Promise<EmployerContact[]> {
       e.status AS email_status,e.sent_at AS email_sent_at,i.payload->'to'->>0 AS billing_email
       FROM job_submissions s JOIN jobs j ON j.id=s.job_id
       LEFT JOIN publication_email_delivery e ON e.job_id=j.id
-      LEFT JOIN job_invoices inv ON inv.job_id=j.id
+      LEFT JOIN LATERAL (SELECT * FROM job_invoices WHERE job_id=j.id ${currentInvoiceOrder()}) inv ON true
       LEFT JOIN invoice_email_delivery i ON i.invoice_id=inv.id
       WHERE NOT s.is_test ORDER BY s.created_at DESC,j.id`),
     db().query('SELECT * FROM employer_contact_notes'),

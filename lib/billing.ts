@@ -56,6 +56,7 @@ export function invoiceNumber(number: string | number) {
   return digits.padStart(6, '0');
 }
 export type JobInvoice = {
+  renewal_for_expires_at?: string | null;
   /** Older queued email payloads predate this field and describe premium. */
   placement_tier?: 'vip' | 'premium';
   id: string;
@@ -74,3 +75,38 @@ export type JobInvoice = {
   paid_at: string | null;
   activated_at: string | null;
 };
+
+export type CompanyInvoiceDetails = {
+  url: string;
+  token: string;
+  number: string;
+  amountGel: number;
+  serviceDays: number;
+  placementTier: 'vip' | 'premium';
+  payeeName: string;
+  bankName: string;
+  iban: string;
+  status: keyof typeof invoiceStatuses;
+  createdAt: string;
+  paidAt: string | null;
+  activatedAt: string | null;
+};
+
+/** Serialize both pg Date values and persisted email payload timestamps. */
+export function invoiceDetails(row: JobInvoice, url: string): CompanyInvoiceDetails {
+  return {
+    url,
+    token: row.token,
+    number: invoiceNumber(row.number),
+    amountGel: row.amount_gel,
+    serviceDays: row.service_days,
+    placementTier: row.placement_tier ?? 'premium',
+    payeeName: row.payee_name,
+    bankName: row.bank_name,
+    iban: row.iban,
+    status: row.status,
+    createdAt: new Date(row.created_at).toISOString(),
+    paidAt: row.paid_at == null ? null : new Date(row.paid_at).toISOString(),
+    activatedAt: row.activated_at == null ? null : new Date(row.activated_at).toISOString(),
+  };
+}

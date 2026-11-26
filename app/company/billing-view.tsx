@@ -1,5 +1,6 @@
 'use client';
 import './billing.css';
+import Link from 'next/link';
 import { StatusMark } from './status-mark';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -71,13 +72,17 @@ export function BillingView() {
                   <article className="cp-invoice" key={invoice.id}>
                     <h3>ინვოისი {invoiceNumber(invoice.number)}</h3>
                     <p>{invoice.vacancy_title}</p>
+                    {invoice.status === 'pending' && <div className="cp-payment-pending">
+                      <strong>{invoice.renewal_for_expires_at ? 'გასაგრძელებლად გადასახდელია' : 'გადასახდელია'} — {invoice.amount_gel} ₾</strong>
+                      <Link href={`/company/jobs/${invoice.job_id}/promote`}>გადახდის მონაცემები</Link>
+                    </div>}
                     <p>
-                      {invoiceServiceLabel(invoice)} · {invoice.amount_gel} ₾ ·{' '}
+                      {invoiceServiceLabel(invoice)} ·{' '}
+                      {invoice.status !== 'pending' && <>{invoice.amount_gel} ₾ · </>}
                       {invoice.service_days} დღე
                     </p>
                     <p>
-                      <StatusMark kind={invoice.status}>{invoiceStatuses[invoice.status]}</StatusMark> ·{' '}
-                      {formatDate(invoice.created_at)}
+                      {[invoiceStatuses[invoice.status] ? <StatusMark key="status" kind={invoice.status}>{invoiceStatuses[invoice.status]}</StatusMark> : null, formatDate(invoice.created_at)].filter(Boolean).map((part, index) => <span key={index}>{index > 0 ? ' · ' : ''}{part}</span>)}
                     </p>
                     {invoice.status === 'paid' && !invoice.activated_at && (
                       <p className="cp-subtle">

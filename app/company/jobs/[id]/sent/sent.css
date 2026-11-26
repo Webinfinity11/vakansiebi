@@ -1,0 +1,21 @@
+.cp-sent-placement, .cp-sent-payment, .cp-sent-state { margin-top: 24px; }
+.cp-sent-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.cp-sent-option, .cp-sent-payment, .cp-sent-state {
+  padding: 28px;
+  border: 1px solid var(--cp-line);
+  border-radius: var(--cp-radius);
+  background: var(--cp-surface);
+  color: var(--cp-ink);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.cp-sent-option { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+.cp-sent-option h2, .cp-sent-payment h2 { margin: 0; font-size: 22px; line-height: 1.5; }
+.cp-sent-option p { margin: 0; line-height: 1.7; }
+.cp-sent-option .cp-btn { margin-top: auto; }
+.cp-sent-payment h2 { margin-bottom: 24px; }
+.cp-sent-payment dd { min-width: 0; }
+@media (max-width: 600px) {
+  .cp-sent-options { grid-template-columns: minmax(0, 1fr); }
+  .cp-sent-option, .cp-sent-payment, .cp-sent-state { padding: 20px 16px; }
+}

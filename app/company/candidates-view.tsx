@@ -1,9 +1,10 @@
 'use client';
+import { untilDate } from '@/lib/date-until';
+import { SaveCandidate, AddToVacancy } from './add-to-candidates';
 import { validCandidateEmail, validCandidatePhone } from '@/lib/company-candidate-contact';
 import { StatusMark } from './status-mark';
 import { SelectField } from '../select-field';
-import { defaultTemplates, render, templateKinds, templateLabels, validTemplate, type MessageTemplates, type TemplateKey } from '@/lib/company-message-templates';
-import { TemplateFields, TemplatePreview } from './message-templates';
+import { cvBaseInvitation, defaultTemplates, render, templateKinds, templateLabels, templateLimits, validTemplate, type MessageTemplate, type TemplateKey } from '@/lib/company-message-templates';
 import { parseNotice } from '@/lib/company-talent-filters';
 import { companyHref, plainClick } from '@/lib/company-portal-navigation';
 import { CandidateAnswers, CandidateSignals } from './candidate-answers';
@@ -13,13 +14,11 @@ import {
   Mail,
   Phone,
   Download,
-  ExternalLink,
   Star,
   ArrowLeft,
   ArrowRight,
   List,
   Columns3,
-  Table2,
   Copy,
   Check,
   FileX,
@@ -27,16 +26,14 @@ import {
   Undo2,
   X,
   RotateCcw,
-  GripVertical,
   MessageSquare,
   ChevronDown,
   MoreHorizontal,
   Trash2,
   Pencil,
   Plus,
-  Briefcase,
-  Database,
   Upload,
+  UserPlus,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -88,7 +85,7 @@ const pipeline: CandidateStage[] = candidateStages.filter(
 const nextStage = (s: CandidateStage) =>
   s === 'rejected' ? null : (pipeline[pipeline.indexOf(s) + 1] ?? null);
 const prevStage = (s: CandidateStage) =>
-  s === 'rejected' ? 'review' : (pipeline[pipeline.indexOf(s) - 1] ?? null);
+  s === 'rejected' ? 'new' : (pipeline[pipeline.indexOf(s) - 1] ?? null);
 const typing = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   (target.isContentEditable ||
@@ -101,16 +98,27 @@ type Undo = {
   rejection?: string[];
 };
 
+// Share in-flight reads across effect replays; never retain contacts after completion.
+const candidateReads = new Map<string, ReturnType<typeof request>>();
+function readCandidate(path: string, body?: Parameters<typeof request>[1]) {
+  const key=path+JSON.stringify(body ?? null);
+  const pending = candidateReads.get(key);
+  if (pending) return pending;
+  const promise = request(path,body).finally(() => candidateReads.delete(key));
+  candidateReads.set(key,promise);
+  return promise;
+}
+
 export function CandidatesView({
   canEdit,
   companyName,
-  candidates,
+  candidates: suppliedCandidates,
   jobs,
   loaded,
   selected,
   onSelect,
   onRemoved,
-  onPatch,
+  onPatch: patchParent,
   onReveal,
   onError,
   initialFilter,
@@ -137,50 +145,56 @@ export function CandidatesView({
   onReveal: (entry: string) => Promise<void>;
   onError: (message: string) => void;
 }) {
-  const [savedView, setViewState] = useState<'list' | 'board' | 'table'>('list');
-  const [wide, setWide] = useState(false);
+  const [sheetCandidate, setSheetCandidate] = useState<Candidate | null>(null);
+  const candidates = useMemo(() => sheetOnly && sheetCandidate
+    ? [...suppliedCandidates.filter(c=>c.entry!==sheetCandidate.entry),sheetCandidate] : suppliedCandidates,
+    [suppliedCandidates,sheetOnly,sheetCandidate]);
+  const onPatch = useCallback((entries: string[], patch: Partial<Candidate>) => {
+    setSheetCandidate(previous=>previous && entries.includes(previous.entry) ? {...previous,...patch} : previous);
+    const base=sheetOnly && sheetCandidate && entries.includes(sheetCandidate.entry) ? sheetCandidate : null;
+    patchParent(entries,base ? {...base,...patch} : patch);
+  }, [patchParent,sheetOnly,sheetCandidate]);
+  const [savedView, setViewState] = useState<'list' | 'board'>('list');
   const [desktop, setDesktop] = useState(false);
-  const view = savedView === 'table' && !wide ? 'list' : savedView;
-  const [source, setSource] = useState('all');
-  const [sort, setSort] = useState<{ key: 'date' | 'stage'; ascending: boolean }>({ key: 'date', ascending: false });
+  const view = savedView;
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 1100px)');
     const split = window.matchMedia('(min-width: 901px)');
-    const update = () => { setWide(media.matches); setDesktop(split.matches); };
-    update(); media.addEventListener('change', update); split.addEventListener('change', update);
-    return () => { media.removeEventListener('change', update); split.removeEventListener('change', update); };
+    const update = () => { setDesktop(split.matches); };
+    update(); split.addEventListener('change', update);
+    return () => { split.removeEventListener('change', update); };
   }, []);
   useEffect(() => {
     if (!initialFilter) return;
     setJob(initialFilter.jobId ?? 'all');
     setStage(initialFilter.stage ?? 'all');
-    setSource('all'); setQuery(''); setOnlyMatching(false); setPicked([]);
+    setQuery(''); setPicked([]);
     onSelect(null);
   }, [initialFilter]);
   const [stage, setStage] = useState<CandidateStage | 'all'>('all');
   const [job, setJob] = useState('all');
-  const [onlyMatching, setOnlyMatching] = useState(false);
   const [query, setQuery] = useState('');
   const clearFilters = () => {
-    setQuery(''); setJob('all'); setSource('all'); setOnlyMatching(false); setStage('all');
+    setQuery(''); setJob('all'); setStage('all');
   };
   const clearFiltersButton = <button type="button" className="cp-btn cp-btn--ghost" onClick={clearFilters}>ფილტრების გასუფთავება</button>;
   const [picked, setPicked] = useState<string[]>([]);
   const [dragging, setDragging] = useState<string[] | null>(null);
   const moving = useRef(false);
+  const priorStages = useRef(new Map<string, CandidateStage>());
   const [undo, setUndo] = useState<Undo | null>(null);
   const [peek, setPeek] = useState<string | null>(null);
   const [composer, setComposer] = useState<{
     entries: string[];
+    message?: MessageTemplate;
     template: TemplateKey;
     channel: Channel;
   } | null>(null);
   // The chosen view is remembered on this device.
   useEffect(() => {
     const saved = localStorage.getItem('jobx-company-candidates-view');
-    if (saved === 'board' || saved === 'list' || saved === 'table') setViewState(saved);
+    if (saved === 'board' || saved === 'list') setViewState(saved);
   }, []);
-  const setView = (v: 'list' | 'board' | 'table') => {
+  const setView = (v: 'list' | 'board') => {
     setViewState(v);
     localStorage.setItem('jobx-company-candidates-view', v);
   };
@@ -191,14 +205,12 @@ export function CandidatesView({
         (job === 'all' ||
           c.jobId === job ||
           (job === 'cv_box' && c.source === 'cv_box')) &&
-        (source === 'all' || (source === 'applied' ? ['swipe', 'resume'].includes(c.source) : c.source === source)) &&
-        (!onlyMatching || c.requirementsMatch === true) &&
         (!q ||
           [c.name, c.title, c.email, c.jobTitle].some((v) =>
             v.toLowerCase().includes(q),
           )),
     );
-  }, [candidates, job, query, onlyMatching, source]);
+  }, [candidates, job, query]);
   const counts = useMemo(() => {
     const out: Record<string, number> = { all: byJob.length };
     for (const s of candidateStages)
@@ -207,20 +219,15 @@ export function CandidatesView({
   }, [byJob]);
   const visible = useMemo(
     () => byJob.filter((c) => stage === 'all' || c.stage === stage).sort((a, b) => {
-      const difference = sort.key === 'date' ? Date.parse(a.appliedAt) - Date.parse(b.appliedAt)
-        : candidateStages.indexOf(a.stage) - candidateStages.indexOf(b.stage);
-      return (sort.ascending ? difference : -difference) || a.entry.localeCompare(b.entry);
+      return Date.parse(b.appliedAt) - Date.parse(a.appliedAt) || a.entry.localeCompare(b.entry);
     }),
-    [byJob, stage, sort],
+    [byJob, stage],
   );
   useEffect(() => {
     if (!sheetOnly && desktop && view === 'list' && visible.length > 0 && !visible.some((c) => c.entry === selected))
       onSelect(visible[0]?.entry ?? null);
   }, [sheetOnly, desktop, view, visible, selected, onSelect]);
-  useEffect(() => { setPicked([]); }, [job, stage, source, query, onlyMatching, canEdit]);
-  const sourceLabel = (c: Candidate) => c.source === 'upload' ? 'თქვენ მიერ ატვირთული' : c.source === 'cv_box' ? 'CV ყუთი' : c.source === 'base' ? 'JOBX-ის CV ბაზიდან' : 'ვაკანსიაზე გამოგზავნილი';
-  const togglePick = (entry: string) => setPicked((all) => all.includes(entry) ? all.filter((id) => id !== entry) : [...all, entry]);
-  const toggleSort = (key: 'date' | 'stage') => setSort((previous) => ({ key, ascending: previous.key === key ? !previous.ascending : true }));
+  useEffect(() => { setPicked([]); }, [job, stage, query, canEdit]);
   const photos = useMemo(() => {
     const out = new Map<string, string>();
     for (const c of candidates)
@@ -231,7 +238,18 @@ export function CandidatesView({
     const entry = photos.get(personKey(c));
     return { name: c.name, entry: entry ?? c.entry, photo: !!entry };
   };
-  const current = candidates.find((c) => c.entry === selected) ?? null;
+  const sheetError = useRef(onError);
+  sheetError.current = onError;
+  useEffect(() => {
+    if (!sheetOnly || !selected) {setSheetCandidate(null);return;}
+    let alive=true;
+    setSheetCandidate(null);
+    void readCandidate('candidates?detail='+encodeURIComponent(selected)).then((detail: Candidate)=>{
+      if(alive) setSheetCandidate(detail);
+    }).catch((error: Error)=>{if(alive) sheetError.current(error.message);});
+    return ()=>{alive=false;};
+  }, [sheetOnly,selected]);
+  const current = sheetOnly ? (sheetCandidate?.entry === selected ? sheetCandidate : null) : visible.find(c=>c.entry===selected) ?? null;
   const peeked = candidates.find((c) => c.entry === peek) ?? null;
   const jobOptions = useMemo(() => {
     const ids = new Set(candidates.map((c) => c.jobId).filter(Boolean));
@@ -240,38 +258,39 @@ export function CandidatesView({
 
   const move = useCallback(
     async (entries: string[], next: CandidateStage, remember = true) => {
-      if (!canEdit || moving.current) return;
+      if (!canEdit || moving.current) return false;
       if (entries.length > 200) { onError('ერთდროულად მაქსიმუმ 200 კანდიდატი მონიშნეთ.'); return; }
       const before = candidates
         .filter((c) => entries.includes(c.entry) && c.stage !== next)
         .map((c) => ({ entry: c.entry, stage: c.stage, hiredAt: c.hiredAt, seen: c.seen, name: c.name }));
-      if (!before.length) return;
+      if (!before.length) return true;
       moving.current = true;
       onPatch(
         before.map((b) => b.entry),
         { stage: next, seen: true },
       );
-      if (remember)
-        setUndo({
-          label:
-            before.length === 1
-              ? `${before[0].name} → ${stageLabels[next]}`
-              : `${before.length} კანდიდატი → ${stageLabels[next]}`,
-          before,
-          rejection:
-            next === 'rejected' ? before.map((b) => b.entry) : undefined,
-        });
       try {
         const result = await request('candidates', {
           action: 'stage',
           entries: before.map((b) => b.entry),
           stage: next,
         });
-        for (const candidate of result.candidates) onPatch([candidate.entry], { hiredAt: candidate.hiredAt });
+        for (const candidate of result.candidates) onPatch([candidate.entry], { hiredAt: candidate.hiredAt, notes: candidate.notes });
+        if (next === 'rejected') {
+          for (const b of before) priorStages.current.set(b.entry, b.stage);
+          setPicked(current => current.filter(entry => !entries.includes(entry)));
+        }
+        if (remember) setUndo({
+          label: before.length === 1 ? `${before[0].name} → ${stageLabels[next]}` : `${before.length} კანდიდატი → ${stageLabels[next]}`,
+          before,
+          rejection: next === 'rejected' ? before.map((b) => b.entry) : undefined,
+        });
+        return true;
       } catch (e) {
         for (const b of before) onPatch([b.entry], { stage: b.stage, hiredAt: b.hiredAt, seen: b.seen });
         setUndo(null);
         onError(e instanceof Error ? e.message : 'ვერ შეინახა');
+        return false;
       } finally { moving.current = false; }
     },
     [canEdit, candidates, onPatch, onError],
@@ -281,8 +300,11 @@ export function CandidatesView({
     const groups = new Map<CandidateStage, string[]>();
     for (const b of undo.before)
       groups.set(b.stage, [...(groups.get(b.stage) ?? []), b.entry]);
+    for (const [s, entries] of groups) {
+      const ok = await move(entries, s, false);
+      if (!ok) { setUndo(undo); return; }
+    }
     setUndo(null);
-    for (const [s, entries] of groups) await move(entries, s, false);
   }
   useEffect(() => {
     if (!undo) return;
@@ -303,7 +325,7 @@ export function CandidatesView({
     );
   }, [canEdit, open, onPatch]);
 
-  // Keyboard: J/K walk the list, → and ← move a stage, X rejects, Z undoes.
+  // Keyboard navigation never changes a stage.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (sheetOnly || composer || document.querySelector('[data-slot="dialog-content"]'))
@@ -315,26 +337,10 @@ export function CandidatesView({
         typing(event.target)
       )
         return;
-      const target = view === 'list' ? current : peeked;
       if (event.key === 'z' && undo) {
         event.preventDefault();
         void revert();
         return;
-      }
-      if (canEdit && target) {
-        const to =
-          event.key === 'ArrowRight'
-            ? nextStage(target.stage)
-            : event.key === 'ArrowLeft'
-              ? prevStage(target.stage)
-              : event.key === 'x'
-                ? 'rejected'
-                : null;
-        if (to) {
-          event.preventDefault();
-          void move([target.entry], to);
-          return;
-        }
       }
       if (view !== 'list' || !visible.length) return;
       const step =
@@ -382,12 +388,15 @@ export function CandidatesView({
   const fresh = candidates.filter((c) => !c.seen).length;
   const detailProps = (c: Candidate) => ({
     candidate: c,
+    jobs,
+    sheetOnly,
     canEdit,
     face: face(c),
     others: candidates.filter(
       (o) => o.entry !== c.entry && personKey(o) === personKey(c),
     ),
     onMove: (next: CandidateStage) => void move([c.entry], next),
+    restoreStage: priorStages.current.get(c.entry) ?? 'new' as CandidateStage,
     onRemoved: (entry: string) => {
       setPicked((entries) => entries.filter((value) => value !== entry));
       setPeek((value) => (value === entry ? null : value));
@@ -395,8 +404,21 @@ export function CandidatesView({
       onRemoved(entry);
     },
     onPatch,
-    onReveal,
+    onReveal: async (entry: string) => {
+      if (!sheetOnly) return onReveal(entry);
+      const detail: Candidate = await readCandidate('candidates',{action:'reveal',entry});
+      setSheetCandidate(previous=>previous?.entry===entry ? detail : previous);
+      onPatch([entry],detail);
+    },
     onError,
+    onInvite: async () => {
+      try {
+        const result: {link:string;invite:Candidate['invite']} = await readCandidate('candidates',{action:'invite',entry:c.entry});
+        onPatch([c.entry],{invite:result.invite});
+        setSheetCandidate(previous=>previous?.entry===c.entry ? {...previous,invite:result.invite} : previous);
+        setComposer({entries:[c.entry],template:'received',channel:c.email?'email':candidatePhone(c.phone)?'whatsapp':'copy',message:cvBaseInvitation(c.name,companyName,result.link)});
+      } catch(e) { onError(e instanceof Error?e.message:'მოწვევა ვერ შეიქმნა.'); }
+    },
     onCompose: (channel: Channel, template: TemplateKey = 'received') =>
       setComposer({ entries: [c.entry], template, channel }),
   });
@@ -408,6 +430,7 @@ export function CandidatesView({
             composer.entries.includes(c.entry),
           )}
           companyName={companyName}
+          initialMessage={composer.message}
           initialTemplate={composer.template}
           initialChannel={composer.channel}
           onClose={() => setComposer(null)}
@@ -415,7 +438,7 @@ export function CandidatesView({
       )}
       {undo && !composer && (
         <div className="cc-undo" role="status">
-          <span>{undo.label}</span>
+          <span>{undo.rejection ? 'უარი —' : undo.label}</span>
           {undo.rejection && (
             <button
               type="button"
@@ -427,7 +450,7 @@ export function CandidatesView({
                 })
               }
             >
-               გავუგზავნოთ უარის წერილი? </button>
+               წერილის გაგზავნა </button>
           )}
           <button type="button" onClick={() => void revert()}>
             <Undo2 size={14} />
@@ -448,7 +471,7 @@ export function CandidatesView({
     return (
       <div className="cc cc--sheet-only">
         <Sheet
-          open={!!current}
+          open={!!selected}
           onOpenChange={(o) => {
             if (!o) onSelect(null);
           }}
@@ -458,6 +481,7 @@ export function CandidatesView({
             <SheetDescription className="sr-only">
               კანდიდატის დეტალები
             </SheetDescription>
+            {!current && <p role="status">იტვირთება…</p>}
             {current && (
               <Detail key={current.entry} {...detailProps(current)} onOpen={onSelect} />
             )}
@@ -488,15 +512,14 @@ export function CandidatesView({
             </button>
           )}
           {candidates.length > 0 && (<>
-          <button
-            type="button"
-            className={`cp-btn ${onAdd ? 'cp-btn--ghost' : !peek && !composer && !picked.length && (view !== 'list' || !current || !nextStage(current.stage)) ? 'cp-btn--primary' : 'cp-btn--ghost'}`}
-            disabled={!visible.length}
-            onClick={() => exportCandidates(visible)}
-          >
-            <Download size={15} />
-            CSV
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="cp-icon-btn" aria-label="მეტი მოქმედება"><MoreHorizontal size={18} /></DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem disabled={!visible.length} onClick={() => exportCandidates(picked.length ? candidates.filter((c) => picked.includes(c.entry)) : visible)}>
+                <Download size={15} />ჩამოტვირთვა ცხრილად (CSV)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <label className="cp-search cc-search">
             <Search size={15} />
             <input
@@ -529,22 +552,6 @@ export function CandidatesView({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <button
-            type="button"
-            className="cp-btn cp-btn--ghost cc-matching-filter"
-            aria-pressed={onlyMatching}
-            onClick={() => setOnlyMatching((value) => !value)}
-          >
-             ემთხვევა მოთხოვნებს </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="cp-btn cp-btn--ghost" aria-label="წყარო">
-              {source === 'all' ? 'წყარო' : source === 'applied' ? 'ვაკანსიაზე გამოგზავნილი' : source === 'upload' ? 'თქვენ მიერ ატვირთული' : 'CV ყუთი'}
-              <ChevronDown size={14} aria-hidden="true" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {Object.entries({ all: 'ყველა წყარო', applied: 'ვაკანსიაზე გამოგზავნილი', upload: 'თქვენ მიერ ატვირთული', cv_box: 'CV ყუთი' }).map(([key, label]) => <DropdownMenuItem key={key} onClick={() => setSource(key)}>{label}</DropdownMenuItem>)}
-            </DropdownMenuContent>
-          </DropdownMenu>
           <div className="cc-switch" role="group" aria-label="ხედი">
             <button
               type="button"
@@ -560,7 +567,6 @@ export function CandidatesView({
             >
               <Columns3 size={15} />
                დაფა </button>
-            {wide && <button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}><Table2 size={15} />ცხრილი</button>}
           </div>
           </div>
           </>)}
@@ -572,39 +578,12 @@ export function CandidatesView({
       ) : !candidates.length ? (
         <div className="cp-empty cc-start">
           <h2>ჯერ კანდიდატი არ გყავთ</h2>
-          <p>კანდიდატი აქ სამი გზით ჩნდება:</p>
-          <ol className="cc-start-ways">
-            <li>
-              <Briefcase size={20} />
-              <strong>ვაკანსიაზე განაცხადი</strong>
-              <span>ვაკანსიაზე გამოგზავნილი CV აქ თავისით შემოვა.</span>
-              {canEdit && onGo && (
-                <button type="button" className="cp-btn cp-btn--secondary" onClick={() => onGo('job')}>
-                  {jobs.length ? 'ვაკანსიების ნახვა' : 'ვაკანსიის დამატება'}
-                </button>
-              )}
-            </li>
-            <li>
-              <Database size={20} />
-              <strong>JOBX-ის CV ბაზა</strong>
-              <span>მოძებნეთ ადამიანი და დაამატეთ ეტაპზე.</span>
-              {onGo && (
-                <button type="button" className="cp-btn cp-btn--secondary" onClick={() => onGo('talent')}>
-                  CV ბაზის გახსნა
-                </button>
-              )}
-            </li>
-            <li>
-              <Upload size={20} />
-              <strong>საკუთარი CV</strong>
-              <span>ფოსტით ან სხვაგან მიღებული CV ატვირთეთ.</span>
-              {canEdit && onAdd && (
-                <button type="button" className="cp-btn cp-btn--primary" onClick={onAdd}>
-                  CV-ის ატვირთვა
-                </button>
-              )}
-            </li>
-          </ol>
+          <p>ვაკანსიაზე გამოგზავნილი რეზიუმეები აქ გამოჩნდება.</p>
+          {canEdit && onGo && <button type="button" className="cp-btn cp-btn--primary" onClick={() => onGo('job')}>ვაკანსიის დამატება</button>}
+          <div className="cc-message-actions">
+            {onGo && <button className="cc-edit-link" onClick={() => onGo('talent')}>CV ბაზის გახსნა</button>}
+            {canEdit && onAdd && <button className="cc-edit-link" onClick={onAdd}>CV-ის ატვირთვა</button>}
+          </div>
         </div>
       ) : view === 'board' ? (
         <>
@@ -629,38 +608,13 @@ export function CandidatesView({
             onPick={setStage}
             onDrop={dropOn}
           />
-          {view === 'table' ? (
-            <div className="cc-table-wrap">
-              <table className="cc-table">
-                <thead><tr>
-                  {canEdit && <th className="cc-table-check" aria-label="მონიშვნა" />}
-                  <th>სახელი</th><th>ვაკანსია</th>
-                  <th aria-sort={sort.key === 'stage' ? (sort.ascending ? 'ascending' : 'descending') : 'none'}><button onClick={() => toggleSort('stage')}>ეტაპი {sort.key === 'stage' ? sort.ascending ? '↑' : '↓' : ''}</button></th>
-                  <th>შეფასება</th><th>წყარო</th>
-                  <th aria-sort={sort.key === 'date' ? (sort.ascending ? 'ascending' : 'descending') : 'none'}><button onClick={() => toggleSort('date')}>თარიღი {sort.key === 'date' ? sort.ascending ? '↑' : '↓' : ''}</button></th>
-                  <th>შენიშვნები</th>
-                </tr></thead>
-                <tbody>{visible.map((c) => <tr key={c.entry} onClick={() => { onSelect(c.entry); setView('list'); }}>
-                  {canEdit && <td onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={picked.includes(c.entry)} aria-label={`მონიშვნა: ${c.name}`} onChange={() => togglePick(c.entry)} /></td>}
-                  <td><button className="cc-table-name" onClick={(event) => { event.stopPropagation(); onSelect(c.entry); setView('list'); }}>{c.name}</button>
-                    <span className="cc-table-contact">
-                      {c.email && <a href={`mailto:${c.email}`} aria-label={`ელფოსტა: ${c.name}`} onClick={(event) => event.stopPropagation()}><Mail size={14} /><span>ელფოსტა</span></a>}
-                      {c.phone && <a href={`tel:${candidatePhone(c.phone)}`} aria-label={`დარეკვა: ${c.name}`} onClick={(event) => event.stopPropagation()}><Phone size={14} /><span>დარეკვა</span></a>}
-                    </span>
-                  </td>
-                  <td>{c.jobTitle || '—'}</td><td><StatusMark kind={c.stage} data-stage={c.stage}>{stageLabels[c.stage]}</StatusMark></td>
-                  <td>{c.rating ?? '—'}</td><td>{sourceLabel(c)}</td><td><time dateTime={c.appliedAt}>{formatDate(c.appliedAt)}</time></td><td>{c.notes}</td>
-                </tr>)}</tbody>
-              </table>
-              {!visible.length && <div className="cc-empty">ამ ფილტრით კანდიდატი არ არის.{clearFiltersButton}</div>}
-            </div>
-          ) : <div className="cc-split">
+          <div className="cc-split">
             <div className="cc-list-wrap">
               {!visible.length ? (
                 <div className="cc-empty">
                   {stage === 'all'
                     ? 'ამ ფილტრით კანდიდატი არ არის.'
-                    : `„${stageLabels[stage]}“ ეტაპზე ჯერ არავინაა.${canEdit ? ' გადმოათრიეთ კანდიდატი ზედა ზოლზე.' : ''}`}
+                    : `„${stageLabels[stage]}“ ეტაპზე ჯერ არავინაა.`}
                   {clearFiltersButton}
                 </div>
               ) : (
@@ -673,8 +627,6 @@ export function CandidatesView({
                       aria-current={c.entry === selected || undefined}
                       data-unseen={!c.seen || undefined}
                       data-dragged={dragging?.includes(c.entry) || undefined}
-                      draggable={canEdit}
-                      onDragStart={(e) => startDrag(e, c.entry)}
                     >
                       {canEdit && (
                         <input
@@ -713,30 +665,14 @@ export function CandidatesView({
                             <StatusMark kind={c.stage} data-stage={c.stage}>
                               {stageLabels[c.stage]}
                             </StatusMark>
-                            <InterviewBadge candidate={c} />
-                            <CandidateSignals candidate={c} />
-                            {c.rating && (
-                              <span className="cc-mini-rating">
-                                <Star size={11} /> {c.rating}
-                              </span>
-                            )}
-                            {c.notes > 0 && (
-                              <span className="cc-mini-notes">
-                                <MessageSquare size={11} /> {c.notes}
-                              </span>
-                            )}
                           </span>
                         </span>
                       </a>
-                      {canEdit && <GripVertical size={14} className="cc-grip" aria-hidden />}
                     </li>
                   ))}
                 </ul>
               )}
-              <p className="cc-keys">
-                <kbd>J</kbd>
-                <kbd>K</kbd>  კანდიდატები {canEdit && <> · <kbd>→</kbd>  შემდეგი ეტაპი · <kbd>X</kbd>  უარი</>}
-              </p>
+
             </div>
             {current ? (
               <Detail
@@ -748,11 +684,11 @@ export function CandidatesView({
             ) : (
               <div className="cc-detail cc-detail--empty">
                 <p>
-                   აირჩიეთ კანდიდატი სიიდან. {canEdit && " ეტაპის შესაცვლელად კანდიდატი ზედა ზოლზე გადაათრიეთ."}
+                   აირჩიეთ კანდიდატი სიიდან.
                 </p>
               </div>
             )}
-          </div>}
+          </div>
         </>
       )}
 
@@ -783,13 +719,11 @@ export function CandidatesView({
                     aria-label="უარი"
                     onClick={() => {
                       void move(picked, 'rejected');
-                      setPicked([]);
                     }}
                   >
                     <X size={16} /><span className="cc-bulk-label">უარი</span>
                   </button>
                   <button type="button" className="cp-btn cp-btn--ghost cp-btn--sm" aria-label="წერილი" onClick={() => { if (picked.length > 200) { onError('ერთდროულად მაქსიმუმ 200 კანდიდატი მონიშნეთ.'); return; } setComposer({ entries: picked, template: 'received', channel: 'email' }); }}><Mail size={16} /><span className="cc-bulk-label">წერილი</span></button>
-                  <button type="button" className="cp-btn cp-btn--ghost cp-btn--sm" aria-label="ექსპორტი" onClick={() => exportCandidates(candidates.filter((c) => picked.includes(c.entry)))}><Download size={16} /><span className="cc-bulk-label">ექსპორტი</span></button>
                   <button
                     type="button"
                     className="cp-icon-btn"
@@ -883,8 +817,11 @@ function StageFlow({
 }
 
 function Detail({
+  jobs,
+  sheetOnly,
   canEdit,
   onCompose,
+  onInvite,
   onRemoved,
   candidate: c,
   face,
@@ -892,12 +829,16 @@ function Detail({
   onBack,
   onOpen,
   onMove,
+  restoreStage,
   onPatch,
   onReveal,
   onError,
 }: {
+  jobs: CompanyJob[];
+  sheetOnly: boolean;
   canEdit: boolean;
   onCompose: (channel: Channel, template?: TemplateKey) => void;
+  onInvite: () => Promise<void>;
   onRemoved: (entry: string) => void;
   candidate: Candidate;
   face: { name: string; entry: string; photo: boolean };
@@ -905,16 +846,27 @@ function Detail({
   onBack?: () => void;
   onOpen: (entry: string) => void;
   onMove: (stage: CandidateStage) => void;
+  restoreStage: CandidateStage;
   onPatch: (entries: string[], patch: Partial<Candidate>) => void;
   onReveal: (entry: string) => Promise<void>;
   onError: (message: string) => void;
 }) {
+  const [inviting,setInviting]=useState(false);
   const [tab, setTab] = useState<'cv' | 'notes'>('cv');
   // Opening a CV base person shows their CV, contacts included: it is one logged view.
   const hidden = !!c.contactHidden;
   useEffect(() => {
     if (hidden) void onReveal(c.entry);
   }, [c.entry, hidden, onReveal]);
+  const needsProfile = c.source === 'base' && !!c.profile && typeof c.profile.text !== 'string';
+  useEffect(() => {
+    if (!needsProfile || hidden) return;
+    let alive = true;
+    void readCandidate('candidates?detail=' + encodeURIComponent(c.entry))
+      .then((detail: Candidate) => { if (alive) onPatch([c.entry], {profile:detail.profile}); })
+      .catch((error: Error) => { if (alive) onError(error.message || 'CV ვერ ჩაიტვირთა.'); });
+    return () => { alive = false; };
+  }, [c.entry, hidden, needsProfile, onPatch, onError]);
   const [notes, setNotes] = useState<CandidateNote[] | null>(null);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -926,13 +878,13 @@ function Detail({
   const cvUrl = `/api/company/candidates/cv?entry=${encodeURIComponent(c.entry)}`;
   useEffect(() => {
     let live = true;
-    void request('candidates?entry=' + encodeURIComponent(c.entry))
+    void readCandidate('candidates?entry=' + encodeURIComponent(c.entry))
       .then((n) => live && setNotes(n))
       .catch(() => live && setNotes([]));
     return () => {
       live = false;
     };
-  }, [c.entry]);
+  }, [c.entry, c.notes]);
   async function rate(value: number) {
     if (!canEdit) return;
     const next = c.rating === value ? null : value;
@@ -971,34 +923,14 @@ function Detail({
     setCopied(value);
     setTimeout(() => setCopied(''), 1500);
   }
-  const at = pipeline.indexOf(c.stage);
   const next = nextStage(c.stage);
   const rejected = c.stage === 'rejected';
   const years = c.profile?.years;
   const moreItems = (
     <>
-      {c.hasCv && (
-        <>
-          <DropdownMenuItem
-            render={<a href={cvUrl} target="_blank" rel="noopener" />}
-          >
-            <ExternalLink size={15} />
-             CV ახალ ფანჯარაში </DropdownMenuItem>
-          <DropdownMenuItem render={<a href={cvUrl + '&download=1'} />}>
-            <Download size={15} />
-             CV-ის ჩამოტვირთვა </DropdownMenuItem>
-        </>
-      )}
-      {c.email && (
-        <DropdownMenuItem onClick={() => copy(c.email)}>
-          <Copy size={15} />
-           ელფოსტის კოპირება </DropdownMenuItem>
-      )}
-      {c.phone && (
-        <DropdownMenuItem onClick={() => copy(c.phone)}>
-          <Copy size={15} />
-           ტელეფონის კოპირება </DropdownMenuItem>
-      )}
+      {canEdit && prevStage(c.stage) && !rejected && <DropdownMenuItem onClick={() => onMove(prevStage(c.stage)!)}><ArrowLeft size={15} />უკან: {stageLabels[prevStage(c.stage)!]}</DropdownMenuItem>}
+      {canEdit && <DropdownMenuItem onClick={() => setEditing(true)}><Pencil size={15} />მონაცემების შესწორება</DropdownMenuItem>}
+      {(c.email || c.phone) && <DropdownMenuItem onClick={() => copy([c.email, c.phone].filter(Boolean).join(' · '))}><Copy size={15} />საკონტაქტო მონაცემების კოპირება</DropdownMenuItem>}
       {canEdit && ['upload', 'cv_box'].includes(c.source) && (
         <>
           <DropdownMenuSeparator />
@@ -1022,10 +954,13 @@ function Detail({
       <header className="cc-person">
         <Avatar {...face} size="lg" />
         <div>
-          <h2>{c.name}</h2>
+          <div className="cc-name-row">
+            <h2>{c.name}</h2>
+            {sheetOnly && <SaveCandidate candidate={c} canEdit={canEdit} onChange={next=>onPatch([c.entry],{saved:next.saved})}/>}
+          </div>
           <p>
             {[
-              c.profile?.roles[0]?.split(' — ')[0] || c.title,
+              (c.source === 'upload' && c.title) || c.profile?.roles[0]?.split(' — ')[0] || c.title,
               c.profile?.city || c.city,
               years != null
                 ? `${years < 1 ? '<1' : years} წლის გამოცდილება`
@@ -1035,41 +970,30 @@ function Detail({
               .join(' · ')}
           </p>
           <p className="cp-subtle">
-            {c.jobTitle || 'ვაკანსიის გარეშე'} · {timeAgo(c.appliedAt)}
+            {c.jobTitle ? `${c.jobTitle} · ` : ''}{timeAgo(c.appliedAt)}
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 4 }}>
-            {c.email && (
-              <a
-                className="cp-icon-btn"
-                href={`mailto:${c.email}`}
-                title={c.email}
-                aria-label="ელფოსტის გაგზავნა"
-                style={{ minWidth: 44, minHeight: 44 }}
-              >
-                <Mail size={16} /><span>ელფოსტა</span>
-              </a>
-            )}
+          <div className="cc-person-acts">
+            {!c.jobId && <AddToVacancy candidate={c} jobs={jobs} canEdit={canEdit} onAdded={next=>onPatch([c.entry],next)}/>}
             {c.phone && (
               <a
-                className="cp-icon-btn"
+                className="cp-btn cp-btn--secondary cp-btn--sm"
                 href={`tel:${candidatePhone(c.phone)}`}
                 title={c.phone}
-                aria-label="დარეკვა"
-                style={{ minWidth: 44, minHeight: 44 }}
               >
-                <Phone size={16} /><span>დარეკვა</span>
+                <Phone size={15} />დარეკვა
               </a>
             )}
-            {canEdit && (
-              <button
-                type="button"
-                className="cc-edit-link"
-                onClick={() => setEditing(true)}
-              >
-                <Pencil size={13} />
-                 მონაცემების შესწორება </button>
+            {c.source === 'upload' && canEdit && !c.invite?.consentedAt && (
+              <button type="button" className="cp-btn cp-btn--secondary cp-btn--sm" disabled={inviting}
+                onClick={async()=>{setInviting(true);try{await onInvite();}finally{setInviting(false);}}}>
+                <UserPlus size={15} />{inviting?'იქმნება…':'მოწვევა JOBX-ის ბაზაში'}
+              </button>
             )}
           </div>
+          {c.source === 'upload' && c.invite && <p className="cp-subtle cc-invite-state">
+            {c.invite.withdrawnAt?'თანხმობა გაუქმებულია':c.invite.consentedAt?'თანხმობა მიღებულია '+new Date(c.invite.consentedAt).toLocaleDateString('ka-GE'):'მოწვევა გაგზავნილია — მოქმედებს '+untilDate(c.invite.expiresAt)}
+            
+          </p>}
         </div>
         {canEdit ? (
           <div className="cc-rating" role="group" aria-label="შეფასება">
@@ -1102,10 +1026,10 @@ function Detail({
             <button
               type="button"
               className="cp-btn"
-              onClick={() => onMove('review')}
+              onClick={() => onMove(restoreStage)}
             >
               <RotateCcw size={15} />
-               აღდგენა </button>
+               აღდგენა: {stageLabels[restoreStage]} </button>
           </>
         ) : (
           <span className="cc-stagebtn" data-stage={next ?? 'hired'}>
@@ -1123,28 +1047,7 @@ function Detail({
               <StatusMark kind="hired" data-stage="hired">
                  აყვანილია </StatusMark>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className="cp-btn cp-btn--ghost cc-stagebtn-more"
-                aria-label="სხვა ეტაპზე გადაყვანა"
-              >
-                <ChevronDown size={15} /><span>ეტაპი</span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-52">
-                {pipeline.map((s) => (
-                  <DropdownMenuItem
-                    key={s}
-                    disabled={s === c.stage}
-                    onClick={() => onMove(s)}
-                  >
-                    <StatusMark kind={s} data-stage={s}>{stageLabels[s]}</StatusMark>
-                    {s === c.stage && (
-                      <span className="cc-menu-note">ახლა</span>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+
           </span>
         )}
         {canEdit && !rejected && (
@@ -1221,16 +1124,6 @@ function Detail({
           <Check size={14} />  დაკოპირდა: {copied}
         </p>
       )}
-      <div className="cc-progress" aria-hidden>
-        {pipeline.map((s, i) => (
-          <i
-            key={s}
-            data-stage={s}
-            data-done={!rejected && i <= at ? '' : undefined}
-          />
-        ))}
-      </div>
-
       <ProfileEditor
         open={canEdit && editing}
         candidate={c}
@@ -1401,11 +1294,13 @@ function ProfileEditor({
   open: boolean;
   candidate: Candidate;
   onClose: () => void;
-  onSaved: (profile: CandidateProfile, contact?: { email: string; phone: string }) => void;
+  onSaved: (profile: CandidateProfile, contact?: { email: string; phone: string; name: string; title: string }) => void;
   onError: (message: string) => void;
 }) {
   const p = c.profile;
   const canEditContact = c.source === 'upload' && !c.contactHidden;
+  const [name, setName] = useState('');
+  const [title, setTitle] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [years, setYears] = useState('');
@@ -1425,6 +1320,8 @@ function ProfileEditor({
     setEmailError('');
     setPhoneError('');
     setSaveError('');
+    setName(c.name);
+    setTitle(c.title);
     setEmail(c.email);
     setPhone(c.phone);
     setYears(p?.years != null ? String(p.years) : '');
@@ -1433,10 +1330,11 @@ function ProfileEditor({
     setSkills((p?.skills ?? []).join(', '));
     setRole(p?.roles[0] ?? '');
     setLanguages(p?.languages.length ? p.languages : []);
-  }, [open, p, c.city, c.email, c.phone]);
+  }, [open, p, c.city, c.email, c.phone, c.name, c.title]);
   async function save() {
-    const contact = canEditContact ? { email: email.trim(), phone: phone.trim() } : undefined;
+    const contact = canEditContact ? { name:name.trim(), title:title.trim(), email: email.trim(), phone: phone.trim() } : undefined;
     setSaveError('');
+    if (canEditContact && !name.trim()) {setSaveError('მიუთითეთ სახელი და გვარი.');return;}
     const badEmail = contact?.email && !validCandidateEmail(contact.email) ? 'ელფოსტა არასწორია.' : '';
     const badPhone = contact?.phone && !validCandidatePhone(contact.phone) ? 'ტელეფონი უნდა შეიცავდეს მინიმუმ 6 ციფრს.' : '';
     setEmailError(badEmail);
@@ -1473,6 +1371,7 @@ function ProfileEditor({
         ...p,
         ...contact,
         origin: 'edited',
+        ...(contact ? {parse:{confidence:p?.parse?.confidence ?? 1,reason:p?.parse?.reason ?? null,nameMissing:false}} : {}),
         education: p?.education ?? [],
         text: p?.text ?? '',
         years: edit.years ?? null,
@@ -1495,6 +1394,10 @@ function ProfileEditor({
         <DialogDescription>
            შეგიძლიათ ამოკითხული მონაცემების შესწორება. CV ფაილი არ იცვლება. </DialogDescription>
         <div className="cp-fields">
+          {canEditContact && <div className="company-form-grid">
+            <label>სახელი და გვარი<input className="cp-input" required maxLength={120} value={name} onChange={e=>setName(e.target.value)}/></label>
+            <label>პოზიცია<input className="cp-input" maxLength={120} value={title} onChange={e=>setTitle(e.target.value)}/></label>
+          </div>}
           {canEditContact && <div className="company-form-grid">
             <label>ელფოსტა<input ref={emailRef} className="cp-input" type="email" value={email} maxLength={254} aria-invalid={!!emailError} aria-describedby={emailError ? 'cc-edit-email-error' : undefined} onChange={(e) => { setEmail(e.target.value); setEmailError(''); }} />
               {emailError && <span id="cc-edit-email-error" className="cc-field-error" role="alert">{emailError}</span>}
@@ -1668,29 +1571,9 @@ function Board({
 }) {
   const [over, setOver] = useState<CandidateStage | null>(null);
   const board = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ start: true, end: false });
-  useEffect(() => {
-    const element = board.current;
-    if (!element) return;
-    const update = () => setEdges({
-      start: element.scrollLeft <= 1,
-      end: element.scrollLeft + element.clientWidth >= element.scrollWidth - 1,
-    });
-    update();
-    element.addEventListener('scroll', update, { passive: true });
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-    return () => { element.removeEventListener('scroll', update); observer.disconnect(); };
-  }, []);
   return (
     <div className="cc-board-wrap">
-      <div className="cc-board-navigation" aria-label="დაფაზე გადაადგილება">
-        <span>შერჩევის ეტაპები</span>
-        <button type="button" className="cp-icon-btn" aria-label="დაფის მარცხნივ გადახვევა" disabled={edges.start}
-          onClick={() => board.current?.scrollBy({ left: -300 })}><ArrowLeft size={16} /><span>მარცხნივ</span></button>
-        <button type="button" className="cp-icon-btn" aria-label="დაფის მარჯვნივ გადახვევა" disabled={edges.end}
-          onClick={() => board.current?.scrollBy({ left: 300 })}><ArrowRight size={16} /><span>მარჯვნივ</span></button>
-      </div>
+      <div className="cc-board-navigation"><span>შერჩევის ეტაპები</span></div>
       <div className="cc-board" ref={board} tabIndex={0} role="region" aria-label="კანდიდატები ეტაპების მიხედვით">
       {candidateStages.map((s) => {
         const items = candidates.filter((c) => c.stage === s);
@@ -1815,27 +1698,27 @@ function messageLink(
   return '';
 }
 
-function MessageComposer({ candidates, companyName, initialTemplate, initialChannel, onClose }: {
+function MessageComposer({ candidates, companyName, initialTemplate, initialChannel, initialMessage, onClose }: {
+  initialMessage?: MessageTemplate;
   candidates: Candidate[]; companyName: string; initialTemplate: TemplateKey; initialChannel: Channel; onClose: () => void;
 }) {
-  const [templates, setTemplates] = useState<MessageTemplates>(defaultTemplates);
   const [template, setTemplate] = useState(initialTemplate);
-  const [value, setValue] = useState(defaultTemplates[initialTemplate]);
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState('');
-  const [preview, setPreview] = useState(false);
+  const [edits, setEdits] = useState<Record<string, MessageTemplate>>({});
   const [entry, setEntry] = useState(candidates[0]?.entry ?? '');
-  const [channel, setChannel] = useState(initialChannel);
+  const [channel, setChannel] = useState<Channel>(candidates.length > 1 ? 'email' : initialChannel);
   const [status, setStatus] = useState('');
-  useEffect(() => { let live = true; request('message-templates').then((data: MessageTemplates) => { if (live) { setTemplates(data); setValue(data[initialTemplate]); setLoaded(true); } }).catch((e) => live && setError(e.message)); return () => { live = false; }; }, [initialTemplate]);
   const c = candidates.find((v) => v.entry === entry) ?? candidates[0];
   if (!c) return null;
   const bulk = candidates.length > 1;
   const recipients = candidates.filter((v) => v.email.trim());
   const tooMany = candidates.length > 200;
-  const message = render(value, messageData(c, companyName));
+  const message = edits[c.entry] ?? initialMessage ?? render(defaultTemplates[template], messageData(c, companyName));
+  const changeMessage = (field: keyof MessageTemplate, value: string) => {
+    setEdits(previous => ({ ...previous, [c.entry]: { ...message, [field]: value } }));
+    setStatus('');
+  };
   const unavailable = channel === 'email' ? !c.email : channel === 'copy' ? false : !candidatePhone(c.phone);
-  const ready = loaded && validTemplate(value) && !tooMany;
+  const ready = validTemplate(message) && !tooMany;
   async function copy() {
     try { await navigator.clipboard.writeText(message.body); setStatus('ტექსტი დაკოპირებულია.'); return true; }
     catch { setStatus('კოპირება ვერ მოხერხდა. მონიშნეთ ტექსტი და დააკოპირეთ.'); return false; }
@@ -1844,19 +1727,20 @@ function MessageComposer({ candidates, companyName, initialTemplate, initialChan
     <DialogContent className="cp-dialog cc-compose">
       <DialogTitle>{bulk ? 'წერილი კანდიდატებს' : 'შეტყობინება კანდიდატს'}</DialogTitle>
       <DialogDescription>შეამოწმეთ ტექსტი. გაგზავნას არჩეულ აპში თავად დაადასტურებთ.</DialogDescription>
-      {error && <p role="alert">{error}</p>}
-      {bulk && <><p>მიმღებები: {recipients.length}  · ელფოსტა არ აქვს: {candidates.length - recipients.length}</p><p className="cp-subtle">თითოეულ კანდიდატს საკუთარი სახელი და ვაკანსია ჩაესმება</p><p className="cp-subtle">წერილები ელფოსტის პროგრამაში ცალ-ცალკე გახსენით.</p></>}
+      {bulk && <><p>მიმღებები: {recipients.length}  · ელფოსტა არ აქვს: {candidates.length - recipients.length}</p><p className="cp-subtle">თითოეულს თავისი სახელით და ვაკანსიით ეწერება. წერილები სათითაოდ იხსნება.</p></>}
       {tooMany && <p role="alert">ერთდროულად მაქსიმუმ 200 კანდიდატი მონიშნეთ.</p>}
-      <label>შაბლონი<SelectField label="შაბლონი" placeholder="აირჩიეთ" value={template} disabled={!loaded} onChange={(next) => { const key = next as TemplateKey; setTemplate(key); setValue(templates[key]); setStatus(''); }} options={templateKinds.map((key) => ({ value: key, label: templateLabels[key] }))} /></label>
-      <div className="cmt-actions" role="group" aria-label="წერილის რეჟიმი"><button type="button" className="cp-btn cp-btn--ghost" aria-pressed={!preview} onClick={() => setPreview(false)}>რედაქტირება</button><button type="button" className="cp-btn cp-btn--ghost" aria-pressed={preview} onClick={() => setPreview(true)}>გადახედვა</button></div>
-      {preview ? <><p className="cp-subtle">{candidates[0].name}</p><TemplatePreview value={render(value, messageData(candidates[0], companyName))} /></> : <TemplateFields value={value} onChange={setValue} disabled={!loaded} />}
+      {!initialMessage && <label>წერილის ტიპი<SelectField label="წერილის ტიპი" placeholder="აირჩიეთ" value={template} onChange={(next) => { setTemplate(next as TemplateKey); setEdits({}); setStatus(''); }} options={templateKinds.map((key) => ({ value: key, label: templateLabels[key] }))} /></label>}
+      <div className="cc-compose-fields">
+        {channel === 'email' && <label>წერილის სათაური<input className="cp-input" value={message.subject} maxLength={templateLimits.subject} onChange={e => changeMessage('subject', e.target.value)} /></label>}
+        <label>ტექსტი<textarea className="cp-input" rows={8} value={message.body} maxLength={templateLimits.body} onChange={e => changeMessage('body', e.target.value)} /></label>
+      </div>
       {bulk && <label>კანდიდატი<select aria-label="კანდიდატი" className="cp-input" value={entry} onChange={(e) => { setEntry(e.target.value); setStatus(''); }}>{candidates.map((v) => <option key={v.entry} value={v.entry}>{v.name}{!v.email ? ' — ელფოსტა არ აქვს' : ''}</option>)}</select></label>}
       {!bulk && <label>არხი<select aria-label="არხი" className="cp-input" value={channel} onChange={(e) => setChannel(e.target.value as Channel)}><option value="email" disabled={!c.email}>ელფოსტა</option><option value="whatsapp" disabled={!candidatePhone(c.phone)}>WhatsApp</option><option value="viber" disabled={!candidatePhone(c.phone)}>Viber</option><option value="copy">ტექსტის კოპირება</option></select></label>}
       {channel === 'viber' && <p className="cp-subtle">ტექსტს დავაკოპირებთ და Viber-ს გავხსნით. ჩასვით ტექსტი საუბარში.</p>}
       {unavailable && <p role="alert">ამ არხისთვის კანდიდატის საკონტაქტო ინფორმაცია არ არის. აირჩიეთ სხვა არხი ან დააკოპირეთ ტექსტი.</p>}
       <p role="status">{status}</p>
       <div className="cc-message-actions"><button type="button" className="cp-btn cp-btn--ghost" disabled={!ready} onClick={() => void copy()}><Copy size={14} />კოპირება</button>
-        {channel !== 'copy' && !unavailable && ready && <a className="cp-btn cp-btn--primary" href={messageLink(c, channel, message.body, message.subject)} target={channel === 'whatsapp' ? '_blank' : undefined} rel="noopener noreferrer" onClick={channel === 'viber' ? async (e) => { e.preventDefault(); if (await copy()) window.location.href = messageLink(c, 'viber', message.body, message.subject); } : undefined}>გახსნა: {channel === 'email' ? 'ელფოსტა' : channel === 'whatsapp' ? 'WhatsApp' : 'Viber'}</a>}
+        {channel !== 'copy' && !unavailable && ready && <a className="cp-btn cp-btn--primary" href={messageLink(c, channel, message.body, message.subject)} target={channel === 'whatsapp' ? '_blank' : undefined} rel="noopener noreferrer" onClick={channel === 'viber' ? async (e) => { e.preventDefault(); if (await copy()) window.location.href = messageLink(c, 'viber', message.body, message.subject); } : undefined}>{channel === 'email' ? 'ელფოსტაში გახსნა' : channel === 'whatsapp' ? 'WhatsApp-ში გახსნა' : 'Viber-ში გახსნა'}</a>}
         <button type="button" className="cp-btn cp-btn--ghost" onClick={onClose}>დახურვა</button>
       </div>
     </DialogContent>

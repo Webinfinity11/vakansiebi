@@ -714,10 +714,29 @@ textarea.cp-input {
 .cp-logo-field label {
   flex: 1;
 }
+.cp-logo-field {
+  align-items: center;
+}
+.cp-logo-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cp-ink);
+  overflow-wrap: anywhere;
+}
 .cp-settings-foot {
   display: flex;
   justify-content: flex-end;
   padding: 20px 0;
+}
+.cp-account-line {
+  margin: 0 0 28px;
+  font-size: 14px;
+  color: var(--cp-ink-3);
+  overflow-wrap: anywhere;
+}
+.cp-account-line strong {
+  font-weight: 500;
+  color: var(--cp-ink);
 }
 .cp-facts {
   display: flex;
@@ -3937,8 +3956,6 @@ textarea.cp-input {
 .cp-nav :is(button, a)[aria-current='page']::before { content: ''; position: absolute; left: -16px; width: 4px; height: 24px; border-radius: 0 4px 4px 0; background: #91b9ff; }
 .cp-nav :is(button, a)[aria-current='page'][data-nav] svg { color: #fff; background: none; }
 .cp-nav :is(button, a) > span { padding: 1px 7px; border-radius: 6px; background: #ffffff22; color: #fff; }
-.cp-nav :is(button, a)[data-nav='profile'] { margin-top: 16px; }
-.cp-nav :is(button, a)[data-nav='profile']::after { content: ''; position: absolute; left: 12px; right: 12px; top: -12px; height: 1px; background: #ffffff26; }
 
 .cp-side :is(button,a):focus-visible { outline: 3px solid #a9c6ff; outline-offset: 2px; }
 .cp-main { min-width: 0; max-width: 1600px; padding: 28px 32px 80px; }
@@ -4038,9 +4055,8 @@ textarea.cp-input {
 
   .cp-nav { position: fixed; inset: auto 0 0; z-index: 40; height: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom)); padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); margin: 0; background: #112653; gap: 6px; overflow-x: auto; flex-wrap: nowrap; box-shadow: 0 -4px 16px #0d1b4420; }
   .cp-nav :is(button, a)[data-nav] { display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 5px 10px; min-width: 84px; min-height: 0; border: 0; border-radius: 8px; font-size: 12px; }
-  .cp-nav :is(button, a)[data-nav='profile'] { margin: 0; }
   .cp-nav :is(button, a)[aria-current='page'] { background: #ffffff22 !important; }
-  .cp-nav :is(button, a)::before, .cp-nav :is(button, a)[data-nav='profile']::after { display: none; }
+  .cp-nav :is(button, a)::before { display: none; }
   .cp-nav :is(button, a) > span { position: absolute; top: 0; right: 2px; font-size: 12px; padding: 0 4px; }
   .cp-main { padding: 24px 16px calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 28px); }
   .cp-toast { bottom: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 12px); }
@@ -4484,7 +4500,6 @@ fieldset.cp-fields {
   .cp[data-nav-folded] .cp-nav :is(button, a) > span {
     position: absolute; top: 4px; right: 4px; padding: 0 5px; font-size: 10px; line-height: 16px;
   }
-  .cp[data-nav-folded] .cp-nav :is(button, a)[data-nav='profile']::after { left: 8px; right: 8px; }
   .cp[data-nav-folded] .cp-side-foot { flex-direction: column; align-items: center; padding-inline: 0; }
   .cp[data-nav-folded] .cp-side-foot .cp-side-link { flex: none; width: 100%; justify-content: center; min-height: 36px; }
 }

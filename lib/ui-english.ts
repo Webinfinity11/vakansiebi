@@ -997,8 +997,8 @@ export const englishUi: Readonly<Record<string, string>> = {
   'ყველა ვაკანსია და განაცხადი ერთ სივრცეშია. ანგარიში ადმინისტრატორის დამტკიცების შემდეგ ჩაირთვება.':
     'All your jobs and applications in one place. The account is activated after an administrator approves it.',
   'კანდიდატების დაფა': 'Candidate board',
-  'განაცხადები ეტაპების მიხედვით: ახალი, განხილული, გასაუბრება, შეთავაზება.':
-    'Applications by stage: new, in review, shortlisted.',
+  'კანდიდატები ეტაპების მიხედვით: ახალი, გასაუბრება, შეთავაზება':
+    'Candidates by stage: new, interview, offer',
   'CV ბაზა': 'CV database',
   'კანდიდატების რეზიუმეები ერთ ადგილას, ძიებითა და ფილტრებით.':
     'Candidate CVs in one place, with search and filters.',

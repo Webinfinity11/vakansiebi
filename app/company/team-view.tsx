@@ -69,7 +69,6 @@ export function TeamView() {
       <header className="cp-head">
         <div className="cp-head-title">
           <h1>გუნდი</h1>
-          <p>მოიწვიეთ თანამშრომლები და მართეთ მათი წვდომა.</p>
         </div>
       </header>
       {error && (
@@ -80,10 +79,9 @@ export function TeamView() {
       {notice && <p role="status">{notice}</p>}
 
       {!loaded && !error && <p role="status">იტვირთება…</p>}
-      {loaded && <>
+      {loaded && data.members.length > 0 && <>
         <section className="cp-team-section" aria-labelledby="team-members-title">
           <h2 id="team-members-title">გუნდის წევრები</h2>
-          {data.members.length === 0 ? <div className="cp-team-empty"><p>გუნდში წევრები ჯერ არ არიან.</p><a className="cp-btn cp-btn--ghost" href="#team-invite-role">წევრის მოწვევა</a></div> : (
             <ul className="cp-team-list">
               {data.members.map((m) => (
                 <li key={m.id} className="cp-team-row" data-member-id={m.id}>
@@ -92,7 +90,7 @@ export function TeamView() {
                     {m.name && <p>{m.email}</p>}
                   </div>
                   <div className="cp-team-status">
-                    <StatusMark kind={m.role} className="cp-team-badge">{labels[m.role]}</StatusMark>
+                    {(m.role === 'owner' || !m.enabled) && <span>{labels[m.role]}</span>}
                     {!m.enabled && <span className="cp-team-muted">წვდომა გაუქმებულია</span>}
                   </div>
                   <div className="cp-team-actions">
@@ -114,14 +112,12 @@ export function TeamView() {
                 </li>
               ))}
             </ul>
-          )}
         </section>
       </>}
       <form className="cp-settings cp-team-invite" onSubmit={invite}>
         <div className="cp-settings-row">
           <div className="cp-settings-label">
             <h2>წევრის მოწვევა</h2>
-            <p>მოწვევის ბმული მოქმედებს 72 საათის განმავლობაში.</p>
           </div>
           <div className="cp-fields">
             <label>
@@ -137,18 +133,16 @@ export function TeamView() {
               <label htmlFor="team-invite-role">როლი</label>
               <SelectField id="team-invite-role" name="role" value={inviteRole}
                 onChange={setInviteRole} options={roleOptions} placeholder="აირჩიეთ" disabled={busy} />
+              <small>რეკრუტერი მართავს ვაკანსიებსა და კანდიდატებს; მნახველი მხოლოდ ნახულობს.</small>
             </div>
-            <p>
-               რეკრუტერი მართავს ვაკანსიებსა და კანდიდატებს. მნახველს მხოლოდ მათი ნახვა შეუძლია. </p>
             <button className="cp-btn cp-btn--primary" disabled={busy}>
                მოწვევის გაგზავნა </button>
           </div>
         </div>
       </form>
-      {loaded && <>
+      {loaded && data.invitations.length > 0 && <>
         <section className="cp-team-section" aria-labelledby="team-invitations-title">
           <h2 id="team-invitations-title">მოლოდინში მყოფი მოწვევები</h2>
-          {data.invitations.length === 0 ? <div className="cp-team-empty"><p>მოლოდინში მყოფი მოწვევები არ გაქვთ.</p><a className="cp-btn cp-btn--ghost" href="#team-invite-role">წევრის მოწვევა</a></div> : (
             <ul className="cp-team-list">
               {data.invitations.map((i) => (
                 <li className="cp-team-row" key={i.id} data-invitation-id={i.id}>
@@ -164,7 +158,6 @@ export function TeamView() {
                 </li>
               ))}
             </ul>
-          )}
         </section>
       </>}
     </>

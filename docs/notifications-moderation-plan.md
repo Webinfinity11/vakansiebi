@@ -1,5 +1,7 @@
 # შეტყობინებები, უარყოფის მიზეზი, სწრაფი მოდერაცია, სანდო კომპანიები — გეგმა
 
+2026-11-26: კანდიდატების ავტოპასუხი (`candidate_ack`) სრულად ამოღებულია: აღარ იგეგმება და რიგში დარჩენილი წერილებიც აღარ იგზავნება. შესაბამისი DB სვეტები და kind CHECK უცვლელია.
+
 2026-11-16. სამი ბლოკი: A (HR-ის შეტყობინებები), B (უარყოფის მიზეზი და სწრაფი
 მოდერაცია), C (ადმინის შეტყობინება და სანდო კომპანიები). ხარჯი არ ემატება.
 
@@ -104,9 +106,7 @@ CREATE TABLE notification_state (key text PRIMARY KEY, value jsonb NOT NULL, upd
    API: `app/api/company/jobs/extend/route.ts` (owner, recruiter).
 3. **„განაცხადი მიღებულია“.** `auto_reply=true`-ისას, ჩართვის მომენტიდან
    (`auto_reply_since`) მოსულ განაცხადებზე, რომლებსაც ელფოსტა აქვს: `candidate_ack`,
-   dedupe `ack:<company>:<entry>`. ტექსტი: კომპანიის შაბლონი (`render` —
-   `lib/company-message-templates.ts`), ნაგულისხმევად `received`. კანდიდატთან „შენ“ ფორმა
-   JOBX-ის ჩარჩოში; შაბლონის ტექსტი კომპანიისაა.
+   dedupe `ack:<company>:<entry>`. ტექსტი ყოველთვის ჩაშენებული `defaultTemplates.received`-ია (`lib/company-message-templates.ts`); კომპანიის შენახული შაბლონები აღარ გამოიყენება.
    პარამეტრები: `GET/POST app/api/company/notifications/route.ts` (ცვლის owner),
    UI: `app/company/notification-settings.tsx` ანგარიშის პარამეტრებში.
 

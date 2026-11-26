@@ -5,8 +5,8 @@ import { db } from '../lib/server/db';
 import { runNotificationJobs, digestDue, notificationDay } from '../lib/server/notification-jobs';
 import { extendedDeadline, extendJobDeadline } from '../lib/server/job-deadline';
 import { companyNotifications, saveCompanyNotifications } from '../lib/server/company-notifications';
-import { queueNotification } from '../lib/server/notification-email';
-import { applicationsEmail, formatDeadlineDate } from '../lib/notification-emails';
+import { deliverNotifications, queueNotification } from '../lib/server/notification-email';
+import { applicationsEmail } from '../lib/notification-emails';
 import { transaction } from '../lib/server/db';
 import type { CompanyIdentity } from '../lib/company-portal';
 
@@ -19,10 +19,6 @@ test('digest respects 09:00 Tbilisi and the local date boundary', () => {
   assert.equal(digestDue(new Date('2026-11-16T05:00:00Z'), null), true);
   assert.equal(digestDue(new Date('2026-11-16T12:00:00Z'), '2026-11-16'), false);
   assert.equal(notificationDay(new Date('2026-11-16T21:00:00Z')), '2026-11-17');
-});
-test('deadline dates use Georgian months with an optional year', () => {
-  assert.equal(formatDeadlineDate('2026-12-18', true), '18 დეკემბერი, 2026');
-  assert.equal(formatDeadlineDate('2026-12-18'), '18 დეკემბერი');
 });
 test('extension rules enforce review, publication and a bounded date', () => {
   const now = new Date('2026-11-16T06:00:00Z');
@@ -87,57 +83,63 @@ test('notification jobs and extension are isolated to test-owned fixtures', { sk
       await query("UPDATE company_notification_settings SET application_mode='instant' WHERE company_key=$1", [key]);
       await run('2026-11-17T12:00Z'); assert.equal(await count('applications'), 4);
     });
-    await t.test('deadline window catches +2 once, excludes yesterday and deduplicates per date', async () => {
+    await t.test('free vacancies never create a deadline reminder or invoice', async () => {
       await query('UPDATE company_notification_settings SET deadline_reminders=true WHERE company_key=$1', [key]);
       await run('2026-11-17T06:00Z'); await run('2026-11-17T07:00Z');
-      assert.equal(await count('deadline'), 1);
-      const payload = (await query('SELECT payload FROM notification_emails WHERE dedupe_key=$1', [`deadline:${jobId}:2026-11-19`])).rows[0].payload;
-      assert.match(payload.text, /2 დღეში/);
-      await query(`UPDATE jobs SET published=jsonb_set(published,'{deadline}','"2026-11-16"') WHERE id=$1`, [jobId]);
-      await run('2026-11-17T08:00Z'); assert.equal(await count('deadline'), 1);
-      await query(`UPDATE jobs SET published=jsonb_set(published,'{deadline}','"2026-11-20"') WHERE id=$1`, [jobId]);
-      await run('2026-11-17T06:00Z'); assert.equal(await count('deadline'), 2);
+      assert.equal(await count('deadline'), 0);
+      assert.equal((await query('SELECT count(*)::int n FROM job_invoices WHERE job_id=$1', [jobId])).rows[0].n, 0);
     });
-    await t.test('ack starts at enable time, respects safeEmail, uses saved template and deduplicates', async () => {
-      await assert.rejects(saveCompanyNotifications(company, { application_mode: 'off', deadline_reminders: false, auto_reply: true, auto_reply_template: 'interview' }), /შესავსებ ადგილს/);
-      await saveCompanyNotifications(company, { application_mode: 'off', deadline_reminders: false, auto_reply: true, auto_reply_template: 'received' });
-      assert.ok((await query('SELECT auto_reply_since FROM company_notification_settings WHERE company_key=$1', [key])).rows[0].auto_reply_since);
-      await query("UPDATE company_notification_settings SET auto_reply_since='2026-11-17T12:00Z' WHERE company_key=$1", [key]);
-      await query("INSERT INTO company_message_templates(company_key,kind,subject,body,updated_by) VALUES($1,'received','მივიღეთ — {ვაკანსია}','გამარჯობა, {სახელი}!', $2)", [key, accountId]);
-      await upload('2026-11-17T13:00Z'); await upload('2026-11-17T13:00Z', 'cv_box', 'invalid');
-      await run('2026-11-17T14:00Z'); await run('2026-11-17T15:00Z');
-      assert.equal(await count('candidate_ack'), 1);
-      const payload = (await query("SELECT payload FROM notification_emails WHERE kind='candidate_ack' AND dedupe_key LIKE $1", [`%${key}%`])).rows[0].payload;
-      assert.match(payload.subject, /მივიღეთ — Test vacancy/);
-      await query("UPDATE company_message_templates SET body='{თარიღი}' WHERE company_key=$1 AND kind='received'", [key]);
-      await upload('2026-11-17T15:30Z');
-      await run('2026-11-17T16:00Z');
-      assert.equal(await count('candidate_ack'), 2);
-      const fallback = (await query("SELECT payload FROM notification_emails WHERE kind='candidate_ack' AND dedupe_key LIKE $1", [`%${key}%`])).rows.map(row => row.payload).find(p => p.subject.includes('განაცხადი მივიღეთ'));
-      assert.ok(fallback);
-      assert.doesNotMatch(fallback.text, /\{თარიღი\}/);
-      await assert.rejects(saveCompanyNotifications({ ...company, role: 'recruiter' }, {}), /მფლობელს/);
-    });
-    await t.test('rejects outcome templates and safely handles legacy stored outcomes', async () => {
-      for (const kind of ['rejected', 'accepted']) {
-        await assert.rejects(saveCompanyNotifications(company, { application_mode: 'off', deadline_reminders: false, auto_reply: true, auto_reply_template: kind }),
-          (e: unknown) => (e as { status: number }).status === 400 && /ავტომატურ პასუხად ვერ გაიგზავნება/.test((e as Error).message));
+    await t.test('legacy auto-replies are ignored, never queued and never delivered', async t => {
+      await query("UPDATE company_notification_settings SET auto_reply_template='rejected',auto_reply_since='2026-11-17T12:00Z' WHERE company_key=$1", [key]);
+      for (const legacy of [
+        { auto_reply: true, auto_reply_template: 'interview' },
+        { auto_reply: false, auto_reply_template: 'arbitrary old client text' },
+        {},
+      ]) {
+        const result = await saveCompanyNotifications(company, {
+          application_mode: 'off', deadline_reminders: false, ...legacy,
+        });
+        assert.deepEqual(result, { application_mode: 'off', deadline_reminders: false });
+        const stored = (await query('SELECT auto_reply,auto_reply_template,auto_reply_since FROM company_notification_settings WHERE company_key=$1', [key])).rows[0];
+        assert.equal(stored.auto_reply, false);
+        assert.equal(stored.auto_reply_template, 'rejected');
+        assert.equal(stored.auto_reply_since.toISOString(), '2026-11-17T12:00:00.000Z');
       }
-      assert.deepEqual(Object.keys((await companyNotifications(company)).templates), ['received', 'information', 'interview']);
-      await query("UPDATE company_notification_settings SET auto_reply_template='rejected' WHERE company_key=$1", [key]);
-      await query("UPDATE company_message_templates SET body='მიღებულია, {სახელი}!' WHERE company_key=$1 AND kind='received'", [key]);
-      await upload('2026-11-17T16:30Z', 'cv_box', 'legacy-saved@example.com');
-      await run('2026-11-17T17:00Z');
-      const payloads = async () => (await query("SELECT payload FROM notification_emails WHERE kind='candidate_ack' AND dedupe_key LIKE $1", [`%${key}%`])).rows.map(row => row.payload);
-      const saved = (await payloads()).find(p => p.to.includes('legacy-saved@example.com'));
-      assert.match(saved.subject, /მივიღეთ — Test vacancy/);
-      assert.match(saved.text, /მიღებულია, Private!/);
-      await query("UPDATE company_message_templates SET body='{თარიღი}' WHERE company_key=$1 AND kind='received'", [key]);
-      await upload('2026-11-17T17:30Z', 'cv_box', 'legacy-default@example.com');
-      await run('2026-11-17T18:00Z');
-      const fallback = (await payloads()).find(p => p.to.includes('legacy-default@example.com'));
-      assert.match(fallback.subject, /განაცხადი მივიღეთ/);
-      assert.doesNotMatch(fallback.text, /\{თარიღი\}/);
+      assert.deepEqual(await companyNotifications(company), { application_mode: 'off', deadline_reminders: false });
+      await assert.rejects(saveCompanyNotifications({ ...company, role: 'recruiter' }, {}), /მფლობელს/);
+      await query("UPDATE company_notification_settings SET auto_reply=true,auto_reply_since='2026-11-17T12:00Z' WHERE company_key=$1", [key]);
+      await upload('2026-11-17T13:00Z');
+      await run('2026-11-17T14:00Z'); await run('2026-11-17T15:00Z');
+      assert.equal(await count('candidate_ack'), 0);
+
+      const legacyId = randomUUID();
+      await query("INSERT INTO notification_emails(id,kind,dedupe_key,payload) VALUES($1,'candidate_ack',$2,$3)",
+        [legacyId, `ack:${key}:legacy`, applicationsEmail([], 'candidate@example.com', 'https://jobx.ge')]);
+      const before = (await query('SELECT * FROM notification_emails WHERE id=$1', [legacyId])).rows[0];
+      const oldApiKey = process.env.RESEND_API_KEY;
+      const pool = db(), originalQuery = pool.query.bind(pool);
+      // Exercise the real claiming SQL against PostgreSQL, scoped to our fixture:
+      // delivery must not claim any other company's pending mail in this shared DB.
+      const queryMock = t.mock.method(pool, 'query', (sql: string, values?: unknown[]) => {
+        if (sql.includes('WITH candidate AS')) {
+          return originalQuery(sql.replace('WHERE kind', 'WHERE id=$1 AND kind'), [legacyId]);
+        }
+        return originalQuery(sql, values);
+      });
+      const fetchMock = t.mock.method(globalThis, 'fetch', async () => {
+        throw new Error('No provider request is allowed for a legacy acknowledgement');
+      });
+      try {
+        process.env.NOTIFICATION_EMAIL_ENABLED = 'true';
+        process.env.RESEND_API_KEY = 'test-no-network';
+        assert.deepEqual(await deliverNotifications(), { sent: 0, failed: 0, disabled: false });
+        assert.equal(fetchMock.mock.callCount(), 0);
+        assert.deepEqual((await query('SELECT * FROM notification_emails WHERE id=$1', [legacyId])).rows[0], before);
+      } finally {
+        queryMock.mock.restore(); fetchMock.mock.restore();
+        process.env.NOTIFICATION_EMAIL_ENABLED = 'false';
+        if (oldApiKey === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = oldApiKey;
+      }
     });
     await t.test('queue conflicts do not duplicate; disabled delivery keeps pending', async () => {
       const input = { kind: 'applications' as const, dedupeKey: `test:${key}`, payload: applicationsEmail([], 'owner@example.com', 'https://jobx.ge') };
@@ -162,7 +164,6 @@ test('notification jobs and extension are isolated to test-owned fixtures', { sk
     });
   } finally {
     await query('DELETE FROM notification_emails WHERE dedupe_key LIKE $1 OR dedupe_key LIKE $2', [`%${key}%`, `%${jobId}%`]);
-    await query('DELETE FROM company_message_templates WHERE company_key=$1', [key]);
     await query('DELETE FROM company_cv_uploads WHERE company_key=$1', [key]);
     await query('DELETE FROM audit_log WHERE job_id=$1', [jobId]);
     await query('DELETE FROM company_job_ownership WHERE company_key=$1', [key]);

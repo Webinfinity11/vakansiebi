@@ -1,8 +1,9 @@
 "use client";
 import "./talent.css";
+import { SaveCandidate, AddToCandidates } from "./add-to-candidates";
 import { StatusMark } from "./status-mark";
 import { Popover, PopoverTrigger, PopoverContent, PopoverTitle } from "@/components/ui/popover";
-import { personCity, positionLabel, readableSkills, parseState, parseNotice, type Person, type Filters, type Facets, emptyFilters, storageKey, stageRank, inProcess, levelLabel, yearsLabel, norm, terms, isNativeGeorgian, matchScore, snippet, passes, countFacets, filterChips, toggle, normalizeFilters, readSavedSearches, saveSearch, deleteSearch, accountStorageKeys, type SavedSearch } from "@/lib/company-talent-filters";
+import { positionLabel, readableSkills, parseState, parseNotice, runCvUploadQueue, uploadSummary, maxCvBatch, type UploadRow, type TalentPerson, type TalentResult, type Person, type Filters, type Facets, emptyFilters, storageKey, inProcess, levelLabel, yearsLabel, norm, terms, isNativeGeorgian, snippet, countFacets, filterChips, toggle, normalizeFilters, readSavedSearches, saveSearch, deleteSearch, accountStorageKeys, type SavedSearch } from "@/lib/company-talent-filters";
 import { maxCvBytes } from "@/lib/cv-upload";
 import { companyHref, plainClick } from "@/lib/company-portal-navigation";
 import { CandidateSignals } from "./candidate-answers";
@@ -41,10 +42,8 @@ import {
 import { SelectField } from "../select-field";
 import {
   educationLabels,
-  personKey,
   stageLabels,
   type Candidate,
-  type CandidateProfile,
   type CandidateStage,
 } from "@/lib/company-candidates";
 import { timeAgo, type CompanyJob } from "./company-api";
@@ -68,11 +67,20 @@ export function TalentView({
   onUploaded: (entry: string, duplicate: boolean) => Promise<void>;
 }) {
   const [f, setFilters] = useState<Filters>(emptyFilters);
-  const [shownCount, setShownCount] = useState(50);
+  const [compactSearch, setCompactSearch] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 599px)");
+    const update = () => setCompactSearch(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const [offset, setOffset] = useState(0);
+  const [revision, setRevision] = useState(0);
   // Every filter update, including restoring a saved search, starts a new list.
   const setF = (next: React.SetStateAction<Filters>) => {
     setFilters(next);
-    setShownCount(50);
+    setOffset(0);
   };
   const [uploading, setUploading] = useState(false);
   const [panel, setPanel] = useState(false);
@@ -127,78 +135,33 @@ export function TalentView({
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setF((prev) => ({ ...prev, [key]: value }));
 
-  const people = useMemo(() => {
-    const map = new Map<string, Person>();
-    for (const c of candidates) {
-      const key = personKey(c);
-      const p = map.get(key);
-      if (!p)
-        map.set(key, {
-          key,
-          latest: c,
-          entries: [c],
-          stage: c.stage,
-          rating: c.rating,
-          profile: c.profile,
-          city: "",
-          haystack: "",
-        });
-      else {
-        p.entries.push(c);
-        if (c.appliedAt > p.latest.appliedAt) p.latest = c;
-        // The stage is the furthest the person got in the company's own process.
-        if (inProcess(c) && (!p.entries.some((e) => e !== c && inProcess(e)) || stageRank(c.stage) > stageRank(p.stage))) p.stage = c.stage;
-        p.rating = Math.max(p.rating ?? 0, c.rating ?? 0) || null;
-        // A corrected profile wins over a JOBX one, which wins over one read from a file.
-        const rank = (x: CandidateProfile | null) =>
-          !x ? 0 : x.origin === "edited" ? 3 : x.origin === "jobx" ? 2 : 1;
-        if (rank(c.profile) > rank(p.profile)) p.profile = c.profile;
-      }
-    }
-    for (const p of map.values()) {
-      p.city = personCity(p.profile, [p.latest, ...p.entries]);
-      p.haystack = norm(
-        [
-          ...p.entries.flatMap((c) => [
-            c.name,
-            c.title,
-            c.email,
-            c.phone,
-            c.jobTitle,
-            c.city,
-          ]),
-          p.profile?.text ?? "",
-          ...(p.profile?.skills ?? []),
-          ...(p.profile?.roles ?? []),
-        ].join(" \n "),
-      );
-    }
-    return [...map.values()];
-  }, [candidates]);
-
+  const [result, setResult] = useState<TalentResult | null>(null);
+  const [listError, setListError] = useState("");
+  const [searching, setSearching] = useState(false);
+  useEffect(() => {setOffset(0);}, [candidates]);
+  useEffect(() => {
+    const controller = new AbortController();
+    let alive = true;
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({talent: "1", filters: JSON.stringify(f), offset:String(offset)});
+        const response = await fetch(`/api/company/candidates?${params}`, {signal:controller.signal, cache:"no-store"});
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "სია ვერ ჩაიტვირთა.");
+        if (alive) { setResult(previous => offset && previous ? {...body,people:[...previous.people,...body.people]} : body); setListError(""); }
+      } catch (error) {
+        if (alive) setListError(error instanceof Error ? error.message : "სია ვერ ჩაიტვირთა.");
+      } finally { if (alive) setSearching(false); }
+    }, 250);
+    return () => { alive = false; clearTimeout(timer); controller.abort(); };
+  }, [f, candidates, offset, revision]);
   const words = useMemo(() => terms(f.query), [f.query]);
-  const since = f.period ? Date.now() - f.period * 86400000 : 0;
-
-  const visible = useMemo(() => {
-    const rows = people
-      .filter((p) => passes(p, f, words, since))
-      .map((p) => ({ p, score: words.length ? matchScore(p, words) : 0 }));
-    const recent = (a: Person, b: Person) =>
-      b.latest.appliedAt.localeCompare(a.latest.appliedAt);
-    rows.sort((a, b) =>
-      f.sort === "years"
-        ? (b.p.profile?.years ?? -1) - (a.p.profile?.years ?? -1) ||
-          recent(a.p, b.p)
-        : f.sort === "rating"
-          ? (b.p.rating ?? 0) - (a.p.rating ?? 0) || recent(a.p, b.p)
-          : f.sort === "match" && words.length
-            ? b.score - a.score || recent(a.p, b.p)
-            : recent(a.p, b.p),
-    );
-    return rows.map((r) => r.p);
-  }, [people, f, words, since]);
-
-  const facets = useMemo(() => countFacets(people, f, jobs, since), [people, f, jobs, since]);
+  const visible = result?.people ?? [];
+  const total = result?.total ?? 0;
+  const matched = result?.matched ?? 0;
+  const refresh = () => {setOffset(0);setRevision(v=>v+1);};
+  const facets = result?.facets ?? countFacets([], emptyFilters, jobs);
   const chips = filterChips(f, facets, set);
   const reset = () => setF({ ...emptyFilters, sort: f.sort });
   const sortLabels: Record<Filters["sort"], string> = {
@@ -218,7 +181,6 @@ export function TalentView({
       <header className="cp-head">
         <div className="cp-head-title">
           <h1>CV ბაზა</h1>
-          {loaded && <span>{people.length}</span>}
         </div>
         <div className="cp-head-actions">
           {canEdit && (
@@ -232,9 +194,11 @@ export function TalentView({
           )}
         </div>
       </header>
-      {!loaded ? (
+      {listError && <p role="alert" className="cp-alert">{listError}</p>}
+      {searching && <p role="status">იტვირთება…</p>}
+      {!loaded || !result ? (
         <div className="cc-empty">იტვირთება…</div>
-      ) : !people.length ? (
+      ) : !total ? (
         <div className="cp-empty">
           <h2>ბაზა ჯერ ცარიელია</h2>
           <p>
@@ -259,8 +223,8 @@ export function TalentView({
                 <Search size={16} />
                 <input
                   type="search"
-                  aria-label="ბაზაში ძიება"
-                  placeholder="ძებნა CV-ში: უნარი, პოზიცია, კომპანია, სიტყვა"
+                  aria-label="ძებნა CV-ში: უნარი, პოზიცია, კომპანია, სიტყვა"
+                  placeholder={compactSearch ? "ძებნა CV-ში" : "ძებნა CV-ში: უნარი, პოზიცია, კომპანია, სიტყვა"}
                   value={f.query}
                   onChange={(e) => set("query", e.target.value)}
                 />
@@ -310,12 +274,14 @@ export function TalentView({
             <div className="ct-result">
               <span>
                 {chips.length || words.length
-                  ? `${people.length}-დან ${visible.length} კანდიდატი`
-                  : `${people.length} კანდიდატი`}
+                  ? `${total}-დან ${matched} კანდიდატი`
+                  : `${total} კანდიდატი`}
               </span>
               <div className="ct-saved-actions">
-                <button type="button" className="ct-clear" disabled={!accountKey} onClick={()=>{setStorageError("");setSearchName("");setSaving(true);}}>ძებნის შენახვა</button>
-                <Popover>
+                <button type="button" className="ct-clear ct-saved-toggle" aria-pressed={f.saved} onClick={()=>set("saved",!f.saved)}>შენახული კანდიდატები</button>
+                {/* Saving a search only makes sense once there is a search or filter to keep. */}
+                {(chips.length > 0 || words.length > 0) && <button type="button" className="ct-clear" disabled={!accountKey} onClick={()=>{setStorageError("");setSearchName("");setSaving(true);}}>ძებნის შენახვა</button>}
+                {savedSearches.length > 0 && <Popover>
                   <PopoverTrigger className="ct-clear">შენახული ძებნები ({savedSearches.length})<ChevronDown size={14}/></PopoverTrigger>
                   <PopoverContent align="start" className="ct-popover">
                     <PopoverTitle>შენახული ძებნები</PopoverTitle>
@@ -325,7 +291,7 @@ export function TalentView({
                       <button type="button" aria-label={`${search.name} — წაშლა`} onClick={()=>persistSearches(deleteSearch(savedSearches,search.id))}><X size={16}/></button>
                     </div>)}
                   </PopoverContent>
-                </Popover>
+                </Popover>}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger className="ct-sort">
@@ -362,10 +328,11 @@ export function TalentView({
             ) : (
               <>
               <ul className="ct-list" aria-label="კანდიდატები">
-                {visible.slice(0, shownCount).map((p) => (
-                  <PersonRow
+                {visible.map((p) => (
+                  <PersonRow jobs={jobs} canEdit={canEdit}
                     key={p.key}
-                    p={p}
+                    p={cardPerson(p)}
+                    onChange={refresh}
                     words={words}
                     skillsOn={f.skills}
                     onOpen={onOpen}
@@ -374,16 +341,13 @@ export function TalentView({
                 ))}
               </ul>
               <div className="ct-pagination">
-                <p role="status" aria-live="polite" aria-atomic="true">
-                  ნაჩვენებია {Math.min(shownCount, visible.length)} / {visible.length}
-                </p>
-                {visible.length > 50 && (
+                {visible.length < matched && (
                   <button
                     type="button"
                     className="cp-btn"
-                    aria-disabled={shownCount >= visible.length}
+                    disabled={searching}
                     onClick={() => {
-                      if (shownCount < visible.length) setShownCount(count => count + 50);
+                      if (!searching) {setOffset(visible.length);setRevision(v=>v+1);}
                     }}
                   >
                     მეტის ჩვენება
@@ -413,7 +377,7 @@ export function TalentView({
               className="cp-btn cp-btn--primary"
               onClick={() => setPanel(false)}
             >
-              {visible.length}  კანდიდატის ნახვა </button>
+              {matched}  კანდიდატის ნახვა </button>
           </div>
         </SheetContent>
       </Sheet>
@@ -555,12 +519,11 @@ function FilterPanel({ f, set, toggle, facets, group }: {
         <option value="0">ნებისმიერ დროს</option><option value="7">ბოლო 7 დღე</option><option value="30">ბოლო 30 დღე</option><option value="90">ბოლო 3 თვე</option>
       </select></label>
     </>},
-    {key:"state",title:"დამატებით",count:Number(f.unchecked)+Number(f.rated)+Number(f.phone)+Number(f.hideRejected)+Number(f.requirementsMatch),body:<>
+    {key:"state",title:"დამატებით",count:Number(f.unchecked)+Number(f.rated)+Number(f.phone)+Number(f.hideRejected),body:<>
       {f.unchecked && <Check checked onChange={()=>set("unchecked",false)} label="შეუმოწმებელი ამოკითხვა" n={facets.unchecked}/>}
       <Check checked={f.phone} onChange={()=>set("phone",!f.phone)} label="აქვს ტელეფონი"/>
       <Check checked={f.rated} onChange={()=>set("rated",!f.rated)} label="შეფასებული"/>
       <Check checked={f.hideRejected} onChange={()=>set("hideRejected",!f.hideRejected)} label="უარყოფილების დამალვა"/>
-      <Check checked={f.requirementsMatch} onChange={()=>set("requirementsMatch",!f.requirementsMatch)} label="ემთხვევა მოთხოვნებს"/>
     </>},
   ];
   if(group) return <div className="ct-popover-options">{groups.find(g=>g.key===group)?.body}</div>;
@@ -569,13 +532,23 @@ function FilterPanel({ f, set, toggle, facets, group }: {
   </div>)}</div>;
 }
 
+// Expand the small wire card only for the existing presentation helpers.
+function cardPerson(card: TalentPerson): Person {
+  const profile: NonNullable<Candidate['profile']> = {origin:'edited',years:card.years,roles:[],skills:card.skills,languages:card.languages,education:card.education,educationLevel:card.educationLevel,city:card.city,text:'',parse:{confidence:1,reason:null,nameMissing:card.nameMissing}};
+  const candidate: Candidate = {...card,jobId:card.added?.jobId ?? null,profile,interviewAt:null,interviewNote:'',seen:true,notes:0};
+  return {key:card.key,latest:candidate,entries:[candidate],profile,city:card.city,stage:card.stage,rating:card.rating,haystack:''};
+}
 function PersonRow({
+  onChange,
+  jobs, canEdit,
   p,
   words,
   skillsOn,
   onOpen,
   onReveal,
 }: {
+  jobs: CompanyJob[]; canEdit: boolean;
+  onChange: () => void;
   p: Person;
   words: string[];
   skillsOn: string[];
@@ -586,9 +559,10 @@ function PersonRow({
   const profile = p.profile;
   // Only a CV whose text could not be read needs a word on the card; "read automatically" is noise.
   const state = parseState(profile, p.entries.some(e=>e.hasCv)) === "ტექსტი ვერ ამოიკითხა" ? "ტექსტი ვერ ამოიკითხა" : "";
-  const active = p.entries.some(inProcess);
   // One CV, one card: the vacancies the person is considered for, and where the CV came from.
   const vacancies = p.entries.filter((e) => inProcess(e) && e.jobTitle);
+  // The stage shows only while the person is in this company's selection.
+  const active = p.entries.some(inProcess);
   const sources = [...new Set(p.entries.map((e) =>
     e.source === "upload" ? "თქვენ მიერ ატვირთული" : e.source === "cv_box" ? "CV ყუთი" : e.source === "base" ? "JOBX-ის CV ბაზა" : "ვაკანსიაზე გამოგზავნილი"))];
   const notice = p.entries.some(e=>e.hasCv) ? parseNotice(profile) : "";
@@ -673,13 +647,15 @@ function PersonRow({
             </span>}
             {vacancies.map((e) => (
               <button type="button" className="ct-job" key={e.entry} onClick={() => onOpen(e.entry)}>
-                {/* The card's top already shows the stage; per vacancy only when there are several. */}
                 {vacancies.length > 1 ? `${e.jobTitle} · ${stageLabels[e.stage]}` : e.jobTitle}
                 <CandidateSignals candidate={e} />
               </button>
             ))}
             <span className="ct-source">{sources.join(" · ")}</span>
           </div>
+          <div className="ct-card-acts">
+          <SaveCandidate candidate={p.latest} canEdit={canEdit} onChange={onChange} />
+          <AddToCandidates onAdded={onChange} candidate={p.entries.find(e => e.added) ?? p.latest} canEdit={canEdit} />
           {/* One contact slot in the same place on every card: a closed CV base
               contact and an open one use the same pill. */}
           {(hidden || phone || email) && (
@@ -716,6 +692,7 @@ function PersonRow({
               )}
             </span>
           )}
+          </div>
         </div>
       </div>
     </li>
@@ -733,71 +710,73 @@ export function UploadDialog({
   onClose: () => void;
   onUploaded: (entry: string, duplicate: boolean) => Promise<void>;
 }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [title, setTitle] = useState("");
+  const [rows, setRows] = useState<UploadRow<File>[]>([]);
   const [job, setJob] = useState("");
   const [busy, setBusy] = useState(false);
+  const [finished, setFinished] = useState(false);
   const [error, setError] = useState("");
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const running = useRef(false);
+  const summary = uploadSummary(rows);
+  useEffect(() => {
+    if (!busy) return;
+    const prevent = (event: BeforeUnloadEvent) => {event.preventDefault(); event.returnValue = "";};
+    window.addEventListener("beforeunload", prevent);
+    return () => window.removeEventListener("beforeunload", prevent);
+  }, [busy]);
   function reset() {
-    setFile(null);
-    setName("");
-    setEmail("");
-    setPhone("");
-    setTitle("");
-    setJob("");
-    setError("");
+    setRows([]);
+    setJob(""); setError(""); setFinished(false);
   }
-  function choose(f: File | undefined) {
-    if (!f) return;
-    setError("");
-    if (!/\.(pdf|docx?|odt|rtf|txt)$/i.test(f.name))
-      return setError("ატვირთეთ PDF, Word (DOC, DOCX), ODT, RTF ან TXT ფაილი.");
-    if (f.size > maxCvBytes)
-      return setError("ფაილი 4 MB-ზე დიდი არ უნდა იყოს.");
-    setFile(f);
-    if (!name)
-      setName(
-        f.name
-          .replace(/\.[^.]+$/, "")
-          .replace(/[_-]+/g, " ")
-          .trim(),
-      );
+  function choose(files: FileList | null) {
+    if (!files?.length || running.current) return;
+    if (files.length > maxCvBatch) return setError("ერთ ჯერზე მაქსიმუმ 30 ფაილი");
+    setError(""); setFinished(false);
+    const selected: UploadRow<File>[] = Array.from(files, file => ({file, state:"queued"}));
+    setRows(selected);
+    void submit(undefined, selected);
   }
-  async function submit() {
-    if (!file) return setError("აირჩიეთ CV ფაილი.");
-    setBusy(true);
-    setError("");
-    try {
-      const form = new FormData();
-      form.set("file", file);
-      form.set("name", name);
-      form.set("email", email);
-      form.set("phone", phone);
-      form.set("title", title);
-      form.set("jobId", job);
-      const res = await fetch("/api/company/candidates/upload", {
-        method: "POST",
-        body: form,
-      });
-      const body = await res.json();
-      if (!res.ok) throw Error(body.error || "ატვირთვა ვერ მოხერხდა");
-      reset();
-      await onUploaded(body.entry, body.duplicate);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "ატვირთვა ვერ მოხერხდა");
-    } finally {
-      setBusy(false);
+  async function upload(file: File) {
+    if (!/\.(pdf|docx?|odt|rtf|txt)$/i.test(file.name)) throw new Error("აირჩიეთ PDF, Word, ODT, RTF ან TXT ფაილი.");
+    if (!file.size) throw new Error("ფაილი ცარიელია.");
+    if (file.size > maxCvBytes) throw new Error("ფაილი 4 MB-ზე დიდი არ უნდა იყოს.");
+    const form = new FormData();
+    form.set("file",file); form.set("jobId",job);
+    for (let attempt = 0; ; attempt++) {
+      const res = await fetch("/api/company/candidates/upload", {method:"POST", body:form})
+        .catch(() => { throw new Error("კავშირი შეწყდა. სცადეთ ხელახლა."); });
+      if (res.status === 429 && attempt < 3) {
+        const retry = res.headers.get("Retry-After");
+        const seconds = retry && /^\d+$/.test(retry) ? Number(retry) : retry ? Math.max(0,(Date.parse(retry)-Date.now())/1000) : 5;
+        await new Promise(resolve => setTimeout(resolve, Math.max(1000, (Number.isFinite(seconds) ? seconds : 5)*1000)));
+        continue;
+      }
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.entry) throw new Error(body.error || "ატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.");
+      return {entry:String(body.entry), duplicate:!!body.duplicate};
     }
+  }
+  async function submit(only?: number, batch = rows) {
+    if (running.current || !batch.length) return;
+    const indices = batch.flatMap((r,i) => (only === undefined ? r.state === "queued" : i === only) ? [i] : []);
+    if (!indices.length) return;
+    running.current = true; setBusy(true); setError(""); setFinished(false);
+    try {
+      const completed = await runCvUploadQueue(indices.map(i => batch[i].file), upload, (index,row) => {
+        setRows(current => current.map((r,i) => i === indices[index] ? row : r));
+      });
+      setFinished(true);
+      const success = completed.find(r => r.result)?.result;
+      // A batch refresh must not open one arbitrary candidate over its summary.
+      if (success) await onUploaded("", completed.every(r => r.result?.duplicate));
+    } catch (error) { setError(error instanceof Error ? error.message : "სიის განახლება ვერ მოხერხდა."); }
+    finally { running.current = false; setBusy(false); }
   }
   const openJobs = jobs.filter((j) => j.status !== "merged");
   return (
     <Dialog
-      open={open}
+      open={open || finished || busy}
       onOpenChange={(o) => {
         if (!o && !busy) {
           reset();
@@ -808,85 +787,8 @@ export function UploadDialog({
       <DialogContent className="cp-dialog ct-upload">
         <DialogTitle>CV-ის ატვირთვა</DialogTitle>
         <DialogDescription>
-           PDF, Word, ODT, RTF ან TXT, მაქსიმუმ 4 MB. ფაილს მხოლოდ თქვენი კომპანია ხედავს. </DialogDescription>
-        <button
-          type="button"
-          className="ct-drop"
-          data-over={over || undefined}
-          data-file={file ? "" : undefined}
-          onClick={() => input.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setOver(true);
-          }}
-          onDragLeave={() => setOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setOver(false);
-            choose(e.dataTransfer.files[0]);
-          }}
-        >
-          <FileUp size={22} />
-          {file ? (
-            <span>
-              <strong>{file.name}</strong>
-              <small>
-                {Math.round(file.size / 1024)}  KB · შესაცვლელად დააჭირეთ </small>
-            </span>
-          ) : (
-            <span>
-              <strong>ჩააგდეთ ფაილი აქ</strong>
-              <small>ან დააჭირეთ ასარჩევად</small>
-            </span>
-          )}
-        </button>
-        <input
-          ref={input}
-          type="file"
-          hidden
-          accept=".pdf,.doc,.docx,.odt,.rtf,.txt"
-          onChange={(e) => {
-            choose(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
-        <div className="cp-fields ct-fields">
-          <label>
-             სახელი და გვარი <input
-              className="cp-input"
-              value={name}
-              maxLength={120}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <label>
-             პოზიცია ან პროფესია <input
-              className="cp-input"
-              value={title}
-              maxLength={120}
-              placeholder="მაგ.: ბუღალტერი"
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </label>
-          <div className="company-form-grid">
-            <label>
-               ელფოსტა <input
-                className="cp-input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label>
-               ტელეფონი <input
-                className="cp-input"
-                type="tel"
-                value={phone}
-                maxLength={32}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </label>
-          </div>
+           PDF, Word, ODT, RTF ან TXT · მაქსიმუმ 4 MB, 30 ფაილამდე </DialogDescription>
+        <fieldset disabled={busy || finished} className="cp-fields ct-upload-fields">
           <label htmlFor="ct-job">
              ვაკანსია (არასავალდებულო) <SelectField
               id="ct-job"
@@ -900,7 +802,50 @@ export function UploadDialog({
               onChange={setJob}
             />
           </label>
-        </div>
+        </fieldset>
+        <button
+          type="button"
+          className="ct-drop"
+          data-over={over || undefined}
+          data-file={rows.length ? "" : undefined}
+          disabled={busy || finished}
+          onClick={() => input.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setOver(true);
+          }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setOver(false);
+            choose(e.dataTransfer.files);
+          }}
+        >
+          <FileUp size={22} />
+          <span><strong>{rows.length ? `${rows.length} ფაილი` : "ჩააგდეთ ფაილები აქ"}</strong>
+            <small>ან დააჭირეთ ასარჩევად · მაქსიმუმ 30 ფაილი</small></span>
+        </button>
+        <input
+          ref={input}
+          type="file"
+          multiple
+          disabled={busy || finished}
+          hidden
+          accept=".pdf,.doc,.docx,.odt,.rtf,.txt"
+          onChange={(e) => {
+            choose(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        {!!rows.length && <ul className="ct-upload-list" aria-live="polite">
+          {rows.map((row,index) => <li key={index}>
+            <strong>{row.file.name}</strong>
+            <span>{row.state === "uploading" ? "იტვირთება" : row.state === "done" ? (row.result?.duplicate ? "მზადაა — უკვე დამატებულია" : "მზადაა") : row.state === "error" ? `შეცდომა — ${row.error}` : "რიგშია"}</span>
+            {row.state === "error" && <button type="button" className="cp-btn cp-btn--ghost" disabled={busy} onClick={() => void submit(index)}>ხელახლა ცდა</button>}
+          </li>)}
+        </ul>}
+        {finished && <p role="status">ატვირთულია {summary.uploaded}, ვერ აიტვირთა {summary.failed}</p>}
+        {busy && <p role="status">ატვირთვა მიმდინარეობს. დასრულებამდე ფანჯარა არ დაიხურება.</p>}
         {error && (
           <p role="alert" className="cp-alert">
             {error}
@@ -916,15 +861,8 @@ export function UploadDialog({
               onClose();
             }}
           >
-             გაუქმება </button>
-          <button
-            type="button"
-            className="cp-btn cp-btn--primary"
-            disabled={busy || !file}
-            onClick={() => void submit()}
-          >
-            {busy ? "იტვირთება…" : "ატვირთვა"}
-          </button>
+             {finished ? "დასრულება" : "გაუქმება"} </button>
+
         </div>
       </DialogContent>
     </Dialog>

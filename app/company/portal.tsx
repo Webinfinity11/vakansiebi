@@ -1,6 +1,5 @@
 "use client";
 import { NotificationSettings } from "./notification-settings";
-import { MessageTemplatesSettings } from "./message-templates";
 import { ProfileBranding } from "./profile-branding";
 import { useCallback, useEffect, useRef, useState, type SubmitEvent } from "react";
 import Link from "next/link";
@@ -257,8 +256,6 @@ export function CompanyPortal({
   const [closing, setClosing] = useState<CompanyJob | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidatesLoaded, setCandidatesLoaded] = useState(false);
-  // The JOBX CV base, loaded the first time the CV base tab opens.
-  const [cvBase, setCvBase] = useState<Candidate[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<CompanyJobStats[]>([]);
   const [statsLoaded, setStatsLoaded] = useState(false);
@@ -266,17 +263,12 @@ export function CompanyPortal({
      soon as the company acts on them, as it does on the server. */
   const patchCandidates = useCallback(
     (entries: string[], patch: Partial<Candidate>) => {
-      setCvBase((base) => {
-        const next = base?.map((c) => (entries.includes(c.entry) ? { ...c, ...patch } : c)) ?? base;
-        const acted = "stage" in patch || "rating" in patch || "interviewAt" in patch;
-        setCandidates((list) => {
-          const patched = list.map((c) => (entries.includes(c.entry) ? { ...c, ...patch } : c));
-          const joining = acted
-            ? (next ?? []).filter((b) => entries.includes(b.entry) && !patched.some((c) => c.entry === b.entry))
-            : [];
-          return [...joining, ...patched];
-        });
-        return next;
+      setCandidates(list => {
+        const patched = list.map(c => entries.includes(c.entry) ? {...c,...patch} : c);
+        if (patch.entry && patch.source && !patched.some(c=>c.entry===patch.entry) &&
+          (patch.added?.jobId || (patch.stage && patch.stage !== 'new') || patch.rating || patch.interviewAt))
+          return [patch as Candidate,...patched];
+        return patched;
       });
     },
     [],
@@ -328,7 +320,6 @@ export function CompanyPortal({
     try {
       const shown: Candidate = await request("candidates", { action: "reveal", entry });
       setCandidates((list) => list.map((c) => (c.entry === entry ? shown : c)));
-      setCvBase((list) => list?.map((c) => (c.entry === entry ? shown : c)) ?? list);
     } catch (e) {
       setError(e instanceof Error ? e.message : "კონტაქტი ვერ გაიხსნა.");
     }
@@ -378,20 +369,6 @@ export function CompanyPortal({
       });
     return () => controller.abort();
   }, [ready, approved]);
-  useEffect(() => {
-    if (tab !== "talent" || !approved || cvBase) return;
-    let alive = true;
-    request("candidates?base=1")
-      .then((list: Candidate[]) => alive && setCvBase(list))
-      .catch((e: Error) => {
-        if (!alive) return;
-        setCvBase([]);
-        setError(e.message);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [tab, approved, cvBase]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 6000);
@@ -502,7 +479,7 @@ export function CompanyPortal({
       </div>
       <div className="cp-settings-foot">
         <button className={identity?.mustChangePassword ? "cp-btn cp-btn--primary" : "cp-btn cp-btn--secondary"} disabled={busy}>
-           პაროლის შენახვა </button>
+           შენახვა </button>
         {identity?.mustChangePassword && (
           <button type="button" className="cp-btn cp-btn--ghost" disabled={busy} onClick={signOut}>
             <LogOut size={15} /> გასვლა
@@ -936,6 +913,7 @@ export function CompanyPortal({
           <JobsView
             canEdit={canEdit}
             canManageBilling={identity.role === "owner"}
+            approved={!!approved}
             onRefresh={load}
             candidates={candidates}
             onCandidates={(id, stage) => { setCandidateFilter({ jobId: id, stage }); setSelected(null); setTab("candidates"); }}
@@ -1050,13 +1028,9 @@ export function CompanyPortal({
         {tab === "talent" && approved && (
           <TalentView
             canEdit={canEdit}
-            candidates={
-              cvBase
-                ? [...candidates, ...cvBase.filter((b) => !candidates.some((c) => c.entry === b.entry))]
-                : candidates
-            }
+            candidates={candidates}
             jobs={jobs}
-            loaded={candidatesLoaded && !!cvBase}
+            loaded={candidatesLoaded}
             onReveal={revealContact}
             onOpen={(entry) => setSelected(entry)}
             onUploaded={async (entry, duplicate) => {
@@ -1075,11 +1049,7 @@ export function CompanyPortal({
             sheetOnly
             canEdit={canEdit}
             companyName={identity.name}
-            candidates={
-              cvBase
-                ? [...candidates, ...cvBase.filter((b) => !candidates.some((c) => c.entry === b.entry))]
-                : candidates
-            }
+            candidates={candidates}
             jobs={jobs}
             loaded={candidatesLoaded}
             selected={selected}
@@ -1141,21 +1111,14 @@ export function CompanyPortal({
                   <div className="cp-settings-row">
                     <div className="cp-settings-label">
                       <h2>იდენტობა</h2>
-                      <p>სახელი და ლოგო ჩანს ყველა ვაკანსიაზე.</p>
                     </div>
                     <div className="cp-fields">
                       <div className="cp-logo-field">
                         <span className="cp-avatar cp-avatar--lg">
                           {logo ? <img src={logo} alt="" /> : initial}
                         </span>
-                        <label>
-                           კომპანიის სახელი <input
-                            className="cp-input"
-                            value={profile.name}
-                            disabled
-                          />
-                          <small>სახელის შესაცვლელად დაგვიკავშირდით.</small>
-                        </label>
+                        {/* The name is set by JOBX: shown as text, not as a locked field. */}
+                        <strong className="cp-logo-name">{profile.name}</strong>
                       </div>
                       <label>
                          ლოგოს ბმული <input
@@ -1172,8 +1135,6 @@ export function CompanyPortal({
                             setProfile({ ...profile, logoUrl: e.target.value })
                           }
                         />
-                        <small>
-                           ცარიელი ველის შემთხვევაში არსებული ლოგო დარჩება. </small>
                       </label>
                     </div>
                   </div>
@@ -1209,7 +1170,7 @@ export function CompanyPortal({
                             })
                           }
                         />
-                        <small>{profile.description.length} / 3000</small>
+                        {profile.description.length >= 2700 && <small>{profile.description.length} / 3000</small>}
                       </label>
                     </div>
                   </div>
@@ -1218,7 +1179,7 @@ export function CompanyPortal({
                 {canEditProfile && (
                   <div className="cp-settings-foot">
                     <button className="cp-btn cp-btn--primary" disabled={busy}>
-                       ცვლილებების შენახვა </button>
+                       შენახვა </button>
                   </div>
                 )}
               </form>
@@ -1235,16 +1196,13 @@ export function CompanyPortal({
                 <h1>ანგარიში</h1>
               </div>
             </header>
-            <dl className="cp-facts">
-              <div>
-                <dt>მომხმარებლის სახელი</dt>
-                <dd>{/^u[0-9a-f]{32}$/.test(identity.username) ? identity.email : identity.username}</dd>
-              </div>
-              <div>
-                <dt>შეტყობინებების ელფოსტა</dt>
-                <dd>{identity.email}</dd>
-              </div>
-            </dl>
+            {/* One line: how the company signs in and where its letters go. */}
+            <p className="cp-account-line">
+              შესვლა: <strong>{[
+                /^u[0-9a-f]{32}$/.test(identity.username) ? "" : identity.username,
+                identity.email,
+              ].filter((v, i, all) => v && all.indexOf(v) === i).join(" · ")}</strong>
+            </p>
             <CompanyDetailsForm
               details={details}
               onDirtyChange={setDetailsDirty}
@@ -1257,7 +1215,6 @@ export function CompanyPortal({
             />
             {passwordForm}
             <NotificationSettings canEdit={identity.role === "owner"} />
-            <MessageTemplatesSettings canEdit={identity.role !== "viewer"} companyName={identity.name} />
           </>
         )}
       </main>

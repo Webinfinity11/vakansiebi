@@ -1280,6 +1280,12 @@
     > .similar-vacancies {
     margin-top: 0;
   }
+  /* Separate cards keep a gap on a phone; only overview and description join. */
+  .vacancy-page
+    .vacancy-layout:has(> .vacancy-description-panel)
+    > :is(.vacancy-contact, .similar-vacancies) {
+    margin-top: var(--jobx-space-16px, 16px);
+  }
 }
 
 /* Loading: the frame is drawn at once and the vacancy's shape pulses until it arrives. */

@@ -101,6 +101,14 @@ export async function getForJob(
   );
   return rows[0] ? present(rows[0]) : null;
 }
+/** Resume only the signed-in person's latest unfinished new vacancy. */
+export async function getLatestNew(company: CompanyIdentity): Promise<CompanyJobDraft | null> {
+  const { rows } = await db().query(
+    select + ' WHERE d.company_key=$1 AND d.updated_by=$2 AND d.job_id IS NULL ORDER BY d.updated_at DESC LIMIT 1',
+    [company.companyKey, company.id],
+  );
+  return rows[0] ? present(rows[0]) : null;
+}
 export async function save(
   company: CompanyIdentity,
   input: unknown,
@@ -162,7 +170,7 @@ export async function save(
     }
     const result = await c.query(
       `INSERT INTO company_job_drafts(id,company_key,job_id,form,step,updated_by) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO UPDATE SET form=excluded.form,step=excluded.step,updated_by=excluded.updated_by,updated_at=now() WHERE company_job_drafts.company_key=excluded.company_key RETURNING id`,
-      [data.id, company.companyKey, jobId, form, data.step, company.id],
+      [data.id, company.companyKey, jobId, form, 1, company.id],
     );
     if (!result.rowCount) throw missing();
   });

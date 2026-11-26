@@ -80,3 +80,7 @@
 .company-cv-box-toggle input { margin-top: 3px; accent-color: var(--cp-accent); }
 .cp-fields input[type=file] { font-size: 13px; overflow: hidden; }
 .cp-fields input[type=file]::file-selector-button { border: 0; border-radius: 6px; padding: 8px; margin-right: 8px; background: var(--cp-side); color: var(--cp-ink); font: inherit; cursor: pointer; }
+
+.cp-cover-pick { display: grid; gap: 8px; }
+.cp-cover-pick > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.cp-cover-pick .cp-subtle { overflow-wrap: anywhere; }

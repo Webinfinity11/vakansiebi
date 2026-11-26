@@ -1,3 +1,5 @@
+import { inviteCvToBase } from './cv-base-invites';
+import { talentPeople, talentCard, talentResults, matchScore, terms, type Filters } from '../company-talent-filters';
 import { after } from 'next/server';
 import { effectiveContact, validCandidateEmail, validCandidatePhone } from '../company-candidate-contact';
 import { isDocx, isOdt, isRtf, isTxt } from '../cv-upload';
@@ -15,6 +17,7 @@ import type { CompanyIdentity } from '../company-portal';
 import type { Cv } from '../cv';
 import {
   candidateStages,
+  normalizeCandidateStage,
   educationLevels,
   languageLevels,
   type Candidate,
@@ -46,6 +49,11 @@ WITH base_all AS (
   FROM (SELECT DISTINCT ON (lower(candidate_email)) * FROM swipe_applications
     WHERE status='sent' AND cv_kind='upload' AND cv_file IS NOT NULL
     ORDER BY lower(candidate_email), COALESCE(sent_at, created_at) DESC) a
+  UNION ALL
+  SELECT 'base:u:'||u.id, 'base', NULL::uuid, '', u.name, u.email, u.phone,
+    u.title, '', i.consented_at, true, NULL::uuid, NULL::jsonb, '[]'::jsonb
+  FROM company_cv_uploads u JOIN company_cv_invites i ON i.upload_id=u.id AND i.company_key=u.company_key
+  WHERE i.consented_at IS NOT NULL AND i.withdrawn_at IS NULL AND u.company_key<>$1
 ), base AS (
   -- A person's several CVs (rebuilt on JOBX, or uploaded with a swipe) count once.
   SELECT b.*, row_number() OVER (
@@ -86,24 +94,35 @@ WITH base_all AS (
   SELECT entry, source, job_id, job_title, name, email, phone, title, city, applied_at,
     has_cv, photo_of, cv, question_answers
   FROM base b WHERE b.rn=1
+    OR EXISTS(SELECT 1 FROM company_saved_candidates sc WHERE sc.company_key=$1 AND sc.entry=b.entry)
+    OR EXISTS(SELECT 1 FROM company_candidate_refs ref WHERE ref.company_key=$1 AND ref.entry=b.entry)
     OR EXISTS(SELECT 1 FROM company_candidate_states s WHERE s.company_key=$1 AND s.entry=b.entry
       AND (s.stage<>'new' OR s.rating IS NOT NULL OR s.interview_at IS NOT NULL))
     OR EXISTS(SELECT 1 FROM company_candidate_notes n WHERE n.company_key=$1 AND n.entry=b.entry)
 )
-SELECT e.*, COALESCE(s.stage,'new') AS stage, s.rating, s.seen_at IS NOT NULL AS seen,
-  s.interview_at, s.interview_note, s.hired_at, COALESCE(p.parsed, pb.parsed) AS parsed, p.edited,
+SELECT e.*, inv.expires_at AS invite_expires_at, inv.consented_at AS invite_consented_at, inv.withdrawn_at AS invite_withdrawn_at, EXISTS(SELECT 1 FROM company_saved_candidates sc WHERE sc.company_key=$1 AND sc.entry=e.entry) AS saved, ref.entry IS NOT NULL AS has_ref, ref.job_id AS ref_job_id, COALESCE(rj.published->>'title',rj.draft->>'title','') AS ref_job_title, COALESCE(s.stage,'new') AS stage, s.rating, s.seen_at IS NOT NULL AS seen,
+  s.interview_at, s.interview_note, s.hired_at, COALESCE(p.parsed, pb.parsed, pu.parsed) AS parsed, p.edited,
   (SELECT count(*)::int FROM company_candidate_notes n WHERE n.company_key=$1 AND n.entry=e.entry) AS notes,
   (e.source<>'base' OR EXISTS(SELECT 1 FROM company_cv_base_views v
     WHERE v.company_key=$1 AND v.entry=e.entry)) AS revealed
-FROM entries e LEFT JOIN company_candidate_states s ON s.company_key=$1 AND s.entry=e.entry
+FROM entries e LEFT JOIN company_cv_invites inv ON e.entry='upload:'||inv.upload_id AND inv.company_key=$1
+LEFT JOIN company_cv_uploads bu ON e.entry='base:u:'||bu.id
+LEFT JOIN company_cv_profiles pu ON pu.company_key=bu.company_key AND pu.entry='upload:'||bu.id
+LEFT JOIN company_candidate_refs ref ON ref.company_key=$1 AND ref.entry=e.entry
+LEFT JOIN jobs rj ON rj.id=ref.job_id
+LEFT JOIN company_candidate_states s ON s.company_key=$1 AND s.entry=e.entry
 LEFT JOIN company_cv_profiles p ON p.company_key=$1 AND p.entry=e.entry
 LEFT JOIN company_cv_profiles pb ON e.source='base' AND pb.company_key='${baseKey}' AND pb.entry=e.entry`;
 /* A base person joins the company's own candidates once the company acts on them. */
-const trackedSql = `(e.source<>'base' OR s.stage<>'new' OR s.rating IS NOT NULL
+const trackedSql = `(e.source<>'base' OR ref.entry IS NOT NULL OR s.stage<>'new' OR s.rating IS NOT NULL
   OR s.interview_at IS NOT NULL OR EXISTS(SELECT 1 FROM company_candidate_notes n
   WHERE n.company_key=$1 AND n.entry=e.entry))`;
 
 type Row = {
+  invite_expires_at: Date | null;
+  invite_consented_at: Date | null;
+  invite_withdrawn_at: Date | null;
+  saved: boolean;
   entry: string;
   source: Candidate['source'];
   job_id: string | null;
@@ -128,6 +147,9 @@ type Row = {
   edited: Record<string, unknown> | null;
   question_answers: ApplicationAnswer[];
   revealed: boolean;
+  has_ref: boolean;
+  ref_job_id: string | null;
+  ref_job_title: string;
 };
 /* Same person across entries without handing out the address: an opaque key per email. */
 const personHash = (email: string) =>
@@ -177,10 +199,14 @@ function shownCandidate(row: Row): Candidate {
       origin: 'edited',
     } as CandidateProfile;
   return {
+    saved: row.saved,
+    invite: row.invite_expires_at ? { expiresAt:row.invite_expires_at.toISOString(),consentedAt:row.invite_consented_at?.toISOString() ?? null,withdrawnAt:row.invite_withdrawn_at?.toISOString() ?? null } : null,
     entry: row.entry,
     source: row.source,
-    jobId: row.job_id,
-    jobTitle: row.job_title,
+    jobId: row.has_ref ? row.ref_job_id : row.job_id,
+    jobTitle: row.has_ref ? row.ref_job_title : row.job_title,
+    added: row.has_ref ? {jobId: row.ref_job_id, jobTitle: row.ref_job_title}
+      : row.source !== 'base' ? {jobId: row.job_id, jobTitle: row.job_title} : null,
     name: row.name,
     ...(row.source === 'upload' ? effectiveContact(row, profile) : { email: row.email, phone: row.phone }),
     title: row.title,
@@ -189,7 +215,7 @@ function shownCandidate(row: Row): Candidate {
     hiredAt: row.hired_at?.toISOString() ?? null,
     interviewAt: row.interview_at?.toISOString() ?? null,
     interviewNote: row.interview_note ?? '',
-    stage: row.stage,
+    stage: normalizeCandidateStage(row.stage),
     rating: row.rating,
     seen: row.seen,
     notes: row.notes,
@@ -311,10 +337,26 @@ export async function companyCvBase(
   return rows.map(candidate);
 }
 
+/** Preserve the ordinary candidates payload; trim only the CV base list. */
+export async function companyTalentList(company: CompanyIdentity, filters: Filters, offset = 0) {
+  const [own, base] = await Promise.all([companyCandidates(company), companyCvBase(company)]);
+  const ids = new Set(own.map(c => c.entry));
+  return talentResults([...own, ...base.filter(c => !ids.has(c.entry))], filters, Date.now(), offset);
+}
+export async function companyCvBaseList(company: CompanyIdentity, query = '', options?: Parameters<typeof companyCvBase>[1]) {
+  const rows = await companyCvBase(company, options);
+  const words = terms(query);
+  const matches = new Set(talentPeople(rows).filter(p => !words.length || matchScore(p, words)).flatMap(p => p.entries.map(c => c.entry)));
+  return rows.filter(c => matches.has(c.entry)).map(talentCard);
+}
+export async function companyCandidateDetail(company: CompanyIdentity, entry: string) {
+  return ownedEntry(company, entry);
+}
+
 const entrySchema = z
   .string()
   .regex(
-    /^(swipe|upload):[0-9a-f-]{36}$|^resume:[0-9a-f-]{36}:[0-9a-f-]{36}$|^base:[rs]:[0-9a-f-]{36}$/,
+    /^(swipe|upload):[0-9a-f-]{36}$|^resume:[0-9a-f-]{36}:[0-9a-f-]{36}$|^base:[rsu]:[0-9a-f-]{36}$/,
     'კანდიდატი ვერ მოიძებნა.',
   );
 /** The entry, if this company may see it; otherwise a 404 that reveals nothing. */
@@ -405,6 +447,8 @@ export async function candidateNotes(
 
 const profileEditSchema = z
   .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    title: z.string().trim().max(120).optional(),
     email: z.string().trim().max(254).refine((v) => !v || validCandidateEmail(v), 'ელფოსტა არასწორია.').optional(),
     phone: z.string().trim().max(32).refine((v) => !v || validCandidatePhone(v), 'ტელეფონი უნდა შეიცავდეს მინიმუმ 6 ციფრს.').optional(),
     years: z.number().int().min(0).max(80).nullable().optional(),
@@ -433,6 +477,9 @@ const profileEditSchema = z
   })
   .strict();
 const changeSchema = z.discriminatedUnion('action', [
+  z.object({action:z.literal('invite'),entry:z.string()}),
+  z.object({ action: z.literal('save'), entry: z.string(), saved: z.boolean() }),
+  z.object({ action: z.literal('add'), entry: z.string(), jobId: z.uuid().nullish() }),
   z.object({
     action: z.literal('profile'),
     entry: z.string(),
@@ -441,7 +488,7 @@ const changeSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('stage'),
     entries: z.array(z.string()).min(1).max(200),
-    stage: z.enum(candidateStages),
+    stage: z.enum([...candidateStages, 'review', 'shortlist']).transform(normalizeCandidateStage),
   }),
   z.object({
     action: z.literal('rate'),
@@ -480,6 +527,7 @@ export async function changeCandidate(
   if (!['owner', 'recruiter'].includes(company.role))
     throw new ApiError('ამ მოქმედების უფლება არ გაქვთ.', 403);
   const data = changeSchema.parse(input);
+  if (data.action === 'invite') return inviteCvToBase(company,data.entry);
   if (data.action === 'stage') {
     const entries = [...new Set(data.entries.map((entry) => entrySchema.parse(entry)))];
     return transaction(async (client) => {
@@ -503,17 +551,62 @@ export async function changeCandidate(
          RETURNING entry,hired_at`,
         [company.companyKey, entries, data.stage],
       );
+      const { rows: counts } = await client.query<{ entry: string; count: number }>(
+        'SELECT entry,count(*)::int AS count FROM company_candidate_notes WHERE company_key=$1 AND entry=ANY($2::text[]) GROUP BY entry',
+        [company.companyKey, entries],
+      );
       return { ok: true, candidates: rows.map((row) => ({
-        entry: row.entry, hiredAt: row.hired_at?.toISOString() ?? null,
+        entry: row.entry, hiredAt: row.hired_at?.toISOString() ?? null, notes: counts.find((count) => count.entry === row.entry)?.count ?? 0,
       })) };
     });
   }
   const owned = await ownedEntry(company, data.entry);
+  if (data.action === 'save') {
+    if (!/^(upload:[0-9a-f-]{36}|base:[rsu]:[0-9a-f-]{36})$/.test(data.entry))
+      throw new ApiError('ამ კანდიდატის შენახვა შეუძლებელია.', 400);
+    if (data.saved) await db().query(`INSERT INTO company_saved_candidates(company_key,entry,created_by) VALUES($1,$2,$3)
+      ON CONFLICT(company_key,entry) DO NOTHING`, [company.companyKey,data.entry,company.id]);
+    else await db().query('DELETE FROM company_saved_candidates WHERE company_key=$1 AND entry=$2', [company.companyKey,data.entry]);
+    return {...owned, saved:data.saved};
+  }
+  if (data.action === 'add') {
+    if (owned.source !== 'base' && owned.source !== 'upload')
+      throw new ApiError('კანდიდატი უკვე დამატებულია.', 400);
+    await transaction(async (client) => {
+      if (data.jobId) {
+        const job = await client.query(`SELECT 1 FROM company_job_ownership o JOIN jobs j ON j.id=o.job_id WHERE o.company_key=$1 AND o.job_id=$2 AND j.status='published' AND COALESCE(NULLIF(j.published->>'deadline',''),'9999-12-31') >= (now() AT TIME ZONE 'Asia/Tbilisi')::date::text`, [company.companyKey, data.jobId]);
+        if (!job.rowCount) throw new ApiError('ვაკანსია ვერ მოიძებნა.', 404);
+      }
+      let attached = false;
+      if (owned.source === 'upload' && data.jobId) {
+        const result = await client.query('UPDATE company_cv_uploads SET job_id=$3 WHERE company_key=$1 AND id=$2 AND job_id IS NULL RETURNING id',
+          [company.companyKey, data.entry.split(':')[1], data.jobId]);
+        attached = !!result.rowCount;
+      } else if (owned.source === 'base') {
+        const result = await client.query(`INSERT INTO company_candidate_refs(company_key,entry,job_id,created_by) VALUES($1,$2,$3,$4)
+          ON CONFLICT(company_key,entry) DO UPDATE SET job_id=EXCLUDED.job_id
+          WHERE company_candidate_refs.job_id IS NULL AND EXCLUDED.job_id IS NOT NULL RETURNING entry`, [company.companyKey,data.entry,data.jobId ?? null,company.id]);
+        attached = !!result.rowCount;
+      }
+      if (attached) await client.query(`INSERT INTO company_candidate_states(company_key,entry,stage) VALUES($1,$2,'new')
+        ON CONFLICT(company_key,entry) DO NOTHING`, [company.companyKey,data.entry]);
+    });
+    return ownedEntry(company, data.entry);
+  }
   if (data.action === 'profile') {
+    if ((data.edit.name !== undefined || data.edit.title !== undefined) && owned.source !== 'upload')
+      throw new ApiError('სახელის შესწორება მხოლოდ ატვირთულ კანდიდატზეა შესაძლებელი.', 400);
     const hasContact = data.edit.email !== undefined || data.edit.phone !== undefined;
     if (hasContact && owned.source !== 'upload')
       throw new ApiError('კონტაქტის შესწორება მხოლოდ თქვენ მიერ ატვირთულ კანდიდატზეა შესაძლებელი.', 400);
     await transaction(async (client) => {
+      if (data.edit.name !== undefined || data.edit.title !== undefined) {
+        await client.query(`UPDATE company_cv_uploads SET name=COALESCE($3,name),title=COALESCE($4,title)
+          WHERE company_key=$1 AND id=$2`, [company.companyKey,data.entry.split(':')[1],data.edit.name ?? null,data.edit.title ?? null]);
+        if (data.edit.name !== undefined) await client.query(`UPDATE company_cv_profiles
+          SET parsed=jsonb_set(parsed,'{parse,nameMissing}','false'::jsonb),updated_at=now()
+          WHERE company_key=$1 AND entry=$2 AND parsed->'parse' IS NOT NULL`, [company.companyKey,data.entry]);
+      }
       if (hasContact) {
         const contact = effectiveContact(data.edit);
         await client.query(
@@ -615,6 +708,16 @@ export async function candidateCv(
   const fileName = (c.name || 'CV').replace(/[^\p{L}\p{N} ._-]/gu, '').trim();
   if (c.source === 'base') {
     const [, kind, id] = entry.split(':');
+    if (kind === 'u') {
+      const {rows}=await db().query(`SELECT u.content,u.blob_path,u.file_name FROM company_cv_uploads u
+        JOIN company_cv_invites i ON i.upload_id=u.id AND i.company_key=u.company_key
+        WHERE u.id=$1 AND i.consented_at IS NOT NULL AND i.withdrawn_at IS NULL`,[id]);
+      const file=rows[0];
+      if (!file) return null;
+      const type=uploadType(file.file_name);
+      return file.content ? {body:new Uint8Array(file.content),type,name:file.file_name}
+        : file.blob_path ? blobFile(file.blob_path,type,file.file_name) : null;
+    }
     if (kind === 'r') {
       const cv = await resumeDetail(id);
       return cv
@@ -742,7 +845,7 @@ export async function uploadCandidate(
     throw new ApiError('ატვირთეთ PDF, Word (DOC, DOCX), ODT, RTF ან TXT ფაილი.');
   if (await isBlankCv(bytes, file.name)) throw new ApiError(blankCvMessage(true));
   const data = uploadSchema.parse({
-    name: form.get('name') || file.name.replace(/\.[^.]+$/, ''),
+    name: form.get('name') || file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().slice(0, 120) || 'კანდიდატი',
     email: form.get('email') ?? '',
     phone: form.get('phone') ?? '',
     title: form.get('title') ?? '',
@@ -835,6 +938,18 @@ export async function uploadCandidate(
     bytes,
     file.name,
   ).catch(() => null);
+  if (!context) {
+    const parsedName = profile?.name?.trim().slice(0,120);
+    if (!parsedName) {
+      const fallback = profile ?? parseCvText('');
+      fallback.parse = { confidence: fallback.parse?.confidence ?? 0, reason: fallback.parse?.reason ?? 'empty', nameMissing: true };
+      await db().query(`INSERT INTO company_cv_profiles(company_key,entry,parsed) VALUES($1,$2,$3)
+        ON CONFLICT(company_key,entry) DO UPDATE SET parsed=EXCLUDED.parsed`,
+        [company.companyKey, 'upload:' + rows[0].id, JSON.stringify(fallback)]);
+    }
+    await db().query('UPDATE company_cv_uploads SET name=$3 WHERE company_key=$1 AND id=$2',
+      [company.companyKey,rows[0].id,parsedName || data.name]);
+  }
   if (!context && profile) {
     const contact = effectiveContact(data, profile);
     await db().query(

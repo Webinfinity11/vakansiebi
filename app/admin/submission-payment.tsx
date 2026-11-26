@@ -8,11 +8,20 @@ import {
   premiumDays,
 } from '@/lib/billing';
 import { placementLabels, type PlacementTier } from '@/lib/placement';
-import { adminDate } from '@/lib/admin-format';
+import { adminUntil } from '@/lib/admin-format';
 import { SelectField } from '../select-field';
 
 export function placementIsReady(job: AdminJob, tier: PlacementTier) {
   if (tier === 'standard') return true;
+  // Mirrors approvePlacement: an unpaid or cancelled renewal must not block
+  // publishing edits to the placement that is already running.
+  if (
+    job.invoice?.renewal_for_expires_at &&
+    ['pending', 'cancelled'].includes(job.invoice.status) &&
+    job.placement_tier === tier &&
+    !!job.placement_expires_at
+  )
+    return true;
   if (job.invoice)
     return (
       job.invoice.status === 'paid' &&
@@ -86,7 +95,7 @@ export function SubmissionPayment({
               {tier === 'standard'
                 ? 'ვაკანსიის ვადამდე'
                 : !invoice && job.placement_expires_at
-                  ? `${adminDate(job.placement_expires_at)}-მდე`
+                  ? adminUntil(job.placement_expires_at)
                   : `${invoice?.service_days ?? premiumDays} დღე`}
             </dd>
           </div>

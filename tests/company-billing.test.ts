@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { nativeSource } from '../lib/job-submission';
 import assert from 'node:assert/strict';
 import type { PoolClient } from 'pg';
 import type { CompanyIdentity } from '../lib/company-portal';
@@ -58,7 +59,7 @@ function client(
           : [
               {
                 id: jobId,
-                draft: { title: 'TEST vacancy' },
+                draft: { title: 'TEST vacancy', source: options.imported ? 'external' : nativeSource },
                 status: options.status ?? 'published',
                 requested_placement: options.imported ? null : 'standard',
                 placement_expires_at: options.active
@@ -66,7 +67,7 @@ function client(
                   : null,
               },
             ];
-      else if (sql.includes('SELECT token,status,placement_tier'))
+      else if (sql.includes('SELECT * FROM job_invoices'))
         rows = options.invoice ? [options.invoice] : [];
       else if (sql.includes('SELECT 1 FROM company_accounts'))
         rows = options.disabledAccount ? [] : [{}];
@@ -104,7 +105,8 @@ for (const tier of ['vip', 'premium'] as const) {
     assert.ok(validGeorgianIban(iban));
     const { c, calls } = client();
     const url = await requestCompanyPlacement(c, company, jobId, tier);
-    assert.match(url!, /^\/invoices\/[a-f0-9]{64}$/);
+    assert.equal(url?.created, true);
+    assert.match(url!.invoice.url, /^\/invoices\/[a-f0-9]{64}$/);
     const insert = calls.find((call) =>
       call.sql.includes('INSERT INTO job_invoices'),
     )!;
@@ -136,14 +138,14 @@ for (const tier of ['vip', 'premium'] as const) {
   });
 }
 
-test('existing invoices are immutable and retries never generate a second invoice', async () => {
+test('pending and paid invoices remain immutable; refund states still block new orders', async () => {
   for (const status of ['pending', 'paid']) {
     const { c, calls } = client({
-      invoice: { token: 'a'.repeat(64), status, placement_tier: 'vip' },
+      invoice: { token: 'a'.repeat(64), status, placement_tier: 'vip', number: '42', created_at: '2026-11-26T00:00:00.000Z' },
     });
     assert.equal(
-      await requestCompanyPlacement(c, company, jobId, 'vip'),
-      undefined,
+      (await requestCompanyPlacement(c, company, jobId, 'vip'))?.created,
+      false,
     );
     assert.ok(!calls.some((call) => call.sql.includes('INSERT INTO')));
     await assert.rejects(
@@ -151,15 +153,27 @@ test('existing invoices are immutable and retries never generate a second invoic
       /ინვოისი უკვე/,
     );
   }
-  for (const status of ['cancelled', 'refunded', 'refund_required']) {
+  for (const status of ['refunded', 'refund_required']) {
     const { c } = client({
-      invoice: { token: 'a'.repeat(64), status, placement_tier: 'vip' },
+      invoice: { token: 'a'.repeat(64), status, placement_tier: 'vip', number: '42', created_at: '2026-11-26T00:00:00.000Z' },
     });
     await assert.rejects(
       requestCompanyPlacement(c, company, jobId, 'vip'),
       /ინვოისი უკვე/,
     );
   }
+});
+
+test('cancelled invoice permits a new order with a new token and unchanged old invoice', async () => {
+  const { c, calls } = client({ invoice: {
+    token: 'a'.repeat(64), status: 'cancelled', placement_tier: 'vip', number: '42',
+  } });
+  const result = await requestCompanyPlacement(c, company, jobId, 'premium');
+  assert.equal(result?.created, true);
+  assert.notEqual(result?.invoice.token, 'a'.repeat(64));
+  assert.equal(result?.invoice.placementTier, 'premium');
+  assert.equal(calls.filter(call => call.sql.includes('INSERT INTO job_invoices')).length, 1);
+  assert.ok(!calls.some(call => call.sql.includes('UPDATE job_invoices')));
 });
 
 test('new orders reject another company vacancy, imported/closed jobs, inactive accounts and recruiters', async () => {

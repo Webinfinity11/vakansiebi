@@ -1,22 +1,39 @@
+import { nativeSource } from '../job-submission';
 import type { PoolClient } from 'pg';
 import { db, transaction } from './db';
 import { ApiError } from './auth';
-import { billingSettings, createInvoice } from './billing';
+import { billingSettings, createInvoiceDetails, currentJobInvoice, currentInvoiceOrder } from './billing';
 import type { CompanyIdentity } from '../company-portal';
+import { invoiceDetails, type CompanyInvoiceDetails } from '../billing';
 import type { PlacementTier } from '../placement';
 
-/** An invoice is immutable: the existing billing system permits one order per vacancy. */
+/** Shared server rule for starting another paid term (existing orders remain idempotent). */
+export function canOrderCompanyPlacement(
+  company: CompanyIdentity,
+  job: { status: string; requested_placement: string | null; placement_expires_at: Date | null; draft: { source: string; deadline?: string } },
+  invoice: { status: string; activated_at: string | Date | null } | null,
+  now = new Date(),
+): boolean {
+  return company.role === 'owner' && company.approvalStatus === 'approved' && company.emailVerified
+    && ['pending', 'published'].includes(job.status) && !!job.requested_placement
+    && job.draft.source === nativeSource
+    && (!job.draft.deadline || job.draft.deadline >= now.toLocaleDateString('en-CA', { timeZone: 'Asia/Tbilisi' }))
+    && (!job.placement_expires_at || job.placement_expires_at.getTime() < now.getTime())
+    && (!invoice || invoice.status === 'cancelled' || (invoice.status === 'paid' && !!invoice.activated_at));
+}
+
+/** Issued invoices stay immutable; a cancelled order can be replaced with a new invoice. */
 export async function requestCompanyPlacement(
   c: PoolClient,
   company: CompanyIdentity,
   id: string,
   placement: PlacementTier,
-) {
+): Promise<{ invoice: CompanyInvoiceDetails; created: boolean } | undefined> {
   if (placement === 'standard') {
     // A rejected/cancelled order may be restored as a free vacancy without reusing payment.
     await c.query(
       `UPDATE job_submissions s SET requested_placement='standard'
-       FROM job_invoices i,company_job_ownership o
+       FROM (SELECT * FROM job_invoices WHERE job_id=$1 ${currentInvoiceOrder()}) i,company_job_ownership o
        WHERE s.job_id=$1 AND i.job_id=s.job_id AND o.job_id=s.job_id AND o.company_key=$2
          AND i.activated_at IS NULL AND i.status IN ('cancelled','refunded','refund_required')`,
       [id, company.companyKey],
@@ -40,18 +57,13 @@ export async function requestCompanyPlacement(
       'ფასიანი განთავსება მხოლოდ JOBX-ზე დამატებულ ვაკანსიაზეა ხელმისაწვდომი.',
       409,
     );
-  const invoice = (
-    await c.query(
-      'SELECT token,status,placement_tier FROM job_invoices WHERE job_id=$1 FOR UPDATE',
-      [id],
-    )
-  ).rows[0];
-  if (invoice) {
+  const invoice = await currentJobInvoice(c, id);
+  if (invoice && invoice.status !== 'cancelled' && !canOrderCompanyPlacement(company, job, invoice)) {
     if (
       invoice.placement_tier === placement &&
-      ['pending', 'paid'].includes(invoice.status)
+      (invoice.status === 'pending' || (invoice.status === 'paid' && !invoice.activated_at))
     )
-      return undefined;
+      return { invoice: invoiceDetails(invoice, `/invoices/${invoice.token}`), created: false };
     throw new ApiError(
       'ამ ვაკანსიაზე ინვოისი უკვე გაცემულია. განთავსების შესაცვლელად დაგვიკავშირდით.',
       409,
@@ -77,7 +89,7 @@ export async function requestCompanyPlacement(
   ).rowCount;
   if (!account)
     throw new ApiError('კომპანიის ანგარიშზე წვდომა შეზღუდულია.', 403);
-  if (job.placement_expires_at)
+  if (job.placement_expires_at && new Date(job.placement_expires_at).getTime() >= Date.now())
     throw new ApiError(
       'ამ ვაკანსიის ფასიანი განთავსება უკვე გაცემულია. განახლებისთვის დაგვიკავშირდით.',
       409,
@@ -88,7 +100,9 @@ export async function requestCompanyPlacement(
       new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tbilisi' })
   )
     throw new ApiError('ვაკანსიის ბოლო ვადა გასულია. ჯერ ვადა განაახლეთ.', 409);
-  const invoiceUrl = await createInvoice(c, {
+  if (!canOrderCompanyPlacement(company, job, invoice))
+    throw new ApiError('ამ ვაკანსიის წინ წამოწევა მიუწვდომელია.', 409);
+  const details = await createInvoiceDetails(c, {
     id,
     company: company.name,
     title: job.draft.title,
@@ -104,7 +118,7 @@ export async function requestCompanyPlacement(
     "INSERT INTO audit_log(job_id,action,actor,after_data) VALUES($1,'company.placement_requested',$2,$3)",
     [id, 'company:' + company.id, { placement }],
   );
-  return invoiceUrl;
+  return { invoice: details, created: true };
 }
 
 export async function upgradeCompanyJob(
@@ -113,6 +127,8 @@ export async function upgradeCompanyJob(
   version: number,
   placement: 'vip' | 'premium',
 ) {
+  if (company.role !== 'owner')
+    throw new ApiError('ფასიანი განთავსების შეკვეთა მხოლოდ ანგარიშის მფლობელს შეუძლია.', 403);
   return transaction(async (c) => {
     const job = (
       await c.query(
@@ -127,17 +143,17 @@ export async function upgradeCompanyJob(
         'ჩანაწერი შეიცვალა. განაახლეთ სია და სცადეთ ხელახლა.',
         409,
       );
-    if (job.status !== 'published')
+    if (!['pending', 'published'].includes(job.status))
       throw new ApiError(
-        'აწევა მხოლოდ გამოქვეყნებულ ვაკანსიაზეა ხელმისაწვდომი.',
+        'დახურული ვაკანსია ჯერ ხელახლა გაგზავნეთ.',
         409,
       );
-    const invoiceUrl = await requestCompanyPlacement(c, company, id, placement);
+    const placementResult = await requestCompanyPlacement(c, company, id, placement);
     await c.query(
       'UPDATE jobs SET version=version+1,updated_at=now() WHERE id=$1',
       [id],
     );
-    return { invoiceUrl };
+    return { invoiceUrl: placementResult?.created ? placementResult.invoice.url : undefined, invoice: placementResult?.invoice };
   });
 }
 

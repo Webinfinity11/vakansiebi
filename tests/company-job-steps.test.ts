@@ -3,10 +3,8 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { newCompanyJob, type CompanyJobForm } from '../lib/company-job-form';
 import {
-  companyJobSteps, fieldSteps, restoreJobStep, visibleJobErrors,
+  restoreJobStep, visibleJobErrors,
   validateAll,
-  validateStep,
-  firstInvalidStep,
   qualityHints,
   descriptionSections,
   questionPresets,
@@ -82,30 +80,6 @@ const cases: [string, Partial<CompanyJobForm>, string, string][] = [
     { contact: 'http://example.com' },
     'contact',
     'მიუთითეთ ელფოსტა, ტელეფონი ან https:// ბმული',
-  ],
-  [
-    'deadline empty',
-    { deadline: '' },
-    'deadline',
-    'აირჩიეთ ვადა დღეიდან 90 დღის ფარგლებში',
-  ],
-  [
-    'deadline invalid calendar',
-    { deadline: '2026-02-30' },
-    'deadline',
-    'აირჩიეთ ვადა დღეიდან 90 დღის ფარგლებში',
-  ],
-  [
-    'deadline old',
-    { deadline: '2000-01-01' },
-    'deadline',
-    'აირჩიეთ ვადა დღეიდან 90 დღის ფარგლებში',
-  ],
-  [
-    'deadline far',
-    { deadline: '2099-01-01' },
-    'deadline',
-    'აირჩიეთ ვადა დღეიდან 90 დღის ფარგლებში',
   ],
   [
     'language duplicates',
@@ -199,7 +173,7 @@ test('all passing combinations also pass submissionSchema with company fields', 
         );
       }
 });
-test('step mapping, remote city, imported salary, hints and presets', () => {
+test('remote city, imported salary, hints and presets', () => {
   assert.deepEqual(
     validateAll({ ...form(), mode: 'დისტანციური', city: '' }),
     {},
@@ -208,19 +182,7 @@ test('step mapping, remote city, imported salary, hints and presets', () => {
     validateAll({ ...form(), salaryFrom: 'bad' }, { imported: true }),
     {},
   );
-  assert.deepEqual(validateStep({ ...form(), title: '' }, 'placement'), {});
-  assert.equal(
-    firstInvalidStep(validateAll({ ...form(), title: '', contact: '' })),
-    'position',
-  );
-  assert.equal(firstInvalidStep({}), null);
-  assert.equal(
-    qualityHints({
-      ...form(),
-      deadline: submissionDate(new Date(Date.now() + 14 * 86400000)),
-    }).find((h) => h.id === 'deadline')?.done,
-    true,
-  );
+  assert.deepEqual(qualityHints(form()).map(h => h.id), ['salary', 'description']);
   assert.equal(descriptionSections.length, 3);
   assert.equal(questionPresets.length, 5);
 });
@@ -273,15 +235,27 @@ test('server issue mapping keeps nested questions and language failures attached
   );
 });
 
-test('two steps map all fields and migrate old drafts without remapping new step 2', () => {
-  assert.equal(companyJobSteps.length, 2);
-  assert.deepEqual(new Set(Object.values(fieldSteps)), new Set(['position', 'placement']));
-  assert.deepEqual([1, 2, 3, 4].map(n => restoreJobStep(n)), [1, 1, 2, 2]);
-  assert.deepEqual([1, 2].map(n => restoreJobStep(n, 2)), [1, 2]);
+test('one page maps all fields and restores every old step at one', () => {
+  assert.deepEqual([1, 2, 3, 4].map(n => restoreJobStep(n)), [1, 1, 1, 1]);
+  assert.deepEqual([1, 2].map(n => restoreJobStep(n, 2)), [1, 1]);
 });
 test('errors are hidden until blur or an attempted continuation', () => {
   const errors = {title: 'title error', description: 'description error'};
   assert.deepEqual(visibleJobErrors(errors, [], false), {});
   assert.deepEqual(visibleJobErrors(errors, ['title'], false), {title: 'title error'});
   assert.deepEqual(visibleJobErrors(errors, [], true), errors);
+});
+
+test('deadline is automatic and never produces a field validation message', () => {
+  for (const deadline of ['', '2000-01-01', '2026-02-30', '2099-01-01']) {
+    assert.equal(validateAll({ ...form(), deadline }).deadline, undefined);
+  }
+});
+
+test('editing ignores legacy hidden values while validating visible changes', () => {
+  const legacy = { ...form(), category: 'ძველი კატეგორია', contact: 'legacy', experience: 'legacy', languages: [{ name: 'legacy', level: '' }], questions: [{ text: '' }], deadline: '2000-01-01' } as unknown as CompanyJobForm;
+  assert.deepEqual(validateAll(legacy, { editing: true }), {});
+  assert.ok(validateAll({ ...legacy, title: '' }, { editing: true }).title);
+  assert.ok(validateAll(legacy).category);
+  assert.ok(validateAll({ ...legacy, salaryFrom: '200', salaryTo: '100' }, { editing: true }).salaryTo);
 });

@@ -1,3 +1,4 @@
+import { untilDate } from '@/lib/date-until';
 import * as statusRules from '@/lib/company-job-status';
 import type { CompanyJobForm } from '@/lib/company-job-form';
 import type { JobRejection } from '@/lib/job-rejection';
@@ -22,6 +23,15 @@ export type CompanyJob = {
     status: string;
     token: string;
     placement_tier: 'vip' | 'premium';
+    number: string;
+    amount_gel: number;
+    service_days: number;
+    payee_name: string;
+    bank_name: string;
+    iban: string;
+    created_at: string;
+    activated_at?: string | null;
+    renewal_for_expires_at?: string | null;
   } | null;
 };
 export type CompanyProfile = {
@@ -110,6 +120,10 @@ export function formatDate(value: string | null, now = new Date()) {
   const current = new Date(now.getTime() + 4 * 60 * 60 * 1000);
   const text = `${local.getUTCDate()} ${months[local.getUTCMonth()]}`;
   return local.getUTCFullYear() === current.getUTCFullYear() ? text : `${text}, ${local.getUTCFullYear()}`;
+}
+/** Georgian deadline, using the calendar day in Tbilisi. */
+export function formatUntilDate(value: string | null, now = new Date()) {
+  return value ? untilDate(value, now) : '';
 }
 /** Georgian business times always use Asia/Tbilisi, regardless of the browser locale. */
 export function formatTime(value: string | number) {

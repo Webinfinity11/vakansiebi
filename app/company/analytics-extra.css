@@ -44,8 +44,10 @@
 .an-table .cp-row { border-bottom-color: var(--cp-line-2); }
 @media (min-width: 1600px) {
   .cp-main:has(.an-kpis) { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 24px; align-content: start; }
-  .cp-main:has(.an-kpis) > :is(.cp-head,.an-kpis,.an-split,.an-card--table,.an-foot) { grid-column: 1 / -1; }
+  .cp-main:has(.an-kpis) > :is(.cp-head,.an-kpis,.an-split,.an-card--tips,.an-card--table,.an-foot) { grid-column: 1 / -1; }
   .cp-main:has(.an-kpis) > .an-extra { grid-template-columns: minmax(0,1fr); }
   .cp-main:has(.an-kpis) > * { margin-block: 0; min-width: 0; }
 }
 @media (max-width: 600px) { .an-card, .an-kpis > div { padding: 16px; } }
+
+.an-extra > .an-card:only-child { grid-column: 1 / -1; }

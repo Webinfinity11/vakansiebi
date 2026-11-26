@@ -2,7 +2,7 @@ import type { PoolClient } from 'pg';
 import type { InvoiceEmail } from '../invoice-email';
 import { db } from './db';
 
-export type NotificationKind = 'applications' | 'deadline' | 'candidate_ack' | 'job_rejected' | 'admin_review';
+export type NotificationKind = 'applications' | 'deadline' | 'job_rejected' | 'admin_review';
 export function notificationEmailEnabled() {
   return !!process.env.RESEND_API_KEY && process.env.NOTIFICATION_EMAIL_ENABLED !== 'false';
 }
@@ -25,7 +25,7 @@ export async function deliverNotifications(limit = 10) {
       WITH candidate AS (
         SELECT id, attempts>0 AND created_at<now()-interval '23 hours' AS expired
         FROM notification_emails
-        WHERE status IN ('pending','sending') AND next_attempt_at<=now()
+        WHERE kind <> 'candidate_ack' AND status IN ('pending','sending') AND next_attempt_at<=now()
           AND (locked_until IS NULL OR locked_until<now())
         ORDER BY next_attempt_at,created_at LIMIT 1 FOR UPDATE SKIP LOCKED
       ) UPDATE notification_emails e SET status='sending',attempts=e.attempts+1,
