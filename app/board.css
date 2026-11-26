@@ -4403,3 +4403,30 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* Vacancy contact card: one type family, even rhythm, the two extra
+   links grouped under a single divider instead of loose paragraphs. */
+.vacancy-page .contact-phone strong {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.vacancy-page .quick-apply .quick-apply-note {
+  margin-top: var(--jobx-space-8px);
+}
+.vacancy-contact .vacancy-contact-more {
+  display: grid;
+  gap: var(--jobx-space-6px);
+  margin-top: var(--jobx-space-16px);
+  padding-top: var(--jobx-space-14px);
+  border-top: 1px solid var(--jobx-color-e1e6ef-surface);
+}
+.vacancy-contact .vacancy-contact-more:empty {
+  display: none;
+}
+.vacancy-contact .vacancy-contact-more .vacancy-cv-hint {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: var(--jobx-font-size-13px);
+  line-height: 1.7;
+}

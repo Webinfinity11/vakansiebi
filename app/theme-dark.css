@@ -2026,6 +2026,15 @@
 :root[data-theme='dark'][data-theme="dark"] .vacancy-page .vacancy-company-benefits {
   background: #374662;
 }
+:root[data-theme='dark'] .cv-draft-note a {
+  color: var(--jobx-accent);
+}
+:root[data-theme='dark'] .vacancy-contact .vacancy-contact-more {
+  border-top: 1px solid var(--jobx-color-e1e6ef-surface);
+}
+:root[data-theme='dark'] .vacancy-contact .vacancy-contact-more .vacancy-cv-hint {
+  border: 0;
+}
 
 /* ── from app/phone.css ── */
 :root[data-theme='dark'] .board-shell .job-new {

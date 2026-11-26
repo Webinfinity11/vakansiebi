@@ -370,6 +370,9 @@ export const englishUi: Readonly<Record<string, string>> = {
   'CV არ გაქვს?': 'Need a CV?',
   'შექმენი უფასოდ': 'Create one for free',
   'ასეთი ვაკანსიები ბევრია?': 'Looking at more jobs like this?',
+  'მსგავსი ვაკანსიები?': 'More jobs like this?',
+  'გაიარე Swipe-ით': 'Browse them with Swipe',
+  'გაიხსნება შენი ფოსტა — მიამაგრე CV და გაგზავნე.': 'Your email app opens: attach your CV and send.',
   'გაიარე Swipe-ით და გააგზავნე CV ერთი შეხებით':
     'Browse with Swipe and send your CV in one step',
   'ადმინის წინასწარი ნახვა — გამოუქვეყნებელი მონაცემები':

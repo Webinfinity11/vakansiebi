@@ -561,9 +561,9 @@ export default function VacancyPage({
   );
   const deckHint = similarDeck ? (
     <p className="vacancy-cv-hint">
-      {ui('ასეთი ვაკანსიები ბევრია?')}{' '}
+      {ui('მსგავსი ვაკანსიები?')}{' '}
       <Link href={similarDeck} prefetch={false}>
-        {ui('გაიარე Swipe-ით და გააგზავნე CV ერთი შეხებით')}
+        {ui('გაიარე Swipe-ით')}
       </Link>
     </p>
   ) : null;
@@ -820,8 +820,10 @@ export default function VacancyPage({
                 <VacancyApplicationForm key={job.id} job={job} />
               ) : (
                 <QuickApply job={job}>
-                  {cvHint}
-                  {deckHint}
+                  <div className="vacancy-contact-more">
+                    {cvHint}
+                    {deckHint}
+                  </div>
                 </QuickApply>
               )}
             </aside>
