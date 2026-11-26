@@ -568,12 +568,14 @@ export function CandidatesView({
       ) : !candidates.length ? (
         <div className="cp-empty cc-start">
           <h2>ჯერ კანდიდატი არ გყავთ</h2>
-          <p>ვაკანსიაზე გამოგზავნილი რეზიუმეები აქ გამოჩნდება.</p>
-          {canEdit && onGo && <button type="button" className="cp-btn cp-btn--primary" onClick={() => onGo('job')}>ვაკანსიის დამატება</button>}
-          <div className="cc-message-actions">
-            {onGo && <button className="cc-edit-link" onClick={() => onGo('talent')}>CV ბაზის გახსნა</button>}
-            {canEdit && onAdd && <button className="cc-edit-link" onClick={onAdd}>CV-ის ატვირთვა</button>}
+          <p>ვაკანსიაზე გამოგზავნილი რეზიუმეები აქ გამოჩნდება. მანამდე კანდიდატები CV ბაზაში მოძებნეთ.</p>
+          <div className="cc-start-actions">
+            {onGo && <button type="button" className="cp-btn cp-btn--primary" onClick={() => onGo('talent')}><Search size={16} />კანდიდატების მოძებნა ბაზაში</button>}
+            {canEdit && onGo && <button type="button" className="cp-btn cp-btn--secondary" onClick={() => onGo('job')}>ვაკანსიის დამატება</button>}
           </div>
+          {canEdit && onAdd && <div className="cc-message-actions">
+            <button className="cc-edit-link" onClick={onAdd}>CV-ის ატვირთვა</button>
+          </div>}
         </div>
       ) : view === 'board' ? (
         <>

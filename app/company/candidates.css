@@ -322,3 +322,6 @@
 
 /* Five stages fit a 1440 screen without sideways scrolling. */
 @media (min-width: 761px) { .cc .cc-board { grid-auto-columns: minmax(200px, 1fr); } }
+
+/* Empty candidates: searching the CV base and adding a vacancy sit side by side. */
+.cc-start-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px 12px; }
