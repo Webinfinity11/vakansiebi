@@ -63,6 +63,10 @@ void test(
       assert.equal(created.mustChangePassword, false);
       assert.equal(created.attached, 2);
 
+      // A few mistyped passwords never lock a person out.
+      for (let i = 0; i < 10; i++)
+        await assert.rejects(loginCompany('hr@tbc.example', 'wrong-pass-' + i, '127.0.0.9'), /არასწორია/);
+      assert.ok(await loginCompany('hr@tbc.example', 'Tbc-Admin-Pass-2026', '127.0.0.9'));
       // The company signs in with the email and the password it was given.
       let me = (await companyIdentity(await loginCompany('hr@tbc.example', 'Tbc-Admin-Pass-2026', '127.0.0.1')))!;
       assert.equal(me.mustChangePassword, false);

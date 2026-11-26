@@ -69,7 +69,7 @@ export async function recordAttempt(
   await transaction(async (c) => {
     await c.query('SELECT pg_advisory_xact_lock(917467)');
     await c.query(
-      "DELETE FROM company_login_attempts WHERE created_at<now()-interval '15 minutes'",
+      "DELETE FROM company_login_attempts WHERE created_at<now()-interval '5 minutes'",
     );
     const { rows } = await c.query<{
       network: number;
@@ -79,8 +79,10 @@ export async function recordAttempt(
       'SELECT count(*) FILTER(WHERE network_hash=$1)::int network,count(*) FILTER(WHERE username_hash=$2)::int username,count(*)::int total FROM company_login_attempts',
       [net, user],
     );
-    if (rows[0].network >= 8 || rows[0].username >= 12 || rows[0].total >= 300)
-      throw new ApiError('ძალიან ბევრი მცდელობაა. სცადეთ 15 წუთში.', 429);
+    // Generous on purpose: a person mistyping a few times never meets it; a script
+    // guessing passwords does. Successful sign-ins and changes are not counted.
+    if (rows[0].network >= 30 || rows[0].username >= 15 || rows[0].total >= 1000)
+      throw new ApiError('ბევრი წარუმატებელი მცდელობაა. სცადეთ 5 წუთში.', 429);
     await c.query(
       'INSERT INTO company_login_attempts(network_hash,username_hash) VALUES($1,$2)',
       [net, user],
@@ -196,7 +198,10 @@ export async function changeCompanyPassword(
   nextPassword: string,
   network?: string,
 ) {
-  if (network) await recordAttempt(network, 'password:' + company.username);
+  // The first change after a temporary password checks no secret, so it is not limited.
+  const attempts = network && !company.mustChangePassword
+    ? await recordAttempt(network, 'password:' + company.username)
+    : null;
   companyPassword.parse(nextPassword);
   if (currentPassword && currentPassword === nextPassword)
     throw new ApiError('ახალი პაროლი ძველისგან უნდა განსხვავდებოდეს.');
@@ -225,6 +230,11 @@ export async function changeCompanyPassword(
     await c.query('DELETE FROM company_sessions WHERE account_id=$1', [
       company.id,
     ]);
+    if (attempts)
+      await c.query(
+        'DELETE FROM company_login_attempts WHERE network_hash=$1 AND username_hash=$2',
+        [attempts.net, attempts.user],
+      );
     await c.query(
       "INSERT INTO audit_log(action,actor,after_data) VALUES('company.password_changed',$1,$2)",
       ['company:' + company.id, { accountId: company.id }],
