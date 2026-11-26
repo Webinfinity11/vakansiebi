@@ -4390,3 +4390,44 @@ fieldset.cp-fields {
 
 .cp-details-settings .cp-details-error { margin: 0 24px 16px; }
 .cp-main > .cp-details-settings { margin-bottom: 16px; }
+
+/* Empty candidates: the three ways someone arrives, each with its action. */
+.cc-start .cc-start-ways {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cc-start-ways li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--cp-line, #e3e7ef);
+  border-radius: var(--cp-radius-sm, 12px);
+  text-align: left;
+}
+.cc-start-ways svg {
+  color: var(--cp-accent);
+}
+.cc-start-ways strong {
+  font-size: 15px;
+  color: var(--cp-ink);
+}
+.cc-start-ways span {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--cp-ink-2);
+}
+.cc-start-ways .cp-btn {
+  margin-top: 4px;
+}
+@media (max-width: 900px) {
+  .cc-start .cc-start-ways {
+    grid-template-columns: 1fr;
+  }
+}

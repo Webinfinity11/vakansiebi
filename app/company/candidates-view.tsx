@@ -33,6 +33,9 @@ import {
   Trash2,
   Pencil,
   Plus,
+  Briefcase,
+  Database,
+  Upload,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -111,7 +114,13 @@ export function CandidatesView({
   onError,
   initialFilter,
   sheetOnly = false,
+  onAdd,
+  onGo,
 }: {
+  /** Opens the CV upload: a CV from elsewhere becomes a candidate at once. */
+  onAdd?: () => void;
+  /** The other ways candidates arrive: a vacancy, or the JOBX CV base. */
+  onGo?: (place: 'job' | 'talent') => void;
   initialFilter?: { jobId?: string; stage?: CandidateStage };
   /** Only the selected person's details, in a side sheet over another view (the CV base). */
   sheetOnly?: boolean;
@@ -467,9 +476,16 @@ export function CandidatesView({
           {fresh > 0 && <em className="cc-fresh">{fresh}  ახალი</em>}
         </div>
         <div className="cp-head-actions">
+          {canEdit && onAdd && (
+            <button type="button" className="cp-btn cp-btn--primary" onClick={onAdd}>
+              <Plus size={15} />
+              კანდიდატის დამატება
+            </button>
+          )}
+          {candidates.length > 0 && (<>
           <button
             type="button"
-            className={`cp-btn ${!peek && !composer && !picked.length && (view !== 'list' || !current || !nextStage(current.stage)) ? 'cp-btn--primary' : 'cp-btn--ghost'}`}
+            className={`cp-btn ${onAdd ? 'cp-btn--ghost' : !peek && !composer && !picked.length && (view !== 'list' || !current || !nextStage(current.stage)) ? 'cp-btn--primary' : 'cp-btn--ghost'}`}
             disabled={!visible.length}
             onClick={() => exportCandidates(visible)}
           >
@@ -538,16 +554,48 @@ export function CandidatesView({
                დაფა </button>
             {wide && <button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}><Table2 size={15} />ცხრილი</button>}
           </div>
+          </>)}
         </div>
       </header>
 
       {!loaded ? (
         <div className="cc-empty">იტვირთება…</div>
       ) : !candidates.length ? (
-        <div className="cp-empty">
+        <div className="cp-empty cc-start">
           <h2>ჯერ კანდიდატი არ გყავთ</h2>
-          <p>
-             როცა ვინმე თქვენს ვაკანსიაზე CV-ს გამოგზავნის, აქ გამოჩნდება. კანდიდატს აქვე გადაიყვანთ შემდეგ ეტაპზე და დაუწერთ შენიშვნას. სხვა წყაროდან მიღებული CV-ები „CV ბაზაში“ ატვირთეთ. </p>
+          <p>კანდიდატი აქ სამი გზით ჩნდება:</p>
+          <ol className="cc-start-ways">
+            <li>
+              <Briefcase size={20} />
+              <strong>ვაკანსიაზე განაცხადი</strong>
+              <span>ვაკანსიაზე გამოგზავნილი CV აქ თავისით შემოვა.</span>
+              {canEdit && onGo && (
+                <button type="button" className="cp-btn cp-btn--secondary" onClick={() => onGo('job')}>
+                  {jobs.length ? 'ვაკანსიების ნახვა' : 'ვაკანსიის დამატება'}
+                </button>
+              )}
+            </li>
+            <li>
+              <Database size={20} />
+              <strong>JOBX-ის CV ბაზა</strong>
+              <span>მოძებნეთ ადამიანი და დაამატეთ ეტაპზე.</span>
+              {onGo && (
+                <button type="button" className="cp-btn cp-btn--secondary" onClick={() => onGo('talent')}>
+                  CV ბაზის გახსნა
+                </button>
+              )}
+            </li>
+            <li>
+              <Upload size={20} />
+              <strong>საკუთარი CV</strong>
+              <span>ფოსტით ან სხვაგან მიღებული CV ატვირთეთ.</span>
+              {canEdit && onAdd && (
+                <button type="button" className="cp-btn cp-btn--primary" onClick={onAdd}>
+                  CV-ის ატვირთვა
+                </button>
+              )}
+            </li>
+          </ol>
         </div>
       ) : view === 'board' ? (
         <Board

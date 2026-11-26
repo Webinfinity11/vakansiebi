@@ -39,6 +39,7 @@ import { missingCompanyDetails, type CompanyDetails } from "@/lib/company-regist
 import { JobsView } from "./jobs-view";
 import { SetupGuide } from "./setup-guide";
 import { CandidatesView } from "./candidates-view";
+import { UploadDialog } from "./talent-view";
 import { TalentView } from "./talent-view";
 import { AnalyticsView } from "./analytics-view";
 import type { CompanyJobStats } from "@/lib/company-analytics";
@@ -139,6 +140,7 @@ export function CompanyPortal({
     null,
   );
   const [tab, setTab] = useState<Tab>("jobs");
+  const [adding, setAdding] = useState(false);
   // The address is read once on arrival; until then it must not be overwritten.
   const [urlReady, setUrlReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -873,6 +875,27 @@ export function CompanyPortal({
             onPatch={patchCandidates}
             onReveal={revealContact}
             onError={setError}
+            onAdd={() => setAdding(true)}
+            onGo={(place) =>
+              place === "job"
+                ? jobs.length
+                  ? setTab("jobs")
+                  : window.location.assign("/company/jobs/new")
+                : setTab("talent")
+            }
+          />
+        )}
+        {tab === "candidates" && approved && canEdit && (
+          <UploadDialog
+            open={adding}
+            jobs={jobs}
+            onClose={() => setAdding(false)}
+            onUploaded={async (entry, duplicate) => {
+              setAdding(false);
+              setCandidates(await request("candidates"));
+              setNotice(duplicate ? "ეს CV უკვე დამატებული იყო." : "კანდიდატი დაემატა.");
+              setSelected(entry);
+            }}
           />
         )}
         {tab === "talent" && approved && (

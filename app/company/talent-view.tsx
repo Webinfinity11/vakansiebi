@@ -696,7 +696,7 @@ function PersonRow({
   );
 }
 
-function UploadDialog({
+export function UploadDialog({
   open,
   jobs,
   onClose,
