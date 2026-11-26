@@ -23,7 +23,25 @@ import { hashCompanyPassword, newCompanyPassword } from './company-auth';
 export async function companyAccounts() {
   const rows = (
     await db().query(
-      'SELECT a.id,a.company_key,p.name,a.username,a.email,a.enabled,a.must_change_password,a.version,p.approval_status,p.trusted_mode AS "trustedMode",p.registration_code,a.representative_name,a.position,a.phone,a.email_verified,a.role,(SELECT count(DISTINCT v.entry)::int FROM company_cv_base_views v WHERE v.company_key=a.company_key AND v.created_at>now()-interval \'30 days\') AS "baseViews" FROM company_accounts a JOIN company_profiles p USING(company_key) ORDER BY a.created_at DESC LIMIT 500',
+      `WITH owned AS (
+         SELECT o.company_key, j.id, j.status,
+           (j.status='published' AND COALESCE(NULLIF(j.published->>'deadline',''),'9999') >= to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')) AS live
+         FROM company_job_ownership o JOIN jobs j ON j.id=o.job_id
+       ), applied AS (
+         SELECT o.company_key, COALESCE(a.sent_at,a.created_at) AS at FROM swipe_applications a JOIN owned o ON o.id=a.job_id WHERE a.status='sent'
+         UNION ALL SELECT o.company_key, c.first_at FROM resume_contacts c JOIN owned o ON o.id=c.job_id WHERE c.kind='cv'
+         UNION ALL SELECT u.company_key, u.created_at FROM company_cv_uploads u
+       )
+       SELECT a.id,a.company_key,p.name,a.username,a.email,a.enabled,a.must_change_password,a.version,
+         p.approval_status,p.trusted_mode AS "trustedMode",p.registration_code,a.representative_name,a.position,a.phone,
+         a.email_verified,a.role,a.created_at AS "createdAt",a.last_login_at AS "lastLoginAt",a.password_changed_at AS "passwordChangedAt",
+         (SELECT count(DISTINCT v.entry)::int FROM company_cv_base_views v WHERE v.company_key=a.company_key AND v.created_at>now()-interval '30 days') AS "baseViews",
+         (SELECT count(*)::int FROM owned o WHERE o.company_key=a.company_key) AS "jobs",
+         (SELECT count(*)::int FROM owned o WHERE o.company_key=a.company_key AND o.live) AS "liveJobs",
+         (SELECT count(*)::int FROM applied x WHERE x.company_key=a.company_key) AS "applications",
+         (SELECT count(*)::int FROM applied x WHERE x.company_key=a.company_key AND x.at>now()-interval '30 days') AS "recentApplications",
+         (SELECT count(*)::int FROM company_accounts t WHERE t.company_key=a.company_key) AS "team"
+       FROM company_accounts a JOIN company_profiles p USING(company_key) ORDER BY a.created_at DESC LIMIT 500`,
     )
   ).rows;
   const trust = new Map<string, boolean>();
@@ -35,6 +53,19 @@ export async function companyAccounts() {
     'SELECT company_key,alias_name FROM company_name_aliases ORDER BY created_at')).rows)
     aliases.set(a.company_key, [...(aliases.get(a.company_key) ?? []), a.alias_name]);
   return rows.map(row => ({ ...row, trusted: trust.get(row.company_key) ?? false, aliases: aliases.get(row.company_key) ?? [] }));
+}
+/** The vacancies an account owns, newest first, for the admin to see what attached. */
+export async function companyAccountJobs(key: string) {
+  const { rows } = await db().query(
+    `SELECT j.id, COALESCE(j.published->>'title', j.draft->>'title', 'ვაკანსია') AS title,
+       ${jobCompany} AS company, j.status, NULLIF(j.published->>'deadline','') AS deadline,
+       j.published_at AS "publishedAt",
+       (SELECT string_agg(DISTINCT s.name, ', ') FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id) AS sources
+     FROM company_job_ownership o JOIN jobs j ON j.id=o.job_id
+     WHERE o.company_key=$1 ORDER BY j.published_at DESC NULLS LAST LIMIT 200`,
+    [key],
+  );
+  return rows;
 }
 /* The longest run of letters or digits in a name: a cheap ILIKE pre-filter
    before the exact companyKey comparison, which SQL cannot reproduce. */

@@ -125,6 +125,7 @@ export async function loginCompany(
       "INSERT INTO company_sessions(token_hash,account_id,expires_at) VALUES($1,$2,now()+interval '12 hours')",
       [digest(token), account.id],
     );
+    await c.query('UPDATE company_accounts SET last_login_at=now() WHERE id=$1', [account.id]);
     await c.query(
       'DELETE FROM company_login_attempts WHERE network_hash=$1 AND username_hash=$2',
       [attempts.net, attempts.user],
@@ -208,7 +209,7 @@ export async function changeCompanyPassword(
     )
       throw new ApiError('მიმდინარე პაროლი არასწორია.', 401);
     await c.query(
-      'UPDATE company_accounts SET password_hash=$2,must_change_password=false,version=version+1,updated_at=now() WHERE id=$1',
+      'UPDATE company_accounts SET password_hash=$2,must_change_password=false,password_changed_at=now(),version=version+1,updated_at=now() WHERE id=$1',
       [company.id, hash],
     );
     await c.query('DELETE FROM company_sessions WHERE account_id=$1', [
@@ -245,5 +246,6 @@ export async function createCompanySession(accountId: string) {
     "INSERT INTO company_sessions(token_hash,account_id,expires_at) VALUES($1,$2,now()+interval '12 hours')",
     [digest(token), accountId],
   );
+  await db().query('UPDATE company_accounts SET last_login_at=now() WHERE id=$1', [accountId]);
   return token;
 }

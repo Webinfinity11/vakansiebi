@@ -27,8 +27,8 @@ void test(
       url.searchParams.set('options', '-c search_path=' + schema);
       process.env.DATABASE_URL = url.href;
       const { db } = await import('../lib/server/db');
-      const { createCompanyAccount, changeCompanyAccount, companyAccounts, deleteCompany } = await import('../lib/server/company-accounts');
-      const { loginCompany, companyIdentity } = await import('../lib/server/company-auth');
+      const { createCompanyAccount, changeCompanyAccount, companyAccounts, deleteCompany, companyAccountJobs } = await import('../lib/server/company-accounts');
+      const { loginCompany, companyIdentity, changeCompanyPassword } = await import('../lib/server/company-auth');
       const { companyJobs } = await import('../lib/server/company-jobs');
       const job = async (company: string) => {
         const vacancy = {
@@ -71,6 +71,12 @@ void test(
 
       const account = () => companyAccounts().then((rows) => rows.find((a) => a.username === 'tbc')!);
       let row = await account();
+      // The admin sees the sign-in, the attached vacancies and their list.
+      assert.ok(row.lastLoginAt, 'sign-in recorded');
+      assert.equal(row.passwordChangedAt, null);
+      assert.equal(row.jobs, 2);
+      assert.equal(row.liveJobs, 2);
+      assert.deepEqual((await companyAccountJobs(row.company_key)).map((j: { company: string }) => j.company).sort(), ['სს „თიბისი ბანკი“', 'თიბისი ბანკი'].sort());
       const added = await changeCompanyAccount({ action: 'add-alias', id: row.id, version: row.version, name: 'TBC Bank' });
       assert.equal(added.attached, 1);
       assert.deepEqual((await account()).aliases, ['სს „თიბისი ბანკი“', 'TBC Bank']);
@@ -118,6 +124,11 @@ void test(
       await assert.rejects(loginCompany('hr@tbc.example', 'Second-Pass-2026!', '127.0.0.2'));
       me = (await companyIdentity(await loginCompany('jobs@tbc.example', 'Second-Pass-2026!', '127.0.0.2')))!;
       assert.equal(me.mustChangePassword, true);
+      await changeCompanyPassword(me, 'Second-Pass-2026!', 'Own-Pass-2026-tbc!');
+      row = await account();
+      assert.equal(row.must_change_password, false);
+      assert.ok(row.passwordChangedAt, 'the admin sees the company set its own password');
+      me = (await companyIdentity(await loginCompany('jobs@tbc.example', 'Own-Pass-2026-tbc!', '127.0.0.2')))!;
       row = await account();
       await assert.rejects(
         changeCompanyAccount({ action: 'set-login', id: row.id, version: row.version, email: 'hr@other.example' }),

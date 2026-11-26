@@ -7,7 +7,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import type { CompanyAccount } from '@/lib/company-portal';
+import type { CompanyAccount, CompanyAccountJob } from '@/lib/company-portal';
+import { vacancyPath } from '@/lib/vacancy-navigation';
+import { day, since, passwordState, jobState } from '@/lib/company-account-status';
 import '../../company/portal.css';
 import './accounts.css';
 
@@ -143,6 +145,24 @@ export function CompanyAccounts() {
   // Set when the name already belongs to a company: the admin decides.
   const [sameName, setSameName] = useState<{ message: string; form: FormData } | null>(null);
   // What the last create attempt used, to point at the account that already has it.
+  const [ownedJobs, setOwnedJobs] = useState<CompanyAccountJob[] | null>(null);
+  const currentKey = current?.company_key;
+  useEffect(() => {
+    if (!currentKey) return;
+    let active = true;
+    fetch('/api/admin/company-accounts?jobs=' + encodeURIComponent(currentKey), { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows: CompanyAccountJob[]) => {
+        if (active) setOwnedJobs(rows);
+      })
+      .catch(() => {
+        if (active) setOwnedJobs([]);
+      });
+    return () => {
+      active = false;
+      setOwnedJobs(null);
+    };
+  }, [currentKey, current?.version]);
   const [tried, setTried] = useState<{ email: string; username: string } | null>(null);
   const owner = (name: string) =>
     accounts.find((a) => a.role === 'owner' && a.name.trim().toLowerCase() === name.trim().toLowerCase());
@@ -302,7 +322,7 @@ export function CompanyAccounts() {
       setAccounts(rows);
       // Name changes keep the dialog open on the refreshed account; the rest close it.
       setCurrent(
-        action === 'add-alias' || action === 'remove-alias'
+        ['add-alias', 'remove-alias', 'assign-company-jobs', 'assign-job', 'trusted-mode'].includes(action)
           ? (rows.find((a) => a.id === current.id) ?? null)
           : null,
       );
@@ -373,6 +393,28 @@ export function CompanyAccounts() {
         </p>
       )}
       {notice && <output className="company-notice">{notice}</output>}
+      {loaded && accounts.length > 0 && (() => {
+        const owners = accounts.filter((a) => a.role === 'owner');
+        const week = Date.now() - 7 * day;
+        const stats: [string, number][] = [
+          ['კომპანია', owners.length],
+          ['აქტიური', owners.filter((a) => a.approval_status === 'approved' && a.enabled).length],
+          ['შევიდა ბოლო 7 დღეში', owners.filter((a) => a.lastLoginAt && Date.parse(a.lastLoginAt) > week).length],
+          ['არასდროს შესულა', owners.filter((a) => !a.lastLoginAt).length],
+          ['აქტიური ვაკანსია', owners.reduce((n, a) => n + a.liveJobs, 0)],
+          ['განაცხადი 30 დღეში', owners.reduce((n, a) => n + a.recentApplications, 0)],
+        ];
+        return (
+          <dl className="account-stats">
+            {stats.map(([label, value]) => (
+              <div key={label}>
+                <dd>{value}</dd>
+                <dt>{label}</dt>
+              </div>
+            ))}
+          </dl>
+        );
+      })()}
       {loaded && accounts.length > 0 && (
         <div
           className="account-views"
@@ -428,9 +470,17 @@ export function CompanyAccounts() {
                     {account.name} <StatusPill account={account} />
                   </h2>
                   <p>{account.email}</p>
-                  {account.baseViews > 0 && (
-                    <p>CV ბაზა: {account.baseViews} კონტაქტი 30 დღეში</p>
-                  )}
+                  <p className="account-meta">
+                    <span>{account.lastLoginAt ? `შევიდა ${since(account.lastLoginAt)}` : 'ჯერ არ შესულა'}</span>
+                    {account.role === 'owner' && (
+                      <>
+                        <span>{account.liveJobs} აქტიური ვაკანსია{account.jobs > account.liveJobs ? ` (სულ ${account.jobs})` : ''}</span>
+                        <span>{account.recentApplications} განაცხადი 30 დღეში</span>
+                        {account.baseViews > 0 && <span>CV ბაზა: {account.baseViews} კონტაქტი</span>}
+                      </>
+                    )}
+                    {account.role !== 'owner' && <span>გუნდის წევრი</span>}
+                  </p>
                 </div>
                 <button
                   className="ds-btn ds-btn--secondary ds-btn--sm"
@@ -699,13 +749,64 @@ export function CompanyAccounts() {
               <dd>{current?.registration_code || '—'}</dd>
               <dt>ელფოსტა</dt>
               <dd>{current?.email_verified ? 'დადასტურებულია' : 'დაუდასტურებელი'}</dd>
+              <dt>პაროლი</dt>
+              <dd>{current && passwordState(current)}</dd>
+              <dt>ბოლო შესვლა</dt>
+              <dd>{since(current?.lastLoginAt) || 'ჯერ არ შესულა'}</dd>
+              <dt>შეიქმნა</dt>
+              <dd>{since(current?.createdAt)}</dd>
             </dl>
+            {current?.role === 'owner' && (
+              <dl className="account-stats account-stats--small">
+                {([
+                  ['აქტიური ვაკანსია', current.liveJobs],
+                  ['განაცხადი 30 დღეში', current.recentApplications],
+                  ['განაცხადი სულ', current.applications],
+                  ['CV ბაზა, 30 დღე', current.baseViews],
+                  ['გუნდი', current.team],
+                ] as [string, number][]).map(([label, value]) => (
+                  <div key={label}>
+                    <dd>{value}</dd>
+                    <dt>{label}</dt>
+                  </div>
+                ))}
+              </dl>
+            )}
             <details className="account-more">
               <summary>
-                სახელები და ვაკანსიები
-                <span>{1 + (current?.aliases?.length ?? 0)}</span>
+                ვაკანსიები და სახელები
+                <span>{current?.jobs ?? 0}</span>
               </summary>
               <div className="company-form">
+                <p className="account-rule">
+                  ებმება საიტზე ამ სახელებით გამოქვეყნებული ვაკანსიები, რომლებიც სხვა კომპანიას არ ეკუთვნის.
+                  ახლებიც თავისით მიება, როცა კომპანია სივრცეს გახსნის.
+                </p>
+                {ownedJobs === null ? (
+                  <p className="account-rule">იტვირთება…</p>
+                ) : ownedJobs.length === 0 ? (
+                  <p className="account-empty">
+                    ჯერ არცერთი ვაკანსია არ არის მიბმული. სცადეთ „ყველა ვაკანსიის მიბმა“; თუ ვერ მოიძებნა,
+                    საიტზე ამ სახელით ვაკანსია ჯერ არ არის, ან სხვა დაწერილობითაა — დაამატეთ სახელი ქვემოთ.
+                  </p>
+                ) : (
+                  <ul className="account-jobs">
+                    {ownedJobs.map((j) => {
+                      const [label, tone] = jobState(j);
+                      return (
+                        <li key={j.id}>
+                          <a href={vacancyPath({ id: j.id, title: j.title })} target="_blank" rel="noopener">
+                            {j.title}
+                          </a>
+                          <span className={`account-pill account-pill--${tone}`}>{label}</span>
+                          <small>
+                            {[j.company, j.sources, j.deadline ? `ვადა ${j.deadline}` : ''].filter(Boolean).join(' · ')}
+                          </small>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
                 <ul className="account-aliases" aria-label="კომპანიის სახელები">
                   <li>{current?.name}</li>
                   {current?.aliases?.map((name) => (

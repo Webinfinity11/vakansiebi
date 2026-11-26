@@ -7,6 +7,7 @@ import {
 import { requireCompanyPortal } from '@/lib/server/company-auth';
 import {
   companyAccounts,
+  companyAccountJobs,
   companySuggestions,
   createCompanyAccount,
   changeCompanyAccount,
@@ -17,11 +18,15 @@ export async function GET(req: Request) {
   try {
     await requireAdmin();
     requireCompanyPortal();
-    const companies = new URL(req.url).searchParams.get('companies');
+    const params = new URL(req.url).searchParams;
+    const companies = params.get('companies');
+    const jobsOf = params.get('jobs');
     return Response.json(
-      companies !== null
-        ? await companySuggestions(companies.slice(0, 160))
-        : await companyAccounts(),
+      jobsOf !== null
+        ? await companyAccountJobs(jobsOf.slice(0, 200))
+        : companies !== null
+          ? await companySuggestions(companies.slice(0, 160))
+          : await companyAccounts(),
       {
         headers: { 'Cache-Control': 'private, no-store' },
       },

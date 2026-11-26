@@ -375,3 +375,91 @@
   gap: 8px 12px;
   margin-bottom: 0;
 }
+
+/* Company activity at a glance. */
+.account-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 20px 0 16px;
+}
+.account-stats > div {
+  padding: 14px 16px;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  background: var(--ds-surface);
+}
+.account-stats dd {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ds-ink);
+}
+.account-stats dt {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ds-ink-3);
+}
+.account-stats--small {
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.account-stats--small > div {
+  padding: 10px 12px;
+}
+.account-stats--small dd {
+  font-size: 18px;
+}
+.company-job-list .account-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.account-rule {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ds-ink-3);
+}
+.account-empty {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--ds-surface-muted, #f5f6f8);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ds-ink-2);
+}
+.account-jobs {
+  display: grid;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--ds-line);
+  border-radius: 10px;
+}
+.account-jobs li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ds-line);
+}
+.account-jobs li:last-child {
+  border-bottom: 0;
+}
+.account-jobs a {
+  font-size: 14px;
+  color: var(--ds-ink);
+  overflow-wrap: anywhere;
+}
+.account-jobs a:hover {
+  color: var(--ds-accent);
+}
+.account-jobs small {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--ds-ink-3);
+}

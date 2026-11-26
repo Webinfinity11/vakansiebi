@@ -47,6 +47,26 @@ export type CompanyAccount = {
   aliases: string[];
   /** JOBX CV base people whose contact or CV the company opened in the last 30 days. */
   baseViews: number;
+  createdAt: string;
+  lastLoginAt: string | null;
+  passwordChangedAt: string | null;
+  /** Vacancies attached to the company, and those live on the site now. */
+  jobs: number;
+  liveJobs: number;
+  /** Applications to its vacancies plus CVs it uploaded: all time and last 30 days. */
+  applications: number;
+  recentApplications: number;
+  team: number;
+};
+
+export type CompanyAccountJob = {
+  id: string;
+  title: string;
+  company: string;
+  status: string;
+  deadline: string | null;
+  publishedAt: string | null;
+  sources: string | null;
 };
 
 export type CompanyRole = 'owner' | 'recruiter' | 'viewer';
