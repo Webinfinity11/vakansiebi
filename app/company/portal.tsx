@@ -158,6 +158,9 @@ export function CompanyPortal({
 }) {
   const [registering, setRegistering] = useState(false);
   const [inviteToken, setInviteToken] = useState("");
+  // A one-time "create your password" link from JOBX: whose account it opens.
+  const [setupToken, setSetupToken] = useState("");
+  const [setupFor, setSetupFor] = useState<{ name: string; email: string } | null>(null);
   const [google, setGoogle] = useState<{ email: string; name: string } | null>(
     null,
   );
@@ -218,6 +221,16 @@ export function CompanyPortal({
       setCandidateFilter({ jobId: place.job, stage: place.stage as CandidateStage | undefined });
     setUrlReady(true);
     setInviteToken(params.get("invite") || "");
+    const setup = params.get("setup") || "";
+    setSetupToken(setup);
+    if (setup)
+      void fetch("/api/company/setup?token=" + encodeURIComponent(setup), { cache: "no-store" })
+        .then(async (res) => {
+          const body = await res.json();
+          if (res.ok) setSetupFor(body);
+          else setError(body.error || "ბმული ვერ გაიხსნა.");
+        })
+        .catch(() => setError("ბმული ვერ გაიხსნა. სცადეთ ხელახლა."));
     if (params.get("register") === "1") setRegistering(true);
     const googleState = params.get("google");
     if (googleState && googleErrors[googleState])
@@ -441,6 +454,14 @@ export function CompanyPortal({
       }
     });
   }
+  async function finishSetup(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    await action(async () => {
+      await request("setup", { token: setupToken, password: data.get("password") });
+      window.location.replace("/company");
+    });
+  }
   // Leave without finishing: the temporary password still works next time.
   const signOut = () => {
     if (!confirmLeaving()) return;
@@ -509,8 +530,8 @@ export function CompanyPortal({
       </button>
     </output>
   );
-  if (!identity || identity.mustChangePassword || inviteToken) {
-    const choosing = !identity && !inviteToken;
+  if (!identity || identity.mustChangePassword || inviteToken || setupToken) {
+    const choosing = !identity && !inviteToken && !setupToken;
     return (
       <div className="cp cp--auth">
         <div className="cp-auth-shell">
@@ -579,7 +600,24 @@ export function CompanyPortal({
                   <span className="cp-auth-or">ან</span>
                 </div>
               )}
-              {registering || inviteToken ? (
+              {setupToken ? (
+                <form className="cp-auth-form" onSubmit={finishSetup}>
+                  <h1>პაროლის შექმნა</h1>
+                  {setupFor && (
+                    <p>
+                      <strong>{setupFor.name}</strong> · {setupFor.email}
+                    </p>
+                  )}
+                  <input type="hidden" name="username" autoComplete="username" value={setupFor?.email ?? ""} readOnly />
+                  <label>
+                    პაროლი, სულ მცირე 8 სიმბოლო <NewPasswordInput />
+                  </label>
+                  <button className="cp-btn cp-btn--primary cp-btn--block" disabled={busy || !setupFor}>
+                    {busy ? "მიმდინარეობს…" : "შენახვა და შესვლა"}
+                  </button>
+                  {!setupFor && error && <Link href="/company">შესვლის გვერდზე გადასვლა</Link>}
+                </form>
+              ) : registering || inviteToken ? (
                 <form className="cp-auth-form" onSubmit={register}>
                   <h1>
                     {inviteToken

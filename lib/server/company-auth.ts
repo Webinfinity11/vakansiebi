@@ -129,7 +129,7 @@ export async function loginCompany(
       throw new ApiError('მომხმარებლის სახელი ან პაროლი არასწორია.', 401);
     await c.query('DELETE FROM company_sessions WHERE expires_at<now()');
     await c.query(
-      "INSERT INTO company_sessions(token_hash,account_id,expires_at) VALUES($1,$2,now()+interval '12 hours')",
+      "INSERT INTO company_sessions(token_hash,account_id,expires_at) VALUES($1,$2,now()+interval '30 days')",
       [digest(token), account.id],
     );
     await c.query('UPDATE company_accounts SET last_login_at=now() WHERE id=$1', [account.id]);
@@ -151,7 +151,7 @@ export async function companyIdentity(
     return null;
   const { rows } = await db().query(
     `UPDATE company_sessions s SET last_seen_at=now() FROM company_accounts a JOIN company_profiles p ON p.company_key=a.company_key JOIN company_accounts owner ON owner.company_key=a.company_key AND owner.role='owner' AND owner.enabled
-    WHERE s.token_hash=$1 AND s.account_id=a.id AND a.enabled AND s.expires_at>now() AND s.last_seen_at>now()-interval '2 hours'
+    WHERE s.token_hash=$1 AND s.account_id=a.id AND a.enabled AND s.expires_at>now()
     RETURNING a.id,a.company_key AS "companyKey",p.name,a.username,a.email,a.must_change_password AS "mustChangePassword",a.role,p.approval_status AS "approvalStatus",a.email_verified AS "emailVerified",a.representative_name AS "representativeName",
       jsonb_build_object('code',COALESCE(p.registration_code,''),'representativeName',owner.representative_name,'position',owner.position,'phone',owner.phone) AS details`,
     [digest(token)],
@@ -178,7 +178,8 @@ export async function setCompanySession(token: string) {
       process.env.APP_URL?.startsWith('https://') === true,
     sameSite: 'strict',
     path: '/',
-    maxAge: 12 * 3600,
+    // Stay signed in for 30 days; signing out or a password change ends it.
+    maxAge: 30 * 86400,
   });
 }
 export async function revokeCompanySession(token: string | undefined) {
@@ -263,7 +264,7 @@ export async function requireCompanyRole(
 export async function createCompanySession(accountId: string) {
   const token = randomBytes(32).toString('hex');
   await db().query(
-    "INSERT INTO company_sessions(token_hash,account_id,expires_at) VALUES($1,$2,now()+interval '12 hours')",
+    "INSERT INTO company_sessions(token_hash,account_id,expires_at) VALUES($1,$2,now()+interval '30 days')",
     [digest(token), accountId],
   );
   await db().query('UPDATE company_accounts SET last_login_at=now() WHERE id=$1', [accountId]);

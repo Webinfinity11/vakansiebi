@@ -19,6 +19,7 @@ import { companyUsername } from '../company-portal';
 import { safeEmail } from '../application-contact';
 import { isGenericCompanyName } from '../company-logo-identity';
 import { hashCompanyPassword, newCompanyPassword } from './company-auth';
+import { companySetupLink } from './company-setup';
 
 export async function companyAccounts() {
   const rows = (
@@ -254,7 +255,7 @@ export async function createCompanyAccount(input: unknown) {
         : 0;
       return { ...rows[0], attached };
     });
-    return { account, password, mustChangePassword: mustChange, attached: account.attached };
+    return { account, password, mustChangePassword: mustChange, attached: account.attached, setupLink: await companySetupLink(account.id) };
   } catch (error) {
     if (
       error &&

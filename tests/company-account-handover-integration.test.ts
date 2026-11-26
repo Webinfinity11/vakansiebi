@@ -30,6 +30,7 @@ void test(
       const { createCompanyAccount, changeCompanyAccount, companyAccounts, deleteCompany, companyAccountJobs } = await import('../lib/server/company-accounts');
       const { loginCompany, companyIdentity, changeCompanyPassword } = await import('../lib/server/company-auth');
       const { companyJobs } = await import('../lib/server/company-jobs');
+      const { readCompanySetup, completeCompanySetup } = await import('../lib/server/company-setup');
       const job = async (company: string) => {
         const vacancy = {
           title: 'ოპერატორი', company, city: 'თბილისი', category: 'ფინანსები', salary: '', salaryMin: null,
@@ -96,6 +97,16 @@ void test(
         changeCompanyAccount({ action: 'add-alias', id: row.id, version: row.version, name: 'სხვა კომპანია' }),
         /სხვა კომპანიის ანგარიშს/,
       );
+
+      // A new company gets a one-time link: it sets its own password and is signed in.
+      const fresh = await createCompanyAccount({ name: 'ბმულის კომპანია', username: 'linkco', email: 'hr@link.example', confirmed: true });
+      const token = new URL(fresh.setupLink).searchParams.get('setup')!;
+      assert.deepEqual(await readCompanySetup(token), { name: 'ბმულის კომპანია', email: 'hr@link.example' });
+      const linked = (await companyIdentity(await completeCompanySetup(token, 'link-pass', '127.0.0.5')))!;
+      assert.equal(linked.mustChangePassword, false);
+      assert.ok(await loginCompany('hr@link.example', 'link-pass', '127.0.0.5'));
+      await assert.rejects(readCompanySetup(token), /ვადა გაუვიდა ან უკვე გამოყენებულია/);
+      await assert.rejects(completeCompanySetup(token, 'other-pass', '127.0.0.5'), /ვადა გაუვიდა ან უკვე გამოყენებულია/);
 
       // Taken email or username: the error names exactly which one.
       await assert.rejects(

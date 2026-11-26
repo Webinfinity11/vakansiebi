@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, type SubmitEvent } from 'react';
-import { Plus, Search, Copy, RefreshCw, X } from 'lucide-react';
+import { Plus, Search, Copy, RefreshCw, X, Mail } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,9 @@ type Secret = {
   email: string;
   password: string;
   mustChangePassword: boolean;
+  /** One-time "create your password" link; the company needs nothing else. */
+  setupLink?: string;
+  accountId?: string;
 };
 
 /* Employer names already on the site, typed and picked: another spelling of the same company. */
@@ -295,6 +298,8 @@ export function CompanyAccounts() {
         email: result.account.email,
         password: result.password,
         mustChangePassword: result.mustChangePassword,
+        setupLink: result.setupLink,
+        accountId: result.account.id,
       });
       await load();
     });
@@ -572,7 +577,7 @@ export function CompanyAccounts() {
             {picked && (
               <p className="account-picked">{picked.jobs} ვაკანსია მიება ანგარიშს</p>
             )}
-            <div className="company-form-grid">
+            <div>
               <label>
                 ელფოსტა
                 <input
@@ -587,23 +592,23 @@ export function CompanyAccounts() {
                   }}
                 />
               </label>
-              <label>
-                პაროლი
-                <input
-                  className="ds-input"
-                  name="password"
-                  type="text"
-                  autoComplete="new-password"
-                  minLength={8}
-                  maxLength={128}
-                  spellCheck={false}
-                  placeholder="ცარიელი — შეიქმნება ავტომატურად"
-                />
-              </label>
             </div>
             <details className="account-more">
               <summary>დამატებით</summary>
               <div className="company-form">
+                <label>
+                  პაროლი
+                  <input
+                    className="ds-input"
+                    name="password"
+                    type="text"
+                    autoComplete="new-password"
+                    minLength={8}
+                    maxLength={128}
+                    spellCheck={false}
+                    placeholder="საჭირო არ არის — კომპანია ბმულით შექმნის"
+                  />
+                </label>
                 <label>
                   მომხმარებლის სახელი
                   <input
@@ -907,6 +912,20 @@ export function CompanyAccounts() {
                   <button
                     type="button"
                     className="ds-btn ds-btn--secondary"
+                    disabled={busy}
+                    onClick={() =>
+                      void act(async () => {
+                        if (!current) return;
+                        const { link } = await request({ action: 'setup-link', id: current.id });
+                        setSecret({ username: current.username, email: current.email, password: '', mustChangePassword: false, setupLink: link, accountId: current.id });
+                      })
+                    }
+                  >
+                    პაროლის შექმნის ბმული
+                  </button>
+                  <button
+                    type="button"
+                    className="ds-btn ds-btn--secondary"
                     onClick={() => setConfirmation('reset-password')}
                   >
                     დროებითი პაროლის გენერაცია
@@ -992,36 +1011,105 @@ export function CompanyAccounts() {
         }}
       >
         <DialogContent>
-          <DialogTitle>შესვლის მონაცემები</DialogTitle>
+          <DialogTitle>{secret?.setupLink ? 'ბმული მზადაა' : 'შესვლის მონაცემები'}</DialogTitle>
           <DialogDescription>
-            პაროლი მხოლოდ ახლა ჩანს — დააკოპირეთ და გადაეცით კომპანიას.
+            {secret?.setupLink
+              ? `კომპანია ბმულით პაროლს თვითონ შექმნის და პირდაპირ შევა. ბმული ${secret.email}-ისთვისაა და 7 დღე მოქმედებს.`
+              : 'პაროლი მხოლოდ ახლა ჩანს — დააკოპირეთ და გადაეცით კომპანიას.'}
           </DialogDescription>
-          <dl className="account-credentials">
-            <dt>შესვლა</dt>
-            <dd>/company</dd>
-            <dt>ელფოსტა</dt>
-            <dd>{secret?.email}</dd>
-            <dt>მომხმარებელი</dt>
-            <dd>{secret?.username}</dd>
-            <dt>{secret?.mustChangePassword ? 'დროებითი პაროლი' : 'პაროლი'}</dt>
-            <dd>
-              <code>{secret?.password}</code>
-            </dd>
-          </dl>
-          <button
-            className="ds-btn ds-btn--primary"
-            onClick={() =>
-              void act(async () => {
-                await navigator.clipboard.writeText(
-                  `${location.origin}/company\nელფოსტა: ${secret?.email}\nმომხმარებელი: ${secret?.username}\nპაროლი: ${secret?.password}`,
-                );
-                setNotice('მონაცემები დაკოპირებულია.');
-              })
-            }
-          >
-            <Copy size={16} />
-            მონაცემების კოპირება
-          </button>
+          {secret?.setupLink ? (
+            <>
+              <div className="account-setup-actions">
+                <button
+                  className="ds-btn ds-btn--primary"
+                  disabled={busy}
+                  onClick={() =>
+                    void act(async () => {
+                      const sent = await request({ action: 'send-setup', id: secret.accountId });
+                      setNotice(`ბმული გაიგზავნა: ${sent.email}`);
+                    })
+                  }
+                >
+                  <Mail size={16} />
+                  ელფოსტაზე გაგზავნა
+                </button>
+                <button
+                  className="ds-btn ds-btn--secondary"
+                  onClick={() =>
+                    void act(async () => {
+                      await navigator.clipboard.writeText(
+                        `JOBX-ზე კომპანიის სივრცე მზადაა. პაროლის შესაქმნელად და შესასვლელად გახსენით ბმული:\n${secret.setupLink}`,
+                      );
+                      setNotice('ბმული დაკოპირებულია — გაუგზავნეთ WhatsApp-ით ან ფოსტით.');
+                    })
+                  }
+                >
+                  <Copy size={16} />
+                  ბმულის კოპირება
+                </button>
+              </div>
+              {secret.password && (
+                <details className="account-more">
+                  <summary>ან შესვლის მონაცემები</summary>
+                <dl className="account-credentials">
+                  <dt>შესვლა</dt>
+                  <dd>/company</dd>
+                  <dt>ელფოსტა</dt>
+                  <dd>{secret?.email}</dd>
+                  <dt>მომხმარებელი</dt>
+                  <dd>{secret?.username}</dd>
+                  <dt>{secret?.mustChangePassword ? 'დროებითი პაროლი' : 'პაროლი'}</dt>
+                  <dd>
+                    <code>{secret?.password}</code>
+                  </dd>
+                </dl>
+                <button
+                  className="ds-btn ds-btn--primary"
+                  onClick={() =>
+                    void act(async () => {
+                      await navigator.clipboard.writeText(
+                        `${location.origin}/company\nელფოსტა: ${secret?.email}\nმომხმარებელი: ${secret?.username}\nპაროლი: ${secret?.password}`,
+                      );
+                      setNotice('მონაცემები დაკოპირებულია.');
+                    })
+                  }
+                >
+                  <Copy size={16} />
+                  მონაცემების კოპირება
+                </button>
+                </details>
+              )}
+            </>
+          ) : (
+            <>
+            <dl className="account-credentials">
+              <dt>შესვლა</dt>
+              <dd>/company</dd>
+              <dt>ელფოსტა</dt>
+              <dd>{secret?.email}</dd>
+              <dt>მომხმარებელი</dt>
+              <dd>{secret?.username}</dd>
+              <dt>{secret?.mustChangePassword ? 'დროებითი პაროლი' : 'პაროლი'}</dt>
+              <dd>
+                <code>{secret?.password}</code>
+              </dd>
+            </dl>
+            <button
+              className="ds-btn ds-btn--primary"
+              onClick={() =>
+                void act(async () => {
+                  await navigator.clipboard.writeText(
+                    `${location.origin}/company\nელფოსტა: ${secret?.email}\nმომხმარებელი: ${secret?.username}\nპაროლი: ${secret?.password}`,
+                  );
+                  setNotice('მონაცემები დაკოპირებულია.');
+                })
+              }
+            >
+              <Copy size={16} />
+              მონაცემების კოპირება
+            </button>
+            </>
+          )}
           {notice && <output>{notice}</output>}
         </DialogContent>
       </Dialog>

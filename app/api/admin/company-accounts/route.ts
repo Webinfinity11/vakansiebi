@@ -13,6 +13,7 @@ import {
   changeCompanyAccount,
   deleteCompany,
 } from '@/lib/server/company-accounts';
+import { companySetupLink, sendCompanySetup } from '@/lib/server/company-setup';
 export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   try {
@@ -46,6 +47,10 @@ export async function POST(req: Request) {
         ? await createCompanyAccount(data)
         : data.action === 'delete-company'
           ? await deleteCompany(data)
+          : data.action === 'setup-link'
+            ? { link: await companySetupLink(String(data.id)) }
+            : data.action === 'send-setup'
+              ? await sendCompanySetup(String(data.id))
           : await changeCompanyAccount(data);
     return Response.json(result, {
       headers: { 'Cache-Control': 'private, no-store' },
