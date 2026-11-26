@@ -10,8 +10,11 @@ void test(
     assert.ok(['localhost', '127.0.0.1'].includes(url.hostname));
     assert.equal(url.pathname, '/jobx_company_local');
     const { db } = await import('../lib/server/db');
-    const { companyCvBase, companyCandidates, changeCandidate, candidateCv, revealCandidate, baseDailyLimit } =
+    const { companyCvBase: loadCompanyCvBase, companyCandidates, changeCandidate, candidateCv, revealCandidate, baseDailyLimit } =
       await import('../lib/server/company-candidates');
+    // Direct DB tests do not have a Next request lifecycle. Other assertions need no backfill.
+    const companyCvBase = (company: Parameters<typeof loadCompanyCvBase>[0]) =>
+      loadCompanyCvBase(company, { schedule: () => {} });
     const key = 'cvbaseqa' + randomUUID().replaceAll('-', '');
     const resume = randomUUID();
     const company = {
@@ -41,6 +44,37 @@ void test(
       );
       const entry = 'base:r:' + resume;
 
+      // The list must resolve even while scheduled PDF parsing is still pending.
+      let releaseBackfill!: (value: number) => void;
+      let backfillStarted = false;
+      let backfillFinished = false;
+      let scheduledWork: Promise<void> | undefined;
+      const pendingBackfill = new Promise<number>((resolve) => { releaseBackfill = resolve; });
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const result = loadCompanyCvBase(company, {
+          schedule: (work) => { scheduledWork = work(); },
+          backfill: async () => {
+            backfillStarted = true;
+            const count = await pendingBackfill;
+            backfillFinished = true;
+            return count;
+          },
+        });
+        const earlyBase = await Promise.race([
+          result,
+          new Promise<never>((_, reject) => {
+            timeout = setTimeout(() => reject(new Error('CV list waited for backfill')), 5000);
+          }),
+        ]);
+        assert.ok(backfillStarted);
+        assert.equal(backfillFinished, false);
+        assert.ok(earlyBase.some((c) => c.entry === entry));
+      } finally {
+        clearTimeout(timeout);
+        releaseBackfill(0);
+        await scheduledWork;
+      }
       const base = await companyCvBase(company);
       const person = base.find((c) => c.entry === entry);
       assert.ok(person, 'resume appears in the CV base');

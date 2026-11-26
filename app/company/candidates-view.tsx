@@ -1,4 +1,5 @@
 'use client';
+import { validCandidateEmail, validCandidatePhone } from '@/lib/company-candidate-contact';
 import { StatusMark } from './status-mark';
 import { SelectField } from '../select-field';
 import { defaultTemplates, render, templateKinds, templateLabels, validTemplate, type MessageTemplates, type TemplateKey } from '@/lib/company-message-templates';
@@ -160,6 +161,10 @@ export function CandidatesView({
   const [job, setJob] = useState('all');
   const [onlyMatching, setOnlyMatching] = useState(false);
   const [query, setQuery] = useState('');
+  const clearFilters = () => {
+    setQuery(''); setJob('all'); setSource('all'); setOnlyMatching(false); setStage('all');
+  };
+  const clearFiltersButton = <button type="button" className="cp-btn cp-btn--ghost" onClick={clearFilters}>ფილტრების გასუფთავება</button>;
   const [picked, setPicked] = useState<string[]>([]);
   const [dragging, setDragging] = useState<string[] | null>(null);
   const moving = useRef(false);
@@ -502,6 +507,7 @@ export function CandidatesView({
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
+          <div className="cc-filter-controls">
           <DropdownMenu>
             <DropdownMenuTrigger className="cp-btn cp-btn--ghost cc-job-filter">
               {job === 'cv_box'
@@ -509,6 +515,7 @@ export function CandidatesView({
                 : job === 'all'
                   ? 'ყველა ვაკანსია'
                   : (jobs.find((j) => j.id === job)?.title ?? 'ვაკანსია')}
+              <ChevronDown size={14} aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-64">
               <DropdownMenuItem onClick={() => setJob('all')}>
@@ -524,7 +531,7 @@ export function CandidatesView({
           </DropdownMenu>
           <button
             type="button"
-            className="cp-btn cp-btn--ghost"
+            className="cp-btn cp-btn--ghost cc-matching-filter"
             aria-pressed={onlyMatching}
             onClick={() => setOnlyMatching((value) => !value)}
           >
@@ -532,6 +539,7 @@ export function CandidatesView({
           <DropdownMenu>
             <DropdownMenuTrigger className="cp-btn cp-btn--ghost" aria-label="წყარო">
               {source === 'all' ? 'წყარო' : source === 'applied' ? 'ვაკანსიაზე გამოგზავნილი' : source === 'upload' ? 'თქვენ მიერ ატვირთული' : 'CV ყუთი'}
+              <ChevronDown size={14} aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {Object.entries({ all: 'ყველა წყარო', applied: 'ვაკანსიაზე გამოგზავნილი', upload: 'თქვენ მიერ ატვირთული', cv_box: 'CV ყუთი' }).map(([key, label]) => <DropdownMenuItem key={key} onClick={() => setSource(key)}>{label}</DropdownMenuItem>)}
@@ -553,6 +561,7 @@ export function CandidatesView({
               <Columns3 size={15} />
                დაფა </button>
             {wide && <button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}><Table2 size={15} />ცხრილი</button>}
+          </div>
           </div>
           </>)}
         </div>
@@ -598,6 +607,8 @@ export function CandidatesView({
           </ol>
         </div>
       ) : view === 'board' ? (
+        <>
+        {!visible.length && <div className="cc-empty">ამ ფილტრით კანდიდატი არ არის.{clearFiltersButton}</div>}
         <Board
           canEdit={canEdit}
           candidates={visible}
@@ -608,6 +619,7 @@ export function CandidatesView({
           onOpen={setPeek}
           onMove={(entry, next) => void move([entry], next)}
         />
+        </>
       ) : (
         <>
           <StageFlow
@@ -640,7 +652,7 @@ export function CandidatesView({
                   <td>{c.rating ?? '—'}</td><td>{sourceLabel(c)}</td><td><time dateTime={c.appliedAt}>{formatDate(c.appliedAt)}</time></td><td>{c.notes}</td>
                 </tr>)}</tbody>
               </table>
-              {!visible.length && <p className="cc-empty">ამ ფილტრით კანდიდატი არ არის.</p>}
+              {!visible.length && <div className="cc-empty">ამ ფილტრით კანდიდატი არ არის.{clearFiltersButton}</div>}
             </div>
           ) : <div className="cc-split">
             <div className="cc-list-wrap">
@@ -649,6 +661,7 @@ export function CandidatesView({
                   {stage === 'all'
                     ? 'ამ ფილტრით კანდიდატი არ არის.'
                     : `„${stageLabels[stage]}“ ეტაპზე ჯერ არავინაა.${canEdit ? ' გადმოათრიეთ კანდიდატი ზედა ზოლზე.' : ''}`}
+                  {clearFiltersButton}
                 </div>
               ) : (
                 <ul className="cc-list" aria-label="კანდიდატების სია">
@@ -1222,9 +1235,9 @@ function Detail({
         open={canEdit && editing}
         candidate={c}
         onClose={() => setEditing(false)}
-        onSaved={(profile) => {
+        onSaved={(profile, contact) => {
           setEditing(false);
-          onPatch([c.entry], { profile });
+          onPatch([c.entry], { profile, ...contact });
         }}
         onError={onError}
       />
@@ -1378,21 +1391,23 @@ function Detail({
 const levelText = (level: string | null) =>
   !level ? '' : level === 'native' ? 'მშობლიური' : level.toUpperCase();
 
-/* Correcting what was read from the CV. Only the screening facts; the file stays as sent. */
+/* Correcting extracted facts and owned upload contacts; the file stays as sent. */
 function ProfileEditor({
   open,
   candidate: c,
   onClose,
   onSaved,
-  onError,
 }: {
   open: boolean;
   candidate: Candidate;
   onClose: () => void;
-  onSaved: (profile: CandidateProfile) => void;
+  onSaved: (profile: CandidateProfile, contact?: { email: string; phone: string }) => void;
   onError: (message: string) => void;
 }) {
   const p = c.profile;
+  const canEditContact = c.source === 'upload' && !c.contactHidden;
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [years, setYears] = useState('');
   const [city, setCity] = useState('');
   const [education, setEducation] = useState<EducationLevel | ''>('');
@@ -1400,17 +1415,38 @@ function ProfileEditor({
   const [role, setRole] = useState('');
   const [languages, setLanguages] = useState<CandidateProfile['languages']>([]);
   const [busy, setBusy] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const emailRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!open) return;
+    setEmailError('');
+    setPhoneError('');
+    setSaveError('');
+    setEmail(c.email);
+    setPhone(c.phone);
     setYears(p?.years != null ? String(p.years) : '');
     setCity(p?.city || c.city || '');
     setEducation(p?.educationLevel ?? '');
     setSkills((p?.skills ?? []).join(', '));
     setRole(p?.roles[0] ?? '');
     setLanguages(p?.languages.length ? p.languages : []);
-  }, [open, p, c.city]);
+  }, [open, p, c.city, c.email, c.phone]);
   async function save() {
-    const edit: CandidateProfileEdit = {
+    const contact = canEditContact ? { email: email.trim(), phone: phone.trim() } : undefined;
+    setSaveError('');
+    const badEmail = contact?.email && !validCandidateEmail(contact.email) ? 'ელფოსტა არასწორია.' : '';
+    const badPhone = contact?.phone && !validCandidatePhone(contact.phone) ? 'ტელეფონი უნდა შეიცავდეს მინიმუმ 6 ციფრს.' : '';
+    setEmailError(badEmail);
+    setPhoneError(badPhone);
+    if (badEmail || badPhone) {
+      (badEmail ? emailRef : phoneRef).current?.focus();
+      return;
+    }
+    const edit: CandidateProfileEdit & { email?: string; phone?: string } = {
+      ...contact,
       years:
         years.trim() === ''
           ? null
@@ -1434,6 +1470,8 @@ function ProfileEditor({
     try {
       await request('candidates', { action: 'profile', entry: c.entry, edit });
       onSaved({
+        ...p,
+        ...contact,
         origin: 'edited',
         education: p?.education ?? [],
         text: p?.text ?? '',
@@ -1443,9 +1481,9 @@ function ProfileEditor({
         skills: edit.skills ?? [],
         roles: edit.roles ?? [],
         languages: edit.languages ?? [],
-      });
+      }, contact);
     } catch (e) {
-      onError(e instanceof Error ? e.message : 'ვერ შეინახა');
+      setSaveError(e instanceof Error ? e.message : 'ვერ შეინახა');
     } finally {
       setBusy(false);
     }
@@ -1455,8 +1493,16 @@ function ProfileEditor({
       <DialogContent className="cp-dialog cc-profile-edit">
         <DialogTitle>პროფილის შესწორება</DialogTitle>
         <DialogDescription>
-           ეს მონაცემები ფილტრებისთვისაა. CV ფაილი არ იცვლება. </DialogDescription>
+           შეგიძლიათ ამოკითხული მონაცემების შესწორება. CV ფაილი არ იცვლება. </DialogDescription>
         <div className="cp-fields">
+          {canEditContact && <div className="company-form-grid">
+            <label>ელფოსტა<input ref={emailRef} className="cp-input" type="email" value={email} maxLength={254} aria-invalid={!!emailError} aria-describedby={emailError ? 'cc-edit-email-error' : undefined} onChange={(e) => { setEmail(e.target.value); setEmailError(''); }} />
+              {emailError && <span id="cc-edit-email-error" className="cc-field-error" role="alert">{emailError}</span>}
+            </label>
+            <label>ტელეფონი<input ref={phoneRef} className="cp-input" type="tel" value={phone} maxLength={32} aria-invalid={!!phoneError} aria-describedby={phoneError ? 'cc-edit-phone-error' : undefined} onChange={(e) => { setPhone(e.target.value); setPhoneError(''); }} />
+              {phoneError && <span id="cc-edit-phone-error" className="cc-field-error" role="alert">{phoneError}</span>}
+            </label>
+          </div>}
           <div className="company-form-grid">
             <label>
                გამოცდილება (წელი) <input
@@ -1578,6 +1624,7 @@ function ProfileEditor({
                ენის დამატება </button>
           </fieldset>
         </div>
+        {saveError && <p className="cc-field-error" role="alert">{saveError}</p>}
         <div className="cp-dialog-actions">
           <button
             type="button"

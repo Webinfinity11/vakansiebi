@@ -1,3 +1,4 @@
+import * as statusRules from '@/lib/company-job-status';
 import type { CompanyJobForm } from '@/lib/company-job-form';
 import type { JobRejection } from '@/lib/job-rejection';
 
@@ -24,6 +25,7 @@ export type CompanyJob = {
   } | null;
 };
 export type CompanyProfile = {
+  publicPath?: string | null;
   coverUrl: string;
   benefits: string[];
   whyUs: string;
@@ -52,44 +54,22 @@ export async function companyRequest(
   );
   const body = await res.json();
   if (!res.ok) {
-    if (res.status === 401 && !['session', 'password'].includes(path))
+    if (res.status === 401 && !['session', 'password'].includes(path)) {
+      try { sessionStorage.setItem('jobx.company.sessionExpired', '1'); } catch {}
       window.location.reload();
+    }
     throw Error(body.error || 'მოქმედება ვერ შესრულდა');
   }
   return body;
 }
 
-export type JobGroup = 'all' | 'active' | 'review' | 'closed';
-const closedStatuses = ['archived', 'rejected', 'merged'];
-export function isClosed(job: CompanyJob) {
-  return closedStatuses.includes(job.status);
-}
-export function inGroup(job: CompanyJob, group: JobGroup) {
-  if (group === 'all') return true;
-  if (group === 'active') return job.status === 'published';
-  if (group === 'review') return job.status === 'pending' || job.needsReview;
-  return isClosed(job);
-}
-
-export function jobStatus(job: CompanyJob): {
-  label: string;
-  tone: 'success' | 'warning' | 'danger' | 'neutral';
-} {
-  switch (job.status) {
-    case 'published':
-      return { label: 'აქტიური', tone: 'success' };
-    case 'pending':
-      return { label: 'განხილვაშია', tone: 'warning' };
-    case 'rejected':
-      return { label: 'უარყოფილი', tone: 'danger' };
-    case 'merged':
-      return { label: 'გაერთიანებული', tone: 'neutral' };
-    case 'archived':
-      return { label: 'დახურული', tone: 'neutral' };
-    default:
-      return { label: job.status, tone: 'neutral' };
-  }
-}
+export type { JobGroup } from '@/lib/company-job-status';
+const todayTbilisi = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tbilisi', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+export const isExpired = (job: CompanyJob, today = todayTbilisi()) => statusRules.isExpired(job, today);
+export const isClosed = (job: CompanyJob, today = todayTbilisi()) => statusRules.isClosed(job, today);
+export const inGroup = (job: CompanyJob, group: statusRules.JobGroup, today = todayTbilisi()) => statusRules.inGroup(job, group, today);
+export const jobGroupOf = (job: CompanyJob, today = todayTbilisi()) => statusRules.jobGroupOf(job, today);
+export const jobStatus = (job: CompanyJob, today = todayTbilisi()) => statusRules.jobStatus(job, today);
 
 const day = 86_400_000;
 /** Whole days from today (local) to a YYYY-MM-DD deadline; null when there is none. */

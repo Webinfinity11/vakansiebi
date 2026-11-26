@@ -4431,3 +4431,63 @@ fieldset.cp-fields {
     grid-template-columns: 1fr;
   }
 }
+
+/* Mobile navigation keeps every destination reachable without horizontal scrolling. */
+.cp-nav .cp-mobile-more { display: none; }
+.cp-mobile-menu nav {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px;
+  width: 100%; min-width: 0; margin: 0;
+}
+:root .cp-mobile-menu nav :is(a, button) {
+  display: flex; align-items: center; justify-content: flex-start; gap: 12px;
+  width: 100%; min-height: 44px;
+  padding: 10px 12px; border-radius: var(--cp-radius-sm);
+  color: var(--cp-ink); text-align: left; text-decoration: none;
+}
+.cp-mobile-menu nav :is(a, button):hover,
+.cp-mobile-menu nav [aria-current='page'] { background: var(--cp-hover); }
+@media (max-width: 900px) {
+  .cp:not(.cp--auth) { display: block; }
+  .cp-side { height: auto; overflow: visible; }
+  .cp-main { padding-bottom: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom) + 28px); }
+  .cp-nav {
+    position: fixed; inset: auto 0 0; z-index: 40;
+    display: grid; grid-template-columns: repeat(5, auto); justify-content: space-evenly;
+    height: calc(var(--cp-mobile-bar) + env(safe-area-inset-bottom));
+    margin: 0; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    gap: 0; overflow: visible; background: var(--cp-nav-gradient);
+  }
+  .cp-nav :is(button, a)[data-nav] {
+    display: flex; flex-direction: column; justify-content: center;
+    gap: 5px; min-width: 0; min-height: 44px; height: auto;
+    padding: 5px 0; border: 0; border-radius: var(--cp-radius-sm);
+    font-size: 12px;
+  }
+  .cp-nav [data-mobile-more] { display: none !important; }
+  .cp-nav :is(button, a)::before { display: none; }
+  .cp-nav :is(button, a) > span { position: absolute; top: 0; right: 2px; }
+}
+
+/* Folded desktop sidebar: icons only, names on hover (title); the choice is remembered. */
+.cp-side-foot { flex-wrap: wrap; }
+.cp-side-foot .cp-side-fold { flex-basis: 100%; justify-content: flex-start; text-align: left; }
+@media (min-width: 901px) {
+  .cp[data-nav-folded] { grid-template-columns: 76px minmax(0, 1fr); }
+  .cp[data-nav-folded] .cp-side { padding-inline: 12px; }
+  .cp[data-nav-folded] .cp-workspace { justify-content: center; padding: 8px 0; border: 0; background: none; }
+  .cp[data-nav-folded] .cp-workspace > div { display: none; }
+  .cp[data-nav-folded] .cp-nav :is(button, a)[data-nav],
+  .cp[data-nav-folded] .cp-side-link {
+    justify-content: center; gap: 0; padding-inline: 0; font-size: 0;
+  }
+  .cp[data-nav-folded] .cp-nav :is(button, a)[aria-current='page']::before { left: -12px; }
+  .cp[data-nav-folded] .cp-nav :is(button, a) > span {
+    position: absolute; top: 4px; right: 4px; padding: 0 5px; font-size: 10px; line-height: 16px;
+  }
+  .cp[data-nav-folded] .cp-nav :is(button, a)[data-nav='profile']::after { left: 8px; right: 8px; }
+  .cp[data-nav-folded] .cp-side-foot { flex-direction: column; align-items: center; padding-inline: 0; }
+  .cp[data-nav-folded] .cp-side-foot .cp-side-link { flex: none; width: 100%; justify-content: center; min-height: 36px; }
+}
+@media (max-width: 900px) {
+  .cp-side-foot .cp-side-fold { display: none; }
+}

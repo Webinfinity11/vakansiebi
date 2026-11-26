@@ -1,4 +1,8 @@
 /* CV database only. Keep the shared portal stylesheet independent of this layout. */
+.ct-pagination { display: grid; justify-items: center; gap: 12px; padding-block: 24px; }
+.ct-pagination p { margin: 0; color: var(--cp-ink-2); font-size: 13px; }
+.ct-pagination .cp-btn { min-height: 44px; }
+.ct-pagination .cp-btn[aria-disabled="true"] { opacity: 0.5; cursor: default; }
 .ct-layout.ct-layout--horizontal { display: block; }
 .ct-sticky { position: sticky; top: 0; z-index: 20; display: grid; gap: 10px; padding: 12px 0 8px; background: var(--ds-surface); border-bottom: 1px solid var(--cp-line); }
 .ct-filterbar { display: flex; gap: 8px; align-items: center; }

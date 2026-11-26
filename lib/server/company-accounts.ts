@@ -30,7 +30,6 @@ export async function companyAccounts() {
        ), applied AS (
          SELECT o.company_key, COALESCE(a.sent_at,a.created_at) AS at FROM swipe_applications a JOIN owned o ON o.id=a.job_id WHERE a.status='sent'
          UNION ALL SELECT o.company_key, c.first_at FROM resume_contacts c JOIN owned o ON o.id=c.job_id WHERE c.kind='cv'
-         UNION ALL SELECT u.company_key, u.created_at FROM company_cv_uploads u
        )
        SELECT a.id,a.company_key,p.name,a.username,a.email,a.enabled,a.must_change_password,a.version,
          p.approval_status,p.trusted_mode AS "trustedMode",p.registration_code,a.representative_name,a.position,a.phone,

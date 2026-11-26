@@ -268,3 +268,49 @@
   .cc .cc-card { position: relative; }
   .cc .cc-card-next { position: absolute; right: 12px; bottom: 12px; box-shadow: var(--cp-shadow); }
 }
+
+/* Keep filter menus distinct from the matching toggle. */
+.cc-filter-controls { display: contents; }
+.cc-head .cc-matching-filter[aria-pressed='true'] {
+  border-color: var(--cp-accent);
+  background: var(--cp-accent-soft);
+  color: var(--cp-accent);
+}
+.cc-empty > .cp-btn {
+  display: flex;
+  margin: 10px auto 0;
+}
+@media (max-width: 640px) {
+  .cc .cc-head { gap: 12px; margin-bottom: 16px; }
+  .cc-head .cp-head-actions { gap: 6px; }
+  .cc-head .cp-head-actions .cc-search {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: none;
+  }
+  .cc-head .cc-filter-controls {
+    display: flex;
+    flex: 0 0 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .cc-head .cc-filter-controls .cp-btn {
+    min-height: 40px;
+    padding: 7px 10px;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .cc-head .cc-job-filter {
+    flex: 0 1 auto;
+    width: auto;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .cc-head .cc-filter-controls svg { flex-shrink: 0; }
+}
+
+.cc-profile-edit .cc-field-error { color: var(--cp-bad); font-size: 13px; line-height: 1.5; }
+.cc-profile-edit [aria-invalid="true"] { border-color: var(--cp-bad); }

@@ -14,6 +14,10 @@ import {
   BarChart3,
   Users,
   UsersRound,
+  UserPlus,
+  MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
   Database,
   Check,
   X,
@@ -22,13 +26,15 @@ import { Brand } from "../brand";
 import {
   Dialog,
   DialogContent,
+  DialogTrigger,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
 import type { CompanyIdentity } from "@/lib/company-portal";
-import { companyHref, plainClick, readCompanyLocation } from "@/lib/company-portal-navigation";
+import { companyHref, mobileNav, plainClick, readCompanyLocation } from "@/lib/company-portal-navigation";
 import {
   companyRequest as request,
+  inGroup,
   type CompanyJob,
   type CompanyProfile,
 } from "./company-api";
@@ -62,7 +68,7 @@ const nav: { id: Tab; label: string; Icon: typeof Briefcase }[] = [
   { id: "analytics", label: "ანალიტიკა", Icon: BarChart3 },
   { id: "profile", label: "კომპანიის გვერდი", Icon: Building2 },
   { id: "billing", label: "გადახდები", Icon: CreditCard },
-  { id: "team", label: "გუნდი", Icon: Users },
+  { id: "team", label: "გუნდი", Icon: UserPlus },
   { id: "security", label: "ანგარიში", Icon: Settings },
 ];
 
@@ -139,7 +145,54 @@ export function CompanyPortal({
   const [google, setGoogle] = useState<{ email: string; name: string } | null>(
     null,
   );
-  const [tab, setTab] = useState<Tab>("jobs");
+  const [tab, setTabState] = useState<Tab>("jobs");
+  const [detailsDirty, setDetailsDirty] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  // The desktop sidebar can fold to icons; the choice is remembered on this device.
+  const [navFolded, setNavFolded] = useState(false);
+  useEffect(() => {
+    setNavFolded(localStorage.getItem("jobx-company-nav") === "folded");
+  }, []);
+  function toggleNav() {
+    setNavFolded((folded) => {
+      localStorage.setItem("jobx-company-nav", folded ? "open" : "folded");
+      return !folded;
+    });
+  }
+  const [loginNotice, setLoginNotice] = useState("");
+  const [loginUsername, setLoginUsername] = useState("");
+  const confirmLeaving = useCallback(() => {
+    if (detailsDirty && !window.confirm("შეუნახავი ცვლილებები დაიკარგება. გადავიდეთ?")) return false;
+    setDetailsDirty(false);
+    return true;
+  }, [detailsDirty]);
+  const setTab = useCallback((next: Tab) => {
+    if (next !== tab && !confirmLeaving()) return false;
+    setTabState(next);
+    return true;
+  }, [tab, confirmLeaving]);
+  useEffect(() => {
+    if (!detailsDirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [detailsDirty]);
+  useEffect(() => {
+    try {
+      const changed = sessionStorage.getItem("jobx.company.passwordChanged");
+      if (changed !== null) {
+        setLoginUsername(changed);
+        setLoginNotice("პაროლი შეიცვალა. შედით ახალი პაროლით.");
+        sessionStorage.removeItem("jobx.company.passwordChanged");
+      } else if (sessionStorage.getItem("jobx.company.sessionExpired") === "1") {
+        setLoginNotice("სესიის ვადა ამოიწურა. გთხოვთ, ხელახლა შეხვიდეთ.");
+      }
+      sessionStorage.removeItem("jobx.company.sessionExpired");
+    } catch { /* Storage may be unavailable in a restricted browser. */ }
+  }, []);
   const [adding, setAdding] = useState(false);
   // The address is read once on arrival; until then it must not be overwritten.
   const [urlReady, setUrlReady] = useState(false);
@@ -235,14 +288,17 @@ export function CompanyPortal({
   useEffect(() => {
     const onPop = () => {
       const place = readCompanyLocation(window.location.search, identity?.role);
+      if (!setTab(place.tab)) {
+        window.history.pushState(null, "", companyHref({ tab, entry: selected }));
+        return;
+      }
       shown.current = { tab: place.tab, entry: place.entry };
       pushedEntry.current = null;
-      setTab(place.tab);
       setSelected(place.entry);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [identity?.role]);
+  }, [identity?.role, setTab, tab, selected]);
   /* A JOBX CV base person's phone and email, opened on request; the server logs it. */
   const revealContact = useCallback(async (entry: string) => {
     try {
@@ -367,15 +423,20 @@ export function CompanyPortal({
         currentPassword: data.get("currentPassword"),
         password: data.get("password"),
       });
+      try {
+        sessionStorage.setItem("jobx.company.passwordChanged", identity?.email || identity?.username || "");
+      } catch { /* Password change must succeed even without storage. */ }
       window.location.reload();
     });
   }
   // Leave without finishing: the temporary password still works next time.
-  const signOut = () =>
+  const signOut = () => {
+    if (!confirmLeaving()) return;
     void action(async () => {
       await fetch("/api/company/session", { method: "DELETE" });
       window.location.reload();
     });
+  };
   const passwordForm = (
     <form className="cp-settings cp-password-settings" onSubmit={password}>
       <div className="cp-settings-row">
@@ -598,7 +659,7 @@ export function CompanyPortal({
                   )}
                   {!inviteToken && (
                     <p className="cp-auth-note">
-                       რეგისტრაციის შემდეგ ვაკანსიის მომზადებას შეძლებთ. საკონტაქტო პირსა და ტელეფონს „ანგარიშის“ გვერდზე შეავსებთ: ისინი კომპანიის დასადასტურებლად გვჭირდება. </p>
+                       რეგისტრაციის შემდეგ ვაკანსიის მომზადებას მაშინვე შეძლებთ. </p>
                   )}
                   <button
                     className="cp-btn cp-btn--primary cp-btn--block"
@@ -615,11 +676,14 @@ export function CompanyPortal({
                 <form className="cp-auth-form" onSubmit={login}>
                   <h1>კომპანიის ანგარიშში შესვლა</h1>
                   <p>შედით ელფოსტით ან მომხმარებლის სახელით.</p>
+                  {loginNotice && <p role="status">{loginNotice}</p>}
                   <label>
                      ელფოსტა ან მომხმარებლის სახელი <input
                       className="cp-input"
                       name="username"
                       autoComplete="username"
+                      value={loginUsername}
+                      onChange={(event) => setLoginUsername(event.target.value)}
                       required
                       maxLength={254}
                     />
@@ -671,10 +735,14 @@ export function CompanyPortal({
       {logo ? <img src={logo} alt="" /> : initial}
     </span>
   );
-  const openJobs = jobs.filter((j) => j.status === "published").length;
+  const openJobs = jobs.filter((j) => inGroup(j, "active")).length;
   const unseen = candidates.filter((c) => !c.seen).length;
+  const visibleNav = nav.filter((item) =>
+    (item.id !== "billing" && item.id !== "team") || identity.role === "owner",
+  );
+  const { more } = mobileNav(visibleNav);
   return (
-    <div className="cp">
+    <div className="cp" data-nav-folded={navFolded || undefined}>
       <aside className="cp-side">
         <div className="cp-workspace">
           {avatar}
@@ -684,22 +752,19 @@ export function CompanyPortal({
           </div>
         </div>
         <nav className="cp-nav" aria-label="კომპანიის მართვა">
-          {nav
-            .filter(
-              (item) =>
-                (item.id !== "billing" && item.id !== "team") ||
-                identity.role === "owner",
-            )
+          {visibleNav
             .map(({ id, label, Icon }) => (
               <a
                 key={id}
                 href={companyHref({ tab: id, entry: null })}
                 data-nav={id}
+                data-mobile-more={more.some((item) => item.id === id) || undefined}
+                title={navFolded ? label : undefined}
                 aria-current={tab === id ? "page" : undefined}
                 onClick={(event) => {
                   if (!plainClick(event)) return;
                   event.preventDefault();
-                  setTab(id);
+                  if (!setTab(id)) return;
                   setSelected(null);
                   if (id === "candidates") setCandidateFilter(undefined);
                   setError("");
@@ -713,15 +778,57 @@ export function CompanyPortal({
                 )}
               </a>
             ))}
+          <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
+            <DialogTrigger
+              className="cp-mobile-more"
+              data-nav="more"
+              aria-expanded={moreOpen}
+              aria-current={more.some((item) => item.id === tab) ? "page" : undefined}
+            >
+              <MoreHorizontal size={16} />მეტი
+            </DialogTrigger>
+            <DialogContent className="cp-dialog cp-mobile-menu">
+              <DialogTitle>მეტი</DialogTitle>
+              <DialogDescription>კომპანიის მართვა</DialogDescription>
+              <nav aria-label="კომპანიის დამატებითი მენიუ">
+                {more.map(({ id, label, Icon }) => (
+                  <a key={id} href={companyHref({ tab: id, entry: null })}
+                    aria-current={tab === id ? "page" : undefined}
+                    onClick={(event) => {
+                      if (!plainClick(event)) return;
+                      event.preventDefault();
+                      if (!setTab(id)) return;
+                      setMoreOpen(false);
+                      setSelected(null);
+                      setError("");
+                    }}>
+                    <Icon size={18} />{label}
+                  </a>
+                ))}
+                <button type="button" onClick={signOut}><LogOut size={18} />გასვლა</button>
+              </nav>
+            </DialogContent>
+          </Dialog>
         </nav>
         <div className="cp-side-foot">
-          <Link href="/" className="cp-side-link">
+          <button
+            type="button"
+            className="cp-side-link cp-side-fold"
+            aria-expanded={!navFolded}
+            title={navFolded ? "მენიუს გაშლა" : undefined}
+            onClick={toggleNav}
+          >
+            {navFolded ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
+            {navFolded ? "მენიუს გაშლა" : "მენიუს დაკეცვა"}
+          </button>
+          <Link href="/" className="cp-side-link" title={navFolded ? "jobx.ge" : undefined}>
             <ArrowUpRight size={15} />
             jobx.ge
           </Link>
           <button
             type="button"
             className="cp-side-link"
+            title={navFolded ? "გასვლა" : undefined}
             onClick={signOut}
           >
             <LogOut size={15} />
@@ -830,11 +937,11 @@ export function CompanyPortal({
                     {
                       id: "candidate",
                       title: "მიიღეთ პირველი კანდიდატი",
-                      hint: "საიტიდან გამოგზავნილი CV აქ ჩნდება. სხვა წყაროდან მიღებული CV-ები CV ბაზაში ატვირთეთ.",
+                      hint: "საიტიდან გამოგზავნილი CV აქ ჩნდება. სხვა წყაროდან მიღებული CV-ებიც კანდიდატების გვერდზე დაამატეთ.",
                       done: candidates.length > 0,
                       action: {
                         label: "CV-ის ატვირთვა",
-                        run: () => setTab("talent"),
+                        run: () => setTab("candidates"),
                       },
                     },
                   ]}
@@ -961,6 +1068,13 @@ export function CompanyPortal({
             <header className="cp-head">
               <div className="cp-head-title">
                 <h1>კომპანიის გვერდი</h1>
+                {profile && (typeof profile.publicPath === "string" ? (
+                  <a className="cp-btn cp-btn--secondary" href={profile.publicPath} target="_blank" rel="noopener noreferrer">
+                    საჯარო გვერდის ნახვა
+                  </a>
+                ) : profile.publicPath === null ? (
+                  <p>საჯარო გვერდი გამოჩნდება ვაკანსიის გამოქვეყნების შემდეგ, თუ გვერდი დამალული არ არის.</p>
+                ) : null)}
               </div>
             </header>
             {profile ? (
@@ -970,7 +1084,7 @@ export function CompanyPortal({
                   e.preventDefault();
                   if (!canEditProfile) return;
                   void action(async () => {
-                    setProfile(await request("profile", profile));
+                    setProfile({ ...profile, ...await request("profile", profile) });
                     setNotice("კომპანიის მონაცემები შენახულია.");
                   });
                 }}
@@ -1082,7 +1196,7 @@ export function CompanyPortal({
             <dl className="cp-facts">
               <div>
                 <dt>მომხმარებლის სახელი</dt>
-                <dd>{identity.username}</dd>
+                <dd>{/^u[0-9a-f]{32}$/.test(identity.username) ? identity.email : identity.username}</dd>
               </div>
               <div>
                 <dt>შეტყობინებების ელფოსტა</dt>
@@ -1091,6 +1205,7 @@ export function CompanyPortal({
             </dl>
             <CompanyDetailsForm
               details={details}
+              onDirtyChange={setDetailsDirty}
               canEdit={identity.role === "owner"}
               codeLocked={identity.approvalStatus === "approved" && !!details.code}
               onSaved={(next) => {
@@ -1144,7 +1259,7 @@ export function CompanyPortal({
                 })
               }
             >
-               დახურვა </button>
+               ვაკანსიის დახურვა </button>
           </div>
         </DialogContent>
       </Dialog>

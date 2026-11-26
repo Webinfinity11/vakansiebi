@@ -2,11 +2,20 @@ import { safeExternalUrl, isLocalLogoUrl } from '@/lib/vacancy-media';
 import { apiError, ApiError, checkOrigin, readBody } from '@/lib/server/auth';
 import { requireCompanyRole } from '@/lib/server/company-auth';
 import { getCompany, saveCompany } from '@/lib/server/companies';
+import { employerPagesIfReady, employerPageSuppressed } from '@/lib/server/employers';
+import { companyPublicPath } from '@/lib/server/company-public-path';
 export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const company = await requireCompanyRole();
-    return Response.json(await getCompany(company.name), {
+    const [profile, directory] = await Promise.all([
+      getCompany(company.name),
+      employerPagesIfReady(),
+    ]);
+    const publicPath = await companyPublicPath(
+      company.companyKey, directory?.bySlug.values() ?? null, employerPageSuppressed,
+    );
+    return Response.json({ ...profile, publicPath }, {
       headers: { 'Cache-Control': 'private, no-store' },
     });
   } catch (e) {

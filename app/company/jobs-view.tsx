@@ -34,6 +34,7 @@ import {
   formatDate,
   inGroup,
   isClosed,
+  isExpired,
   jobStatus,
   salaryText,
   type CompanyJob,
@@ -407,6 +408,7 @@ function JobRow({
   const rejection = job.rejection;
   const status = jobStatus(job);
   const closed = isClosed(job);
+  const expired = isExpired(job);
   const left = daysLeft(job.form.deadline);
   const urgency = closed
     ? undefined
@@ -462,6 +464,7 @@ function JobRow({
             return count > 0 ? <button type="button" key={stage} data-stage={stage} onClick={() => onCandidates(job.id, stage === 'all' ? undefined : stage)}><StatusMark kind={stage}>{stage === 'all' ? 'სულ' : stageLabels[stage]}{' '}<b>{count}</b></StatusMark></button> : null;
           }) : <span>განაცხადები ჯერ არ არის</span>}
         </div>
+        {canEdit && expired && <Link className="cp-btn cp-btn--primary cp-btn--sm" href={`/company/jobs/${job.id}/extend`}>ვადის გაგრძელება</Link>}
         {hasDraft && (canEdit ? <Link href={`/company/jobs/${job.id}/edit`}>შეუნახავი ცვლილებები</Link> : <span>შეუნახავი ცვლილებები</span>)}
 
         {job.placement &&
@@ -490,7 +493,7 @@ function JobRow({
           )}
       </div>
       <div role="cell" className="cp-cell-status">
-        <StatusMark kind={job.status} className="cp-status" data-tone={status.tone}>
+        <StatusMark kind={expired ? 'expiring' : job.status} className="cp-status" data-tone={status.tone}>
           {status.label}
         </StatusMark>
         {job.needsReview && job.status === 'published' && (
@@ -530,6 +533,7 @@ function JobRow({
                   {reopen ? <RotateCcw /> : <Pencil />}
                   {reopen ? 'ხელახლა გაგზავნა' : 'რედაქტირება'}
                 </DropdownMenuItem>}
+                {canEdit && job.status === 'published' && <DropdownMenuItem render={<Link href={`/company/jobs/${job.id}/extend`} />}><RotateCcw />ვადის გაგრძელება</DropdownMenuItem>}
                 {canEdit && <DropdownMenuItem onClick={() => onCopy(job)}>
                   <Copy />
                    ასლის შექმნა </DropdownMenuItem>}

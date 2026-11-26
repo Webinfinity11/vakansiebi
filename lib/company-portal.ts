@@ -53,7 +53,7 @@ export type CompanyAccount = {
   /** Vacancies attached to the company, and those live on the site now. */
   jobs: number;
   liveJobs: number;
-  /** Applications to its vacancies plus CVs it uploaded: all time and last 30 days. */
+  /** CVs sent to its vacancies (uploads by the company are not applications): all time and last 30 days. */
   applications: number;
   recentApplications: number;
   team: number;

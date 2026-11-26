@@ -11,6 +11,10 @@ export type Person = {
   /** Lower-case text of everything known about the person, for search. */
   haystack: string;
 };
+/** A CV base person is in the company's process only once moved past "new";
+    applications, uploads and CV box entries always are. Stages mean nothing outside it. */
+export const inProcess = (c: Pick<Candidate, "source" | "stage">) =>
+  c.source !== "base" || c.stage !== "new";
 // The furthest a person got with this company, for the "best stage" column.
 export const stageRank = (s: Candidate["stage"]) =>
   s === "rejected" ? -1 : candidateStages.indexOf(s);
@@ -178,9 +182,9 @@ export function passes(
     !p.entries.some((e) => f.jobs.includes(e.jobId ?? "none"))
   )
     return false;
-  if (skip !== "stages" && f.stages.length && !f.stages.includes(p.stage))
+  if (skip !== "stages" && f.stages.length && (!p.entries.some(inProcess) || !f.stages.includes(p.stage)))
     return false;
-  if (f.hideRejected && p.stage === "rejected") return false;
+  if (f.hideRejected && p.entries.some(inProcess) && p.stage === "rejected") return false;
   if (f.rated && !p.rating) return false;
   if (f.phone && !p.entries.some((e) => e.phone)) return false;
   if (f.unchecked && !(p.profile === null || p.profile.origin === "parsed"))

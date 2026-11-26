@@ -42,8 +42,8 @@ export const companyDetailLabels: Record<keyof CompanyDetails, string> = {
   position: 'თანამდებობა',
   phone: 'ტელეფონი',
 };
-/** The details a review needs. The identification code helps the review but is optional. */
-export const requiredCompanyDetails: (keyof CompanyDetails)[] = ['representativeName', 'position', 'phone'];
+/** The details a review needs: whom to call and where. The code and position are optional. */
+export const requiredCompanyDetails: (keyof CompanyDetails)[] = ['representativeName', 'phone'];
 /** What the company still has to give before it can be reviewed. */
 export function missingCompanyDetails(d: Partial<Record<keyof CompanyDetails, string | null>>) {
   return requiredCompanyDetails

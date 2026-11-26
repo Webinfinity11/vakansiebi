@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { companyTabs, initialCompanyTab } from '../lib/company-portal-navigation';
+import { companyTabs, initialCompanyTab, mobileNav } from '../lib/company-portal-navigation';
 
 test('owner deep links accept every existing portal tab', () => {
   for (const tab of companyTabs) {
@@ -36,4 +36,15 @@ test('the address keeps the tab, the open candidate and the candidates filter', 
   assert.equal(readCompanyLocation('?tab=profile&c=swipe:1').entry, null);
   assert.equal(readCompanyLocation('?tab=talent&c=<script>').entry, null);
   assert.equal(readCompanyLocation('?tab=candidates&c=base:r:x&job=../../x').job, undefined);
+});
+
+test('mobile navigation preserves four main destinations and role visibility', () => {
+  for (const role of ['owner', 'recruiter', 'viewer'] as const) {
+    const visible = companyTabs.filter(id => role === 'owner' || !['billing', 'team'].includes(id)).map(id => ({ id }));
+    const { primary, more } = mobileNav(visible);
+    assert.deepEqual(primary.map(item => item.id), ['jobs', 'candidates', 'talent', 'analytics']);
+    assert.deepEqual(more.map(item => item.id), role === 'owner' ? ['profile', 'billing', 'security', 'team'] : ['profile', 'security']);
+    assert.equal(primary.length + more.length, visible.length);
+  }
+  assert.deepEqual(mobileNav([]), { primary: [], more: [] });
 });

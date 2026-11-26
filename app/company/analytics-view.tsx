@@ -1,5 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import { ArrowDownRight, ArrowUpRight, Lightbulb } from 'lucide-react';
 import {
   DropdownMenu,
@@ -18,7 +19,7 @@ import {
   type CompanyJobStats,
 } from '@/lib/company-analytics';
 import { seriesDays, type VacancyDay } from '@/lib/vacancy-analytics';
-import { candidateSources, candidateHireTime } from '@/lib/company-analytics-extra';
+import { candidateSources, candidateHireTime, candidateApplicationFunnel } from '@/lib/company-analytics-extra';
 import './analytics-extra.css';
 import { StatusMark } from './status-mark';
 import type { Candidate } from '@/lib/company-candidates';
@@ -116,12 +117,7 @@ export function AnalyticsView({
     cv_box: 'CV ყუთი',
     base: 'JOBX-ის CV ბაზიდან',
   };
-  const applied = candidates.filter(
-    (c) =>
-      (job === 'all' || c.jobId === job) &&
-      since &&
-      c.appliedAt.slice(0, 10) >= since,
-  ).length;
+  const { applied, rate: applicationRate } = candidateApplicationFunnel(candidates, period, month.view);
   const perJob = useMemo(() => {
     const byJob = new Map<string, number>();
     for (const c of candidates)
@@ -237,7 +233,7 @@ export function AnalyticsView({
           <h1>ანალიტიკა</h1>
           <span>ბოლო 30 დღე</span>
         </div>
-        <div className="cp-head-actions">
+        {jobs.length > 0 && perJob.length > 0 && <div className="cp-head-actions">
           <DropdownMenu>
             <DropdownMenuTrigger className="cp-btn cp-btn--primary an-filter">
               {selectedTitle}
@@ -255,7 +251,7 @@ export function AnalyticsView({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+        </div>}
       </header>
 
       {!loaded ? (
@@ -266,6 +262,11 @@ export function AnalyticsView({
           <h2>მონაცემები ჯერ არ არის</h2>
           <p>
              ანალიტიკა ვაკანსიის გამოქვეყნებისთანავე დაიწყება: ნახავთ, რამდენმა ნახა, შეინახა და დაგიკავშირდათ. </p>
+          {canEdit && (
+            <Link className="cp-btn cp-btn--primary" href="/company/jobs/new">
+              ვაკანსიის დამატება
+            </Link>
+          )}
         </div>
         {extraCards}
         </>
@@ -291,8 +292,8 @@ export function AnalyticsView({
               <span className="cp-metric-label">განაცხადი პანელში</span>
               <strong>{num(applied)}</strong>
               <span className="an-trend">
-                {month.view
-                  ? `${pct(applied / month.view)} ნახვიდან განაცხადამდე`
+                {applicationRate !== null
+                  ? `${pct(applicationRate)} ნახვიდან განაცხადამდე`
                   : 'ნახვები ჯერ არ არის'}
               </span>
             </div>

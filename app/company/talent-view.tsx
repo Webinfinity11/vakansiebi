@@ -2,7 +2,7 @@
 import "./talent.css";
 import { StatusMark } from "./status-mark";
 import { Popover, PopoverTrigger, PopoverContent, PopoverTitle } from "@/components/ui/popover";
-import { personCity, positionLabel, readableSkills, parseState, parseNotice, type Person, type Filters, type Facets, emptyFilters, storageKey, stageRank, levelLabel, yearsLabel, norm, terms, isNativeGeorgian, matchScore, snippet, passes, countFacets, filterChips, toggle, normalizeFilters, readSavedSearches, saveSearch, deleteSearch, accountStorageKeys, type SavedSearch } from "@/lib/company-talent-filters";
+import { personCity, positionLabel, readableSkills, parseState, parseNotice, type Person, type Filters, type Facets, emptyFilters, storageKey, stageRank, inProcess, levelLabel, yearsLabel, norm, terms, isNativeGeorgian, matchScore, snippet, passes, countFacets, filterChips, toggle, normalizeFilters, readSavedSearches, saveSearch, deleteSearch, accountStorageKeys, type SavedSearch } from "@/lib/company-talent-filters";
 import { maxCvBytes } from "@/lib/cv-upload";
 import { companyHref, plainClick } from "@/lib/company-portal-navigation";
 import { CandidateSignals } from "./candidate-answers";
@@ -67,7 +67,13 @@ export function TalentView({
   onReveal: (entry: string) => Promise<void>;
   onUploaded: (entry: string, duplicate: boolean) => Promise<void>;
 }) {
-  const [f, setF] = useState<Filters>(emptyFilters);
+  const [f, setFilters] = useState<Filters>(emptyFilters);
+  const [shownCount, setShownCount] = useState(50);
+  // Every filter update, including restoring a saved search, starts a new list.
+  const setF = (next: React.SetStateAction<Filters>) => {
+    setFilters(next);
+    setShownCount(50);
+  };
   const [uploading, setUploading] = useState(false);
   const [panel, setPanel] = useState(false);
   const [accountKey, setAccountKey] = useState("");
@@ -140,7 +146,8 @@ export function TalentView({
       else {
         p.entries.push(c);
         if (c.appliedAt > p.latest.appliedAt) p.latest = c;
-        if (stageRank(c.stage) > stageRank(p.stage)) p.stage = c.stage;
+        // The stage is the furthest the person got in the company's own process.
+        if (inProcess(c) && (!p.entries.some((e) => e !== c && inProcess(e)) || stageRank(c.stage) > stageRank(p.stage))) p.stage = c.stage;
         p.rating = Math.max(p.rating ?? 0, c.rating ?? 0) || null;
         // A corrected profile wins over a JOBX one, which wins over one read from a file.
         const rank = (x: CandidateProfile | null) =>
@@ -353,8 +360,9 @@ export function TalentView({
                    ფილტრების მოხსნა </button>
               </div>
             ) : (
+              <>
               <ul className="ct-list" aria-label="კანდიდატები">
-                {visible.map((p) => (
+                {visible.slice(0, shownCount).map((p) => (
                   <PersonRow
                     key={p.key}
                     p={p}
@@ -365,6 +373,24 @@ export function TalentView({
                   />
                 ))}
               </ul>
+              <div className="ct-pagination">
+                <p role="status" aria-live="polite" aria-atomic="true">
+                  ნაჩვენებია {Math.min(shownCount, visible.length)} / {visible.length}
+                </p>
+                {visible.length > 50 && (
+                  <button
+                    type="button"
+                    className="cp-btn"
+                    aria-disabled={shownCount >= visible.length}
+                    onClick={() => {
+                      if (shownCount < visible.length) setShownCount(count => count + 50);
+                    }}
+                  >
+                    მეტის ჩვენება
+                  </button>
+                )}
+              </div>
+              </>
             )}
           </div>
         </div>
@@ -517,23 +543,23 @@ function FilterPanel({ f, set, toggle, facets, group }: {
       <Check checked={!f.education} onChange={()=>set("education","")} label="ნებისმიერი"/>
       {facets.education.map(e=><Check key={e.key} checked={f.education===e.key} onChange={()=>set("education",f.education===e.key?"":e.key)} label={`${educationLabels[e.key]}${e.key!=="phd"?" ან მეტი":""}`} n={e.n}/>)}
     </>},
-    {key:"vacancy",title:"ვაკანსია და ეტაპი",count:f.jobs.length+f.stages.length,body:<div className="ct-vacancy-groups">
+    {key:"vacancy",title:"ვაკანსია და შერჩევის ეტაპი",count:f.jobs.length+f.stages.length,body:<div className="ct-vacancy-groups">
       <div><h3>ვაკანსია</h3>{facets.jobs.map(j=><Check key={j.key} checked={f.jobs.includes(j.key)} onChange={()=>set("jobs",toggle(f.jobs,j.key))} label={j.label} n={j.n}/>)}</div>
       <div><h3>ეტაპი</h3>{facets.stages.map(stage=><Check key={stage.key} checked={f.stages.includes(stage.key)} onChange={()=>set("stages",toggle(f.stages,stage.key))} label={stageLabels[stage.key]} n={stage.n} dot={stage.key}/>)}</div>
     </div>},
     {key:"source",title:"წყარო და თარიღი",count:Number(f.source!=="all")+Number(!!f.period),body:<>
       <label className="ct-select">წყარო<select value={f.source} onChange={event=>set("source",event.target.value as Filters["source"])}>
-        <option value="all">ყველა</option><option value="own">თქვენი კანდიდატები</option><option value="base">JOBX-ის CV ბაზა</option><option value="applied">ვაკანსიაზე გამოგზავნილი</option><option value="upload">თქვენ მიერ ატვირთული</option><option value="cv_box">CV ყუთი</option>
+        <option value="all">ყველა</option><option value="applied">ვაკანსიაზე გამოგზავნილი</option><option value="upload">თქვენ მიერ ატვირთული</option><option value="cv_box">CV ყუთი</option><option value="base">JOBX-ის CV ბაზა</option>{f.source==="own" && <option value="own">თქვენი კანდიდატები</option>}
       </select></label>
       <label className="ct-select">როდის დაემატა<select value={String(f.period)} onChange={event=>set("period",Number(event.target.value))}>
         <option value="0">ნებისმიერ დროს</option><option value="7">ბოლო 7 დღე</option><option value="30">ბოლო 30 დღე</option><option value="90">ბოლო 3 თვე</option>
       </select></label>
     </>},
-    {key:"state",title:"CV-ის მდგომარეობა",count:Number(f.unchecked)+Number(f.rated)+Number(f.phone)+Number(f.hideRejected)+Number(f.requirementsMatch),body:<>
-      <Check checked={f.unchecked} onChange={()=>set("unchecked",!f.unchecked)} label="შეუმოწმებელი ამოკითხვა" n={facets.unchecked}/>
-      <Check checked={f.phone} onChange={()=>set("phone",!f.phone)} label="ტელეფონი მითითებულია"/>
+    {key:"state",title:"დამატებით",count:Number(f.unchecked)+Number(f.rated)+Number(f.phone)+Number(f.hideRejected)+Number(f.requirementsMatch),body:<>
+      {f.unchecked && <Check checked onChange={()=>set("unchecked",false)} label="შეუმოწმებელი ამოკითხვა" n={facets.unchecked}/>}
+      <Check checked={f.phone} onChange={()=>set("phone",!f.phone)} label="აქვს ტელეფონი"/>
       <Check checked={f.rated} onChange={()=>set("rated",!f.rated)} label="შეფასებული"/>
-      <Check checked={f.hideRejected} onChange={()=>set("hideRejected",!f.hideRejected)} label="უარის მიღებულების დამალვა"/>
+      <Check checked={f.hideRejected} onChange={()=>set("hideRejected",!f.hideRejected)} label="უარყოფილების დამალვა"/>
       <Check checked={f.requirementsMatch} onChange={()=>set("requirementsMatch",!f.requirementsMatch)} label="ემთხვევა მოთხოვნებს"/>
     </>},
   ];
@@ -558,16 +584,17 @@ function PersonRow({
 }) {
   const [revealing, setRevealing] = useState(false);
   const profile = p.profile;
-  const state = parseState(profile, p.entries.some(e=>e.hasCv));
+  // Only a CV whose text could not be read needs a word on the card; "read automatically" is noise.
+  const state = parseState(profile, p.entries.some(e=>e.hasCv)) === "ტექსტი ვერ ამოიკითხა" ? "ტექსტი ვერ ამოიკითხა" : "";
+  const active = p.entries.some(inProcess);
+  // One CV, one card: the vacancies the person is considered for, and where the CV came from.
+  const vacancies = p.entries.filter((e) => inProcess(e) && e.jobTitle);
+  const sources = [...new Set(p.entries.map((e) =>
+    e.source === "upload" ? "თქვენ მიერ ატვირთული" : e.source === "cv_box" ? "CV ყუთი" : e.source === "base" ? "JOBX-ის CV ბაზა" : "ვაკანსიაზე გამოგზავნილი"))];
   const notice = p.entries.some(e=>e.hasCv) ? parseNotice(profile) : "";
   const phone = p.entries.find((e) => e.phone)?.phone;
   const email = p.entries.find((e) => e.email)?.email;
   const hidden = !phone && !email ? p.entries.find((e) => e.contactHidden) : undefined;
-  // A person can be in the CV base twice (a JOBX CV and an uploaded one); the card
-  // offers the newest, the detail view keeps the rest.
-  const newestBase = p.entries.filter((e) => e.source === "base")
-    .sort((a, b) => b.appliedAt.localeCompare(a.appliedAt))[0];
-  const entries = p.entries.filter((e) => e.source !== "base" || e === newestBase);
   // Skills that match the filter or the search come first and are marked.
   const hit = (s: string) =>
     skillsOn.includes(norm(s)) || words.some((w) => norm(s).includes(w));
@@ -607,7 +634,7 @@ function PersonRow({
       <div className="ct-card-main">
         <div className="ct-card-top">
           <strong>{p.latest.name}</strong>
-          <StatusMark kind={p.stage} data-stage={p.stage}>{stageLabels[p.stage]}</StatusMark>
+          {active && <StatusMark kind={p.stage} data-stage={p.stage}>{stageLabels[p.stage]}</StatusMark>}
           {!!p.rating && (
             <span
               className="cc-mini-rating"
@@ -644,15 +671,14 @@ function PersonRow({
             {state && <span className="ct-origin" title={notice || undefined}>
               <StatusMark kind="review">{state}</StatusMark>
             </span>}
-            {entries.map((e) => (
-              <span className="ct-entry" key={e.entry}>
-                <button type="button" className="ct-job" onClick={() => onOpen(e.entry)}>
-                  {e.source === "base" ? "CV-ის ნახვა" : e.jobTitle || "ვაკანსიის გარეშე"}
-                  <CandidateSignals candidate={e} />
-                </button>
-                <span className="ct-source">{e.source === "upload" ? "თქვენ მიერ ატვირთული" : e.source === "cv_box" ? "CV ყუთი" : e.source === "base" ? "JOBX-ის CV ბაზა" : "ვაკანსიაზე გამოგზავნილი"}</span>
-              </span>
+            {vacancies.map((e) => (
+              <button type="button" className="ct-job" key={e.entry} onClick={() => onOpen(e.entry)}>
+                {/* The card's top already shows the stage; per vacancy only when there are several. */}
+                {vacancies.length > 1 ? `${e.jobTitle} · ${stageLabels[e.stage]}` : e.jobTitle}
+                <CandidateSignals candidate={e} />
+              </button>
             ))}
+            <span className="ct-source">{sources.join(" · ")}</span>
           </div>
           {/* One contact slot in the same place on every card: a closed CV base
               contact and an open one use the same pill. */}

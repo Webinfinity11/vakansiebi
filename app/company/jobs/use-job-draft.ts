@@ -28,23 +28,23 @@ export function useJobDraft(initialForm: CompanyJobForm, initial: DraftInitial, 
       if (!jobId) localStorage.setItem(storagePrefix + snapshot.id, JSON.stringify(snapshot));
     } catch { /* Network saving still works when storage is unavailable. */ }
   }, [ensureId, storageKey, storagePrefix, jobId]);
-  const save = useCallback(() => {
-    clearTimeout(timer.current);
+  const save = useCallback((keepalive = false) => {
+    clearTimeout(timer.current); timer.current = undefined;
     queue.current = queue.current.catch(() => {}).then(async () => {
-      if (!active.current) return;
+      if (!active.current && !keepalive) return;
       const snapshot = { ...current.current };
       const serialized = JSON.stringify(snapshot);
       if (serialized === saved.current) { setStatus(persisted.current ? 'saved' : 'idle'); return; }
       localCopy(); setStatus('saving');
       try {
-        const response = await fetch('/api/company/job-drafts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', id: ensureId(), jobId, ...snapshot, form: { ...snapshot.form, wizardVersion: 2 } }) });
+        const response = await fetch('/api/company/job-drafts', { method: 'POST', keepalive, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', id: ensureId(), jobId, ...snapshot, form: { ...snapshot.form, wizardVersion: 2 } }) });
         const body = await response.json();
         if (!response.ok) throw Error(body.error);
         saved.current = serialized; persisted.current = true; setSavedAt(body.updatedAt);
         setStatus(JSON.stringify(current.current) === serialized ? 'saved' : 'saving');
         // Keep only the id-addressed copy once the new draft has a URL.
         if (!jobId && !initial) { try { localStorage.removeItem(storageKey); } catch {} }
-        if (!jobId) {
+        if (!jobId && active.current) {
           const url = new URL(window.location.href); url.searchParams.delete('copy'); url.searchParams.set('draft', id.current);
           window.history.replaceState(null, '', url);
         }
@@ -65,8 +65,12 @@ export function useJobDraft(initialForm: CompanyJobForm, initial: DraftInitial, 
       }
     } catch { /* Ignore malformed browser backups. */ }
     const online = () => { void save(); };
+    const flush = () => {
+      if (active.current && timer.current !== undefined) void save(true);
+    };
     window.addEventListener('online', online);
-    return () => { active.current = false; clearTimeout(timer.current); window.removeEventListener('online', online); };
+    window.addEventListener('pagehide', flush);
+    return () => { flush(); active.current = false; window.removeEventListener('online', online); window.removeEventListener('pagehide', flush); };
   }, [storageKey, initial, initialForm, save]);
   function update(next: CompanyJobForm) {
     current.current = { ...current.current, form: next }; setForm(next); localCopy(); setStatus('saving');
@@ -79,7 +83,7 @@ export function useJobDraft(initialForm: CompanyJobForm, initial: DraftInitial, 
     if (!persisted.current && !copySource && !jobId && current.current.form === initialForm) return;
     localCopy(); void save();
   }
-  async function pause() { clearTimeout(timer.current); active.current = false; await queue.current; }
+  async function pause() { clearTimeout(timer.current); timer.current = undefined; active.current = false; await queue.current; }
   function resume() { active.current = true; }
   function clear() { try {
     localStorage.removeItem(storageKey);

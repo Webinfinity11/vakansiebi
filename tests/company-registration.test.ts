@@ -47,7 +47,7 @@ test('invitation cannot grant ownership and normalizes email', () => {
 });
 test('missing details are named for the review notice', async () => {
   const { missingCompanyDetails, companyDetailsSchema } = await import('../lib/company-registration');
-  assert.deepEqual(missingCompanyDetails({ code: '123456789', representativeName: 'ანა', position: '', phone: null }), ['თანამდებობა', 'ტელეფონი']);
+  assert.deepEqual(missingCompanyDetails({ code: '123456789', representativeName: 'ანა', position: '', phone: null }), ['ტელეფონი']);
   // The identification code is optional.
   assert.deepEqual(missingCompanyDetails({ ...valid, code: '' }), []);
   assert.deepEqual(missingCompanyDetails(valid), []);

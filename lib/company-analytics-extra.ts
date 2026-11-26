@@ -14,6 +14,18 @@ export function candidatesInPeriod(candidates: readonly AnalyticsCandidate[], pe
   });
 }
 
+/** Only applications submitted on a vacancy belong in the views-to-application funnel. */
+export function candidateApplicationFunnel(
+  candidates: readonly AnalyticsCandidate[],
+  period: CandidatePeriod,
+  views: number,
+) {
+  const applied = candidatesInPeriod(candidates, period).filter(
+    (candidate) => candidate.source === 'swipe' || candidate.source === 'resume',
+  ).length;
+  return { applied, rate: views > 0 ? applied / views : null };
+}
+
 export function candidateSources(candidates: readonly AnalyticsCandidate[], period: CandidatePeriod) {
   const scoped = candidatesInPeriod(candidates, period);
   const counts = { applied: 0, upload: 0, cv_box: 0, base: 0 };

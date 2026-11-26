@@ -28,7 +28,7 @@ void test(
       assert.ok(me);
       key = me.companyKey;
       assert.equal(me.approvalStatus, 'pending');
-      assert.deepEqual(missingCompanyDetails(me.details!), ['საკონტაქტო პირი', 'თანამდებობა', 'ტელეფონი']);
+      assert.deepEqual(missingCompanyDetails(me.details!), ['საკონტაქტო პირი', 'ტელეფონი']);
 
       const code = String(100000000 + Math.floor(Math.random() * 899999999));
       await updateCompanyDetails(me, { code, representativeName: 'ანა ტესტი', position: 'HR მენეჯერი', phone: '+995 555 12 34 56' });

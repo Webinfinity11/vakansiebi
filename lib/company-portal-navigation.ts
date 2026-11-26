@@ -52,3 +52,12 @@ export function companyHref(l: CompanyLocation): string {
 /** Ordinary clicks stay in the app; Cmd/Ctrl/Shift/middle clicks open the link. */
 export const plainClick = (e: { metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean; button: number }) =>
   e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+
+/** Split role-filtered destinations without promoting account tabs into the bar. */
+export function mobileNav<T extends { id: CompanyTab }>(visible: readonly T[]) {
+  const primaryIds: readonly CompanyTab[] = ['jobs', 'candidates', 'talent', 'analytics'];
+  return {
+    primary: visible.filter(item => primaryIds.includes(item.id)),
+    more: visible.filter(item => !primaryIds.includes(item.id)),
+  };
+}

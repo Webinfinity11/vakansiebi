@@ -1,10 +1,42 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { candidateSources, candidateHireTime, type AnalyticsCandidate } from '../lib/company-analytics-extra';
+import { candidateSources, candidateHireTime, candidateApplicationFunnel, type AnalyticsCandidate } from '../lib/company-analytics-extra';
 
 const period = { first: '2026-10-18', last: '2026-11-16' };
 const candidate = (overrides: Partial<AnalyticsCandidate> = {}): AnalyticsCandidate => ({
   source: 'swipe', jobId: 'job-a', appliedAt: '2026-11-01T12:00:00Z', stage: 'new', ...overrides,
+});
+
+test('application funnel counts only vacancy submissions, leaving other source totals intact', () => {
+  const entries = (['swipe', 'resume', 'upload', 'cv_box', 'base'] as const)
+    .map((source) => candidate({ source }));
+  assert.deepEqual(candidateApplicationFunnel(entries, period, 100), { applied: 2, rate: 0.02 });
+  assert.equal(candidateSources(entries, period).reduce((sum, source) => sum + source.count, 0), 5);
+});
+
+test('application funnel respects the selected vacancy', () => {
+  const entries = [candidate(), candidate({ source: 'resume', jobId: 'job-b' })];
+  assert.deepEqual(candidateApplicationFunnel(entries, { ...period, jobId: 'job-a' }, 10), {
+    applied: 1, rate: 0.1,
+  });
+  assert.deepEqual(candidateApplicationFunnel(entries, { ...period, jobId: 'missing' }, 10), {
+    applied: 0, rate: 0,
+  });
+});
+
+test('application funnel includes both UTC boundary days and excludes future and invalid dates', () => {
+  const entries = [
+    '2026-10-17T23:59:59Z', '2026-10-18T00:00:00Z',
+    '2026-11-16T23:59:59Z', '2026-11-17T00:00:00Z',
+    '2026-11-17T02:00:00+04:00', 'invalid',
+  ].map((appliedAt) => candidate({ appliedAt }));
+  assert.deepEqual(candidateApplicationFunnel(entries, period, 100), { applied: 3, rate: 0.03 });
+});
+
+test('application funnel has no conversion rate without views', () => {
+  assert.deepEqual(candidateApplicationFunnel([candidate()], period, 0), { applied: 1, rate: null });
+  assert.deepEqual(candidateApplicationFunnel([], period, 0), { applied: 0, rate: null });
+  assert.deepEqual(candidateApplicationFunnel([], period, 100), { applied: 0, rate: 0 });
 });
 
 test('empty data has zero sources and no measurable hire time', () => {

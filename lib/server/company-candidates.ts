@@ -1,3 +1,5 @@
+import { after } from 'next/server';
+import { effectiveContact, validCandidateEmail, validCandidatePhone } from '../company-candidate-contact';
 import { isDocx, isOdt, isRtf, isTxt } from '../cv-upload';
 import { requirementsMatch, type ApplicationAnswer } from '../job-questions';
 import { parseCvText, normalizeProfile } from '../cv-parse';
@@ -180,8 +182,7 @@ function shownCandidate(row: Row): Candidate {
     jobId: row.job_id,
     jobTitle: row.job_title,
     name: row.name,
-    email: row.email,
-    phone: row.phone,
+    ...(row.source === 'upload' ? effectiveContact(row, profile) : { email: row.email, phone: row.phone }),
     title: row.title,
     city: row.city,
     appliedAt: row.applied_at.toISOString(),
@@ -292,8 +293,17 @@ export async function companyCandidates(company: CompanyIdentity) {
 }
 
 /** The whole JOBX CV base for the company's CV base view. */
-export async function companyCvBase(company: CompanyIdentity) {
-  await ensureBaseProfiles();
+export async function companyCvBase(
+  company: CompanyIdentity,
+  // Injectable scheduling keeps direct integration tests independent of Next's request context.
+  { schedule = after, backfill = ensureBaseProfiles }: {
+    schedule?: (work: () => Promise<void>) => void;
+    backfill?: () => Promise<number>;
+  } = {},
+) {
+  schedule(async () => {
+    try { await backfill(); } catch { /* A later request retries unavailable profiles. */ }
+  });
   const { rows } = await db().query<Row>(
     candidatesSql + " WHERE e.source='base' ORDER BY e.applied_at DESC LIMIT 5000",
     [company.companyKey],
@@ -395,6 +405,8 @@ export async function candidateNotes(
 
 const profileEditSchema = z
   .object({
+    email: z.string().trim().max(254).refine((v) => !v || validCandidateEmail(v), 'ელფოსტა არასწორია.').optional(),
+    phone: z.string().trim().max(32).refine((v) => !v || validCandidatePhone(v), 'ტელეფონი უნდა შეიცავდეს მინიმუმ 6 ციფრს.').optional(),
     years: z.number().int().min(0).max(80).nullable().optional(),
     skills: z
       .array(z.string().trim().min(1).max(100))
@@ -498,12 +510,27 @@ export async function changeCandidate(
   }
   const owned = await ownedEntry(company, data.entry);
   if (data.action === 'profile') {
-    await db().query(
-      `INSERT INTO company_cv_profiles(company_key,entry,edited) VALUES($1,$2,jsonb_strip_nulls($3::jsonb))
-       ON CONFLICT(company_key,entry) DO UPDATE SET
-       edited=jsonb_strip_nulls(company_cv_profiles.edited || $3::jsonb),updated_at=now()`,
-      [company.companyKey, data.entry, JSON.stringify(data.edit)],
-    );
+    const hasContact = data.edit.email !== undefined || data.edit.phone !== undefined;
+    if (hasContact && owned.source !== 'upload')
+      throw new ApiError('კონტაქტის შესწორება მხოლოდ თქვენ მიერ ატვირთულ კანდიდატზეა შესაძლებელი.', 400);
+    await transaction(async (client) => {
+      if (hasContact) {
+        const contact = effectiveContact(data.edit);
+        await client.query(
+          `UPDATE company_cv_uploads SET email=COALESCE($3,email),phone=COALESCE($4,phone)
+           WHERE company_key=$1 AND id=$2`,
+          [company.companyKey, data.entry.split(':')[1],
+            data.edit.email === undefined ? null : contact.email,
+            data.edit.phone === undefined ? null : contact.phone],
+        );
+      }
+      await client.query(
+        `INSERT INTO company_cv_profiles(company_key,entry,edited) VALUES($1,$2,jsonb_strip_nulls($3::jsonb))
+         ON CONFLICT(company_key,entry) DO UPDATE SET
+         edited=jsonb_strip_nulls(company_cv_profiles.edited || $3::jsonb),updated_at=now()`,
+        [company.companyKey, data.entry, JSON.stringify(data.edit)],
+      );
+    });
   } else if (data.action === 'deleteUpload') {
     if (!['upload', 'cv_box'].includes(owned.source))
       throw new ApiError('მხოლოდ ატვირთული CV-ის წაშლაა შესაძლებელი.', 400);
@@ -808,6 +835,13 @@ export async function uploadCandidate(
     bytes,
     file.name,
   ).catch(() => null);
+  if (!context && profile) {
+    const contact = effectiveContact(data, profile);
+    await db().query(
+      `UPDATE company_cv_uploads SET email=$3,phone=$4 WHERE company_key=$1 AND id=$2`,
+      [company.companyKey, rows[0].id, contact.email, contact.phone],
+    );
+  }
   return { entry: 'upload:' + rows[0].id, duplicate: false, parse: profile?.parse ?? null };
 }
 
