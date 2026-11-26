@@ -103,6 +103,24 @@ export function usernameFromEmail(email: string) {
   return (name.length < 3 || sharedMailboxes.has(name) ? company || name : name).slice(0, 64);
 }
 
+function statusOf(a: CompanyAccount): [string, 'ok' | 'wait' | 'off'] {
+  if (a.approval_status === 'pending') return ['შემოწმება', 'wait'];
+  if (a.approval_status === 'rejected') return ['უარყოფილი', 'off'];
+  if (!a.enabled) return ['გათიშული', 'off'];
+  return ['აქტიური', 'ok'];
+}
+function StatusPill({ account }: { account: CompanyAccount }) {
+  const [label, tone] = statusOf(account);
+  return (
+    <span className="account-pills">
+      <span className={`account-pill account-pill--${tone}`}>{label}</span>
+      {account.must_change_password && (
+        <span className="account-pill">დროებითი პაროლი</span>
+      )}
+    </span>
+  );
+}
+
 export function CompanyAccounts() {
   const [accounts, setAccounts] = useState<CompanyAccount[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -122,6 +140,8 @@ export function CompanyAccounts() {
   const [companyName, setCompanyName] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [picked, setPicked] = useState<Suggestion | null>(null);
+  // Set when the name already belongs to a company: the admin decides.
+  const [sameName, setSameName] = useState<{ message: string; form: FormData } | null>(null);
   const pending = accounts.filter(
     (a) => a.approval_status === 'pending' && a.role === 'owner',
   ).length;
@@ -157,7 +177,10 @@ export function CompanyAccounts() {
         : { cache: 'no-store' },
     );
     const body = await response.json();
-    if (!response.ok) throw Error(body.error || 'მოქმედება ვერ შესრულდა');
+    if (!response.ok)
+      throw Object.assign(Error(body.error || 'მოქმედება ვერ შესრულდა'), {
+        code: response.headers.get('X-Jobx-Error') ?? '',
+      });
     return body;
   }
   async function load() {
@@ -197,9 +220,15 @@ export function CompanyAccounts() {
   }
   async function add(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    await submit(new FormData(event.currentTarget), false);
+  }
+  async function submit(form: FormData, allowSameName: boolean) {
+    setSameName(null);
     await act(async () => {
-      const result = await request({
+      let result;
+      try {
+        result = await request({
+        sameName: allowSameName,
         action: 'create',
         name: companyName.trim(),
         username: form.get('username'),
@@ -210,6 +239,13 @@ export function CompanyAccounts() {
         confirmed: form.get('confirmed') === 'on',
         attachJobs: form.get('attachJobs') === 'on',
       });
+      } catch (e) {
+        if ((e as { code?: string }).code === 'same-name') {
+          setSameName({ message: (e as Error).message, form });
+          return;
+        }
+        throw e;
+      }
       setCreate(false);
       setCompanyName('');
       setPicked(null);
@@ -264,6 +300,8 @@ export function CompanyAccounts() {
                 : 'ახალი ვაკანსია ვერ მოიძებნა. ყველა უკვე მიბმულია ან სხვა სახელითაა.'
             : action === 'remove-alias'
               ? 'სახელი მოიხსნა. უკვე მიბმული ვაკანსიები დარჩა.'
+              : action === 'delete-company'
+                ? `კომპანია წაიშალა${result.releasedJobs ? `; ${result.releasedJobs} ვაკანსია საიტზე დარჩა` : ''}.`
               : action === 'set-login'
                 ? 'შესვლის მონაცემები შეიცვალა.'
                 : 'ანგარიში განახლებულია.',
@@ -298,6 +336,7 @@ export function CompanyAccounts() {
             onClick={() => {
               setCreate(true);
               setError('');
+              setSameName(null);
               setCompanyName('');
               setPicked(null);
               setSuggestions([]);
@@ -368,30 +407,12 @@ export function CompanyAccounts() {
             .map((account) => (
               <li key={account.id}>
                 <div>
-                  <h2>{account.name}</h2>
-                  <p>
-                    {account.username} · {account.email}
-                  </p>
-                  <p>
-                    {account.approval_status === 'pending'
-                      ? 'შემოწმების მოლოდინში'
-                      : account.approval_status === 'rejected'
-                        ? 'უარყოფილია'
-                        : account.enabled
-                          ? 'აქტიური'
-                          : 'გათიშული'}
-                    {account.must_change_password
-                      ? ' · პაროლი შესაცვლელია'
-                      : ''}
-                  </p>
-                  {account.aliases?.length > 0 && (
-                    <p>სხვა სახელები: {account.aliases.join(', ')}</p>
-                  )}
+                  <h2>
+                    {account.name} <StatusPill account={account} />
+                  </h2>
+                  <p>{account.email}</p>
                   {account.baseViews > 0 && (
-                    <p>
-                      CV ბაზა: {account.baseViews} კანდიდატის კონტაქტი ნახა
-                      ბოლო 30 დღეში
-                    </p>
+                    <p>CV ბაზა: {account.baseViews} კონტაქტი 30 დღეში</p>
                   )}
                 </div>
                 <button
@@ -415,19 +436,23 @@ export function CompanyAccounts() {
         }}
       >
         <DialogContent className="company-job-dialog">
-          <DialogTitle>კომპანიის ანგარიშის შექმნა</DialogTitle>
-          <DialogDescription>
-            მიუთითეთ ელფოსტა და პაროლი, რომლითაც კომპანია შევა. მისი ვაკანსიები
-            ამ ანგარიშზე გადავა.
-          </DialogDescription>
-          <form className="company-form" onSubmit={add}>
+          <DialogTitle>ახალი ანგარიში</DialogTitle>
+          <DialogDescription>კომპანია ამ ელფოსტით შევა.</DialogDescription>
+          <form
+            className="company-form account-form"
+            onSubmit={add}
+            onInvalidCapture={(e) => {
+              const box = (e.target as HTMLElement).closest('details');
+              if (box) box.open = true;
+            }}
+          >
             {error && (
               <p role="alert" className="company-error">
                 {error}
               </p>
             )}
             <label>
-              კომპანიის სრული სახელი
+              კომპანია
               <input
                 className="ds-input"
                 name="name"
@@ -435,6 +460,7 @@ export function CompanyAccounts() {
                 minLength={2}
                 maxLength={160}
                 autoComplete="off"
+                placeholder="დაიწყეთ აკრეფა"
                 value={companyName}
                 onChange={(e) => {
                   setCompanyName(e.target.value);
@@ -442,10 +468,6 @@ export function CompanyAccounts() {
                   if (e.target.value.trim().length < 2) setSuggestions([]);
                 }}
               />
-              <small>
-                აკრიფე და აირჩიე საიტზე უკვე არსებული კომპანია, ან ჩაწერე ახალი
-                სახელი.
-              </small>
             </label>
             {!picked && suggestions.length > 0 && (
               <ul
@@ -475,101 +497,121 @@ export function CompanyAccounts() {
               </ul>
             )}
             {picked && (
-              <p className="account-picked">
-                არჩეულია საიტზე არსებული კომპანია: {picked.name} · {picked.jobs}{' '}
-                ვაკანსია
-              </p>
+              <p className="account-picked">{picked.jobs} ვაკანსია მიება ანგარიშს</p>
             )}
-            <NameSearch
-              label="სხვა სახელები (არასავალდებულო)"
-              hint="თუ კომპანიის ვაკანსიები სხვა დაწერილობითაც ჩანს (მაგ. TBC Bank), დაამატეთ ისიც."
-              exclude={[companyName, ...aliases.map((a) => a.name)]}
-              onPick={(s) => setAliases((list) => [...list, s])}
-            />
-            {aliases.length > 0 && (
-              <ul className="account-aliases" aria-label="დამატებული სახელები">
-                {aliases.map((a) => (
-                  <li key={a.name}>
-                    {a.name} · {a.jobs} ვაკანსია
-                    <button
-                      type="button"
-                      aria-label={`${a.name} — მოხსნა`}
-                      onClick={() => setAliases((list) => list.filter((x) => x.name !== a.name))}
-                    >
-                      <X size={14} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <label className="account-confirm">
-              <input type="checkbox" name="attachJobs" defaultChecked />
-              ამ სახელების აქტიური და მოლოდინში მყოფი ვაკანსიების მიბმა. ახალი
-              ვაკანსიებიც ავტომატურად მიებმება.
-            </label>
-            <label>
-              კომპანიის ელფოსტა
-              <input
-                className="ds-input"
-                name="email"
-                type="email"
-                required
-                maxLength={254}
-                onChange={(e) => {
-                  if (usernameEdited) return;
-                  setUsername(usernameFromEmail(e.target.value));
-                }}
-              />
-              <small>კომპანია ამ ელფოსტით ან მომხმარებლის სახელით შევა.</small>
-            </label>
-            <label>
-              პაროლი
-              <input
-                className="ds-input"
-                name="password"
-                type="text"
-                autoComplete="new-password"
-                minLength={12}
-                maxLength={128}
-                spellCheck={false}
-              />
-              <small>
-                მინიმუმ 12 სიმბოლო. თუ ცარიელს დატოვებთ, პაროლი ავტომატურად
-                შეიქმნება.
-              </small>
-            </label>
-            <label className="account-confirm">
-              <input type="checkbox" name="mustChangePassword" defaultChecked />
-              პირველ შესვლაზე კომპანიამ პაროლი შეცვალოს
-            </label>
-            <label>
-              მომხმარებლის სახელი
-              <input
-                className="ds-input"
-                name="username"
-                autoComplete="off"
-                required
-                pattern="[a-z0-9][a-z0-9._\-]{2,63}"
-                maxLength={64}
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value);
-                  setUsernameEdited(true);
-                }}
-              />
-              <small>
-                ელფოსტიდან ივსება. ლათინური პატარა ასოები და ციფრები; მინიმუმ 3
-                სიმბოლო.
-              </small>
-            </label>
+            <div className="company-form-grid">
+              <label>
+                ელფოსტა
+                <input
+                  className="ds-input"
+                  name="email"
+                  type="email"
+                  required
+                  maxLength={254}
+                  onChange={(e) => {
+                    if (usernameEdited) return;
+                    setUsername(usernameFromEmail(e.target.value));
+                  }}
+                />
+              </label>
+              <label>
+                პაროლი
+                <input
+                  className="ds-input"
+                  name="password"
+                  type="text"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={128}
+                  spellCheck={false}
+                  placeholder="ცარიელი — შეიქმნება ავტომატურად"
+                />
+              </label>
+            </div>
+            <details className="account-more">
+              <summary>დამატებით</summary>
+              <div className="company-form">
+                <label>
+                  მომხმარებლის სახელი
+                  <input
+                    className="ds-input"
+                    name="username"
+                    autoComplete="off"
+                    required
+                    pattern="[a-z0-9][a-z0-9._\-]{2,63}"
+                    title="ლათინური პატარა ასოები და ციფრები, მინიმუმ 3 სიმბოლო"
+                    maxLength={64}
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      setUsernameEdited(true);
+                    }}
+                  />
+                </label>
+                <NameSearch
+                  label="სხვა სახელები"
+                  hint="მაგ. TBC Bank — ამ სახელის ვაკანსიებიც მიება."
+                  exclude={[companyName, ...aliases.map((a) => a.name)]}
+                  onPick={(s) => setAliases((list) => [...list, s])}
+                />
+                {aliases.length > 0 && (
+                  <ul className="account-aliases" aria-label="დამატებული სახელები">
+                    {aliases.map((a) => (
+                      <li key={a.name}>
+                        {a.name} · {a.jobs}
+                        <button
+                          type="button"
+                          aria-label={`${a.name} — მოხსნა`}
+                          onClick={() => setAliases((list) => list.filter((x) => x.name !== a.name))}
+                        >
+                          <X size={14} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <label className="account-confirm">
+                  <input type="checkbox" name="attachJobs" defaultChecked />
+                  ვაკანსიების მიბმა
+                </label>
+                <label className="account-confirm">
+                  <input type="checkbox" name="mustChangePassword" defaultChecked />
+                  პირველ შესვლაზე პაროლის შეცვლა
+                </label>
+              </div>
+            </details>
             <label className="account-confirm">
               <input type="checkbox" name="confirmed" required />
-              გადამოწმებულია, რომ წვდომას კომპანიის უფლებამოსილ წარმომადგენელს
-              ვაძლევ.
+              წარმომადგენელი გადამოწმებულია
             </label>
-            <button className="ds-btn ds-btn--primary" disabled={busy}>
-              {busy ? 'იქმნება…' : 'ანგარიშის შექმნა'}
-            </button>
+            {sameName && (
+              <div className="company-confirm" role="alert">
+                <p>{sameName.message}</p>
+                <div className="company-row-actions">
+                  <button
+                    type="button"
+                    className="ds-btn ds-btn--primary"
+                    disabled={busy}
+                    onClick={() => void submit(sameName.form, true)}
+                  >
+                    კი, დავამატო
+                  </button>
+                  <button
+                    type="button"
+                    className="ds-btn ds-btn--secondary"
+                    disabled={busy}
+                    onClick={() => setSameName(null)}
+                  >
+                    არა
+                  </button>
+                </div>
+              </div>
+            )}
+            {!sameName && (
+              <button className="ds-btn ds-btn--primary" disabled={busy}>
+                {busy ? 'იქმნება…' : 'შექმნა'}
+              </button>
+            )}
           </form>
         </DialogContent>
       </Dialog>
@@ -585,203 +627,214 @@ export function CompanyAccounts() {
       >
         <DialogContent className="company-job-dialog">
           <DialogTitle>{current?.name}</DialogTitle>
-          <DialogDescription>
-            {current?.username} · {current?.email}
+          <DialogDescription className="account-head">
+            {current?.email}
+            {current && <StatusPill account={current} />}
           </DialogDescription>
           {error && (
             <p role="alert" className="company-error">
               {error}
             </p>
           )}
-          <div className="company-form">
-            <h2>კომპანიის დადასტურება</h2>
-            <p>
-              სტატუსი:{' '}
-              {current?.approval_status === 'pending'
-                ? 'შემოწმების მოლოდინში'
-                : current?.approval_status === 'rejected'
-                  ? 'უარყოფილია'
-                  : 'დადასტურებულია'}
-            </p>
-            <p>
-              კოდი: {current?.registration_code || 'არ არის შევსებული'} · საკონტაქტო
-              პირი: {current?.representative_name || 'არ არის შევსებული'}
-              {current?.position ? ` (${current.position})` : ''} · ტელეფონი:{' '}
-              {current?.phone || 'არ არის შევსებული'}
-            </p>
-            {current?.approval_status === 'pending' &&
-              !(current.representative_name && current.position && current.phone) && (
-                <p className="company-form-note">
-                  კომპანიას მონაცემები ჯერ ბოლომდე არ შეუვსია; შეუძლია „ანგარიშის“
-                  გვერდზე შეავსოს.
+          <div className="company-form account-manage">
+            {current?.role === 'owner' && current.approval_status !== 'approved' && (
+              <div className="account-approve">
+                <p>
+                  {current.email_verified
+                    ? 'კომპანია დადასტურებას ელოდება.'
+                    : 'ელფოსტა ჯერ დადასტურებული არ არის.'}
                 </p>
-              )}
-            <p>
-              ელფოსტა:{' '}
-              {current?.email_verified ? 'დადასტურებულია' : 'დასადასტურებელია'}
-            </p>
-            {current?.role === 'owner' && (
-              <div className="company-row-actions">
-                <button
-                  className="ds-btn ds-btn--primary"
-                  disabled={busy || !current.email_verified}
-                  onClick={() => void change('approve')}
-                >
-                  კომპანიის დამტკიცება
-                </button>
+                <div className="company-row-actions">
+                  <button
+                    className="ds-btn ds-btn--primary"
+                    disabled={busy || !current.email_verified}
+                    onClick={() => void change('approve')}
+                  >
+                    დამტკიცება
+                  </button>
+                  {current.approval_status === 'pending' && (
+                    <button
+                      className="ds-btn ds-btn--secondary"
+                      disabled={busy}
+                      onClick={() => void change('reject')}
+                    >
+                      უარყოფა
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            <dl className="account-facts">
+              <dt>საკონტაქტო პირი</dt>
+              <dd>
+                {current?.representative_name || '—'}
+                {current?.position ? `, ${current.position}` : ''}
+              </dd>
+              <dt>ტელეფონი</dt>
+              <dd>{current?.phone || '—'}</dd>
+              <dt>საიდ. კოდი</dt>
+              <dd>{current?.registration_code || '—'}</dd>
+              <dt>ელფოსტა</dt>
+              <dd>{current?.email_verified ? 'დადასტურებულია' : 'დაუდასტურებელი'}</dd>
+            </dl>
+            <details className="account-more">
+              <summary>
+                სახელები და ვაკანსიები
+                <span>{1 + (current?.aliases?.length ?? 0)}</span>
+              </summary>
+              <div className="company-form">
+                <ul className="account-aliases" aria-label="კომპანიის სახელები">
+                  <li>{current?.name}</li>
+                  {current?.aliases?.map((name) => (
+                    <li key={name}>
+                      {name}
+                      <button
+                        type="button"
+                        disabled={busy}
+                        aria-label={`${name} — მოხსნა`}
+                        onClick={() => void change('remove-alias', { name })}
+                      >
+                        <X size={14} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <NameSearch
+                  label="სახელის დამატება"
+                  hint="მაგ. TBC Bank — ამ სახელის ვაკანსიებიც მიება."
+                  exclude={[current?.name ?? '', ...(current?.aliases ?? [])]}
+                  disabled={busy}
+                  onPick={(s) => void change('add-alias', { name: s.name })}
+                />
                 <button
                   className="ds-btn ds-btn--secondary"
                   disabled={busy}
-                  onClick={() => void change('reject')}
+                  onClick={() => void change('assign-company-jobs')}
                 >
-                  უარყოფა
+                  ყველა ვაკანსიის მიბმა
                 </button>
+                <div className="account-inline">
+                  <input
+                    className="ds-input"
+                    aria-label="ვაკანსიის ID"
+                    value={jobId}
+                    onChange={(e) => setJobId(e.target.value)}
+                    placeholder="ვაკანსიის ID"
+                  />
+                  <button
+                    className="ds-btn ds-btn--secondary"
+                    disabled={busy || !jobId.trim()}
+                    onClick={() => void change('assign-job', { jobId })}
+                  >
+                    მიბმა
+                  </button>
+                </div>
               </div>
-            )}
-            <label>
-              ავტომატური გამოქვეყნება
-              <select className="ds-input" value={current?.trustedMode ?? 'auto'} disabled={busy}
-                onChange={(event) => void change('trusted-mode', { mode: event.target.value as CompanyAccount['trustedMode'] })}>
-                <option value="auto">წესით (3 დამტკიცებული, 0 უარყოფილი 90 დღეში)</option>
-                <option value="on">ყოველთვის</option>
-                <option value="off">არასოდეს</option>
-              </select>
-            </label>
-            <p>{current?.trusted ? 'ახლა: სანდო' : 'ახლა: რიგში დგება'}</p>
-            <h2>კომპანიის სახელები</h2>
-            <p>
-              ამ სახელებით გამოქვეყნებული ვაკანსიები, ახლაც და მომავალშიც, ამ
-              ანგარიშს მიებმება. სხვა ანგარიშის ვაკანსიები არ გადაიწერება.
-            </p>
-            <ul className="account-aliases" aria-label="კომპანიის სახელები">
-              <li>{current?.name} · მთავარი</li>
-              {current?.aliases?.map((name) => (
-                <li key={name}>
-                  {name}
+            </details>
+            <details className="account-more">
+              <summary>შესვლა და პაროლი</summary>
+              <form
+                className="company-form"
+                key={current?.id + ':' + current?.version}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const form = new FormData(event.currentTarget);
+                  const email = String(form.get('email') ?? '').trim();
+                  void change('set-login', {
+                    ...(email && email !== current?.email ? { email } : {}),
+                    password: form.get('password'),
+                    mustChangePassword: form.get('mustChangePassword') === 'on',
+                  });
+                }}
+              >
+                <div className="company-form-grid">
+                  <label>
+                    ელფოსტა
+                    <input
+                      className="ds-input"
+                      name="email"
+                      type="email"
+                      maxLength={254}
+                      defaultValue={current?.email}
+                    />
+                  </label>
+                  <label>
+                    ახალი პაროლი
+                    <input
+                      className="ds-input"
+                      name="password"
+                      type="text"
+                      autoComplete="new-password"
+                      minLength={12}
+                      maxLength={128}
+                      spellCheck={false}
+                      placeholder="ცარიელი — არ შეიცვლება"
+                    />
+                  </label>
+                </div>
+                <label className="account-confirm">
+                  <input type="checkbox" name="mustChangePassword" defaultChecked />
+                  პირველ შესვლაზე პაროლის შეცვლა
+                </label>
+                <div className="company-row-actions">
+                  <button className="ds-btn ds-btn--primary" disabled={busy}>
+                    შენახვა
+                  </button>
                   <button
                     type="button"
-                    disabled={busy}
-                    aria-label={`${name} — მოხსნა`}
-                    onClick={() => void change('remove-alias', { name })}
+                    className="ds-btn ds-btn--secondary"
+                    onClick={() => setConfirmation('reset-password')}
                   >
-                    <X size={14} />
+                    დროებითი პაროლის გენერაცია
                   </button>
-                </li>
-              ))}
-            </ul>
-            <NameSearch
-              label="სახელის დამატება"
-              hint="აკრიფეთ, როგორ წერია კომპანია სხვა ვაკანსიებში (მაგ. TBC Bank), და აირჩიეთ."
-              exclude={[current?.name ?? '', ...(current?.aliases ?? [])]}
-              disabled={busy}
-              onPick={(s) => void change('add-alias', { name: s.name })}
-            />
-            <h2>ვაკანსიების მიბმა</h2>
-            <p>
-              კომპანიის ყველა სახელით მოიძებნება აქტიური და მოლოდინში მყოფი
-              ვაკანსია, რომელიც სხვა ანგარიშს არ ეკუთვნის.
-            </p>
-            <button
-              className="ds-btn ds-btn--primary"
-              disabled={busy}
-              onClick={() => void change('assign-company-jobs')}
-            >
-              კომპანიის ყველა ვაკანსიის მიბმა
-            </button>
-            <p>
-              ან მიუთითე ერთი ვაკანსიის ID. მიბმა დაშვებულია მხოლოდ იმავე
-              სახელის კომპანიის განცხადებაზე; სხვა კომპანიაზე არსებული წვდომა არ
-              გადაიწერება.
-            </p>
-            <label>
-              ვაკანსიის ID
-              <input
-                className="ds-input"
-                value={jobId}
-                onChange={(e) => setJobId(e.target.value)}
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              />
-            </label>
-            <button
-              className="ds-btn ds-btn--secondary"
-              disabled={busy || !jobId.trim()}
-              onClick={() => void change('assign-job', { jobId })}
-            >
-              მიბმა
-            </button>
-            <h2>შესვლის მონაცემები</h2>
-            <form
-              className="company-form account-login-form"
-              key={current?.id + ':' + current?.version}
-              onSubmit={(event) => {
-                event.preventDefault();
-                const form = new FormData(event.currentTarget);
-                const email = String(form.get('email') ?? '').trim();
-                void change('set-login', {
-                  ...(email && email !== current?.email ? { email } : {}),
-                  password: form.get('password'),
-                  mustChangePassword: form.get('mustChangePassword') === 'on',
-                });
-              }}
-            >
-              <label>
-                ელფოსტა
-                <input
-                  className="ds-input"
-                  name="email"
-                  type="email"
-                  maxLength={254}
-                  defaultValue={current?.email}
-                />
-              </label>
-              <label>
-                ახალი პაროლი
-                <input
-                  className="ds-input"
-                  name="password"
-                  type="text"
-                  autoComplete="new-password"
-                  minLength={12}
-                  maxLength={128}
-                  spellCheck={false}
-                />
-                <small>
-                  მინიმუმ 12 სიმბოლო. ცარიელი ნიშნავს, რომ პაროლი არ იცვლება.
-                </small>
-              </label>
-              <label className="account-confirm">
-                <input type="checkbox" name="mustChangePassword" defaultChecked />
-                პირველ შესვლაზე კომპანიამ პაროლი შეცვალოს
-              </label>
-              <button className="ds-btn ds-btn--primary" disabled={busy}>
-                შენახვა
-              </button>
-            </form>
-            <h2>შესვლის მართვა</h2>
-            <div className="company-row-actions">
-              <button
-                className="ds-btn ds-btn--secondary"
-                onClick={() => setConfirmation('reset-password')}
-              >
-                ახალი დროებითი პაროლი
-              </button>
-              <button
-                className="ds-btn ds-btn--secondary"
-                onClick={() =>
-                  setConfirmation(current?.enabled ? 'disable' : 'enable')
-                }
-              >
-                {current?.enabled ? 'ანგარიშის გათიშვა' : 'ანგარიშის ჩართვა'}
-              </button>
-            </div>
+                </div>
+              </form>
+            </details>
+            <details className="account-more">
+              <summary>პარამეტრები</summary>
+              <div className="company-form">
+                <label>
+                  ვაკანსიების გამოქვეყნება
+                  <select
+                    className="ds-input"
+                    value={current?.trustedMode ?? 'auto'}
+                    disabled={busy}
+                    onChange={(event) =>
+                      void change('trusted-mode', {
+                        mode: event.target.value as CompanyAccount['trustedMode'],
+                      })
+                    }
+                  >
+                    <option value="auto">ავტომატურად, 3 დამტკიცების შემდეგ</option>
+                    <option value="on">ყოველთვის შემოწმების გარეშე</option>
+                    <option value="off">ყოველთვის შემოწმებით</option>
+                  </select>
+                  <small>{current?.trusted ? 'ახლა: შემოწმების გარეშე' : 'ახლა: შემოწმებით'}</small>
+                </label>
+                <button
+                  className="ds-btn ds-btn--secondary"
+                  onClick={() => setConfirmation(current?.enabled ? 'disable' : 'enable')}
+                >
+                  {current?.enabled ? 'ანგარიშის გათიშვა' : 'ანგარიშის ჩართვა'}
+                </button>
+                <button
+                  className="ds-btn account-delete-btn"
+                  onClick={() => setConfirmation('delete-company')}
+                >
+                  კომპანიის წაშლა
+                </button>
+              </div>
+            </details>
             {confirmation && (
               <div className="company-confirm">
                 <p>
                   {confirmation === 'reset-password'
-                    ? 'ძველი პაროლი აღარ იმუშავებს და ყველა სესია დასრულდება.'
+                    ? 'ძველი პაროლი აღარ იმუშავებს.'
+                    : confirmation === 'delete-company'
+                      ? `„${current?.name}“ წაიშლება: ანგარიშები, გუნდი და კანდიდატების სამუშაო სივრცე. ვაკანსიები საიტზე დარჩება. ამის დაბრუნება შეუძლებელია.`
                     : confirmation === 'disable'
-                      ? 'კომპანია სივრცეში ვეღარ შევა. ვაკანსიები შენარჩუნდება.'
-                      : 'კომპანიას სივრცეში შესვლა კვლავ შეეძლება.'}
+                      ? 'კომპანია ვეღარ შევა. ვაკანსიები დარჩება.'
+                      : 'კომპანია ისევ შეძლებს შესვლას.'}
                 </p>
                 <div className="company-row-actions">
                   <button
@@ -792,11 +845,15 @@ export function CompanyAccounts() {
                     გაუქმება
                   </button>
                   <button
-                    className="ds-btn ds-btn--primary"
+                    className={
+                      confirmation === 'delete-company'
+                        ? 'ds-btn account-delete-btn account-delete-btn--solid'
+                        : 'ds-btn ds-btn--primary'
+                    }
                     disabled={busy}
                     onClick={() => void change(confirmation)}
                   >
-                    დადასტურება
+                    {confirmation === 'delete-company' ? 'წაშლა' : 'დადასტურება'}
                   </button>
                 </div>
               </div>
@@ -813,9 +870,7 @@ export function CompanyAccounts() {
         <DialogContent>
           <DialogTitle>შესვლის მონაცემები</DialogTitle>
           <DialogDescription>
-            პაროლი მხოლოდ ამ ფანჯარაში ჩანს. გადაეცით კომპანიის წარმომადგენელს
-            დაცული გზით
-            {secret?.mustChangePassword ? '; პირველ შესვლაზე შეცვლის.' : '.'}
+            პაროლი მხოლოდ ახლა ჩანს — დააკოპირეთ და გადაეცით კომპანიას.
           </DialogDescription>
           <dl className="account-credentials">
             <dt>შესვლა</dt>

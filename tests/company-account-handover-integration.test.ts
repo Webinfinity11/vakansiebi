@@ -27,7 +27,7 @@ void test(
       url.searchParams.set('options', '-c search_path=' + schema);
       process.env.DATABASE_URL = url.href;
       const { db } = await import('../lib/server/db');
-      const { createCompanyAccount, changeCompanyAccount, companyAccounts } = await import('../lib/server/company-accounts');
+      const { createCompanyAccount, changeCompanyAccount, companyAccounts, deleteCompany } = await import('../lib/server/company-accounts');
       const { loginCompany, companyIdentity } = await import('../lib/server/company-auth');
       const { companyJobs } = await import('../lib/server/company-jobs');
       const job = async (company: string) => {
@@ -87,6 +87,27 @@ void test(
         /სხვა კომპანიის ანგარიშს/,
       );
 
+      // Taken email or username: the error names exactly which one.
+      await assert.rejects(
+        createCompanyAccount({ name: 'მესამე კომპანია', username: 'third', email: 'HR@Other.example', confirmed: true }),
+        /ელფოსტა HR@Other\.example უკვე გამოყენებულია \(„სხვა კომპანია“\)/,
+      );
+      await assert.rejects(
+        createCompanyAccount({ name: 'მესამე კომპანია', username: 'other', email: 'hr@third.example', confirmed: true }),
+        /მომხმარებლის სახელი „other“ დაკავებულია/,
+      );
+      // The same name is a question, not a refusal: two companies may share a name.
+      await assert.rejects(
+        createCompanyAccount({ name: 'სხვა კომპანია', username: 'other2', email: 'hr@other2.example', confirmed: true }),
+        (e: { code?: string }) => e.code === 'same-name',
+      );
+      await job('სხვა კომპანია');
+      const twin = await createCompanyAccount({
+        name: 'სხვა კომპანია', username: 'other2', email: 'hr@other2.example', confirmed: true, sameName: true, attachJobs: true,
+      });
+      assert.notEqual(twin.account.company_key, (await companyAccounts()).find((a) => a.username === 'other')!.company_key);
+      assert.equal(twin.attached, 0, "the twin does not take the first company's vacancies by name");
+
       // New login details end old sessions; the new password must be changed if asked.
       row = await account();
       const login = await changeCompanyAccount({
@@ -112,6 +133,18 @@ void test(
         `SELECT count(*)::int n FROM company_job_ownership o JOIN company_accounts a USING(company_key) WHERE a.username='tbc'`,
       );
       assert.equal(after.rows[0].n, 4);
+
+      // Deleting a company removes its logins and workspace; its vacancies stay published.
+      row = await account();
+      const gone = await deleteCompany({ id: row.id, version: row.version });
+      assert.equal(gone.releasedJobs, 4);
+      assert.ok(!(await companyAccounts()).some((a) => a.username === 'tbc'));
+      await assert.rejects(loginCompany('jobs@tbc.example', 'Second-Pass-2026!', '127.0.0.3'));
+      const left = await db().query(
+        `SELECT count(*)::int n FROM jobs WHERE status='published' AND published->>'company' ILIKE '%TBC%' OR published->>'company' LIKE '%თიბისი%'`,
+      );
+      assert.ok(left.rows[0].n >= 4);
+      assert.equal((await db().query("SELECT count(*)::int n FROM company_profiles WHERE name='თიბისი ბანკი'")).rows[0].n, 0);
       await db().end();
     } finally {
       process.env.DATABASE_URL = originalUrl;

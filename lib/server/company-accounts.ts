@@ -106,12 +106,14 @@ async function assignCompanyJobs(c: PoolClient, key: string, names: string[]) {
   return result.rowCount || 0;
 }
 async function companyNames(c: PoolClient, key: string) {
-  const { rows } = await c.query<{ name: string }>(
-    `SELECT name FROM company_profiles WHERE company_key=$1
-     UNION ALL SELECT alias_name FROM company_name_aliases WHERE company_key=$1`,
+  const { rows } = await c.query<{ name: string; alias: boolean }>(
+    `SELECT name, false AS alias FROM company_profiles WHERE company_key=$1
+     UNION ALL SELECT alias_name, true FROM company_name_aliases WHERE company_key=$1`,
     [key],
   );
-  return rows.map((r) => r.name);
+  // A second company with the same name (key "name-2") does not take the
+  // first one's vacancies by that name; only its own aliases attach jobs.
+  return rows.filter((r) => r.alias || companyKey(r.name) === key).map((r) => r.name);
 }
 /* Vacancies that reach the site later under any of the company's names join its
    account the next time it opens the workspace. */
@@ -157,10 +159,27 @@ const createSchema = z.object({
   password: z.preprocess((v) => (v === '' ? undefined : v), companyPassword.optional()),
   mustChangePassword: z.boolean().default(true),
   aliases: z.array(z.string().trim().min(2).max(160)).max(10).default([]),
+  // The admin confirmed a second, different company with an existing name.
+  sameName: z.boolean().optional(),
 });
+/* Exact reasons a new login cannot be created, checked before any write. */
+async function loginTaken(c: PoolClient, email: string, username: string) {
+  const { rows } = await c.query<{ field: string; name: string }>(
+    `SELECT 'email' AS field, p.name FROM company_accounts a JOIN company_profiles p USING(company_key) WHERE lower(a.email)=lower($1)
+     UNION ALL SELECT 'username', p.name FROM company_accounts a JOIN company_profiles p USING(company_key) WHERE a.username=$2
+     LIMIT 2`,
+    [email, username],
+  );
+  const email_ = rows.find((r) => r.field === 'email');
+  if (email_)
+    throw new ApiError(`ელფოსტა ${email} უკვე გამოყენებულია („${email_.name}“).`, 409);
+  const user = rows.find((r) => r.field === 'username');
+  if (user)
+    throw new ApiError(`მომხმარებლის სახელი „${username}“ დაკავებულია („${user.name}“). შეცვალეთ „დამატებით“ ველში.`, 409);
+}
 export async function createCompanyAccount(input: unknown) {
-  const data = createSchema.parse(input),
-    key = companyKey(data.name);
+  const data = createSchema.parse(input);
+  let key = companyKey(data.name);
   if (!key || isGenericCompanyName(data.name))
     throw new ApiError('მიუთითე კომპანიის სრული სახელი.');
   const password = data.password ?? newCompanyPassword(),
@@ -168,6 +187,25 @@ export async function createCompanyAccount(input: unknown) {
     mustChange = data.password ? data.mustChangePassword : true;
   try {
     const account = await transaction(async (c) => {
+      await loginTaken(c, data.email, data.username);
+      const owned = await c.query(
+        "SELECT 1 FROM company_accounts WHERE company_key=$1 AND role='owner'",
+        [key],
+      );
+      if (owned.rowCount) {
+        if (!data.sameName)
+          throw new ApiError(
+            `კომპანია „${data.name}“ უკვე არსებობს. ეს სხვა კომპანიაა იგივე სახელით?`,
+            409,
+            'same-name',
+          );
+        const base = key;
+        for (let n = 2; ; n++) {
+          key = `${base}-${n}`;
+          const used = await c.query('SELECT 1 FROM company_profiles WHERE company_key=$1', [key]);
+          if (!used.rowCount) break;
+        }
+      }
       await c.query(
         'INSERT INTO company_profiles(company_key,name) VALUES($1,$2) ON CONFLICT DO NOTHING',
         [key, data.name],
@@ -195,7 +233,7 @@ export async function createCompanyAccount(input: unknown) {
       error.code === '23505'
     )
       throw new ApiError(
-        'ამ კომპანიას უკვე აქვს ანგარიში, ან მომხმარებლის სახელი ან ელფოსტა დაკავებულია.',
+        'ელფოსტა ან მომხმარებლის სახელი ახლახან დაიკავა სხვა ანგარიშმა. სცადეთ თავიდან.',
         409,
       );
     throw error;
@@ -349,6 +387,33 @@ export async function changeCompanyAccount(input: unknown) {
             mustChangePassword: data.action === 'reset-password' || (data.mustChangePassword ?? true) }
         : {}),
     };
+  });
+}
+
+/* Removing a company: its logins, team and workspace data go; the vacancies
+   stay on the site and are simply no longer tied to an account. */
+export async function deleteCompany(input: unknown) {
+  const data = z.object({ id: z.uuid(), version: z.number().int().positive() }).parse(input);
+  return transaction(async (c) => {
+    const account = (
+      await c.query('SELECT id,company_key,version FROM company_accounts WHERE id=$1 FOR UPDATE', [data.id])
+    ).rows[0];
+    if (!account) throw new ApiError('ანგარიში ვერ მოიძებნა.', 404);
+    if (account.version !== data.version)
+      throw new ApiError('ანგარიში უკვე შეიცვალა. განაახლე სია.', 409);
+    const key: string = account.company_key;
+    const profile = (await c.query('SELECT name FROM company_profiles WHERE company_key=$1', [key])).rows[0];
+    const released = await c.query('DELETE FROM company_job_ownership WHERE company_key=$1', [key]);
+    for (const table of ['company_team_invitations', 'company_job_drafts', 'company_cv_profiles'])
+      await c.query(`DELETE FROM ${table} WHERE company_key=$1`, [key]);
+    const accounts = await c.query('DELETE FROM company_accounts WHERE company_key=$1', [key]);
+    // The rest of the workspace (candidates, notes, uploads, aliases…) cascades.
+    await c.query('DELETE FROM company_profiles WHERE company_key=$1', [key]);
+    await c.query(
+      "INSERT INTO audit_log(action,actor,after_data) VALUES('company.deleted','admin',$1)",
+      [{ companyKey: key, name: profile?.name, accounts: accounts.rowCount, releasedJobs: released.rowCount }],
+    );
+    return { ok: true, releasedJobs: released.rowCount || 0 };
   });
 }
 

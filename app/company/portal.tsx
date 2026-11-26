@@ -368,6 +368,12 @@ export function CompanyPortal({
       window.location.reload();
     });
   }
+  // Leave without finishing: the temporary password still works next time.
+  const signOut = () =>
+    void action(async () => {
+      await fetch("/api/company/session", { method: "DELETE" });
+      window.location.reload();
+    });
   const passwordForm = (
     <form className="cp-settings cp-password-settings" onSubmit={password}>
       <div className="cp-settings-row">
@@ -409,6 +415,11 @@ export function CompanyPortal({
       <div className="cp-settings-foot">
         <button className={identity?.mustChangePassword ? "cp-btn cp-btn--primary" : "cp-btn cp-btn--secondary"} disabled={busy}>
            პაროლის შენახვა </button>
+        {identity?.mustChangePassword && (
+          <button type="button" className="cp-btn cp-btn--ghost" disabled={busy} onClick={signOut}>
+            <LogOut size={15} /> გასვლა
+          </button>
+        )}
       </div>
     </form>
   );
@@ -709,12 +720,7 @@ export function CompanyPortal({
           <button
             type="button"
             className="cp-side-link"
-            onClick={() =>
-              void action(async () => {
-                await fetch("/api/company/session", { method: "DELETE" });
-                window.location.reload();
-              })
-            }
+            onClick={signOut}
           >
             <LogOut size={15} />
              გასვლა </button>

@@ -10,6 +10,7 @@ import {
   companySuggestions,
   createCompanyAccount,
   changeCompanyAccount,
+  deleteCompany,
 } from '@/lib/server/company-accounts';
 export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
@@ -38,7 +39,9 @@ export async function POST(req: Request) {
     const result =
       data.action === 'create'
         ? await createCompanyAccount(data)
-        : await changeCompanyAccount(data);
+        : data.action === 'delete-company'
+          ? await deleteCompany(data)
+          : await changeCompanyAccount(data);
     return Response.json(result, {
       headers: { 'Cache-Control': 'private, no-store' },
     });

@@ -216,3 +216,154 @@
 .company-form .account-login-form {
   padding: 0;
 }
+
+/* Status at a glance: one pill instead of a sentence. */
+.account-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.account-pill {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(127, 140, 160, 0.14);
+  color: var(--ds-ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.account-pill--ok {
+  background: var(--ds-success-soft);
+  color: var(--ds-success);
+}
+.account-pill--wait {
+  background: #fff1e6;
+  color: #b4410b;
+}
+.account-pill--off {
+  background: var(--ds-danger-soft);
+  color: var(--ds-danger);
+}
+.company-job-list li h2 .account-pills {
+  margin-left: 6px;
+}
+.company-job-list li p {
+  margin-top: 4px;
+}
+.account-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.account-head .account-pills {
+  margin-left: 4px;
+}
+.company-job-dialog .account-form,
+.company-job-dialog .account-manage {
+  gap: 14px;
+}
+.account-approve {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #fff7f0;
+}
+.account-approve p {
+  font-size: 14px;
+  color: var(--ds-ink);
+}
+.account-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 14px;
+}
+.account-facts dt {
+  color: var(--ds-ink-3);
+}
+.account-facts dd {
+  margin: 0;
+  color: var(--ds-ink);
+  overflow-wrap: anywhere;
+}
+/* Rarely used settings fold away under one line each. */
+.account-more {
+  border: 1px solid var(--ds-line);
+  border-radius: 10px;
+}
+.account-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ds-ink);
+  cursor: pointer;
+  list-style: none;
+}
+.account-more > summary::-webkit-details-marker {
+  display: none;
+}
+.account-more > summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.6;
+}
+.account-more[open] > summary::after {
+  transform: rotate(-135deg);
+}
+.account-more > summary span {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(127, 140, 160, 0.14);
+  font-size: 12px;
+  font-weight: 400;
+}
+.account-more > .company-form {
+  padding: 4px 16px 16px;
+  gap: 14px;
+}
+.account-inline {
+  display: flex;
+  gap: 8px;
+}
+.account-inline .ds-input {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .company-job-dialog .company-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.company-job-dialog .account-delete-btn {
+  border: 1px solid var(--ds-danger-soft);
+  background: transparent;
+  color: var(--ds-danger);
+}
+.company-job-dialog .account-delete-btn:hover:not(:disabled) {
+  background: var(--ds-danger-soft);
+}
+.company-job-dialog .account-delete-btn--solid,
+.company-job-dialog .account-delete-btn--solid:hover:not(:disabled) {
+  border-color: var(--ds-danger);
+  background: var(--ds-danger);
+  color: #fff;
+}
+.account-more .company-form > .ds-btn + .ds-btn {
+  margin-top: -6px;
+}

@@ -4238,6 +4238,8 @@ textarea.cp-input {
 .cp-auth .cp-settings-label h2 { font-size: 32px; }
 .cp-auth .cp-settings-foot { padding: 0; box-shadow: none; }
 .cp-auth .cp-settings-foot .cp-btn { width: 100%; }
+.cp-auth .cp-settings-foot { flex-direction: column; gap: 8px; }
+.cp-auth .cp-settings-foot .cp-btn--ghost { color: var(--cp-ink-2); }
 .cp-auth-form > a { font-size: 13px; color: var(--cp-ink-2); text-decoration: underline; text-underline-offset: 4px; }
 .cp-auth-note { padding: 16px; border-radius: var(--cp-radius-sm); background: var(--cp-side); }
 .cp-auth-linked { gap: 16px; padding: 16px; border: 0; }
