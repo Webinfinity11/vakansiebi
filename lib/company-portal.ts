@@ -9,7 +9,7 @@ export const companyUsername = z
   );
 export const companyPassword = z
   .string()
-  .min(12, 'პაროლი სულ მცირე 12 სიმბოლოს უნდა შეიცავდეს.')
+  .min(8, 'პაროლი სულ მცირე 8 სიმბოლოს უნდა შეიცავდეს.')
   .max(128, 'პაროლი მაქსიმუმ 128 სიმბოლოა.');
 export type CompanyIdentity = {
   id: string;

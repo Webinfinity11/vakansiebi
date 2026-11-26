@@ -46,8 +46,13 @@ export async function verifyCompanyPassword(password: string, stored: string) {
   const supplied = await derive(password, valid ? salt : '0'.repeat(48));
   return !!valid && timingSafeEqual(supplied, Buffer.from(hash, 'hex'));
 }
+/* A temporary password the admin can read out or type: no look-alike characters
+   (0/o, 1/l/i), e.g. "k7mp-w3qx". Login attempts are rate limited and it is changed
+   on first sign-in. */
+const readable = 'abcdefghjkmnpqrstuvwxyz23456789';
 export function newCompanyPassword() {
-  return randomBytes(18).toString('base64url');
+  const chars = [...randomBytes(8)].map((b) => readable[b % readable.length]);
+  return chars.slice(0, 4).join('') + '-' + chars.slice(4).join('');
 }
 export async function recordAttempt(
   network: string,
@@ -193,19 +198,24 @@ export async function changeCompanyPassword(
 ) {
   if (network) await recordAttempt(network, 'password:' + company.username);
   companyPassword.parse(nextPassword);
-  if (currentPassword === nextPassword)
+  if (currentPassword && currentPassword === nextPassword)
     throw new ApiError('ახალი პაროლი ძველისგან უნდა განსხვავდებოდეს.');
   const hash = await hashCompanyPassword(nextPassword);
   await transaction(async (c) => {
     const row = (
       await c.query(
-        'SELECT password_hash,enabled FROM company_accounts WHERE id=$1 FOR UPDATE',
+        'SELECT password_hash,enabled,must_change_password FROM company_accounts WHERE id=$1 FOR UPDATE',
         [company.id],
       )
     ).rows[0];
+    // On the first sign-in the session was opened with the temporary password a
+    // moment ago, so it is not asked again; a later change needs the current one.
+    if (row?.must_change_password && (await verifyCompanyPassword(nextPassword, row.password_hash)))
+      throw new ApiError('ახალი პაროლი დროებითისგან უნდა განსხვავდებოდეს.');
     if (
       !row?.enabled ||
-      !(await verifyCompanyPassword(currentPassword, row.password_hash))
+      (!row.must_change_password &&
+        !(await verifyCompanyPassword(currentPassword, row.password_hash)))
     )
       throw new ApiError('მიმდინარე პაროლი არასწორია.', 401);
     await c.query(

@@ -4491,3 +4491,13 @@ fieldset.cp-fields {
 @media (max-width: 900px) {
   .cp-side-foot .cp-side-fold { display: none; }
 }
+
+/* New password: one field with a show button inside it. */
+.cp-password-field { position: relative; display: block; }
+.cp-password-field .cp-input { width: 100%; padding-right: 44px; }
+.cp-password-toggle {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  display: inline-grid; place-items: center; width: 34px; height: 34px;
+  border: 0; border-radius: var(--cp-radius-sm); background: none; color: var(--cp-ink-3); cursor: pointer;
+}
+.cp-password-toggle:hover { color: var(--cp-ink); background: var(--cp-hover); }

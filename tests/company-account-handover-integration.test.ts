@@ -124,11 +124,15 @@ void test(
       await assert.rejects(loginCompany('hr@tbc.example', 'Second-Pass-2026!', '127.0.0.2'));
       me = (await companyIdentity(await loginCompany('jobs@tbc.example', 'Second-Pass-2026!', '127.0.0.2')))!;
       assert.equal(me.mustChangePassword, true);
-      await changeCompanyPassword(me, 'Second-Pass-2026!', 'Own-Pass-2026-tbc!');
+      // First sign-in: the temporary password is not asked again, but cannot be reused.
+      await assert.rejects(changeCompanyPassword(me, '', 'Second-Pass-2026!'), /დროებითისგან/);
+      await changeCompanyPassword(me, '', 'own-pass');
       row = await account();
       assert.equal(row.must_change_password, false);
       assert.ok(row.passwordChangedAt, 'the admin sees the company set its own password');
-      me = (await companyIdentity(await loginCompany('jobs@tbc.example', 'Own-Pass-2026-tbc!', '127.0.0.2')))!;
+      me = (await companyIdentity(await loginCompany('jobs@tbc.example', 'own-pass', '127.0.0.2')))!;
+      // Later changes need the current password.
+      await assert.rejects(changeCompanyPassword(me, '', 'another-pass'), /მიმდინარე პაროლი არასწორია/);
       row = await account();
       await assert.rejects(
         changeCompanyAccount({ action: 'set-login', id: row.id, version: row.version, email: 'hr@other.example' }),

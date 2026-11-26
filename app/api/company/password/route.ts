@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { apiError, checkOrigin, readBody } from '@/lib/server/auth';
 import {
   changeCompanyPassword,
-  logoutCompany,
+  createCompanySession,
   requireCompanyRole,
+  setCompanySession,
 } from '@/lib/server/company-auth';
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
     );
     const data = z
       .object({
-        currentPassword: z.string().max(128),
+        currentPassword: z.string().max(128).default(''),
         password: z.string().max(128),
       })
       .parse(await readBody(req));
@@ -26,7 +27,8 @@ export async function POST(req: Request) {
       data.password,
       clientKey(req),
     );
-    await logoutCompany();
+    // Other devices are signed out; this one stays signed in with the new password.
+    await setCompanySession(await createCompanySession(company.id));
     return Response.json(
       { ok: true },
       { headers: { 'Cache-Control': 'private, no-store' } },

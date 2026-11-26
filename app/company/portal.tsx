@@ -20,6 +20,8 @@ import {
   PanelLeftOpen,
   Database,
   Check,
+  Eye,
+  EyeOff,
   X,
 } from "lucide-react";
 import { Brand } from "../brand";
@@ -102,32 +104,46 @@ function GoogleMark() {
   );
 }
 
-/* The length rule appears only once the password is actually too short. */
+/* One field with a show button instead of typing the password twice; the length
+   rule appears only once the password is actually too short. */
 function NewPasswordInput() {
   const [short, setShort] = useState(false);
+  const [shown, setShown] = useState(false);
   const check = (input: HTMLInputElement) =>
-    setShort(input.value.length > 0 && input.value.length < 12);
+    setShort(input.value.length > 0 && input.value.length < 8);
   return (
     <>
-      <input
-        className="cp-input"
-        name="password"
-        type="password"
-        autoComplete="new-password"
-        required
-        minLength={12}
-        maxLength={128}
-        aria-invalid={short || undefined}
-        aria-describedby={short ? "cp-password-short" : undefined}
-        onBlur={(e) => check(e.currentTarget)}
-        onInvalid={(e) => check(e.currentTarget)}
-        onChange={(e) => {
-          if (short) check(e.currentTarget);
-        }}
-      />
+      <span className="cp-password-field">
+        <input
+          className="cp-input"
+          name="password"
+          type={shown ? "text" : "password"}
+          autoComplete="new-password"
+          required
+          minLength={8}
+          maxLength={128}
+          spellCheck={false}
+          aria-invalid={short || undefined}
+          aria-describedby={short ? "cp-password-short" : undefined}
+          onBlur={(e) => check(e.currentTarget)}
+          onInvalid={(e) => check(e.currentTarget)}
+          onChange={(e) => {
+            if (short) check(e.currentTarget);
+          }}
+        />
+        <button
+          type="button"
+          className="cp-password-toggle"
+          aria-label={shown ? "პაროლის დამალვა" : "პაროლის ჩვენება"}
+          aria-pressed={shown}
+          onClick={() => setShown(!shown)}
+        >
+          {shown ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </span>
       {short && (
         <small id="cp-password-short" className="cp-field-error">
-           სულ მცირე 12 სიმბოლო </small>
+          სულ მცირე 8 სიმბოლო</small>
       )}
     </>
   );
@@ -182,12 +198,7 @@ export function CompanyPortal({
   }, [detailsDirty]);
   useEffect(() => {
     try {
-      const changed = sessionStorage.getItem("jobx.company.passwordChanged");
-      if (changed !== null) {
-        setLoginUsername(changed);
-        setLoginNotice("პაროლი შეიცვალა. შედით ახალი პაროლით.");
-        sessionStorage.removeItem("jobx.company.passwordChanged");
-      } else if (sessionStorage.getItem("jobx.company.sessionExpired") === "1") {
+      if (sessionStorage.getItem("jobx.company.sessionExpired") === "1") {
         setLoginNotice("სესიის ვადა ამოიწურა. გთხოვთ, ხელახლა შეხვიდეთ.");
       }
       sessionStorage.removeItem("jobx.company.sessionExpired");
@@ -415,18 +426,19 @@ export function CompanyPortal({
   }
   async function password(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     await action(async () => {
-      if (data.get("password") !== data.get("repeat"))
-        throw Error("პაროლები ერთმანეთს არ ემთხვევა.");
       await request("password", {
-        currentPassword: data.get("currentPassword"),
+        currentPassword: data.get("currentPassword") ?? "",
         password: data.get("password"),
       });
-      try {
-        sessionStorage.setItem("jobx.company.passwordChanged", identity?.email || identity?.username || "");
-      } catch { /* Password change must succeed even without storage. */ }
-      window.location.reload();
+      // The server keeps this device signed in with the new password.
+      if (identity?.mustChangePassword) window.location.reload();
+      else {
+        form.reset();
+        setNotice("პაროლი შეიცვალა.");
+      }
     });
   }
   // Leave without finishing: the temporary password still works next time.
@@ -444,34 +456,26 @@ export function CompanyPortal({
           <h2>პაროლი</h2>
           <p>
             {identity?.mustChangePassword
-              ? "პირველი შესვლისას შეცვალეთ დროებითი პაროლი."
-              : "შეცვლის შემდეგ ყველა მოწყობილობაზე სესია დასრულდება და ხელახლა შეხვალთ."}
+              ? "მოიფიქრეთ საკუთარი პაროლი, სულ მცირე 8 სიმბოლო."
+              : "სხვა მოწყობილობებზე ხელახლა შესვლა დაგჭირდებათ."}
           </p>
         </div>
         <div className="cp-fields">
+          {!identity?.mustChangePassword && (
+            <label>
+              მიმდინარე პაროლი
+              <input
+                className="cp-input"
+                name="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                required
+                maxLength={128}
+              />
+            </label>
+          )}
           <label>
-             მიმდინარე პაროლი <input
-              className="cp-input"
-              name="currentPassword"
-              type="password"
-              autoComplete="current-password"
-              required
-              maxLength={128}
-            />
-          </label>
-          <label>
-             ახალი პაროლი <NewPasswordInput />
-          </label>
-          <label>
-             გაიმეორეთ ახალი პაროლი <input
-              className="cp-input"
-              name="repeat"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={12}
-              maxLength={128}
-            />
+            ახალი პაროლი <NewPasswordInput />
           </label>
         </div>
       </div>

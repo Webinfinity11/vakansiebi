@@ -594,7 +594,7 @@ export function CompanyAccounts() {
                   name="password"
                   type="text"
                   autoComplete="new-password"
-                  minLength={12}
+                  minLength={8}
                   maxLength={128}
                   spellCheck={false}
                   placeholder="ცარიელი — შეიქმნება ავტომატურად"
@@ -889,7 +889,7 @@ export function CompanyAccounts() {
                       name="password"
                       type="text"
                       autoComplete="new-password"
-                      minLength={12}
+                      minLength={8}
                       maxLength={128}
                       spellCheck={false}
                       placeholder="ცარიელი — არ შეიცვლება"
