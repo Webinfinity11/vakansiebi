@@ -367,3 +367,11 @@
 .account-more .company-form > .ds-btn + .ds-btn {
   margin-top: -6px;
 }
+.account-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 0;
+}

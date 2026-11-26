@@ -142,6 +142,22 @@ export function CompanyAccounts() {
   const [picked, setPicked] = useState<Suggestion | null>(null);
   // Set when the name already belongs to a company: the admin decides.
   const [sameName, setSameName] = useState<{ message: string; form: FormData } | null>(null);
+  // What the last create attempt used, to point at the account that already has it.
+  const [tried, setTried] = useState<{ email: string; username: string } | null>(null);
+  const owner = (name: string) =>
+    accounts.find((a) => a.role === 'owner' && a.name.trim().toLowerCase() === name.trim().toLowerCase());
+  const existing =
+    error && tried
+      ? accounts.find(
+          (a) => a.email.toLowerCase() === tried.email.toLowerCase() || a.username === tried.username,
+        )
+      : undefined;
+  function openAccount(a: CompanyAccount) {
+    setCreate(false);
+    setError('');
+    setConfirmation(null);
+    setCurrent(a);
+  }
   const pending = accounts.filter(
     (a) => a.approval_status === 'pending' && a.role === 'owner',
   ).length;
@@ -224,6 +240,7 @@ export function CompanyAccounts() {
   }
   async function submit(form: FormData, allowSameName: boolean) {
     setSameName(null);
+    setTried({ email: String(form.get('email') ?? '').trim(), username: String(form.get('username') ?? '') });
     await act(async () => {
       let result;
       try {
@@ -447,9 +464,14 @@ export function CompanyAccounts() {
             }}
           >
             {error && (
-              <p role="alert" className="company-error">
-                {error}
-              </p>
+              <div role="alert" className="company-error account-error">
+                <span>{error}</span>
+                {existing && (
+                  <button type="button" className="ds-btn ds-btn--secondary ds-btn--sm" onClick={() => openAccount(existing)}>
+                    ანგარიშის გახსნა
+                  </button>
+                )}
+              </div>
             )}
             <label>
               კომპანია
@@ -478,8 +500,9 @@ export function CompanyAccounts() {
                   <li key={s.name}>
                     <button
                       type="button"
-                      disabled={s.hasAccount}
                       onClick={() => {
+                        const has = s.hasAccount ? owner(s.name) : undefined;
+                        if (has) return openAccount(has);
                         setCompanyName(s.name);
                         setPicked(s);
                         setSuggestions([]);
@@ -488,7 +511,7 @@ export function CompanyAccounts() {
                       <strong>{s.name}</strong>
                       <span>
                         {s.hasAccount
-                          ? 'ანგარიში უკვე აქვს'
+                          ? 'ანგარიში აქვს — გახსნა'
                           : `${s.jobs} ვაკანსია`}
                       </span>
                     </button>
