@@ -1,10 +1,9 @@
 'use client';
-import { untilDate } from '@/lib/date-until';
 import { SaveCandidate, AddToVacancy } from './add-to-candidates';
 import { validCandidateEmail, validCandidatePhone } from '@/lib/company-candidate-contact';
 import { StatusMark } from './status-mark';
 import { SelectField } from '../select-field';
-import { cvBaseInvitation, defaultTemplates, render, templateKinds, templateLabels, templateLimits, validTemplate, type MessageTemplate, type TemplateKey } from '@/lib/company-message-templates';
+import { defaultTemplates, render, templateKinds, templateLabels, templateLimits, validTemplate, type MessageTemplate, type TemplateKey } from '@/lib/company-message-templates';
 import { parseNotice } from '@/lib/company-talent-filters';
 import { companyHref, plainClick } from '@/lib/company-portal-navigation';
 import { CandidateAnswers, CandidateSignals } from './candidate-answers';
@@ -33,7 +32,6 @@ import {
   Pencil,
   Plus,
   Upload,
-  UserPlus,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -411,14 +409,6 @@ export function CandidatesView({
       onPatch([entry],detail);
     },
     onError,
-    onInvite: async () => {
-      try {
-        const result: {link:string;invite:Candidate['invite']} = await readCandidate('candidates',{action:'invite',entry:c.entry});
-        onPatch([c.entry],{invite:result.invite});
-        setSheetCandidate(previous=>previous?.entry===c.entry ? {...previous,invite:result.invite} : previous);
-        setComposer({entries:[c.entry],template:'received',channel:c.email?'email':candidatePhone(c.phone)?'whatsapp':'copy',message:cvBaseInvitation(c.name,companyName,result.link)});
-      } catch(e) { onError(e instanceof Error?e.message:'მოწვევა ვერ შეიქმნა.'); }
-    },
     onCompose: (channel: Channel, template: TemplateKey = 'received') =>
       setComposer({ entries: [c.entry], template, channel }),
   });
@@ -821,7 +811,6 @@ function Detail({
   sheetOnly,
   canEdit,
   onCompose,
-  onInvite,
   onRemoved,
   candidate: c,
   face,
@@ -838,7 +827,6 @@ function Detail({
   sheetOnly: boolean;
   canEdit: boolean;
   onCompose: (channel: Channel, template?: TemplateKey) => void;
-  onInvite: () => Promise<void>;
   onRemoved: (entry: string) => void;
   candidate: Candidate;
   face: { name: string; entry: string; photo: boolean };
@@ -851,7 +839,6 @@ function Detail({
   onReveal: (entry: string) => Promise<void>;
   onError: (message: string) => void;
 }) {
-  const [inviting,setInviting]=useState(false);
   const [tab, setTab] = useState<'cv' | 'notes'>('cv');
   // Opening a CV base person shows their CV, contacts included: it is one logged view.
   const hidden = !!c.contactHidden;
@@ -983,17 +970,7 @@ function Detail({
                 <Phone size={15} />დარეკვა
               </a>
             )}
-            {c.source === 'upload' && canEdit && !c.invite?.consentedAt && (
-              <button type="button" className="cp-btn cp-btn--secondary cp-btn--sm" disabled={inviting}
-                onClick={async()=>{setInviting(true);try{await onInvite();}finally{setInviting(false);}}}>
-                <UserPlus size={15} />{inviting?'იქმნება…':'მოწვევა JOBX-ის ბაზაში'}
-              </button>
-            )}
           </div>
-          {c.source === 'upload' && c.invite && <p className="cp-subtle cc-invite-state">
-            {c.invite.withdrawnAt?'თანხმობა გაუქმებულია':c.invite.consentedAt?'თანხმობა მიღებულია '+new Date(c.invite.consentedAt).toLocaleDateString('ka-GE'):'მოწვევა გაგზავნილია — მოქმედებს '+untilDate(c.invite.expiresAt)}
-            
-          </p>}
         </div>
         {canEdit ? (
           <div className="cc-rating" role="group" aria-label="შეფასება">
