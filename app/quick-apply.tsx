@@ -2,15 +2,13 @@
 import { useUi } from '@/app/ui-language';
 import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import {
-  ChevronDown,
   Copy,
   Globe2,
-  Languages,
   Mail,
   Phone,
   Send,
 } from 'lucide-react';
-import { emailDraft, hasEnglishDescription } from '@/lib/application-contact';
+import { emailDraft } from '@/lib/application-contact';
 import {
   applicationDestination,
   defaultApplicationBody,
@@ -64,27 +62,8 @@ export function QuickApply({
         </a>
       )}
       <div className="contact-options">
-        {phones.map((phone) => (
-          <a
-            className="contact-phone"
-            key={phone.number}
-            href={`tel:${phone.number}`}
-          >
-            <Phone size={16} />
-            <span>
-              <small>{ui('ტელეფონი')}</small>
-              <strong>{phone.display}</strong>
-            </span>
-            <span className="contact-call">{ui('დარეკვა')}</span>
-          </a>
-        ))}
         {emails.map((contact) => (
           <div className="application-email" key={contact.email}>
-            <span>
-              {contact.application
-                ? ui('ელფოსტა CV-სთვის')
-                : ui('საკონტაქტო ელფოსტა')}
-            </span>
             <strong>{contact.email}</strong>
             <div className="email-actions">
               <a
@@ -130,18 +109,21 @@ export function QuickApply({
             )}
           </div>
         ))}
+        {phones.map((phone) => (
+          <a
+            className="contact-phone"
+            key={phone.number}
+            href={`tel:${phone.number}`}
+          >
+            <Phone size={16} />
+            <span>
+              <small>{ui('ტელეფონი')}</small>
+              <strong>{phone.display}</strong>
+            </span>
+            <span className="contact-call">{ui('დარეკვა')}</span>
+          </a>
+        ))}
       </div>
-      {!!emails.length && (
-        <p className="quick-apply-note">
-          {emails.some((contact) => contact.application)
-            ? ui(
-                'გაიხსნება შენი ფოსტა — მიამაგრე CV და გაგზავნე.',
-              )
-            : ui(
-                'გაიხსნება შენი ფოსტა. წერილის ტექსტი და თემა შეცვალე დაკავშირების მიზნის მიხედვით.',
-              )}
-        </p>
-      )}
       {linksCv && (phones.length > 0 || emails.length > 0 || !!application) && (
         <p className="quick-apply-note">
           {ui(
@@ -159,39 +141,6 @@ export function QuickApply({
       )}
       <output aria-live="polite">{ui(message)}</output>
       {children}
-      <TranslationHelp job={job} />
     </section>
-  );
-}
-
-export function TranslationHelp({ job }: { job: PublicJob }) {
-  const { ui } = useUi();
-  if (!hasEnglishDescription(job.description)) return null;
-  return (
-    <details className="translation-help">
-      <summary>
-        <Languages size={16} aria-hidden="true" />
-        {ui('ინგლისური აღწერის ქართულად ნახვა')}
-        <ChevronDown className="disclosure-chevron" aria-hidden="true" />
-      </summary>
-      <p>
-        {ui(
-          'წყაროს ავტომატური თარგმანი შეგიძლია Google Translate-ში გახსნა; მოთხოვნები ორიგინალთან გადაამოწმე.',
-        )}
-      </p>
-      <a
-        className="secondary-button"
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => trackAction('translate')}
-        href={
-          'https://translate.google.com/translate?sl=auto&tl=ka&u=' +
-          encodeURIComponent(job.url)
-        }
-      >
-        <Languages aria-hidden="true" />
-        {ui('ქართულად ნახვა')}
-      </a>
-    </details>
   );
 }

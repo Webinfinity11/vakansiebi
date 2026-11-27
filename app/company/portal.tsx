@@ -1,6 +1,7 @@
 "use client";
 import { NotificationSettings } from "./notification-settings";
 import { ProfileBranding } from "./profile-branding";
+import { ProfileLogo } from "./profile-logo";
 import { useCallback, useEffect, useRef, useState, type SubmitEvent } from "react";
 import Link from "next/link";
 import {
@@ -1113,29 +1114,7 @@ export function CompanyPortal({
                       <h2>იდენტობა</h2>
                     </div>
                     <div className="cp-fields">
-                      <div className="cp-logo-field">
-                        <span className="cp-avatar cp-avatar--lg">
-                          {logo ? <img src={logo} alt="" /> : initial}
-                        </span>
-                        {/* The name is set by JOBX: shown as text, not as a locked field. */}
-                        <strong className="cp-logo-name">{profile.name}</strong>
-                      </div>
-                      <label>
-                         ლოგოს ბმული <input
-                          className="cp-input"
-                          type="url"
-                          placeholder="https://"
-                          maxLength={2000}
-                          value={
-                            profile.logoUrl.startsWith("/")
-                              ? ""
-                              : profile.logoUrl
-                          }
-                          onChange={(e) =>
-                            setProfile({ ...profile, logoUrl: e.target.value })
-                          }
-                        />
-                      </label>
+                      <ProfileLogo profile={profile} onChange={setProfile} logo={logo ?? ""} initial={initial} />
                     </div>
                   </div>
                   <div className="cp-settings-row">

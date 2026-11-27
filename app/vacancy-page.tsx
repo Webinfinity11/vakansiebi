@@ -11,7 +11,6 @@ import {
   Mail,
   Phone,
   Send,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CalendarDays,
@@ -25,8 +24,7 @@ import { PublicHeader } from './public-header';
 import { CompanyIdentity } from './company-identity';
 import { VacancyCompanyBenefits } from './vacancy-company-benefits';
 import { Description, formatDate } from './vacancy-text';
-import { QuickApply, TranslationHelp } from './quick-apply';
-import { VacancyApplicationForm } from './vacancy-application-form';
+import { QuickApply } from './quick-apply';
 import {
   vacancyContacts,
   workSchedule,
@@ -62,7 +60,6 @@ import { explicitWorkCity } from '@/lib/work-location';
 import { vacancyLinks } from '@/lib/vacancy-links';
 import { useVacancyActivity } from './use-vacancy-activity';
 import { SimilarVacancies } from './similar-vacancies';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import './search-features.css';
 
 /* Whole days from today's local midnight to the deadline's; negative once it has passed. */
@@ -76,27 +73,12 @@ function daysUntil(date: string) {
 function ApplyAction({
   job,
 }: {
-  job: PublicJob & { companyApplyEnabled?: boolean };
+  job: PublicJob;
 }) {
   const { ui } = useUi();
   const contacts = vacancyContacts(job);
   const emails = contacts.emails.filter((c) => c.application);
   const external = applicationDestination(job);
-  if (job.companyApplyEnabled)
-    return (
-      <button
-        className="primary"
-        onClick={() => {
-          const form = document.getElementById('vacancy-application');
-          form?.scrollIntoView({ block: 'center' });
-          form
-            ?.querySelector<HTMLInputElement>('input')
-            ?.focus({ preventScroll: true });
-        }}
-      >
-        {ui('CV-ის გაგზავნა')}
-      </button>
-    );
   if (contacts.phones.length === 1 && contacts.emails.length === 1)
     return (
       <>
@@ -171,124 +153,6 @@ function ApplyAction({
     );
   return null;
 }
-function JobReportForm({ jobId }: { jobId: string }) {
-  const { ui } = useUi();
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState('');
-  const [note, setNote] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState('');
-  const success = useRef<HTMLOutputElement>(null);
-  useEffect(() => {
-    if (!sent) return;
-    success.current?.focus();
-    success.current?.scrollIntoView({ block: 'center' });
-  }, [sent]);
-  return (
-    <div className="job-report">
-      {!sent && (
-        <button
-          type="button"
-          className="secondary-button"
-          aria-expanded={open}
-          aria-controls="job-report-form"
-          disabled={busy}
-          onClick={() => {
-            if (!open) trackAction('report_open');
-            setOpen((value) => !value);
-          }}
-        >
-          {ui('შეცდომის შეტყობინება')}
-        </button>
-      )}
-      {open && !sent && (
-        <form
-          id="job-report-form"
-          aria-label={ui('ვაკანსიის პრობლემის შეტყობინება')}
-          className="job-report-form"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (busy) return;
-            setBusy(true);
-            setError('');
-            try {
-              const response = await fetch(`/api/jobs/${jobId}/report`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason, note }),
-              });
-              const body = await response.json();
-              if (!response.ok)
-                throw Error(
-                  body.error || 'გაგზავნა ვერ მოხერხდა. სცადე ხელახლა.',
-                );
-              setSent(true);
-              trackAction('report_sent');
-            } catch (e) {
-              setError(
-                e instanceof Error ? e.message : 'გაგზავნა ვერ მოხერხდა.',
-              );
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <fieldset className="job-report-reasons">
-            <legend id="job-report-reason-label">{ui('რა პრობლემაა?')}</legend>
-            <RadioGroup
-              aria-labelledby="job-report-reason-label"
-              value={reason}
-              disabled={busy}
-              onValueChange={(value) => setReason(String(value))}
-            >
-              {[
-                ['expired', 'ვადაგასულია'],
-                ['wrong', 'არასწორი ინფორმაცია'],
-                ['duplicate', 'დუბლიკატია'],
-                ['other', 'სხვა'],
-              ].map(([value, label]) => (
-                <label key={value} className="job-report-reason">
-                  <RadioGroupItem value={value} />
-                  {ui(label ?? '')}
-                </label>
-              ))}
-            </RadioGroup>
-          </fieldset>
-          <label htmlFor="job-report-note">
-            {ui('შენიშვნა (არასავალდებულო)')}
-          </label>
-          <textarea
-            id="job-report-note"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            disabled={busy}
-            maxLength={300}
-            rows={3}
-            aria-describedby="job-report-note-hint"
-            className="ds-input job-report-note"
-          />
-          <small id="job-report-note-hint">
-            {note.length}
-            {ui('/300 · პირად მონაცემებს ნუ მიუთითებ.')}
-          </small>
-          {error && <p role="alert">{ui(error)}</p>}
-          <button
-            className="primary job-report-submit"
-            type="submit"
-            disabled={busy || !reason}
-          >
-            {busy && <span className="ds-spinner" aria-hidden="true" />}
-            {busy ? ui('იგზავნება') : ui('გაგზავნა')}
-          </button>
-        </form>
-      )}
-      <output ref={success} tabIndex={-1} className="job-report-done">
-        {sent ? ui('მადლობა, გადავამოწმებთ.') : ''}
-      </output>
-    </div>
-  );
-}
 
 export default function VacancyPage({
   job,
@@ -300,7 +164,7 @@ export default function VacancyPage({
   footer,
   embedded = false,
 }: {
-  job: PublicJob & { companyApplyEnabled?: boolean };
+  job: PublicJob;
   preview: boolean;
   returnTo: string;
   /** The employer's own page, when it has one. */
@@ -674,17 +538,21 @@ export default function VacancyPage({
                 href={companyPath}
                 large
               />
+              {(job.category !== 'სხვა' || job.placement) && (
+                <div className="vacancy-tags">
+                  {job.category !== 'სხვა' && (
+                    <span className="category-tag">{ui(job.category)}</span>
+                  )}
+                  {job.placement && (
+                    <span
+                      className={`placement-badge placement-badge-${job.placement.tier}`}
+                    >
+                      {job.placement.tier === 'premium' ? ui('პრემიუმი') : 'VIP'}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            {job.category !== 'სხვა' && (
-              <span className="category-tag">{ui(job.category)}</span>
-            )}
-            {job.placement && (
-              <span
-                className={`placement-badge placement-badge-${job.placement.tier}`}
-              >
-                {job.placement.tier === 'premium' ? ui('პრემიუმი') : 'VIP'}
-              </span>
-            )}
             <Title
               id="vacancy-title"
               className="detail-title"
@@ -816,16 +684,12 @@ export default function VacancyPage({
               className="vacancy-contact"
               aria-label={ui('დამსაქმებელთან დაკავშირება')}
             >
-              {job.companyApplyEnabled ? (
-                <VacancyApplicationForm key={job.id} job={job} />
-              ) : (
-                <QuickApply job={job}>
-                  <div className="vacancy-contact-more">
-                    {cvHint}
-                    {deckHint}
-                  </div>
-                </QuickApply>
-              )}
+              <QuickApply job={job}>
+                <div className="vacancy-contact-more">
+                  {cvHint}
+                  {deckHint}
+                </div>
+              </QuickApply>
             </aside>
           )}
           {hasDescriptionContent && (
@@ -881,7 +745,6 @@ export default function VacancyPage({
                   </div>
                 </section>
               )}
-              {!hasAction && <TranslationHelp job={job} />}
               {!!extraFacts.length && (
                 <section className="extra-facts">
                   <h3>{ui('დამატებითი პირობები და მოთხოვნები')}</h3>
@@ -917,42 +780,6 @@ export default function VacancyPage({
                   )}
                 </section>
               )}
-              <details className="vacancy-more-actions">
-                <summary>
-                  {ui('მეტი მოქმედება')}
-                  <ChevronDown
-                    className="disclosure-chevron"
-                    aria-hidden="true"
-                  />
-                </summary>
-                {!preview && (
-                  <button
-                    className="secondary-button vacancy-hide-action"
-                    disabled={!activity.ready}
-                    onClick={() => {
-                      const hidden = activity.hidden.some(
-                        (item) => item.id === job.id,
-                      );
-                      const ok = hidden
-                        ? activity.restore(job.id)
-                        : activity.hide(job.id, job.title);
-                      setFeedback(
-                        ok
-                          ? hidden
-                            ? 'ვაკანსია დაბრუნებულია ძებნის შედეგებში.'
-                            : 'ვაკანსია დამალულია ძებნის შედეგებიდან. აქვე შეგიძლია აღდგენა.'
-                          : 'ბრაუზერმა ცვლილება ვერ შეინახა.',
-                      );
-                    }}
-                  >
-                    {activity.hidden.some((item) => item.id === job.id)
-                      ? ui('ძებნის შედეგებში აღდგენა')
-                      : ui('არ მაინტერესებს')}
-                  </button>
-                )}
-                {/* Rarely needed, so it waits here rather than under the page. */}
-                {!preview && <JobReportForm key={job.id} jobId={job.id} />}
-              </details>
             </section>
           )}
           {/* One quiet line: where the posting came from, each site once, in the

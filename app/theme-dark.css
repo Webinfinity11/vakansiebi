@@ -2634,6 +2634,11 @@
   border: 0;
   background: none;
 }
+:root[data-theme='dark'] .placement-badge.placement-badge-premium.placement-badge-premium,
+:root[data-theme='dark'] .vacancy-page .detail-company > .vacancy-tags > .placement-badge.placement-badge-premium.placement-badge-premium,
+:root[data-theme='dark'] .board-shell .job-title-row .placement-badge.placement-badge-premium.placement-badge-premium {
+  color: #131b2c;
+}
 
 /* ── from app/public-header.css ── */
 :root[data-theme='dark'] .board-shell .topbar.public-header {
@@ -2677,14 +2682,6 @@
   color: var(--jobx-accent);
   background: var(--jobx-accent-tint);
 }
-:root[data-theme='dark'] .placement-badge-premium {
-  color: var(--jobx-surface);
-  background: var(--jobx-accent);
-}
-:root[data-theme='dark'] .placement-badge-vip {
-  color: var(--jobx-warning-text);
-  background: #4d3b14;
-}
 :root[data-theme='dark'] .post-intro {
   border-bottom: 1px solid var(--jobx-color-d9e2f5-surface);
 }
@@ -2717,6 +2714,9 @@
 }
 :root[data-theme='dark'] .not-found-shell {
   background: var(--jobx-page-cool);
+}
+:root[data-theme='dark'] .post-vacancy-fields .post-import {
+  border: 0;
 }
 
 /* ── from app/invoices.css ── */

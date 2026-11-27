@@ -1,3 +1,4 @@
+import { companyBrandingRevision } from './company-job-branding';
 import { z } from 'zod';
 import { db, transaction } from './db';
 import { publicRead, searchPlan } from './search-plan';
@@ -335,6 +336,12 @@ async function buildEmployerDirectory(
   const visibleGroups = new Map<string, string>(
     visible.rows.map((row) => [row.id, row.group_key]),
   );
+  const owned = await publicRead(
+    `SELECT o.job_id::text, p.logo_url FROM company_job_ownership o
+     JOIN company_profiles p USING(company_key) WHERE o.job_id=ANY($1::uuid[])`,
+    [list.flatMap((p) => p.jobIds)],
+  );
+  const ownedLogos = new Map<string, string>(owned.rows.map((row) => [row.job_id, row.logo_url]));
   const profiles = new Map<string, string>(
     (
       await publicRead(
@@ -345,6 +352,7 @@ async function buildEmployerDirectory(
     ).rows.map((r) => [r.company_key, r.logo_url]),
   );
   const own = (p: EmployerPage) =>
+    p.jobIds.map((id) => ownedLogos.get(id)).find(Boolean) ||
     p.names.map((n) => profiles.get(companyKey(n))).find(Boolean) ||
     safeLogoUrl(p.logoUrl) ||
     '';
@@ -369,19 +377,21 @@ async function buildEmployerDirectory(
 }
 
 let directory: {
+  revision: string;
   at: number;
   from: ReturnType<typeof buildEmployerPages>;
   value: Promise<DirectoryEmployer[]>;
 } | null = null;
 /** Refresh live counts each minute even while employer identities are cached. */
-export function companiesDirectory() {
+export async function companiesDirectory() {
+  const revision = await companyBrandingRevision();
   const from = employerPages();
-  if (directory?.from !== from || Date.now() - directory.at >= 60_000) {
+  if (directory?.revision !== revision || directory?.from !== from || Date.now() - directory.at >= 60_000) {
     const value = from.then(buildEmployerDirectory).catch((error) => {
       directory = null;
       throw error;
     });
-    directory = { at: Date.now(), from, value };
+    directory = { revision, at: Date.now(), from, value };
   }
   return directory.value;
 }

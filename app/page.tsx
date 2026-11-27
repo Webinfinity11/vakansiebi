@@ -41,8 +41,8 @@ const sharedLandingJobs = unstable_cache(
       jobs: result.jobs.map((job) => ({ ...job, sources: [] })),
     };
   },
-  ["landing-board-v1"],
-  { revalidate: 300 },
+  ["landing-board-v2"],
+  { revalidate: 300, tags: ["company-branding"] },
 );
 const readBoardJobs = cache((query: string) => {
   const params = new URLSearchParams(query);

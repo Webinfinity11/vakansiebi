@@ -33,7 +33,7 @@
 }
 .board-shell .job-title-row .featured-label-vip {
   margin: 0;
-  color: var(--jobx-color-7a5a1e-fixed);
+  color: var(--ds-ink);
   font-size: var(--jobx-font-size-11px);
 }
 
@@ -165,14 +165,14 @@
 .board-shell.editorial-board.crafted-board.refined-board
   .job-card[data-featured='vip'] {
   padding: var(--jobx-space-20px);
-  border: 1px solid var(--jobx-color-e3cfa4-fixed);
+  border: 1px solid var(--ds-line-strong);
   border-radius: var(--jobx-radius-10px);
-  background: #fffaf1;
+  background: var(--ds-surface);
   box-shadow: none;
 }
 .board-shell.editorial-board.crafted-board.refined-board
   .job-card[data-featured='vip']:hover {
-  border-color: #c9a86a;
+  border-color: var(--ds-accent);
 }
 .board-shell.editorial-board.crafted-board.refined-board
   .job-card[data-featured='vip']
@@ -188,21 +188,21 @@
   width: 44px;
   height: 44px;
   flex-basis: 44px;
-  border: 1px solid var(--jobx-color-e3cfa4-fixed);
+  border: 1px solid var(--ds-line);
   border-radius: var(--jobx-radius-10px);
-  background: var(--jobx-white-fixed);
+  background: var(--ds-surface);
 }
 .board-shell.editorial-board.crafted-board.refined-board
   .job-card[data-featured='vip']
   .company-avatar.company-none {
-  border-color: var(--jobx-color-f6ecd6-fixed);
-  background: var(--jobx-color-f6ecd6-fixed);
+  border-color: var(--ds-surface-muted);
+  background: var(--ds-surface-muted);
 }
 .board-shell
   .job-card[data-featured='vip']
   .company-none
   .company-fallback-initial {
-  color: var(--jobx-color-7a5a1e-fixed);
+  color: var(--ds-ink-2);
   font-size: var(--jobx-font-size-16px);
   font-weight: 600;
 }
@@ -343,7 +343,7 @@
   color: var(--jobx-color-8eabff-fixed);
 }
 :root[data-theme='dark'] .board-shell .job-title-row .featured-label-vip {
-  color: var(--jobx-color-d9b978-fixed);
+  color: var(--ds-ink);
 }
 :root[data-theme='dark']
   .board-shell.editorial-board.crafted-board.refined-board
@@ -381,25 +381,25 @@
 :root[data-theme='dark']
   .board-shell.editorial-board.crafted-board.refined-board
   .job-card[data-featured='vip'] {
-  border-color: #514734;
-  background: #26231d;
+  border-color: var(--ds-line-strong);
+  background: var(--ds-surface);
 }
 :root[data-theme='dark']
   .board-shell.editorial-board.crafted-board.refined-board
   .job-card[data-featured='vip']:hover {
-  border-color: #9a896b;
+  border-color: var(--ds-accent);
 }
 :root[data-theme='dark']
   .board-shell.editorial-board.crafted-board.refined-board
   .job-card[data-featured='vip']
   .company-avatar.company-none {
-  border-color: var(--jobx-color-3a3325-fixed);
-  background: var(--jobx-color-3a3325-fixed);
+  border-color: var(--ds-surface-muted);
+  background: var(--ds-surface-muted);
 }
 :root[data-theme='dark']
   .board-shell
   .job-card[data-featured='vip']
   .company-none
   .company-fallback-initial {
-  color: var(--jobx-color-d9b978-fixed);
+  color: var(--ds-ink-2);
 }

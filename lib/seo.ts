@@ -2,7 +2,7 @@ import type { PublicJob } from './types';
 import { privateListingLabel } from './types';
 import { cities, cityStem } from './cities';
 import { tbilisiDistricts } from './street-address';
-import { safeExternalUrl } from './vacancy-media';
+import { isLocalLogoUrl, safeExternalUrl } from './vacancy-media';
 import { isGenericCompanyName } from './company-logo-identity';
 import { companyVacancyTitle } from './company-vacancy-title';
 import { vacancyPath } from './vacancy-navigation';
@@ -311,7 +311,7 @@ export function jobPosting(
      stays alongside it: those are the hybrid roles. */
   const telecommute = remote(job);
   const website = safeExternalUrl(job.companyProfile?.website || '');
-  const logo = safeExternalUrl(job.logoUrl || '');
+  const logo = isLocalLogoUrl(job.logoUrl) ? siteUrl + job.logoUrl : safeExternalUrl(job.logoUrl || '');
   const pay = salaryFacts(job.salary || '', job.salaryPeriod || '');
   const employment = employmentOf(job);
   const street = working.length === 1 ? streetAddress(address) : '';
@@ -451,7 +451,7 @@ export function employerPage(employer: {
   offset?: number;
 }) {
   const website = safeExternalUrl(employer.website || '');
-  const logo = safeExternalUrl(employer.logoUrl || '');
+  const logo = isLocalLogoUrl(employer.logoUrl) ? siteUrl + employer.logoUrl : safeExternalUrl(employer.logoUrl || '');
   const url = siteUrl + employer.path;
   return [
     {

@@ -1452,6 +1452,13 @@
   overflow-wrap: anywhere;
   font-size: var(--jobx-font-size-14px);
 }
+/* The address sits right under the heading; no empty label row above it. */
+.vacancy-page .contact-options > .application-email:first-child {
+  padding-top: 0;
+}
+.vacancy-page .application-email > strong:first-child {
+  margin-top: 0;
+}
 .vacancy-page .email-actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--ds-control-md);
@@ -1905,18 +1912,15 @@
 }
 .vacancy-searches ul {
   display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
+  flex-wrap: wrap;
   gap: var(--jobx-space-10px);
-  padding: 5px;
-  scroll-snap-type: x proximity;
-  scroll-padding-inline: 5px;
+  padding: 0;
   margin: 0;
   list-style: none;
 }
 .vacancy-searches li {
-  flex: 0 0 auto;
-  scroll-snap-align: start;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 .vacancy-searches a {
   display: flex;
@@ -1951,9 +1955,6 @@
   margin-top: var(--jobx-space-24px);
 }
 @media (max-width: 760px) {
-  .vacancy-searches li {
-    max-width: 85%;
-  }
   .vacancy-searches a {
     white-space: normal;
   }
@@ -4413,11 +4414,30 @@
 .vacancy-page .quick-apply .quick-apply-note {
   margin-top: var(--jobx-space-8px);
 }
+/* Spacing: title 12, address to its button 8, between contacts 12,
+   then 20 + divider + 16 before the two quiet links, 4 between them. */
+.vacancy-page .vacancy-contact .quick-apply > h3 {
+  margin-bottom: var(--jobx-space-12px, 12px);
+}
+.vacancy-page .vacancy-contact .contact-options {
+  display: grid;
+  gap: var(--jobx-space-12px, 12px);
+}
+.vacancy-page .vacancy-contact .application-email {
+  padding: 0;
+}
+.vacancy-page .vacancy-contact .application-email > strong {
+  margin: 0 0 var(--jobx-space-8px, 8px);
+  line-height: 1.5;
+}
+.vacancy-page .vacancy-contact .email-actions .primary {
+  margin: 0;
+}
 .vacancy-contact .vacancy-contact-more {
   display: grid;
-  gap: var(--jobx-space-6px);
-  margin-top: var(--jobx-space-16px);
-  padding-top: var(--jobx-space-14px);
+  gap: var(--jobx-space-4px, 4px);
+  margin-top: var(--jobx-space-20px, 20px);
+  padding-top: var(--jobx-space-16px, 16px);
   border-top: 1px solid var(--jobx-color-e1e6ef-surface);
 }
 .vacancy-contact .vacancy-contact-more:empty {

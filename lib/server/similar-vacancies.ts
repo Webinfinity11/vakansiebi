@@ -63,8 +63,8 @@ export async function cachedSimilarVacancies(
   try {
     const cached = unstable_cache(
       () => similarVacancies(job),
-      ['similar-vacancies-v1', job.id],
-      { revalidate: 3600 },
+      ['similar-vacancies-v2', job.id],
+      { revalidate: 3600, tags: ['company-branding'] },
     );
     return await Promise.race([
       cached(),

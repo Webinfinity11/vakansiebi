@@ -9,7 +9,7 @@ test('add reference: both base sources, ownership, roles, idempotence and privat
   const {changeCandidate,companyCandidates,companyCvBase,companyCvBaseList,uploadCandidate}=await import('../lib/server/company-candidates');
   const key='refsqa'+randomUUID().replaceAll('-','');
   const company={id:randomUUID(),companyKey:key,name:'Refs QA',username:key,email:key+'@example.com',mustChangePassword:false,role:'owner' as const,approvalStatus:'approved' as const,emailVerified:true,representativeName:'QA'};
-  const job=randomUUID(),foreign=randomUUID(),resume=randomUUID(),swipe=randomUUID(),sharedUpload=randomUUID();
+  const job=randomUUID(),foreign=randomUUID(),resume=randomUUID(),swipe=randomUUID();
   try {
     await db().query('INSERT INTO company_profiles(company_key,name) VALUES($1,$2)',[key,'Refs QA']);
     for(const id of [job,foreign]) await db().query("INSERT INTO jobs(id,draft,published,status,fingerprint,published_at) VALUES($1::uuid,$2,$2,'published',$1::text,now())",[id,JSON.stringify({title:'QA vacancy'})]);
@@ -17,12 +17,7 @@ test('add reference: both base sources, ownership, roles, idempotence and privat
     await db().query('INSERT INTO resumes(id,delete_token_hash,cv) VALUES($1,$2,$3)',[resume,'a'.repeat(64),JSON.stringify({fullName:'ნინო ტესტიძე',email:key+'@example.com'})]);
     await db().query(`INSERT INTO swipe_applications(id,job_id,candidate_name,candidate_email,candidate_phone,cv_kind,cv_file,status,client_hash,candidate_key,recipient)
       VALUES($1,$2,'გიორგი ტესტიძე',$3,'555123456','upload','qa-reference.pdf','sent',$4,$4,'qa@example.com')`,[swipe,foreign,key+'s@example.com','a'.repeat(64)]);
-    await db().query('INSERT INTO company_profiles(company_key,name) VALUES($1,$2)',[key+'source','Shared QA']);
-    await db().query(`INSERT INTO company_cv_uploads(id,company_key,name,email,file_name,file_hash,file_size,content)
-      VALUES($1,$2,'გაზიარებული კანდიდატი',$3,'shared.txt',$4,1,$5)`,[sharedUpload,key+'source',key+'u@example.com','b'.repeat(64),Buffer.from('x')]);
-    await db().query(`INSERT INTO company_cv_invites(company_key,upload_id,token_hash,created_by,consented_at)
-      VALUES($1,$2,$3,'QA',now())`,[key+'source',sharedUpload,sharedUpload.replaceAll('-','').repeat(2)]);
-    for(const entry of ['base:r:'+resume,'base:s:'+swipe,'base:u:'+sharedUpload]) {
+    for(const entry of ['base:r:'+resume,'base:s:'+swipe]) {
       await assert.rejects(changeCandidate({...company,role:'viewer'}, {action:'save',entry,saved:true}),/უფლება/);
       await Promise.all([1,2,3].map(()=>changeCandidate(company,{action:'save',entry,saved:true})));
       assert.equal((await db().query('SELECT count(*)::int n FROM company_saved_candidates WHERE company_key=$1 AND entry=$2',[key,entry])).rows[0].n,1);
@@ -85,7 +80,7 @@ test('add reference: both base sources, ownership, roles, idempotence and privat
     }
   } finally {
     await db().query('DELETE FROM company_job_ownership WHERE company_key=$1',[key]);
-    await db().query('DELETE FROM company_profiles WHERE company_key=ANY($1::text[])',[[key,key+'source']]);
+    await db().query('DELETE FROM company_profiles WHERE company_key=ANY($1::text[])',[[key]]);
     await db().query('DELETE FROM swipe_applications WHERE id=$1',[swipe]);
     await db().query('DELETE FROM resumes WHERE id=$1',[resume]);
     await db().query('DELETE FROM jobs WHERE id=ANY($1::uuid[])',[[job,foreign]]);

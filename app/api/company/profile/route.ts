@@ -1,3 +1,4 @@
+import { revalidateTag } from 'next/cache';
 import { safeExternalUrl, isLocalLogoUrl } from '@/lib/vacancy-media';
 import { apiError, ApiError, checkOrigin, readBody } from '@/lib/server/auth';
 import { requireCompanyRole } from '@/lib/server/company-auth';
@@ -34,11 +35,12 @@ export async function POST(req: Request) {
       if (!normalized) throw new ApiError('მიუთითეთ სწორი https ბმული.');
       data[key] = normalized;
     }
-    return Response.json(
-      await saveCompany(
-        { ...data, name: company.name },
-        { accountId: company.id, companyKey: company.companyKey },
-      ),
+    const saved = await saveCompany(
+      { ...data, name: company.name },
+      { accountId: company.id, companyKey: company.companyKey },
+    );
+    revalidateTag('company-branding', { expire: 0 });
+    return Response.json(saved,
       { headers: { 'Cache-Control': 'private, no-store' } },
     );
   } catch (e) {

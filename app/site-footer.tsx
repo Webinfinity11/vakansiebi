@@ -45,7 +45,7 @@ export function SiteFooter({
         <div className="jx-footer-top">
           <div className="jx-footer-brand">
             <Brand />
-            <p>{ui('ვაკანსიები მთელი საქართველოდან')}</p>
+            <p>{ui('ვაკანსიები საქართველოში')}</p>
             <ul
               className="jx-footer-social"
               aria-label={ui('სოციალური ქსელები')}

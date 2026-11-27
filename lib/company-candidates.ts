@@ -75,7 +75,6 @@ export type CandidateProfileEdit = { name?: string; title?: string } & Partial<
   >
 >;
 export type Candidate = {
-  invite?: { expiresAt: string; consentedAt: string | null; withdrawnAt: string | null } | null;
   saved?: boolean;
   added?: { jobId: string | null; jobTitle: string } | null;
   entry: string;

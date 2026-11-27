@@ -1,4 +1,3 @@
-import { inviteCvToBase } from './cv-base-invites';
 import { talentPeople, talentCard, talentResults, matchScore, terms, type Filters } from '../company-talent-filters';
 import { after } from 'next/server';
 import { effectiveContact, validCandidateEmail, validCandidatePhone } from '../company-candidate-contact';
@@ -49,11 +48,6 @@ WITH base_all AS (
   FROM (SELECT DISTINCT ON (lower(candidate_email)) * FROM swipe_applications
     WHERE status='sent' AND cv_kind='upload' AND cv_file IS NOT NULL
     ORDER BY lower(candidate_email), COALESCE(sent_at, created_at) DESC) a
-  UNION ALL
-  SELECT 'base:u:'||u.id, 'base', NULL::uuid, '', u.name, u.email, u.phone,
-    u.title, '', i.consented_at, true, NULL::uuid, NULL::jsonb, '[]'::jsonb
-  FROM company_cv_uploads u JOIN company_cv_invites i ON i.upload_id=u.id AND i.company_key=u.company_key
-  WHERE i.consented_at IS NOT NULL AND i.withdrawn_at IS NULL AND u.company_key<>$1
 ), base AS (
   -- A person's several CVs (rebuilt on JOBX, or uploaded with a swipe) count once.
   SELECT b.*, row_number() OVER (
@@ -100,14 +94,12 @@ WITH base_all AS (
       AND (s.stage<>'new' OR s.rating IS NOT NULL OR s.interview_at IS NOT NULL))
     OR EXISTS(SELECT 1 FROM company_candidate_notes n WHERE n.company_key=$1 AND n.entry=b.entry)
 )
-SELECT e.*, inv.expires_at AS invite_expires_at, inv.consented_at AS invite_consented_at, inv.withdrawn_at AS invite_withdrawn_at, EXISTS(SELECT 1 FROM company_saved_candidates sc WHERE sc.company_key=$1 AND sc.entry=e.entry) AS saved, ref.entry IS NOT NULL AS has_ref, ref.job_id AS ref_job_id, COALESCE(rj.published->>'title',rj.draft->>'title','') AS ref_job_title, COALESCE(s.stage,'new') AS stage, s.rating, s.seen_at IS NOT NULL AS seen,
-  s.interview_at, s.interview_note, s.hired_at, COALESCE(p.parsed, pb.parsed, pu.parsed) AS parsed, p.edited,
+SELECT e.*, EXISTS(SELECT 1 FROM company_saved_candidates sc WHERE sc.company_key=$1 AND sc.entry=e.entry) AS saved, ref.entry IS NOT NULL AS has_ref, ref.job_id AS ref_job_id, COALESCE(rj.published->>'title',rj.draft->>'title','') AS ref_job_title, COALESCE(s.stage,'new') AS stage, s.rating, s.seen_at IS NOT NULL AS seen,
+  s.interview_at, s.interview_note, s.hired_at, COALESCE(p.parsed, pb.parsed) AS parsed, p.edited,
   (SELECT count(*)::int FROM company_candidate_notes n WHERE n.company_key=$1 AND n.entry=e.entry) AS notes,
   (e.source<>'base' OR EXISTS(SELECT 1 FROM company_cv_base_views v
     WHERE v.company_key=$1 AND v.entry=e.entry)) AS revealed
-FROM entries e LEFT JOIN company_cv_invites inv ON e.entry='upload:'||inv.upload_id AND inv.company_key=$1
-LEFT JOIN company_cv_uploads bu ON e.entry='base:u:'||bu.id
-LEFT JOIN company_cv_profiles pu ON pu.company_key=bu.company_key AND pu.entry='upload:'||bu.id
+FROM entries e
 LEFT JOIN company_candidate_refs ref ON ref.company_key=$1 AND ref.entry=e.entry
 LEFT JOIN jobs rj ON rj.id=ref.job_id
 LEFT JOIN company_candidate_states s ON s.company_key=$1 AND s.entry=e.entry
@@ -119,9 +111,6 @@ const trackedSql = `(e.source<>'base' OR ref.entry IS NOT NULL OR s.stage<>'new'
   WHERE n.company_key=$1 AND n.entry=e.entry))`;
 
 type Row = {
-  invite_expires_at: Date | null;
-  invite_consented_at: Date | null;
-  invite_withdrawn_at: Date | null;
   saved: boolean;
   entry: string;
   source: Candidate['source'];
@@ -200,7 +189,6 @@ function shownCandidate(row: Row): Candidate {
     } as CandidateProfile;
   return {
     saved: row.saved,
-    invite: row.invite_expires_at ? { expiresAt:row.invite_expires_at.toISOString(),consentedAt:row.invite_consented_at?.toISOString() ?? null,withdrawnAt:row.invite_withdrawn_at?.toISOString() ?? null } : null,
     entry: row.entry,
     source: row.source,
     jobId: row.has_ref ? row.ref_job_id : row.job_id,
@@ -477,7 +465,6 @@ const profileEditSchema = z
   })
   .strict();
 const changeSchema = z.discriminatedUnion('action', [
-  z.object({action:z.literal('invite'),entry:z.string()}),
   z.object({ action: z.literal('save'), entry: z.string(), saved: z.boolean() }),
   z.object({ action: z.literal('add'), entry: z.string(), jobId: z.uuid().nullish() }),
   z.object({
@@ -527,7 +514,6 @@ export async function changeCandidate(
   if (!['owner', 'recruiter'].includes(company.role))
     throw new ApiError('ამ მოქმედების უფლება არ გაქვთ.', 403);
   const data = changeSchema.parse(input);
-  if (data.action === 'invite') return inviteCvToBase(company,data.entry);
   if (data.action === 'stage') {
     const entries = [...new Set(data.entries.map((entry) => entrySchema.parse(entry)))];
     return transaction(async (client) => {
@@ -708,16 +694,6 @@ export async function candidateCv(
   const fileName = (c.name || 'CV').replace(/[^\p{L}\p{N} ._-]/gu, '').trim();
   if (c.source === 'base') {
     const [, kind, id] = entry.split(':');
-    if (kind === 'u') {
-      const {rows}=await db().query(`SELECT u.content,u.blob_path,u.file_name FROM company_cv_uploads u
-        JOIN company_cv_invites i ON i.upload_id=u.id AND i.company_key=u.company_key
-        WHERE u.id=$1 AND i.consented_at IS NOT NULL AND i.withdrawn_at IS NULL`,[id]);
-      const file=rows[0];
-      if (!file) return null;
-      const type=uploadType(file.file_name);
-      return file.content ? {body:new Uint8Array(file.content),type,name:file.file_name}
-        : file.blob_path ? blobFile(file.blob_path,type,file.file_name) : null;
-    }
     if (kind === 'r') {
       const cv = await resumeDetail(id);
       return cv

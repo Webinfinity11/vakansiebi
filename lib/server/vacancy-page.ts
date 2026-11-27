@@ -5,7 +5,6 @@ import type { PublicJob } from '../types';
 import { db } from './db';
 export type VacancyPageJob = PublicJob & {
   companyOwned?: boolean;
-  companyApplyEnabled?: boolean;
 };
 export const getVacancyPage = cache(
   async (id: string, preview = false): Promise<VacancyPageJob | null> => {
@@ -23,8 +22,6 @@ export const getVacancyPage = cache(
     return {
       ...job,
       companyOwned,
-      companyApplyEnabled:
-        companyOwned && process.env.COMPANY_PORTAL_ENABLED === 'true',
     };
   },
 );

@@ -7,6 +7,10 @@ import type { CompanyJob } from "./company-api";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import "./add-to-candidates.css";
 
+export function candidateSourceLabel(source: Candidate["source"]) {
+  return { base: "ბაზიდან", upload: "ატვირთული", swipe: "Swipe", cv_box: "CV ყუთი", resume: "რეზიუმე" }[source];
+}
+
 export type CandidateControl = Pick<Candidate, "entry" | "source" | "added" | "saved" | "jobId" | "jobTitle">;
 
 export function AddToCandidates({candidate, canEdit, onAdded}: {
@@ -22,7 +26,7 @@ export function AddToCandidates({candidate, canEdit, onAdded}: {
   </span>;
   if (!canEdit || current.source !== "base") return null;
   return <div className="ct-add">
-    <button type="button" className="cp-btn cp-btn--ghost cp-btn--sm" disabled={busy} onClick={async () => {
+    <button type="button" className="cp-btn cp-btn--primary cp-btn--sm" disabled={busy} onClick={async () => {
       if (lock.current) return;
       lock.current = true; setBusy(true); setError("");
       try {
@@ -66,7 +70,7 @@ export function AddToVacancy({candidate, jobs, canEdit, onAdded}: {
   if (!canEdit || !openJobs.length || !["base","upload"].includes(current.source)) return null;
   return <div className="ct-add">
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="cp-btn cp-btn--secondary cp-btn--sm"><Briefcase size={15}/>ვაკანსიის არჩევა<ChevronDown size={14}/></PopoverTrigger>
+      <PopoverTrigger className="cp-btn cp-btn--ghost cp-btn--sm"><Briefcase size={15}/>ვაკანსიის არჩევა<ChevronDown size={14}/></PopoverTrigger>
       <PopoverContent className="ct-add-menu" align="end" aria-label="აირჩიეთ ვაკანსია">
         {openJobs.map(j=><button type="button" key={j.id} disabled={busy} onClick={()=>void add(j.id)}>{j.title}</button>)}
         {error && <p role="alert">{error}</p>}

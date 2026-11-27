@@ -1,3 +1,4 @@
+import { revalidateTag } from 'next/cache';
 import { getCompany, saveCompany } from '@/lib/server/companies';
 import {
   apiError,
@@ -22,7 +23,9 @@ export async function POST(req: Request) {
   try {
     await requireAdmin();
     checkOrigin(req);
-    return Response.json(await saveCompany(await readBody(req)));
+    const saved = await saveCompany(await readBody(req));
+    revalidateTag('company-branding', { expire: 0 });
+    return Response.json(saved);
   } catch (e) {
     return apiError(e);
   }

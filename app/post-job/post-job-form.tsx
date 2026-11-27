@@ -1,4 +1,8 @@
 'use client';
+import { companyJobIssueFields, companyJobIssueMessage } from '@/lib/company-job-steps';
+import { JobSteps } from '../company/jobs/job-steps';
+import { JobImport, useJobImport } from '../company/jobs/job-import';
+import { newCompanyJob, visibleJobDeadline, type CompanyJobForm } from '@/lib/company-job-form';
 import { useUi } from '@/app/ui-language';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,7 +28,6 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  CalendarDays,
   CheckCircle2,
   ChevronLeft,
   FileText,
@@ -33,34 +36,23 @@ import {
   Send,
   X,
 } from 'lucide-react';
-import { ka } from 'date-fns/locale/ka';
-import { enGB } from 'date-fns/locale/en-GB';
-import { SelectField } from '../select-field';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { cities, otherCity } from '@/lib/cities';
-import { categories } from '@/lib/types';
 import {
   maxSubmissionBytes,
   prepareSubmissionLogo,
   submissionLogoSchema,
 } from '@/lib/submission-logo';
 import {
-  employmentOptions,
-  workModes,
   submissionDate,
   submissionSchema,
   type JobSubmission,
 } from '@/lib/job-submission';
 
-const draftKey = 'jobx-post-job-draft-v2';
+const draftKey = 'jobx-post-job-draft-v3';
+const importNoteKey = draftKey + ':import';
+const importDefaults = newCompanyJob();
 const initial = {
-  placement: 'vip',
+  placement: 'standard',
   title: '',
   company: '',
   notificationEmail: '',
@@ -68,7 +60,6 @@ const initial = {
   logo: '',
   category: '',
   city: 'თბილისი',
-  cityOther: '',
   mode: 'ადგილზე',
   employmentType: 'სრული განაკვეთი',
   salaryFrom: '',
@@ -137,124 +128,18 @@ function Field({
     </div>
   );
 }
-/* YYYY-MM-DD in Tbilisi ↔ a local calendar day; the picker works in local days. */
-const toDay = (value: string) => {
-  const [y, m, d] = value.split('-').map(Number);
-  return y && m && d ? new Date(y, m - 1, d) : undefined;
-};
-const fromDay = (day: Date) =>
-  `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-/* Spelled out here: not every browser carries Georgian month names for Intl. */
-const months = [
-  'იანვარი',
-  'თებერვალი',
-  'მარტი',
-  'აპრილი',
-  'მაისი',
-  'ივნისი',
-  'ივლისი',
-  'აგვისტო',
-  'სექტემბერი',
-  'ოქტომბერი',
-  'ნოემბერი',
-  'დეკემბერი',
-];
-const longDate = (day: Date) =>
-  `${day.getDate()} ${months[day.getMonth()]}, ${day.getFullYear()}`;
-
-/* The deadline: the site's own calendar in place of the browser's date input, whose English
-   mask and system popup matched nothing else on the form. The value stays YYYY-MM-DD. */
-function DateField({
-  id,
-  name,
-  value,
-  min,
-  max,
-  disabled,
-  invalid,
-  describedBy,
-  onChange,
-}: {
-  id: string;
-  name: string;
-  value: string;
-  min: string;
-  max: string;
-  disabled: boolean;
-  invalid: boolean;
-  describedBy?: string;
-  onChange: (value: string) => void;
-}) {
-  const { ui, locale } = useUi();
-  const [open, setOpen] = useState(false);
-  const selected = toDay(value);
-  const from = toDay(min);
-  const to = toDay(max);
-  return (
-    <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          id={id}
-          type="button"
-          disabled={disabled}
-          aria-invalid={invalid || undefined}
-          aria-describedby={describedBy}
-          className="ds-select post-date"
-        >
-          {selected ? (
-            <span>
-              {locale === 'en'
-                ? selected.toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })
-                : longDate(selected)}
-            </span>
-          ) : (
-            <span className="ds-select-placeholder">{ui('აირჩიე თარიღი')}</span>
-          )}
-          <CalendarDays aria-hidden="true" />
-        </PopoverTrigger>
-        <PopoverContent className="ds-select-menu post-date-menu" align="start">
-          <Calendar
-            mode="single"
-            locale={locale === 'en' ? enGB : ka}
-            weekStartsOn={1}
-            selected={selected}
-            defaultMonth={selected ?? from}
-            startMonth={from}
-            endMonth={to}
-            disabled={[
-              ...(from ? [{ before: from }] : []),
-              ...(to ? [{ after: to }] : []),
-            ]}
-            onSelect={(day) => {
-              if (!day) return;
-              onChange(fromDay(day));
-              setOpen(false);
-            }}
-          />
-        </PopoverContent>
-      </Popover>
-      <input type="hidden" name={name} value={value} />
-    </>
-  );
-}
-
 export function PostJobForm({
   initialPlacement,
 }: {
   initialPlacement?: PlacementTier;
 }) {
-  const { ui } = useUi();
+  const { ui, locale } = useUi();
   const [values, setValues] = useState<Values>(() => ({
     ...initial,
     placement: initialPlacement ?? initial.placement,
   }));
   const [consent, setConsent] = useState(false);
   const [ready, setReady] = useState(false);
-  const [dateBounds, setDateBounds] = useState({ min: '', max: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState('');
   const [draftNote, setDraftNote] = useState('');
@@ -262,7 +147,6 @@ export function PostJobForm({
   const [logoBusy, setLogoBusy] = useState(false);
   const logoWorking = useRef(false);
   const [sent, setSent] = useState<JobSubmission | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [receipt, setReceipt] = useState('');
   const [alreadyReceived, setAlreadyReceived] = useState(false);
   const [invoiceUrl, setInvoiceUrl] = useState('');
@@ -283,10 +167,6 @@ export function PostJobForm({
   useEffect(() => {
     const timer = setTimeout(() => {
       requestId.current = crypto.randomUUID();
-      setDateBounds({
-        min: submissionDate(),
-        max: submissionDate(new Date(Date.now() + 90 * 86400000)),
-      });
       try {
         const stored = JSON.parse(sessionStorage.getItem(draftKey) || 'null');
         // Restore the exact sent payload without time-dependent validation.
@@ -320,16 +200,6 @@ export function PostJobForm({
           ) as Values;
           if (!submissionLogoSchema.safeParse(restored.logo).success)
             restored.logo = '';
-          if (
-            restored.city &&
-            restored.city !== otherCity &&
-            restored.city !== 'დისტანციური' &&
-            !cities.some((city) => city === restored.city)
-          ) {
-            restored.cityOther = restored.city;
-            restored.city = otherCity;
-          }
-          if (restored.city === 'დისტანციური') restored.mode = 'დისტანციური';
           // An explicit plan choice updates an editable draft, never a sent payload.
           if (initialPlacement && !payload)
             restored.placement = initialPlacement;
@@ -433,25 +303,16 @@ export function PostJobForm({
 
   function change(name: FieldName, value: string) {
     if (busy || sent) return;
+    if (name in importDefaults) importer.edit(name as keyof CompanyJobForm);
     reached(detailFields.includes(name) ? 'details' : 'started');
     setValues((v) => ({
       ...v,
       [name]: value,
-      ...(name === 'city'
-        ? {
-            mode:
-              value === 'დისტანციური'
-                ? 'დისტანციური'
-                : v.city === 'დისტანციური'
-                  ? 'ადგილზე'
-                  : v.mode,
-          }
-        : {}),
+
     }));
     setErrors((e) => {
       const next = { ...e, [name]: '' };
       if (name === 'city') {
-        next.cityOther = '';
         next.mode = '';
       }
       return next;
@@ -459,6 +320,43 @@ export function PostJobForm({
     setMessage('');
   }
   const locked = busy || !!sent;
+  const contactUndo = useRef<{ company: string; notificationEmail: string } | null>(null);
+  const jobForm: CompanyJobForm = { ...importDefaults, ...values,
+    placement: values.placement as CompanyJobForm['placement'],
+    category: '', mode: values.mode as CompanyJobForm['mode'],
+    employmentType: values.employmentType as CompanyJobForm['employmentType'],
+    salaryPeriod: 'თვე', salaryBasis: values.salaryBasis as CompanyJobForm['salaryBasis'],
+    contact: values.notificationEmail,
+  };
+  const importer = useJobImport({ form: jobForm, defaults: importDefaults, noteKey: importNoteKey, disabled: locked,
+    onApply: next => {
+      if (locked) return;
+      reached('details');
+      setValues(previous => ({ ...previous, title: next.title, city: next.city, mode: next.mode,
+        employmentType: next.employmentType, salaryFrom: next.salaryFrom, salaryTo: next.salaryTo,
+        salaryBasis: next.salaryBasis, description: next.description }));
+      setErrors({}); setMessage('');
+    },
+    contacts: {
+      // Only empty fields; whatever the person typed stays.
+      fill: (found) => {
+        const filled: string[] = [];
+        const patch: Partial<typeof values> = {};
+        if (found.company && !values.company.trim()) { patch.company = found.company.slice(0, 160); filled.push('კომპანიის დასახელება'); }
+        if (found.email && !values.notificationEmail.trim()) { patch.notificationEmail = found.email.slice(0, 254); filled.push('ელფოსტა'); }
+        if (filled.length) {
+          contactUndo.current = { company: values.company, notificationEmail: values.notificationEmail };
+          setValues(previous => ({ ...previous, ...patch }));
+        }
+        return filled;
+      },
+      undo: () => {
+        const previous = contactUndo.current;
+        if (previous) setValues(current => ({ ...current, ...previous }));
+        contactUndo.current = null;
+      },
+    },
+  });
   const previewLogo = sent?.logo ?? values.logo;
   async function selectLogo(file: File | undefined) {
     if (!file || locked || logoWorking.current) return;
@@ -485,8 +383,6 @@ export function PostJobForm({
     salaryFrom: 'არასავალდებულო.',
     salaryTo: 'არასავალდებულო.',
     contact: 'ელფოსტა, ტელეფონი ან განაცხადის ბმული (გამოქვეყნდება საჯაროდ)',
-    notificationEmail:
-      'გამოქვეყნების შემდეგ აქ მოგივა მოკლე წერილი ვაკანსიის ბმულით. ეს ელფოსტა საჯაროდ არ გამოჩნდება.',
     description: `${values.description.trim().length.toLocaleString()} / 20 000 · ${ui('მინიმუმ 30 სიმბოლო')}`,
   };
   const props = (name: FieldName) => ({
@@ -514,24 +410,24 @@ export function PostJobForm({
         change(name, e.currentTarget.value);
     },
   });
-  /* The same wiring as props(), for the site's own dropdowns. */
-  const selectProps = (name: FieldName) => ({
-    id: `post-${name}`,
-    name,
-    value: values[name],
-    disabled: locked,
-    invalid: !!errors[name],
-    describedBy: errors[name] || hints[name] ? `post-${name}-hint` : undefined,
-    onChange: (value: string) => change(name, value),
-  });
-  function showErrors(fields: Record<string, string>) {
+  function showErrors(fields: Record<string, string>, serverFields = false) {
+    // The API sends field messages without Zod codes. Recover only the shared
+    // validation fields; upload, consent and request errors keep their detail.
+    const sharedFields = ['title', 'description', 'city', 'mode', 'employmentType', 'salaryFrom', 'salaryTo', 'salaryBasis', 'salaryPeriod', 'deadline', 'category'];
+    function message(name: string, error: string) {
+      if (name === 'company') return 'მიუთითეთ კომპანიის დასახელება';
+      if (name === 'notificationEmail' || name === 'contact') return 'მიუთითეთ სწორი ელფოსტა';
+      if (!serverFields || !sharedFields.includes(name)) return error;
+      return companyJobIssueMessage(error.includes('მაქსიმუმ')
+        ? { code: 'too_big', origin: 'string', maximum: 0, path: [name], message: error }
+        : { code: 'custom', path: [name], message: error });
+    }
     const mapped = Object.fromEntries(
       Object.entries(fields).map(([name, error]) => [
-        name === 'city' && values.city === otherCity ? 'cityOther' : name,
-        error,
+        name === 'contact' ? 'notificationEmail' : name,
+        message(name, error),
       ]),
     );
-    if (detailFields.some((name) => mapped[name])) setDetailsOpen(true);
     const firstInvalid = Array.from(formRef.current?.elements || []).find(
       (element) =>
         element.id.startsWith('post-') && mapped[element.id.slice(5)],
@@ -545,19 +441,18 @@ export function PostJobForm({
   function validate() {
     const result = submissionSchema.safeParse({
       ...values,
-      city:
-        values.city === 'დისტანციური'
-          ? ''
-          : values.city === otherCity
-            ? values.cityOther
-            : values.city,
+      contact: values.notificationEmail,
+      category: '', salaryPeriod: 'თვე',
+      deadline: submissionDate(new Date(Date.now() + 30 * 86400000)),
       consent,
       requestId: requestId.current,
     });
     if (!result.success) {
-      const fields = Object.fromEntries(
-        result.error.issues.map((i) => [String(i.path[0]), i.message]),
-      );
+      const shared = result.error.issues.filter(i => String(i.path[0]) in importDefaults);
+      const fields = {
+        ...Object.fromEntries(result.error.issues.map(i => [String(i.path[0]), i.message])),
+        ...companyJobIssueFields(shared),
+      };
       showErrors(fields);
       setMessage('შეამოწმე მონიშნული ველები.');
       return null;
@@ -631,7 +526,7 @@ export function PostJobForm({
             );
           } catch {}
           track('post', 'refused');
-          showErrors(result.fields || { description: result.error });
+          showErrors(result.fields || { description: result.error }, !!result.fields);
           setMessage(result.error || 'შეამოწმე მონიშნული ველები.');
           return;
         }
@@ -644,6 +539,7 @@ export function PostJobForm({
       setInvoiceUrl(
         typeof received.invoiceUrl === 'string' ? received.invoiceUrl : '',
       );
+      importer.clear();
       try {
         sessionStorage.removeItem(draftKey);
       } catch {}
@@ -729,7 +625,7 @@ export function PostJobForm({
                     new Date(Date.now() + 30 * 86400000),
                   ),
                 });
-                setDetailsOpen(false);
+                importer.clear();
                 setConsent(false);
                 setReceipt('');
                 setSent(null);
@@ -774,122 +670,26 @@ export function PostJobForm({
           aria-label={ui('განცხადების დამატება')}
           aria-busy={busy}
         >
+          <fieldset className="post-section post-vacancy-fields" disabled={locked}>
+            <JobImport controller={importer} endpoint="/api/job-import" disabled={locked} skin="public" t={ui} />
+            <JobSteps form={jobForm} errors={errors} skin="public" t={ui} disabled={locked}
+              filled={importer.filled} onDescriptionPaste={importer.paste} onDescriptionBlur={importer.blurDescription}
+              set={(key, value) => { if (key in initial) change(key as FieldName, String(value)); }} blur={() => {}} />
+            <p className="post-import-subtle">{ui('ვაკანსია საიტზე იქნება {0}', [locale === 'en' && values.deadline ? new Date(values.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Tbilisi' }) : visibleJobDeadline(values.deadline)])}</p>
+          </fieldset>
           <section className="post-section">
-            <p className="post-section-note">
-              {ui('სავალდებულო ველები აღნიშნულია *-ით.')}
-            </p>
             <div className="post-grid">
-              <Field
-                name="title"
-                label={ui('პოზიციის დასახელება *')}
-                error={errors.title}
-                wide
-              >
-                <input
-                  {...props('title')}
-                  required
-                  maxLength={120}
-                  placeholder={ui('მაგ. გაყიდვების კონსულტანტი')}
-                  autoComplete="off"
-                />
+              <Field name="company" label={ui('კომპანიის დასახელება *')} error={errors.company}>
+                <input {...props('company')} required maxLength={160} autoComplete="organization" />
               </Field>
-              <Field
-                name="company"
-                label={ui('კომპანიის დასახელება *')}
-                error={errors.company}
-              >
-                <input
-                  {...props('company')}
-                  required
-                  maxLength={160}
-                  autoComplete="organization"
-                />
+              <Field name="notificationEmail" label={ui('ელფოსტა *')} error={errors.notificationEmail}>
+                <input {...props('notificationEmail')} required type="email" autoComplete="email" maxLength={254} />
               </Field>
-              <Field name="city" label={ui('ქალაქი *')} error={errors.city}>
-                <SelectField
-                  {...selectProps('city')}
-                  options={[...cities, 'დისტანციური', otherCity]}
-                />
-              </Field>
-              {values.city === otherCity && (
-                <Field
-                  name="cityOther"
-                  label={ui('დასახლების სახელი *')}
-                  error={errors.cityOther}
-                >
-                  <input
-                    {...props('cityOther')}
-                    required
-                    maxLength={100}
-                    autoComplete="address-level2"
-                  />
-                </Field>
-              )}
-              <Field
-                name="description"
-                label={ui('ვაკანსიის აღწერა *')}
-                error={errors.description}
-                hint={hints.description}
-                wide
-              >
-                <textarea
-                  {...props('description')}
-                  required
-                  minLength={30}
-                  maxLength={20000}
-                  rows={7}
-                  placeholder={ui(
-                    'რას გააკეთებს გუნდის ახალი წევრი?\n\nმოვალეობები\n• ...\n\nმოთხოვნები\n• ...\n\nგრაფიკი და დამატებითი პირობები\n• ...',
-                  )}
-                />
-              </Field>
-              <Field
-                name="contact"
-                label={ui('როგორ მოგმართონ კანდიდატები *')}
-                error={errors.contact}
-                hint={hints.contact}
-                wide
-              >
-                <input
-                  {...props('contact')}
-                  required
-                  type="text"
-                  inputMode="email"
-                  autoComplete="off"
-                  maxLength={2000}
-                  placeholder="hr@company.ge · +995 5XX XX XX XX · https://…"
-                />
-              </Field>
-              <Field
-                name="notificationEmail"
-                label={ui('ელფოსტა შეტყობინებისთვის *')}
-                error={errors.notificationEmail}
-                hint={hints.notificationEmail}
-                wide
-              >
-                <input
-                  {...props('notificationEmail')}
-                  type="email"
-                  autoComplete="email"
-                  required
-                  maxLength={254}
-                  placeholder="you@company.ge"
-                />
-              </Field>
-            </div>
-          </section>
-          <details
-            className="post-section post-details"
-            open={detailsOpen}
-            onToggle={(event) => setDetailsOpen(event.currentTarget.open)}
-          >
-            <summary>{ui('დამატებითი დეტალები (არასავალდებულო)')}</summary>
-            <div className="post-grid">
               <Field
                 name="logo"
                 label={ui('კომპანიის ლოგო')}
                 error={errors.logo}
-                hint="PNG, JPEG ან WebP · მაქსიმუმ 10 MB. ლოგო ავტომატურად შემცირდება."
+                hint="PNG, JPG ან WebP"
                 wide
               >
                 <div className="post-logo-row" aria-busy={logoBusy}>
@@ -951,113 +751,8 @@ export function PostJobForm({
                   </div>
                 </div>
               </Field>
-              <Field
-                name="salaryFrom"
-                label={ui('მინიმალური ხელფასი (₾)')}
-                error={errors.salaryFrom}
-                hint={hints.salaryFrom}
-              >
-                <input
-                  {...props('salaryFrom')}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={7}
-                  placeholder={ui('მაგ. 1000')}
-                />
-              </Field>
-              <Field
-                name="salaryTo"
-                label={ui('მაქსიმალური ხელფასი (₾)')}
-                error={errors.salaryTo}
-                hint={hints.salaryTo}
-              >
-                <input
-                  {...props('salaryTo')}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={7}
-                  placeholder={ui('მაგ. 1500')}
-                />
-              </Field>
-              <Field
-                name="salaryPeriod"
-                label={ui('ანაზღაურების სიხშირე')}
-                error={errors.salaryPeriod}
-              >
-                <SelectField
-                  {...selectProps('salaryPeriod')}
-                  options={[
-                    { value: 'თვე', label: 'თვეში' },
-                    { value: 'დღე', label: 'დღეში' },
-                  ]}
-                />
-              </Field>
-              <Field
-                name="salaryBasis"
-                label={ui('ანაზღაურების ტიპი')}
-                error={errors.salaryBasis}
-              >
-                <SelectField
-                  {...selectProps('salaryBasis')}
-                  options={['ხელზე', 'დარიცხული']}
-                />
-              </Field>
-              <Field
-                name="mode"
-                label={ui('მუშაობის ფორმატი')}
-                error={errors.mode}
-              >
-                <SelectField
-                  {...selectProps('mode')}
-                  disabled={locked || values.city === 'დისტანციური'}
-                  options={[...workModes]}
-                />
-              </Field>
-              <Field
-                name="employmentType"
-                label={ui('დასაქმების ტიპი')}
-                error={errors.employmentType}
-              >
-                <SelectField
-                  {...selectProps('employmentType')}
-                  options={[...employmentOptions]}
-                />
-              </Field>
-              <Field
-                name="deadline"
-                label={ui('განაცხადების ბოლო ვადა')}
-                error={errors.deadline}
-              >
-                <DateField
-                  id="post-deadline"
-                  name="deadline"
-                  value={values.deadline}
-                  min={dateBounds.min}
-                  max={dateBounds.max}
-                  disabled={locked}
-                  invalid={!!errors.deadline}
-                  describedBy={
-                    errors.deadline ? 'post-deadline-hint' : undefined
-                  }
-                  onChange={(value) => change('deadline', value)}
-                />
-              </Field>
-              <Field
-                name="category"
-                label={ui('კატეგორია')}
-                error={errors.category}
-              >
-                <SelectField
-                  {...selectProps('category')}
-                  placeholder={ui('ავტომატურად (სათაურის მიხედვით)')}
-                  options={[
-                    { value: '', label: 'ავტომატურად (სათაურის მიხედვით)' },
-                    ...categories,
-                  ]}
-                />
-              </Field>
             </div>
-          </details>
+          </section>
           <fieldset className="post-section post-plans">
             <legend>{ui('განთავსება')}</legend>
             <div className="post-plan-pills">

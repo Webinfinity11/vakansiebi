@@ -1848,8 +1848,8 @@ details[open] > summary > svg.disclosure-chevron {
 
 /* ── The vacancy page ─────────────────────────────────────────────────────────────────── */
 /* Category and placement are one badge shape. */
-.vacancy-page .vacancy-overview > .category-tag,
-.vacancy-page .vacancy-overview > .placement-badge {
+.vacancy-page .detail-company > .vacancy-tags > .category-tag,
+.vacancy-page .detail-company > .vacancy-tags > .placement-badge {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
@@ -1861,17 +1861,17 @@ details[open] > summary > svg.disclosure-chevron {
   line-height: 1;
   vertical-align: middle;
 }
-.vacancy-page .vacancy-overview > .category-tag {
+.vacancy-page .detail-company > .vacancy-tags > .category-tag {
   background: var(--ds-surface-muted);
   color: var(--ds-ink-2);
 }
-.vacancy-page .vacancy-overview > .placement-badge-premium {
-  background: var(--ds-accent);
-  color: var(--ds-on-accent);
+.vacancy-page .detail-company > .vacancy-tags > .placement-badge-premium {
+  background: var(--ds-surface);
+  color: var(--ds-ink);
 }
-.vacancy-page .vacancy-overview > .placement-badge-vip {
-  background: var(--ds-warning-soft);
-  color: var(--ds-warning);
+.vacancy-page .detail-company > .vacancy-tags > .placement-badge-vip {
+  background: var(--ds-surface);
+  color: var(--ds-ink);
 }
 .board-shell .job-title-row .placement-badge {
   border-radius: var(--ds-radius-pill);
@@ -2492,4 +2492,78 @@ details[open] > summary > svg.disclosure-chevron {
   background: none;
   color: var(--ds-ink-3);
   cursor: pointer;
+}
+
+/* Placement badges and the category tag: small rectangular tags with
+   4px corners, like established job boards use. No icon, never yellow. */
+.placement-badge.placement-badge,
+.vacancy-page .detail-company > .vacancy-tags > .placement-badge.placement-badge,
+.board-shell .job-title-row .placement-badge.placement-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 7px;
+  border: 1px solid var(--ds-line-strong);
+  border-radius: 4px;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.vacancy-page .detail-company > .vacancy-tags > .category-tag.category-tag {
+  min-height: 22px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* Placement colours: the brand blue only. VIP is a light blue tag,
+   premium the solid brand blue, so the two tiers read apart. */
+.placement-badge.placement-badge-vip.placement-badge-vip,
+.vacancy-page .detail-company > .vacancy-tags > .placement-badge.placement-badge-vip.placement-badge-vip,
+.board-shell .job-title-row .placement-badge.placement-badge-vip.placement-badge-vip {
+  border-color: var(--ds-accent-border);
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent-ink);
+}
+.placement-badge.placement-badge-premium.placement-badge-premium,
+.vacancy-page .detail-company > .vacancy-tags > .placement-badge.placement-badge-premium.placement-badge-premium,
+.board-shell .job-title-row .placement-badge.placement-badge-premium.placement-badge-premium {
+  border-color: var(--ds-accent);
+  background: var(--ds-accent);
+  color: #fff;
+}
+/* On the vacancy page the category and placement tags sit together on the
+   company row, at the right, instead of taking a row above the title. */
+.vacancy-page .vacancy-overview > .detail-company {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.vacancy-page .detail-company > .vacancy-tags {
+  display: flex;
+  flex-direction: row;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.vacancy-page .detail-company > .vacancy-tags > * {
+  display: inline-flex;
+  margin: 0;
+}
+.vacancy-page .detail-company > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .vacancy-page .detail-company > .vacancy-tags {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    gap: 4px;
+  }
 }

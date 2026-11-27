@@ -323,5 +323,28 @@
 /* Five stages fit a 1440 screen without sideways scrolling. */
 @media (min-width: 761px) { .cc .cc-board { grid-auto-columns: minmax(200px, 1fr); } }
 
-/* Empty candidates: searching the CV base and adding a vacancy sit side by side. */
+/* Empty candidates use the same acquisition actions as the header. */
 .cc-start-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px 12px; }
+
+/* Keep candidate acquisition separate from search and selection controls. */
+.cc-acquire-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+.cc-acquire-actions .cp-btn {
+  min-height: 44px;
+  height: auto;
+  white-space: normal;
+  padding-block: 10px;
+}
+.cc-source {
+  color: var(--cp-ink-3);
+  font-size: 12px;
+  font-weight: 400;
+}
+@media (max-width: 560px) {
+  .cc-acquire-actions { width: 100%; }
+  .cc-acquire-actions .cp-btn { flex: 1 1 160px; }
+}

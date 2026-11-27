@@ -40,3 +40,5 @@
     flex-direction: column;
   }
 }
+/* The file button sits plainly above the text field, as on the public form. */
+.ji { padding: 0; border: 0; border-radius: 0; background: none; }

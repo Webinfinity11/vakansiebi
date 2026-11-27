@@ -1,5 +1,5 @@
 'use client';
-import { SaveCandidate, AddToVacancy } from './add-to-candidates';
+import { SaveCandidate, AddToVacancy, AddToCandidates, candidateSourceLabel } from './add-to-candidates';
 import { validCandidateEmail, validCandidatePhone } from '@/lib/company-candidate-contact';
 import { StatusMark } from './status-mark';
 import { SelectField } from '../select-field';
@@ -495,12 +495,15 @@ export function CandidatesView({
           {fresh > 0 && <em className="cc-fresh">{fresh}  ახალი</em>}
         </div>
         <div className="cp-head-actions">
-          {canEdit && onAdd && (
-            <button type="button" className="cp-btn cp-btn--primary" onClick={onAdd}>
-              <Plus size={15} />
-              კანდიდატის დამატება
-            </button>
-          )}
+          <div className="cc-acquire-actions">
+            <a className="cp-btn cp-btn--primary" href={companyHref({ tab: 'talent', entry: null })} onClick={(event) => {
+              if (!onGo || !plainClick(event)) return;
+              event.preventDefault();
+              onSelect(null);
+              onGo('talent');
+            }}><Search size={16} />ბაზიდან არჩევა</a>
+            <button type="button" className="cp-btn cp-btn--primary" disabled={!canEdit || !onAdd} onClick={onAdd}><Upload size={16} />CV-ის ატვირთვა</button>
+          </div>
           {candidates.length > 0 && (<>
           <DropdownMenu>
             <DropdownMenuTrigger className="cp-icon-btn" aria-label="მეტი მოქმედება"><MoreHorizontal size={18} /></DropdownMenuTrigger>
@@ -568,14 +571,16 @@ export function CandidatesView({
       ) : !candidates.length ? (
         <div className="cp-empty cc-start">
           <h2>ჯერ კანდიდატი არ გყავთ</h2>
-          <p>ვაკანსიაზე გამოგზავნილი რეზიუმეები აქ გამოჩნდება. მანამდე კანდიდატები CV ბაზაში მოძებნეთ.</p>
-          <div className="cc-start-actions">
-            {onGo && <button type="button" className="cp-btn cp-btn--primary" onClick={() => onGo('talent')}><Search size={16} />კანდიდატების მოძებნა ბაზაში</button>}
-            {canEdit && onGo && <button type="button" className="cp-btn cp-btn--secondary" onClick={() => onGo('job')}>ვაკანსიის დამატება</button>}
+          <p>აქ გამოჩნდებიან JOBX-ის ბაზიდან არჩეული კანდიდატები და თქვენ მიერ ატვირთული CV-ები. ასევე — თქვენს ვაკანსიაზე Swipe-ით გამოგზავნილი რეზიუმეები.</p>
+          <div className="cc-acquire-actions cc-start-actions">
+            <a className="cp-btn cp-btn--primary" href={companyHref({ tab: 'talent', entry: null })} onClick={(event) => {
+              if (!onGo || !plainClick(event)) return;
+              event.preventDefault();
+              onSelect(null);
+              onGo('talent');
+            }}><Search size={16} />ბაზიდან არჩევა</a>
+            <button type="button" className="cp-btn cp-btn--primary" disabled={!canEdit || !onAdd} onClick={onAdd}><Upload size={16} />CV-ის ატვირთვა</button>
           </div>
-          {canEdit && onAdd && <div className="cc-message-actions">
-            <button className="cc-edit-link" onClick={onAdd}>CV-ის ატვირთვა</button>
-          </div>}
         </div>
       ) : view === 'board' ? (
         <>
@@ -654,6 +659,7 @@ export function CandidatesView({
                             {c.jobTitle || c.title}
                           </span>
                           <span className="cc-item-meta">
+                            <span className="cc-source">{candidateSourceLabel(c.source)}</span>
                             <StatusMark kind={c.stage} data-stage={c.stage}>
                               {stageLabels[c.stage]}
                             </StatusMark>
@@ -962,6 +968,8 @@ function Detail({
             {c.jobTitle ? `${c.jobTitle} · ` : ''}{timeAgo(c.appliedAt)}
           </p>
           <div className="cc-person-acts">
+            <span className="cc-source">{candidateSourceLabel(c.source)}</span>
+            {sheetOnly && <AddToCandidates candidate={c} canEdit={canEdit} onAdded={next=>onPatch([c.entry],next)}/>}
             {!c.jobId && <AddToVacancy candidate={c} jobs={jobs} canEdit={canEdit} onAdded={next=>onPatch([c.entry],next)}/>}
             {c.phone && (
               <a
@@ -1608,6 +1616,7 @@ function Board({
                     <InterviewBadge candidate={c} />
                     <CandidateSignals candidate={c} />
                     <span className="cc-card-foot">
+                      <span className="cc-source">{candidateSourceLabel(c.source)}</span>
                       <time dateTime={c.appliedAt}>{timeAgo(c.appliedAt)}</time>
                       {c.rating && (
                         <span className="cc-mini-rating">

@@ -1,6 +1,6 @@
 "use client";
 import "./talent.css";
-import { SaveCandidate, AddToCandidates } from "./add-to-candidates";
+import { SaveCandidate, AddToCandidates, candidateSourceLabel } from "./add-to-candidates";
 import { StatusMark } from "./status-mark";
 import { Popover, PopoverTrigger, PopoverContent, PopoverTitle } from "@/components/ui/popover";
 import { positionLabel, readableSkills, parseState, parseNotice, runCvUploadQueue, uploadSummary, maxCvBatch, type UploadRow, type TalentPerson, type TalentResult, type Person, type Filters, type Facets, emptyFilters, storageKey, inProcess, levelLabel, yearsLabel, norm, terms, isNativeGeorgian, snippet, countFacets, filterChips, toggle, normalizeFilters, readSavedSearches, saveSearch, deleteSearch, accountStorageKeys, type SavedSearch } from "@/lib/company-talent-filters";
@@ -183,6 +183,7 @@ export function TalentView({
           <h1>CV ბაზა</h1>
         </div>
         <div className="cp-head-actions">
+          <a className="cp-btn cp-btn--secondary" href={companyHref({ tab: "candidates", entry: null })}>კანდიდატები</a>
           {canEdit && (
             <button
               type="button"
@@ -202,16 +203,7 @@ export function TalentView({
         <div className="cp-empty">
           <h2>ბაზა ჯერ ცარიელია</h2>
           <p>
-             აქ გროვდება ვაკანსიებზე გამოგზავნილი CV-ები. სხვა წყაროდან მიღებული რეზიუმეებიც ატვირთეთ, რომ ყველაფერი ერთ ადგილას გქონდეთ. </p>
-          {canEdit && (
-            <button
-              type="button"
-              className="cp-btn cp-btn--primary"
-              onClick={() => setUploading(true)}
-            >
-              <Upload size={16} />
-               CV-ის ატვირთვა </button>
-          )}
+             აქ შეგიძლიათ მოძებნოთ რეზიუმეები და დაამატოთ კანდიდატებში. </p>
         </div>
       ) : (
         <div className="ct-layout ct-layout--horizontal">
@@ -564,7 +556,7 @@ function PersonRow({
   // The stage shows only while the person is in this company's selection.
   const active = p.entries.some(inProcess);
   const sources = [...new Set(p.entries.map((e) =>
-    e.source === "upload" ? "თქვენ მიერ ატვირთული" : e.source === "cv_box" ? "CV ყუთი" : e.source === "base" ? "JOBX-ის CV ბაზა" : "ვაკანსიაზე გამოგზავნილი"))];
+    candidateSourceLabel(e.source)))];
   const notice = p.entries.some(e=>e.hasCv) ? parseNotice(profile) : "";
   const phone = p.entries.find((e) => e.phone)?.phone;
   const email = p.entries.find((e) => e.email)?.email;

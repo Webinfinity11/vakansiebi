@@ -27,9 +27,3 @@ export function render(template: Partial<MessageTemplate> | null | undefined, da
   const fill = (v: unknown) => clean(v).replace(/\{([^{}]+)\}/g, (match, key: string) => values[key] ?? match);
   return { subject: fill(template?.subject), body: fill(template?.body) };
 }
-
-/** Invitation is composed explicitly, never offered in the ordinary message-kind selector. */
-export function cvBaseInvitation(name: string, companyName: string, link: string): MessageTemplate {
-  const firstName=name.trim().split(/\s+/)[0];
-  return {subject:'მოწვევა JOBX-ის CV ბაზაში',body:`გამარჯობა, ${firstName}!\n\nკომპანია „${companyName}“ გიწვევთ JOBX-ის CV ბაზაში, რომ თქვენი რეზიუმე სხვა შემოწმებულ დამსაქმებლებსაც შეეძლოთ ნახონ. ბაზაში დამატება მხოლოდ თქვენი თანხმობით მოხდება. პირობების სანახავად და თანხმობის მისაცემად გახსენით ბმული:\n\n${link}\n\nბმული მოქმედებს 30 დღე. თანხმობის შემდეგ ამავე ბმულით მისი გაუქმება ნებისმიერ დროს შეგიძლიათ.\n\nპატივისცემით,\n${companyName}`};
-}

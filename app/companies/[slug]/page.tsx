@@ -105,8 +105,8 @@ const load = cache(async (rawSlug: string, rawQuery: string) => {
     db()
       .query(
         `SELECT logo_url, website, description FROM company_profiles
-          WHERE company_key=ANY($1) AND (website<>'' OR description<>'' OR logo_url<>'') ORDER BY updated_at DESC`,
-        [employer.names.map(companyKey)],
+          WHERE (company_key=ANY($1) OR company_key IN (SELECT company_key FROM company_job_ownership WHERE job_id=ANY($2::uuid[]))) AND (website<>'' OR description<>'' OR logo_url<>'') ORDER BY (company_key IN (SELECT company_key FROM company_job_ownership WHERE job_id=ANY($2::uuid[]))) DESC, updated_at DESC`,
+        [employer.names.map(companyKey), employer.jobIds],
       )
       .then((r) => {
         const rows = r.rows as {

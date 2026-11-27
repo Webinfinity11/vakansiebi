@@ -340,8 +340,8 @@
   background: var(--jobx-accent-tint);
 }
 .placement-badge-premium {
-  color: var(--jobx-surface);
-  background: var(--jobx-accent);
+  color: var(--ds-ink);
+  background: var(--ds-surface);
 }
 
 .post-plan-note summary {
@@ -376,8 +376,8 @@
 }
 
 .placement-badge-vip {
-  color: var(--jobx-warning-text);
-  background: #ffedbd;
+  color: var(--ds-ink);
+  background: var(--ds-surface);
 }
 .vacancy-detail > .placement-badge {
   margin-bottom: var(--jobx-space-10px);
@@ -703,3 +703,26 @@
   font-size: var(--ds-text-md);
   line-height: 1.7;
 }
+
+/* Shared vacancy fields, using public-site tokens without the company portal skin. */
+.post-vacancy-fields { display: grid; gap: var(--ds-space-5); min-width: 0; }
+.post-vacancy-fields h3 { font-size: var(--ds-text-sm); margin: 0 0 var(--ds-space-3); line-height: 1.7; }
+.post-import { display: grid; gap: var(--ds-space-3); padding: var(--ds-space-4); border: 1px dashed var(--ds-line); border-radius: var(--ds-radius-md); min-width: 0; }
+.post-import p { margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
+.post-import-actions, .post-heading-chips { display: flex; align-items: center; gap: var(--ds-space-2); flex-wrap: wrap; }
+.post-heading-chips { margin-bottom: var(--ds-space-3); }
+.post-import .post-secondary, .post-heading-chips .post-secondary { white-space: normal; max-width: 100%; min-height: 44px; border-radius: var(--ds-radius-md); }
+.post-import-subtle, .post-auto-mark { color: var(--ds-ink-3); font-size: var(--ds-text-xs); font-weight: normal; line-height: 1.7; }
+.post-auto-mark { margin-inline-start: var(--ds-space-2); }
+.post-field[data-autofilled] :is(input, textarea, .ds-select) { border-color: var(--ds-accent); }
+.post-part-time { display: flex; align-items: center; flex-wrap: wrap; gap: var(--ds-space-2); min-height: 44px; font-size: var(--ds-text-sm); }
+.post-part-time input { accent-color: var(--ds-accent); width: 18px; height: 18px; }
+.post-description { resize: vertical; }
+@media (max-width: 480px) {
+  .post-import-actions { align-items: stretch; flex-direction: column; }
+}
+
+/* Keep description shortcuts compact despite the mobile full-width action rule. */
+.post-job-shell .post-heading-chips .post-secondary { width: auto; flex: 0 1 auto; padding-inline: var(--ds-space-2); font-size: var(--ds-text-xs); }
+/* The file button sits plainly above the text field; no frame around one button. */
+.post-vacancy-fields .post-import { padding: 0; border: 0; border-radius: 0; }

@@ -138,7 +138,13 @@ function DeckInvite({ href, onClose }: { href: string; onClose: () => void }) {
           {ui("ვაკანსია ერთ ეკრანზე — გადაწიე და CV ერთი შეხებით გაეგზავნება.")}
         </p>
       </div>
-      <Link className="ds-btn ds-btn--primary" href={href} prefetch={false}>
+      {/* Either answer ends the invitation for good: it never asks twice. */}
+      <Link
+        className="ds-btn ds-btn--primary"
+        href={href}
+        prefetch={false}
+        onClick={onClose}
+      >
         {ui("დაწყება")}
       </Link>
       <button
@@ -242,7 +248,9 @@ const JobCard = memo(function JobCard({
               </span>
             )}
             {featured === "vip" && (
-              <span className="featured-label featured-label-vip">VIP</span>
+              <span className="placement-badge placement-badge-vip">
+                VIP
+              </span>
             )}
             {isNew(j) && <span className="job-new">{ui("ახალი")}</span>}
           </div>

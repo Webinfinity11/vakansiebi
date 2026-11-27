@@ -1110,3 +1110,40 @@ body:has(.swipe-page) {
   touch-action: pan-y;
   overscroll-behavior: contain;
 }
+
+/* Phones: smaller round buttons (still above a thumb's 44px) and the space
+   they free goes to the card, so more of the vacancy text shows. */
+@media (max-width: 899px) {
+  .swipe-page .swipe-deck {
+    height: max(320px, calc(100dvh - 218px - env(safe-area-inset-bottom)));
+  }
+  .swipe-page .swipe-actions {
+    gap: var(--ds-space-5, 20px);
+    padding-top: var(--ds-space-1);
+  }
+  .swipe-page .swipe-actions button {
+    grid-template-rows: 56px;
+    min-width: 48px;
+  }
+  .swipe-page .swipe-act {
+    width: 56px;
+    height: 56px;
+  }
+  .swipe-page .swipe-act-sm {
+    width: 40px;
+    height: 40px;
+  }
+  .swipe-page .swipe-act-send {
+    box-shadow: 0 6px 14px rgba(36, 87, 230, 0.28);
+  }
+  /* The cards behind peek out a little less; the front card keeps the rest. */
+  .swipe-page .quick-card {
+    inset: 0 0 18px;
+  }
+  .swipe-page .swipe-depth-1 {
+    transform: translateY(9px) scale(0.96);
+  }
+  .swipe-page .swipe-depth-2 {
+    transform: translateY(18px) scale(0.92);
+  }
+}

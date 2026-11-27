@@ -169,13 +169,224 @@ void test('ambiguous upper-only salary and separate daily period are not monthly
   }
 });
 
-
 test('DOCX list markers are opt-in and do not change ordinary CV extraction', async () => {
   const { xmlText } = await import('../lib/server/cv-text');
-  const xml = '<w:p><w:r><w:t>Responsibilities</w:t></w:r></w:p>' +
+  const xml =
+    '<w:p><w:r><w:t>Responsibilities</w:t></w:r></w:p>' +
     '<w:p w:rsidR="1"><w:pPr><w:numPr><w:ilvl w:val="0"/></w:numPr></w:pPr><w:r><w:t>Help customers &amp; colleagues</w:t></w:r></w:p>' +
     '<w:p><w:pPr><w:numPr /></w:pPr><w:r><w:t>Maintain records</w:t></w:r></w:p>';
-  assert.equal(xmlText(xml), 'Responsibilities\nHelp customers & colleagues\nMaintain records\n');
+  assert.equal(
+    xmlText(xml),
+    'Responsibilities\nHelp customers & colleagues\nMaintain records\n',
+  );
   assert.equal(xmlText(xml, false), xmlText(xml));
-  assert.equal(xmlText(xml, true), 'Responsibilities\n• Help customers & colleagues\n• Maintain records\n');
+  assert.equal(
+    xmlText(xml, true),
+    'Responsibilities\n• Help customers & colleagues\n• Maintain records\n',
+  );
+});
+
+const realistic = [
+  {
+    name: 'company announcement and explicit location',
+    text: 'კომპანია ალფა აცხადებს ვაკანსიას გაყიდვების მენეჯერის პოზიციაზე\nმდებარეობა: ბათუმის ფილიალი\nსათავო ოფისი თბილისშია\nხელფასი: 1500-2000 ლარი\nმოვალეობები:\n• მომხმარებელთა მომსახურება და ანგარიშგება',
+    expected: {
+      title: 'გაყიდვების მენეჯერი',
+      city: 'ბათუმი',
+      salaryFrom: '1500',
+      salaryTo: '2000',
+    },
+  },
+  {
+    name: 'wanted role with suffix and symbol range',
+    text: 'ვეძებთ კონსულტანტს\nსამუშაო ადგილი: ქუთაისში\nმუშაობა ოფისიდან\nანაზღაურება: 1500 ₾-დან 2000 ₾-მდე\nნახევარ განაკვეთზე\nმოთხოვნები:\nკომუნიკაციის უნარი და პუნქტუალურობა',
+    expected: {
+      title: 'კონსულტანტი',
+      city: 'ქუთაისი',
+      mode: 'ადგილზე',
+      salaryFrom: '1500',
+      salaryTo: '2000',
+      employmentType: 'ნახევარი განაკვეთი',
+    },
+  },
+  {
+    name: 'spaced salary gross',
+    text: 'პოზიციის დასახელება: ბუღალტერი\nლოკაცია: გორი\nჰიბრიდული სამუშაო\nანაზღაურება: 2 000 ლარი დარიცხული\nარასრული განაკვეთი\nმოვალეობები:\nფინანსური დოკუმენტების მომზადება და აღრიცხვა',
+    expected: {
+      title: 'ბუღალტერი',
+      city: 'გორი',
+      mode: 'ჰიბრიდული',
+      salaryFrom: '2000',
+      salaryBasis: 'დარიცხული',
+      employmentType: 'ნახევარი განაკვეთი',
+    },
+  },
+  {
+    name: 'net and home working',
+    text: 'ვაკანსია: ოპერატორი\nსახლიდან მუშაობა\nანაზღაურება 1800 ლარი (ხელზე)\nარასრული სამუშაო დღე\nმოთხოვნები:\nგამართული მეტყველება და კომპიუტერული პროგრამების ცოდნა',
+    expected: {
+      title: 'ოპერატორი',
+      mode: 'დისტანციური',
+      salaryFrom: '1800',
+      salaryBasis: undefined,
+      employmentType: 'ნახევარი განაკვეთი',
+    },
+  },
+  {
+    name: 'starting amount and negative remote',
+    text: 'თანამდებობა: ადმინისტრატორი\nმუშაობა არ არის დისტანციური\nხელფასი: 1500 ლარიდან\nზუგდიდში\nმოვალეობები:\nსტუმრების მიღება და საოფისე პროცესების მართვა',
+    expected: {
+      title: 'ადმინისტრატორი',
+      mode: undefined,
+      city: 'ზუგდიდი',
+      salaryFrom: '1500',
+    },
+  },
+  {
+    name: 'ambiguous locations and compensation',
+    text: 'მოლარე\nთბილისში და ბათუმში\nხელფასი: 1500 ლარი\nანაზღაურება: 2000 ლარი\nმოვალეობები:\nსალაროს მართვა და მომხმარებელთა მომსახურება',
+    expected: { title: 'მოლარე', city: undefined, salaryFrom: undefined },
+  },
+  {
+    name: 'negotiable range is not salary',
+    text: 'პოზიცია: კურიერი\nრუსთავში\nხელფასი: 1500-2000 ლარი შეთანხმებით\nმოვალეობები:\nშეკვეთების დროული მიწოდება და მომხმარებელთან კომუნიკაცია',
+    expected: { salaryFrom: undefined },
+  },
+  {
+    name: 'bonus and percentage excluded',
+    text: 'პოზიცია: აგენტი\nხელფასი: 1500 ლარი + ბონუსი 10%\nმოთხოვნები:\nგაყიდვების გამოცდილება და გამართული კომუნიკაცია',
+    expected: { salaryFrom: undefined },
+  },
+  {
+    name: 'English hiring and comma thousands',
+    text: 'Acme is hiring Product Designer\nLocation: Tbilisi\nNot remote; on-site\nSalary: 1,500 GEL gross\nHalf-time\nRequirements:\nExperience creating accessible interfaces',
+    expected: {
+      title: 'Product Designer',
+      city: 'თბილისი',
+      mode: 'ადგილზე',
+      salaryFrom: '1500',
+      salaryBasis: 'დარიცხული',
+      employmentType: 'ნახევარი განაკვეთი',
+    },
+  },
+];
+for (const fixture of realistic)
+  test(fixture.name, () => {
+    const result = parseJobText(fixture.text);
+    for (const [key, value] of Object.entries(fixture.expected))
+      assert.equal(result[key as keyof typeof result], value, key);
+  });
+
+test('unsafe periods, currencies and multiple candidate lines stay unfilled', () => {
+  for (const pay of [
+    '1500 GEL per year',
+    '1500 ლარი წელიწადში',
+    '1500 EUR',
+    '1500 USD',
+    '50 ლარი საათში',
+    '100 ლარი დღეში',
+    '1500 ლარი\nხელფასი: შეთანხმებით',
+    '1500 ლარი\nხელფასი: 50 GEL per hour',
+  ]) {
+    assert.equal(
+      parseJobText(
+        'პოზიცია: ოპერატორი\nხელფასი: ' +
+          pay +
+          '\nმოთხოვნები:\nსაჭიროა კომუნიკაციის უნარი',
+      ).salaryFrom,
+      undefined,
+      pay,
+    );
+  }
+});
+test('section headings and sentences never become titles', () => {
+  for (const heading of [
+    'მოთხოვნები',
+    'სამუშაო გრაფიკი',
+    'ჩვენ გვჭირდება ადამიანი, რომელიც დაეხმარება გუნდს.',
+    'Company Alpha',
+    'ვეძებთ ახალ თანამშრომელს ჩვენს გუნდში.',
+  ])
+    assert.equal(
+      parseJobText(heading + '\nგამოცდილება სასურველია').title,
+      undefined,
+      heading,
+    );
+});
+test('only a salary filled by this import may carry its basis', () => {
+  const defaults = newCompanyJob();
+  const imported = { salaryFrom: '1500', salaryBasis: 'დარიცხული' as const };
+  assert.equal(
+    mergeJobImport(defaults, defaults, imported).form.salaryBasis,
+    'დარიცხული',
+  );
+  const typed = { ...defaults, salaryFrom: '2500' };
+  assert.equal(
+    mergeJobImport(typed, defaults, imported).form.salaryBasis,
+    'ხელზე',
+  );
+  assert.equal(
+    mergeJobImport(defaults, defaults, { salaryBasis: 'დარიცხული' }).form
+      .salaryBasis,
+    'ხელზე',
+  );
+  assert.equal(
+    mergeJobImport({ ...defaults, salaryBasis: 'დარიცხული' }, defaults, {
+      salaryFrom: '1500',
+      salaryBasis: 'ხელზე',
+    }).form.salaryBasis,
+    'დარიცხული',
+  );
+});
+test('large vacancy threshold counts letters and nonempty lines', async () => {
+  const { looksLikeVacancyText } = await import('../lib/company-job-import');
+  assert.equal(looksLikeVacancyText('ა'.repeat(200)), true);
+  assert.equal(looksLikeVacancyText('ა'.repeat(199)), false);
+  assert.equal(
+    looksLikeVacancyText(Array(4).fill('ა'.repeat(30)).join('\n')),
+    true,
+  );
+  assert.equal(
+    looksLikeVacancyText(Array(4).fill('ა'.repeat(29)).join('\n')),
+    false,
+  );
+  assert.equal(looksLikeVacancyText('1234\n'.repeat(100)), false);
+});
+
+test('the bare title heading leaves the description; the announcement sentence stays', () => {
+  const parsed = parseJobText(`გაყიდვების კონსულტანტი
+
+შპს „მწვანე სახლი“ თბილისის ფილიალში აცხადებს ვაკანსიას გაყიდვების კონსულტანტის პოზიციაზე.
+
+სამუშაო გრაფიკი: ორშაბათი–პარასკევი, 10:00–19:00, ჰიბრიდული რეჟიმი
+ხელფასი: 1500-2000 ლარი
+
+მოვალეობები:
+- მომხმარებლების კონსულტაცია და პროდუქციის შეთავაზება
+- შეკვეთების გაფორმება და სალაროსთან მუშაობა
+- ყოველდღიური გაყიდვების ანგარიშის მომზადება
+
+მოთხოვნები:
+- გაყიდვების სფეროში მუშაობის მინიმუმ 1 წლის გამოცდილება
+- კომუნიკაციის კარგი უნარი
+- რუსული ან ინგლისური ენის ცოდნა სასურველია
+
+პირობები:
+- ანაზღაურებადი შვებულება და ჯანმრთელობის დაზღვევა
+- პროფესიული ზრდის შესაძლებლობა
+
+რეზიუმე გამოგზავნეთ ელფოსტაზე: hr@example.ge
+`);
+  assert.equal(parsed.title, 'გაყიდვების კონსულტანტი');
+  assert.ok(parsed.description?.startsWith('შპს „მწვანე სახლი“ თბილისის ფილიალში აცხადებს ვაკანსიას'));
+  assert.ok(!parsed.description?.split('\n').includes('გაყიდვების კონსულტანტი'));
+  assert.equal(parsed.company, 'მწვანე სახლი');
+  assert.equal(parsed.email, 'hr@example.ge');
+});
+
+test('duplicate title matching ignores case and surrounding whitespace', () => {
+  const parsed = parseJobText('  SALES CONSULTANT  \nAcme is hiring Sales Consultant.\nResponsibilities:\nHelp customers choose the right products.');
+  assert.equal(parsed.title, 'Sales Consultant');
+  assert.ok(parsed.description?.startsWith('Acme is hiring Sales Consultant.\nმოვალეობები\n'));
+  assert.ok(!parsed.description?.includes('SALES CONSULTANT'));
 });

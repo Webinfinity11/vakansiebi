@@ -223,3 +223,6 @@
 .jw-part-time input { width: 20px; height: 20px; accent-color: var(--cp-accent); }
 .jw-form .jw-chips { margin-bottom: 16px; }
 .jw-footer { justify-content: flex-end; }
+
+.jw-auto-mark { margin-inline-start: 8px; color: var(--cp-ink-2); font-size: 12px; font-weight: normal; }
+.jw-field[data-autofilled] :is(.cp-input, .ds-select) { border-color: var(--cp-accent); }

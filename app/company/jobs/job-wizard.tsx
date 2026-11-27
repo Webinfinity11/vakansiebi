@@ -9,7 +9,7 @@ import type { CompanyJobForm } from '@/lib/company-job-form';
 import { validateAll, visibleJobErrors, type CompanyJobErrors } from '@/lib/company-job-steps';
 import { formatTime, type CompanyJob } from '../company-api';
 import { JobSteps } from './job-steps';
-import { JobImport } from './job-import';
+import { JobImport, useJobImport } from './job-import';
 import { JobPreview, type JobPreviewProfile } from './job-preview';
 import { useJobDraft, type DraftInitial } from './use-job-draft';
 import '../portal.css';
@@ -29,12 +29,12 @@ export function JobWizard({ identity, profile, job, initialForm, baseForm, initi
   const submitting = useRef(false);
   const completed = useRef(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [importRevision, setImportRevision] = useState(0);
   const importNoteKey = `jobx:job-import:${identity.companyKey}:${job?.id ?? draft.ensureId()}`;
-  function clearImportNote() {
-    try { sessionStorage.removeItem(importNoteKey); } catch {}
-    setImportRevision(value => value + 1);
-  }
+  const importer = useJobImport({ form, defaults: baseForm, noteKey: importNoteKey,
+    disabled: busy || !!job?.imported || job?.status === 'merged', preserveHidden: !!job,
+    onApply: next => { if (!submitting.current && !completed.current) draft.update(next); },
+  });
+  function clearImportNote() { importer.clear(); }
   const root = useRef<HTMLDivElement>(null);
   const reopening = !!job && ['archived', 'rejected'].includes(job.status);
   const title = copy ? 'ვაკანსიის ასლი' : !job ? 'ახალი ვაკანსია' : reopening ? 'ვაკანსიის ხელახლა გაგზავნა' : 'ვაკანსიის რედაქტირება';
@@ -102,8 +102,8 @@ export function JobWizard({ identity, profile, job, initialForm, baseForm, initi
       {draft.restored && <div className="jw-note jw-restored">{job ? 'აღდგენილია თქვენი ცვლილებები' : 'აღდგენილია თქვენი მონახაზი'} <button className="cp-btn cp-btn--ghost" type="button" disabled={busy} onClick={async () => { if (!window.confirm(job ? 'გავაუქმოთ შენახული ცვლილებები?' : 'წავშალოთ მონახაზი და დავიწყოთ თავიდან?')) return; try { await draft.discard(baseForm); clearImportNote(); setErrors({}); setTouched([]); setSubmitted(false); setError(''); } catch (e) { setError(e instanceof Error ? e.message : 'მონახაზის წაშლა ვერ მოხერხდა'); } }}>{job ? 'ცვლილებების გაუქმება' : 'ახლიდან დაწყება'}</button></div>}
       <div className="jw-layout"><main className="jw-main">{job?.status === 'published' && <p className="jw-note">ცვლილებები გამოჩნდება JOBX-ის გუნდის დადასტურების შემდეგ. მანამდე საიტზე მიმდინარე ვერსია დარჩება.</p>}
         <form id="job-wizard-form" noValidate onSubmit={e => { e.preventDefault(); void submit(); }}><fieldset className="jw-form" disabled={busy || job?.status === 'merged'}>
-        <JobImport key={job?.id ?? copySource ?? 'new'} resetKey={importRevision} form={form} defaults={baseForm} noteKey={importNoteKey} disabled={busy || !!job?.imported || job?.status === 'merged'} onApply={next => { if (!submitting.current && !completed.current) draft.update(next); }} />
-        <JobSteps form={form} errors={errors} job={job} set={(key, value) => { setErrors(previous => { const next = { ...previous }; delete next[key]; return next; }); draft.update({ ...form, [key]: value }); }} blur={blur} />
+        <JobImport controller={importer} disabled={busy || !!job?.imported || job?.status === 'merged'} />
+        <JobSteps filled={importer.filled} onDescriptionPaste={importer.paste} onDescriptionBlur={importer.blurDescription} disabled={busy || job?.status === 'merged'} form={form} errors={errors} job={job} set={(key, value) => { importer.edit(key); setErrors(previous => { const next = { ...previous }; delete next[key]; return next; }); draft.update({ ...form, [key]: value }); }} blur={blur} />
         {deadlineLabel && <p className="cp-subtle">ვაკანსია საიტზე იქნება {deadlineLabel}</p>}
         </fieldset>
         {error && <p role="alert" className="jw-error jw-note">{error}</p>}

@@ -1,5 +1,6 @@
 import type { CompanyJobForm } from './company-job-form';
 import { cities, cityNamePattern } from './cities';
+import { payExcerpts } from './pay-excerpts';
 
 export const importKeys = [
   'title',
@@ -8,11 +9,43 @@ export const importKeys = [
   'employmentType',
   'salaryFrom',
   'salaryTo',
+  'salaryBasis',
   'description',
 ] as const;
 export type JobImportFields = Partial<
   Pick<CompanyJobForm, (typeof importKeys)[number]>
->;
+> & {
+  /** Read for the public form only; a company's own form already knows both. */
+  company?: string;
+  email?: string;
+};
+const emailPattern = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/u;
+const companyLabel =
+  /^(?:კომპანია|დამსაქმებელი|ორგანიზაცია|company|employer)\s*[:–—-]\s*(.{2,80})$/i;
+const legalName =
+  /(?:^|[\s(])(?:შპს|სს|ააიპ|ი\/მ|LLC|JSC|Ltd)\.?\s*[„"“«']\s*([^"“”»'\n]{2,60}?)\s*[“"”»']/iu;
+/** The employer's name and the address CVs go to, when the text states them. */
+function contacts(lines: string[], source: string): Pick<JobImportFields, 'company' | 'email'> {
+  const found: Pick<JobImportFields, 'company' | 'email'> = {};
+  for (const line of lines) {
+    const named = companyLabel.exec(line)?.[1]?.trim();
+    if (named && !emailPattern.test(named)) {
+      found.company = named.replace(/[.;,]$/, '');
+      break;
+    }
+  }
+  if (!found.company) {
+    const legal = legalName.exec(source)?.[1]?.trim();
+    if (legal) found.company = legal;
+  }
+  // Prefer the address next to CV/résumé wording; otherwise the first one.
+  const cvLine = lines.find(
+    (line) => emailPattern.test(line) && /რეზიუმე|CV|სივი|გამოგზავნ|გაგზავნ|resume|apply/i.test(line),
+  );
+  const email = emailPattern.exec(cvLine ?? source)?.[0];
+  if (email) found.email = email.replace(/\.$/, '');
+  return found;
+}
 const englishCities = [
   'Tbilisi',
   'Batumi',
@@ -49,10 +82,11 @@ const boilerplate =
 const salaryLabel = /^(?:ხელფასი|ანაზღაურება|salary|pay)\s*:/i;
 function salary(
   line: string,
-): Pick<JobImportFields, 'salaryFrom' | 'salaryTo'> | null {
+): Pick<JobImportFields, 'salaryFrom' | 'salaryTo' | 'salaryBasis'> | null {
+  line = line.replace(/(\d),(?=\d{3}(?:\D|$))/g, '$1');
   if (
     !/(?:ლარი|ლარიდან|ლარამდე|₾|\bGEL\b)/i.test(line) ||
-    /დღი|დღე|საათ|კვირ|წლიურ|daily|day|hour|week|annual|annum|year|USD|EUR|\$|€|%|ბონუს|bonus|\d[,.]\d{1,2}(?!\d)/i.test(
+    /შეთანხმებით|negotiable|ცვლაში|ცვლაზე|დღი|დღე|საათ|კვირ|წლიურ|წელიწად|daily|day|hour|week|annual|annum|year|USD|EUR|\$|€|%|ბონუს|bonus|\d[,.]\d{1,2}(?!\d)/i.test(
       line,
     )
   )
@@ -90,7 +124,13 @@ function salary(
     (to && (+to < +from || +to > 1000000))
   )
     return null;
-  return { salaryFrom: from, ...(to ? { salaryTo: to } : {}) };
+  return {
+    salaryFrom: from,
+    ...(to ? { salaryTo: to } : {}),
+    ...(/დარიცხული|დაბეგვრამდე|\bgross\b/i.test(line)
+      ? { salaryBasis: 'დარიცხული' as const }
+      : {}),
+  };
 }
 export function parseJobText(text: string): JobImportFields {
   const source = text
@@ -105,28 +145,56 @@ export function parseJobText(text: string): JobImportFields {
     .split('\n')
     .map((line) => line.replace(/[\t ]+/g, ' ').trim());
   const fields: JobImportFields = {};
-  let titleIndex = lines.findIndex((line) => titleLabel.test(line));
-  if (titleIndex >= 0) {
-    const title = titleLabel.exec(lines[titleIndex])![1];
-    if (title.length <= 120) fields.title = title;
-    else titleIndex = -1;
-  } else {
+  let titleIndex = -1;
+  const validTitle = (title: string) =>
+    title.length >= 3 &&
+    title.length <= 120 &&
+    title.split(/\s+/).length <= 10 &&
+    !/[:.!?@\d]|კომპანია|შპს|\b(?:company|llc|ltd|inc)\b|ვაკანსიები|^ვაკანსია$|^vacanc(?:y|ies)$|^we are|^ჩვენ|თანამშრომელ|ჩვენს|გუნდში|ვეძებთ|აცხადებს|მდებარეობა|განაკვეთი|სამუშაო გრაფიკი|საჭიროა|მუშაობა|არის|\b(?:is|are|must|should)\b/i.test(
+      title,
+    ) &&
+    !sections.some(([pattern]) => pattern.test(title));
+  // Explicit role labels beat banners and introductory recruitment sentences.
+  for (const [index, line] of lines.entries()) {
+    const title = titleLabel.exec(line)?.[1]?.trim();
+    if (title && validTitle(title)) {
+      fields.title = title;
+      titleIndex = index;
+      break;
+    }
+  }
+  if (!fields.title) {
+    for (const [index, line] of lines.entries()) {
+      const announced = /აცხადებს ვაკანსიას\s+(.+?)\s+პოზიციაზე[.!]?$/i.exec(
+        line,
+      )?.[1];
+      const wanted = /^(?:ჩვენ )?ვეძებთ\s+(.+?)[.!]?$/i.exec(line)?.[1];
+      const hiring = /^.+?\bis hiring\s+(.+?)[.!]?$/i.exec(line)?.[1];
+      const title =
+        announced?.replace(/-ის$/, '').replace(/ის$/, 'ი') ??
+        wanted?.replace(/-ს$/, '').replace(/([\p{L}])ს$/u, '$1ი') ??
+        hiring;
+      if (title && validTitle(title)) {
+        fields.title = title;
+        // A whole sentence stays in the description; only a bare heading is dropped.
+        break;
+      }
+    }
+  }
+  if (!fields.title) {
     const first = lines.findIndex(Boolean);
     const heading = lines[first] ?? '';
-    if (
-      heading.length >= 4 &&
-      heading.length <= 120 &&
-      heading.split(/\s+/).length <= 10 &&
-      !/[:.!?@]|კომპანია|შპს|სს |company|\b(?:llc|ltd|inc)\b|ვაკანსიები|^ვაკანსია$|^vacanc(?:y|ies)$|^we are|^ჩვენ/i.test(
-        heading,
-      ) &&
-      !sections.some(([r]) => r.test(heading)) &&
-      !/\d/.test(heading)
-    ) {
+    if (validTitle(heading)) {
       fields.title = heading;
       titleIndex = first;
     }
   }
+  const locationLines = lines.filter((line) =>
+    /^(?:მდებარეობა|ადგილმდებარეობა|ლოკაცია|სამუშაო ადგილი|location)\s*[:–—-]/i.test(
+      line,
+    ),
+  );
+  const locationText = locationLines.length ? locationLines.join('\n') : source;
   const matchedCities = cities.filter((city, index) =>
     new RegExp(
       '(?:^|[^\\p{L}])(?:' +
@@ -135,16 +203,28 @@ export function parseJobText(text: string): JobImportFields {
         englishCities[index] +
         ')(?=$|[^\\p{L}])',
       'iu',
-    ).test(source),
+    ).test(locationText),
   );
   if (matchedCities.length === 1) fields.city = matchedCities[0];
-  if (/ჰიბრიდულ|\bhybrid\b/i.test(source)) fields.mode = 'ჰიბრიდული';
-  else if (
-    /დისტანციურ|\bremote\b/i.test(source) &&
-    !/not remote|არ არის დისტანციური/i.test(source)
-  )
+  const positiveModes = source
+    .replace(
+      /(?:არ არის|არ იქნება|არ ვმუშაობთ|not|non[- ]?)\s*(?:დისტანციურ[\p{L}]*|remote|ჰიბრიდულ[\p{L}]*|hybrid|ადგილზე|ოფისიდან|on[- ]site)/giu,
+      '',
+    )
+    .replace(
+      /(?:დისტანციურ[\p{L}]*|remote|ჰიბრიდულ[\p{L}]*|hybrid)\s+(?:არ არის|არ იქნება|is not available)/giu,
+      '',
+    );
+  if (/ჰიბრიდულ|\bhybrid\b/i.test(positiveModes)) fields.mode = 'ჰიბრიდული';
+  else if (/დისტანციურ|\bremote\b|სახლიდან მუშაობა/i.test(positiveModes))
     fields.mode = 'დისტანციური';
-  if (/ნახევარ(?:ი)? განაკვეთ|\bpart[ -]time\b|\bhalf[ -]time\b/i.test(source))
+  else if (/ოფისიდან|ადგილზე|\bon[- ]site\b/i.test(positiveModes))
+    fields.mode = 'ადგილზე';
+  if (
+    /ნახევარ(?:ი)? განაკვეთ|არასრული (?:განაკვეთი|სამუშაო დღე)|\bpart[ -]time\b|\bhalf[ -]time\b/i.test(
+      source,
+    )
+  )
     fields.employmentType = 'ნახევარი განაკვეთი';
   const salaryLines = lines
     .map((line, index) => {
@@ -159,13 +239,18 @@ export function parseJobText(text: string): JobImportFields {
       return { line, index, value: salary(context) };
     })
     .filter((item) => item.value);
-  if (salaryLines.length === 1) Object.assign(fields, salaryLines[0].value);
+  // The shared scraper helper also counts labelled unsafe/negotiable offers.
+  const payCandidates = payExcerpts(source);
+  if (salaryLines.length === 1 && payCandidates.length <= 1)
+    Object.assign(fields, salaryLines[0].value);
   const body = lines
     .filter(
       (line, index) =>
         index !== titleIndex &&
+        !(fields.title && line.trim().toLowerCase() === fields.title.trim().toLowerCase()) &&
         !boilerplate.test(line) &&
         !(
+          fields.salaryFrom &&
           salaryLines.length === 1 &&
           index === salaryLines[0].index &&
           (salaryLabel.test(line) || /^[\d\s₾–—-]+(?:ლარი|GEL|₾)/i.test(line))
@@ -183,6 +268,7 @@ export function parseJobText(text: string): JobImportFields {
     .trim()
     .slice(0, 20000);
   if ((body.match(/\p{L}/gu)?.length ?? 0) >= 20) fields.description = body;
+  Object.assign(fields, contacts(lines, source));
   return fields;
 }
 export function mergeJobImport(
@@ -200,10 +286,28 @@ export function mergeJobImport(
   for (const key of importKeys) {
     const value = imported[key];
     if (typeof value !== 'string' || !value.trim()) continue;
+    if (
+      key === 'salaryBasis' &&
+      !filled.includes('salaryFrom') &&
+      !filled.includes('salaryTo')
+    ) {
+      kept.push(key);
+      continue;
+    }
     if (!form[key]?.trim() || form[key] === defaults[key]) {
       Object.assign(next, { [key]: value });
       filled.push(key);
     } else kept.push(key);
   }
   return { form: next, filled, kept };
+}
+
+/** Avoid treating a short edit or a lone heading as a pasted vacancy. */
+export function looksLikeVacancyText(text: string): boolean {
+  const letters = text.match(/\p{L}/gu)?.length ?? 0;
+  return (
+    letters >= 200 ||
+    (letters >= 120 &&
+      text.split(/\r?\n/).filter((line) => line.trim()).length >= 4)
+  );
 }

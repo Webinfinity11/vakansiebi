@@ -26,6 +26,7 @@ import type { Vacancy } from "../types";
 import { vacancySchema } from "../vacancy-schema";
 export { vacancySchema } from "../vacancy-schema";
 import { companyKey } from "../company-key";
+import { companyBrandingRevision, jobCompanyProfiles } from "./company-job-branding";
 import { contactAsCompany } from "../employer-identity";
 import { sourceHealth } from "../job-intelligence";
 import {
@@ -63,8 +64,13 @@ export async function publicJobs(
   preview = false,
   options: PublicJobsOptions = {},
 ) {
+  const revision = await companyBrandingRevision();
+  const brandingKey = (params: URLSearchParams) => {
+    const key = publicJobsCacheKey(params, preview, options.jobIds);
+    return key === null ? null : `${revision}:${key}`;
+  };
   const answer = await publicResponses.get(
-    publicJobsCacheKey(params, preview, options.jobIds),
+    brandingKey(params),
     () => loadPublicJobs(params, preview, options),
   );
   // A named profession must keep the same title matches as its landing census.
@@ -79,7 +85,7 @@ export async function publicJobs(
     return answer;
   const again = (changed: URLSearchParams) =>
     publicResponses.get(
-      publicJobsCacheKey(changed, preview, options.jobIds),
+      brandingKey(changed),
       () => loadPublicJobs(changed, preview, options),
     );
   /* A misspelt word is worth more than an empty page with a button on it: the
@@ -296,16 +302,8 @@ async function loadPublicJobs(
   const pageRows: QueryResultRow[] = measured.page_rows || [];
   for (const r of pageRows) r.created_at = new Date(r.created_at);
   const rows = pageRows;
-  const companyKeys = [
-    ...new Set(rows.map((r) => companyKey(r.published.company || ""))),
-  ];
-  const [profilesResult, sharedLogos, employers] = await Promise.all([
-    companyKeys.length
-      ? publicRead(
-          `SELECT company_key,logo_url${summary ? "" : ",website,description,benefits,why_us"} FROM company_profiles WHERE company_key=ANY($1::text[])`,
-          [companyKeys],
-        )
-      : Promise.resolve({ rows: [] }),
+  const [companyProfiles, sharedLogos, employers] = await Promise.all([
+    jobCompanyProfiles(rows.map((r) => ({ id: r.id, company: r.published.company || "" })), summary),
     resolveCompanyLogos(
       rows
         .filter((r) => !r.published.logoUrl)
@@ -315,9 +313,6 @@ async function loadPublicJobs(
       ? Promise.resolve(null)
       : (summary ? employerPagesIfReady() : employerPages()).catch(() => null),
   ]);
-  const companyProfiles = new Map(
-    profilesResult.rows.map((p) => [p.company_key, p]),
-  );
   return {
     jobs: rows.map((r) => ({
       description: "",
@@ -379,9 +374,9 @@ async function loadPublicJobs(
           health: sourceHealth(s.checkedAt, s.error),
         }),
       ),
-      ...(companyProfiles.get(companyKey(r.published.company || ""))?.logo_url
+      ...(companyProfiles.get(r.id)?.logo_url
         ? {
-            logoUrl: companyProfiles.get(companyKey(r.published.company || ""))!
+            logoUrl: companyProfiles.get(r.id)!
               .logo_url,
           }
         : {}),
@@ -389,16 +384,16 @@ async function loadPublicJobs(
         ? {
             companyProfile: {
               website:
-                companyProfiles.get(companyKey(r.published.company || ""))
+                companyProfiles.get(r.id)
                   ?.website || "",
               description:
-                companyProfiles.get(companyKey(r.published.company || ""))
+                companyProfiles.get(r.id)
                   ?.description || "",
               benefits:
-                companyProfiles.get(companyKey(r.published.company || ""))
+                companyProfiles.get(r.id)
                   ?.benefits || [],
               whyUs:
-                companyProfiles.get(companyKey(r.published.company || ""))
+                companyProfiles.get(r.id)
                   ?.why_us || "",
             },
           }

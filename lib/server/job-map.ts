@@ -1,4 +1,5 @@
 import { db } from './db';
+import { jobCompanyProfiles } from './company-job-branding';
 import { workplaceDistricts } from '../map-address';
 
 export type MapVacancy = {
@@ -47,8 +48,10 @@ export async function mapVacancies(): Promise<MapVacancy[]> {
      ORDER BY premium DESC, j.published_at DESC NULLS LAST
      LIMIT 5000`,
   );
+  const profiles = await jobCompanyProfiles(rows);
   return rows.map(({ addressText, ...vacancy }) => ({
     ...vacancy,
+    logoUrl: profiles.get(vacancy.id)?.logo_url || vacancy.logoUrl,
     placeDistricts: workplaceDistricts(addressText, vacancy.city),
   }));
 }
