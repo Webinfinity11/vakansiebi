@@ -605,9 +605,12 @@ export function searchPlan(
   // Members of every group present in the result. A lookup by id must also see
   // duplicates outside its restricted set; the indexed import fingerprint (the
   // same three fields, taken from the draft) narrows that scan to candidates.
-  // Membership needs no filter answers, only the key.
+  // Membership needs no filter answers, only the key. Two indexed lookups joined by
+  // UNION: an OR between them made the planner scan jobs and source_items (37 ms
+  // instead of 0.6 ms per vacancy page on production, 2026-11-27).
+  // The duplicate-key branch repeats status='published' so the partial index applies.
   const members = params.has('ids')
-    ? `SELECT j.id,${groupKey} AS group_key,j.p_title,${posted} AS posted_at FROM (${extraction('j', false)} FROM jobs j ${scalarRecord('j')} WHERE ${visible} AND (j.fingerprint IN (SELECT fingerprint FROM searchable) OR j.search_duplicate_key IN (SELECT p_duplicate FROM searchable)) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
+    ? `SELECT j.id,${groupKey} AS group_key,j.p_title,${posted} AS posted_at FROM (${extraction('j', false)} FROM jobs j ${scalarRecord('j')} WHERE ${visible} AND j.id IN (SELECT f.id FROM jobs f WHERE f.fingerprint IN (SELECT fingerprint FROM searchable) UNION SELECT d.id FROM jobs d WHERE d.status='published' AND d.search_duplicate_key IN (SELECT p_duplicate FROM searchable)) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
     : `SELECT j.id,j.group_key,j.p_title,${posted} AS posted_at FROM searchable j`;
   /* Candidates first, so the rest of the plan only asks whether a row is in that
      set. The visibility a candidate needs is its own — retired sources, deadlines
