@@ -611,7 +611,7 @@ export function CandidatesView({
                 <div className="cc-empty">
                   {stage === 'all'
                     ? 'ამ ფილტრით კანდიდატი არ არის.'
-                    : `„${stageLabels[stage]}“ ეტაპზე ჯერ არავინაა.`}
+                    : `„${stageLabels[stage]}“ სვეტში ჯერ არავინაა.`}
                   {clearFiltersButton}
                 </div>
               ) : (
@@ -1617,7 +1617,6 @@ function Board({
                     <CandidateSignals candidate={c} />
                     <span className="cc-card-foot">
                       <span className="cc-source">{candidateSourceLabel(c.source)}</span>
-                      <time dateTime={c.appliedAt}>{timeAgo(c.appliedAt)}</time>
                       {c.rating && (
                         <span className="cc-mini-rating">
                           <Star size={11} /> {c.rating}

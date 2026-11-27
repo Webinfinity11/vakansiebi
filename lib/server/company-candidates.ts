@@ -325,11 +325,29 @@ export async function companyCvBase(
   return rows.map(candidate);
 }
 
-/** Preserve the ordinary candidates payload; trim only the CV base list. */
-export async function companyTalentList(company: CompanyIdentity, filters: Filters, offset = 0) {
+// Reading the whole CV base moves ~1 MB from the database, so typing, filtering
+// and "show more" reuse it for a minute; a change by this company clears it.
+const talentTtl = 60_000;
+const talentRows = new Map<string, { at: number; rows: Promise<Candidate[]> }>();
+export function forgetCompanyTalent(companyKey: string) {
+  talentRows.delete(companyKey);
+}
+async function loadTalentRows(company: CompanyIdentity) {
   const [own, base] = await Promise.all([companyCandidates(company), companyCvBase(company)]);
   const ids = new Set(own.map(c => c.entry));
-  return talentResults([...own, ...base.filter(c => !ids.has(c.entry))], filters, Date.now(), offset);
+  return [...own, ...base.filter(c => !ids.has(c.entry))];
+}
+/** Preserve the ordinary candidates payload; trim only the CV base list. */
+export async function companyTalentList(company: CompanyIdentity, filters: Filters, offset = 0, fresh = false) {
+  const now = Date.now();
+  let cached = talentRows.get(company.companyKey);
+  if (fresh || !cached || now - cached.at > talentTtl) {
+    for (const [key, value] of talentRows) if (now - value.at > talentTtl) talentRows.delete(key);
+    cached = { at: now, rows: loadTalentRows(company) };
+    talentRows.set(company.companyKey, cached);
+    cached.rows.catch(() => { if (talentRows.get(company.companyKey) === cached) talentRows.delete(company.companyKey); });
+  }
+  return talentResults(await cached.rows, filters, now, offset);
 }
 export async function companyCvBaseList(company: CompanyIdentity, query = '', options?: Parameters<typeof companyCvBase>[1]) {
   const rows = await companyCvBase(company, options);
@@ -394,7 +412,7 @@ async function recordBaseView(company: CompanyIdentity, entry: string, kind: 'co
   });
 }
 /* Shows a CV base person's phone and email to the company, and records that it looked. */
-export async function revealCandidate(company: CompanyIdentity, entry: string) {
+async function revealCandidateNow(company: CompanyIdentity, entry: string) {
   const row = await ownedRow(company, entry);
   if (row.source !== 'base') return candidate(row);
   await recordBaseView(company, row.entry, 'contact');
@@ -507,7 +525,7 @@ function upsertSql(column: string, value: string) {
     .replace('%SET%', `${column}=EXCLUDED.${column}`);
 }
 
-export async function changeCandidate(
+async function changeCandidateNow(
   company: CompanyIdentity,
   input: unknown,
 ) {
@@ -805,7 +823,7 @@ function looksLike(bytes: Buffer, ext: string) {
 }
 
 /* A CV the company brings from elsewhere. Same file twice in one company is one upload. */
-export async function uploadCandidate(
+async function uploadCandidateNow(
   company: Pick<CompanyIdentity, 'companyKey'>,
   form: FormData,
   context?: { source: 'cv_box'; clientHash: string },
@@ -1128,4 +1146,15 @@ export async function ensureCvProfiles(
   );
   activeBackfills.set(company.companyKey, pending);
   return pending;
+}
+
+// Each change clears the cached CV base once it is written, so the next list read shows it.
+export async function revealCandidate(...args: Parameters<typeof revealCandidateNow>) {
+  try { return await revealCandidateNow(...args); } finally { forgetCompanyTalent(args[0].companyKey); }
+}
+export async function changeCandidate(...args: Parameters<typeof changeCandidateNow>) {
+  try { return await changeCandidateNow(...args); } finally { forgetCompanyTalent(args[0].companyKey); }
+}
+export async function uploadCandidate(...args: Parameters<typeof uploadCandidateNow>) {
+  try { return await uploadCandidateNow(...args); } finally { forgetCompanyTalent(args[0].companyKey); }
 }

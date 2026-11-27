@@ -2556,7 +2556,9 @@ details[open] > summary > svg.disclosure-chevron {
   display: inline-flex;
   margin: 0;
 }
-.vacancy-page .detail-company > :first-child {
+/* Only the vacancy page: the company page shares .vacancy-page, where this
+   stretched the logo across the header. */
+.vacancy-page .vacancy-overview > .detail-company > :first-child {
   flex: 1 1 auto;
   min-width: 0;
 }

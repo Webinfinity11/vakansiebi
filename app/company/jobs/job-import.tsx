@@ -92,6 +92,8 @@ export function useJobImport({ form, defaults, noteKey, disabled = false, onAppl
       const cleaned = fields.description || text.slice(0, 20000);
       lastText.current = cleaned;
       apply(fields, c.form, cleaned, { ...c.form, description: plain });
+      // Show the start of the text, not its last line.
+      requestAnimationFrame(() => { el.scrollTop = 0; el.setSelectionRange(0, 0); });
     } else {
       // Let the native paste update the textarea, then merge against its latest form.
       delete fields.description;
@@ -158,10 +160,31 @@ export function JobImport({ controller, endpoint = '/api/company/job-import', di
       <span className={subtle}>{t('PDF, DOCX, ODT ან TXT')}</span>
     </div>
     {error && <p role="alert" className={publicSkin ? 'post-field-error' : 'jw-error'}>{t(error)}</p>}
-    {controller.note && <p className={subtle} aria-live="polite">{controller.filled.length || controller.extra.length ? t('შეივსო ავტომატურად: {0}. გადახედეთ გაგზავნამდე.', [[...controller.extra.map(label => t(label)), ...controller.filled.map(key => t(labels[key] || key))].join(', ')]) : t('შევსებული ველები უცვლელად დარჩა.')}</p>}
-    {(controller.replacement || controller.undo) && <div className={publicSkin ? 'post-import-actions' : 'ji-actions'}>
-      {controller.replacement && <button type="button" className={button} disabled={disabled || busy} onClick={controller.replaceDescription}>{t('აღწერის ჩანაცვლება ფაილის ტექსტით')}</button>}
-      {controller.undo && <button type="button" className={button} disabled={disabled || busy} onClick={controller.undoImport}>{t('დაბრუნება')}</button>}
-    </div>}
   </section>;
+}
+
+/** Under the text field: what was filled, what still needs typing, and the way back. */
+export function ImportStatus({ controller, form, disabled, t = identity, skin = 'company' }: {
+  controller: ReturnType<typeof useJobImport>; form: CompanyJobForm; disabled?: boolean; t?: JobTranslator; skin?: 'company' | 'public';
+}) {
+  if (!controller.note && !controller.replacement && !controller.undo) return null;
+  const publicSkin = skin === 'public';
+  const button = publicSkin ? 'post-secondary' : 'cp-btn cp-btn--secondary';
+  const shown = [...new Set([
+    ...controller.extra,
+    ...controller.filled.filter(key => key !== 'description' && key !== 'salaryBasis')
+      .map(key => key === 'salaryFrom' || key === 'salaryTo' ? 'ხელფასი' : labels[key] || key),
+  ])];
+  const missing = (['title', 'city'] as const).filter(key => !String(form[key] ?? '').trim()).map(key => labels[key]!);
+  return <div className={publicSkin ? 'post-import-status' : 'ji-status'} aria-live="polite">
+    {controller.note && <p>
+      {shown.length ? t('შეივსო: {0}.', [shown.map(label => t(label)).join(', ')]) : t('ახალი არაფერი შეივსო — შევსებული ველები უცვლელია.')}
+      {missing.length > 0 && <> <b>{t('შეავსეთ ხელით: {0}.', [missing.map(label => t(label)).join(', ')])}</b></>}
+      {controller.undo && <> <button type="button" className="import-undo" disabled={disabled} onClick={controller.undoImport}>{t('გაუქმება')}</button></>}
+    </p>}
+    <div className={publicSkin ? 'post-import-actions' : 'ji-actions'}>
+      {controller.replacement && <button type="button" className={button} disabled={disabled} onClick={controller.replaceDescription}>{t('აღწერის ჩანაცვლება ფაილის ტექსტით')}</button>}
+      {controller.undo && !controller.note && <button type="button" className={button} disabled={disabled} onClick={controller.undoImport}>{t('გაუქმება')}</button>}
+    </div>
+  </div>;
 }

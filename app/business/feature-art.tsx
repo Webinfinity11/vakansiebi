@@ -20,8 +20,8 @@ export type FeatureArtKind =
 
 const stages = [
   { stage: 'new', Icon: Plus, label: 'ახალი', count: 3 },
-  { stage: 'interview', Icon: MessageSquareText, label: 'გასაუბრება', count: 2 },
-  { stage: 'offer', Icon: BriefcaseBusiness, label: 'შეთავაზება', count: 1 },
+  { stage: 'interview', Icon: MessageSquareText, label: 'გასაუბრებაზე', count: 2 },
+  { stage: 'offer', Icon: BriefcaseBusiness, label: 'შეთავაზებული', count: 1 },
 ];
 const team = [
   { initials: 'ნ.ბ.', Icon: ShieldCheck, role: 'მფლობელი', can: 'ყველაფერი' },

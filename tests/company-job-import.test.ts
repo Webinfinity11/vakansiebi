@@ -253,8 +253,13 @@ const realistic = [
     expected: { salaryFrom: undefined },
   },
   {
-    name: 'bonus and percentage excluded',
+    name: 'a bonus on top keeps the base amount',
     text: 'პოზიცია: აგენტი\nხელფასი: 1500 ლარი + ბონუსი 10%\nმოთხოვნები:\nგაყიდვების გამოცდილება და გამართული კომუნიკაცია',
+    expected: { salaryFrom: '1500' },
+  },
+  {
+    name: 'a bonus alone is not a salary',
+    text: 'პოზიცია: აგენტი\nბონუსი: 500 ლარი\nმოთხოვნები:\nგაყიდვების გამოცდილება და გამართული კომუნიკაცია',
     expected: { salaryFrom: undefined },
   },
   {

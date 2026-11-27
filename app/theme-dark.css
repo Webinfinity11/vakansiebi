@@ -2718,6 +2718,13 @@
 :root[data-theme='dark'] .post-vacancy-fields .post-import {
   border: 0;
 }
+:root[data-theme='dark'] .post-import-status .import-undo {
+  border: 0;
+  background: none;
+}
+:root[data-theme='dark'] .post-preview .jw-preview-card > .post-secondary {
+  border-color: transparent;
+}
 
 /* ── from app/invoices.css ── */
 :root[data-theme='dark'] .invoice-page {

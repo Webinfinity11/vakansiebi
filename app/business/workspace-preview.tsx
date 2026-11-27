@@ -32,7 +32,7 @@ const columns: {
   {
     stage: 'interview',
     Icon: MessageSquareText,
-    label: 'გასაუბრება',
+    label: 'გასაუბრებაზე',
     cards: [
       { initials: 'დ.ხ.', role: 'ბუღალტერი', meta: '★ 4', tone: 0 },
       { initials: 'ე.ქ.', role: 'მძღოლი', meta: '★ 5', tone: 2 },
@@ -41,7 +41,7 @@ const columns: {
   {
     stage: 'offer',
     Icon: BriefcaseBusiness,
-    label: 'შეთავაზება',
+    label: 'შეთავაზებული',
     cards: [{ initials: 'ს.ა.', role: 'ოპერატორი', meta: '★ 5', tone: 1 }],
   },
 ];

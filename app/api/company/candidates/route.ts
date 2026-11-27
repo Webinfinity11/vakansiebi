@@ -7,6 +7,7 @@ import {
   companyCandidates,
   companyCvBaseList,
   companyTalentList,
+  forgetCompanyTalent,
   companyCandidateDetail,
   revealCandidate,
 } from '@/lib/server/company-candidates';
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
     }
     return Response.json(
       params.has('detail') ? await companyCandidateDetail(company, params.get('detail')!)
-      : params.get('talent') === '1' ? await companyTalentList(company, normalizeFilters(filters), Math.max(0, Math.floor(Number(params.get('offset')) || 0)))
+      : params.get('talent') === '1' ? await companyTalentList(company, normalizeFilters(filters), Math.max(0, Math.floor(Number(params.get('offset')) || 0)), params.get('fresh') === '1')
       : entry
         ? await candidateNotes(company, entry)
         : params.get('base') === '1'

@@ -123,3 +123,16 @@
 .ct-upload-list span { font-size: 13px; }
 .ct-upload-list button { justify-self: start; }
 .ct-upload .ct-drop { min-width: 0; }
+
+/* While a search runs the current list stays in place, only dimmed: nothing jumps. */
+.ct-list[data-busy] { opacity: .55; transition: opacity .15s; }
+@media (max-width: 760px) {
+  /* Count, saved and sort share one line instead of two. */
+  .ct-result .ct-saved-actions { order: 0; flex-basis: auto; margin-left: auto; }
+  .ct-layout--horizontal .ct-result .ct-sort { margin-left: 0; }
+  /* Avatar beside the text in a grid, so the date stays inside the card. */
+  .ct-layout .ct-card { display: grid; grid-template-columns: 40px minmax(0,1fr); gap: 12px; padding: 16px; }
+  .ct-layout .ct-card > .cp-person-avatar { float: none; margin: 0; width: 40px; height: 40px; }
+}
+/* An unread CV is a review note, not a warning colour. */
+.ct-origin { background: var(--cp-hover); color: var(--cp-ink-2); }

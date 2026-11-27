@@ -726,3 +726,25 @@
 .post-job-shell .post-heading-chips .post-secondary { width: auto; flex: 0 1 auto; padding-inline: var(--ds-space-2); font-size: var(--ds-text-xs); }
 /* The file button sits plainly above the text field; no frame around one button. */
 .post-vacancy-fields .post-import { padding: 0; border: 0; border-radius: 0; }
+/* Under the text field: what was filled and what still needs typing. */
+.post-import-status { display: grid; gap: var(--ds-space-2); margin-top: calc(var(--ds-space-2) * -1); }
+.post-import-status p { margin: 0; color: var(--ds-ink-2); font-size: var(--ds-text-sm); line-height: 1.6; }
+.post-import-status b { color: var(--ds-ink); font-weight: 600; }
+.post-import-status .post-import-actions:empty { display: none; }
+.post-import-status .import-undo { padding: 0; border: 0; background: none; color: var(--ds-accent); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.post-import-status .import-undo:disabled { opacity: .5; cursor: default; }
+
+/* Live candidate view beside the form, the same card the company form shows. */
+.post-preview { display: none; min-width: 0; color: var(--ds-ink);
+  --cp-line: var(--ds-line); --cp-ink: var(--ds-ink); --cp-ink-2: var(--ds-ink-2); --cp-ink-3: var(--ds-ink-3);
+  --cp-side: var(--ds-surface-muted); --cp-ok: var(--ds-success);
+  --cp-surface: var(--ds-surface); --cp-radius: var(--ds-radius-xl); --cp-shadow: 0 0 0 1px var(--ds-line); }
+.post-preview .cp-subtle { color: var(--ds-ink-3); font-size: var(--ds-text-sm); }
+.post-preview .jw-preview-card { border-radius: var(--ds-radius-xl); padding: var(--jobx-space-24px); }
+.post-preview .jw-preview-card > .post-secondary { width: 100%; justify-content: center; opacity: 1; color: var(--ds-ink-2); background: var(--ds-surface-muted); border-color: transparent; }
+.post-preview .jw-preview-label { margin: 0 0 var(--ds-space-2); font-size: var(--ds-text-xs); color: var(--ds-ink-3); }
+@media (min-width: 1100px) {
+  .post-job-shell .post-job-main { max-width: 1240px; }
+  .post-job-shell .post-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: var(--jobx-space-32px); }
+  .post-preview { display: block; position: sticky; top: 88px; margin-top: var(--jobx-space-24px); max-height: calc(100dvh - 104px); overflow-y: auto; }
+}

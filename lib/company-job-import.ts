@@ -23,7 +23,7 @@ const emailPattern = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/u;
 const companyLabel =
   /^(?:კომპანია|დამსაქმებელი|ორგანიზაცია|company|employer)\s*[:–—-]\s*(.{2,80})$/i;
 const legalName =
-  /(?:^|[\s(])(?:შპს|სს|ააიპ|ი\/მ|LLC|JSC|Ltd)\.?\s*[„"“«']\s*([^"“”»'\n]{2,60}?)\s*[“"”»']/iu;
+  /(?:^|[\s(])(?:შპს|სს|ააიპ|ი\/მ|LLC|JSC|Ltd)\.?\s*(?:,,|[„"“«'])\s*([^"“”»'\n]{2,60}?)\s*(?:''|[“"”»'])/iu;
 /** The employer's name and the address CVs go to, when the text states them. */
 function contacts(lines: string[], source: string): Pick<JobImportFields, 'company' | 'email'> {
   const found: Pick<JobImportFields, 'company' | 'email'> = {};
@@ -79,13 +79,21 @@ const sections: [RegExp, string][] = [
 ];
 const boilerplate =
   /^(?:საკონტაქტო(?: ინფორმაცია)?|ელფოსტა|ტელეფონი|განაცხადების (?:მიღების )?ბოლო ვადა|ბოლო ვადა|contact|e-?mail|phone|application deadline|deadline)\s*:/i;
-const salaryLabel = /^(?:ხელფასი|ანაზღაურება|salary|pay)\s*:/i;
+const salaryLabel = /^(?:[•●▪◦*–—-]\s*)?(?:(?:ფიქსირებული|საწყისი|ძირითადი|საბაზო)\s+)?(?:ხელფასი|ანაზღაურება|salary|pay|base salary)\s*:/i;
 function salary(
   line: string,
 ): Pick<JobImportFields, 'salaryFrom' | 'salaryTo' | 'salaryBasis'> | null {
-  line = line.replace(/(\d),(?=\d{3}(?:\D|$))/g, '$1');
+  line = line
+    .replace(/(\d),(?=\d{3}(?:\D|$))/g, '$1')
+    // "2500gel", "GEL 3000": the currency is read wherever it stands.
+    .replace(/(\d)\s*gel(?![a-z])/gi, '$1 GEL')
+    .replace(/(?<![a-z])GEL\s*(\d[\d ]*\d|\d)(?!\s*GEL)/gi, '$1 GEL')
+    .replace(/(\d[\d ]*)(?=\s+(?:net|gross)\b)/gi, '$1 GEL')
+    // A bonus or tips added on top do not change the base amount.
+    .replace(/\(?\s*\+\s*(?:ბონუს[\p{L}]*|პრემი[\p{L}]*|bonus(?:es)?|tips)[^)\n]*\)?/giu, ' ')
+    .replace(/\s+და\s+(?:ბონუს[\p{L}]*|პრემი[\p{L}]*)[^\n]*$/iu, ' ');
   if (
-    !/(?:ლარი|ლარიდან|ლარამდე|₾|\bGEL\b)/i.test(line) ||
+    !/(?:ლარი|ლარიდან|ლარამდე|₾|GEL(?![a-z]))/i.test(line) ||
     /შეთანხმებით|negotiable|ცვლაში|ცვლაზე|დღი|დღე|საათ|კვირ|წლიურ|წელიწად|daily|day|hour|week|annual|annum|year|USD|EUR|\$|€|%|ბონუს|bonus|\d[,.]\d{1,2}(?!\d)/i.test(
       line,
     )
@@ -146,13 +154,16 @@ export function parseJobText(text: string): JobImportFields {
     .map((line) => line.replace(/[\t ]+/g, ' ').trim());
   const fields: JobImportFields = {};
   let titleIndex = -1;
+  // Whole words only: "ბარისტა" and "დანადგარის" contain "არის" but are titles.
+  const sentenceWord =
+    /(?:^|[^\p{L}])(?:კომპანია|შპს|ვაკანსიები|ვეძებთ|ეძებს|ვაცხადებთ|აცხადებს|არის|გუნდში|ჩვენ|ჩვენს|საჭიროა|company|llc|ltd|inc|we|is|are|must|should|hiring)(?=$|[^\p{L}])/iu;
   const validTitle = (title: string) =>
     title.length >= 3 &&
     title.length <= 120 &&
-    title.split(/\s+/).length <= 10 &&
-    !/[:.!?@\d]|კომპანია|შპს|\b(?:company|llc|ltd|inc)\b|ვაკანსიები|^ვაკანსია$|^vacanc(?:y|ies)$|^we are|^ჩვენ|თანამშრომელ|ჩვენს|გუნდში|ვეძებთ|აცხადებს|მდებარეობა|განაკვეთი|სამუშაო გრაფიკი|საჭიროა|მუშაობა|არის|\b(?:is|are|must|should)\b/i.test(
-      title,
-    ) &&
+    title.split(/\s+/).length <= 12 &&
+    !/[:@]|[.!?]$|^ვაკანსია!?$|^vacanc(?:y|ies)$/i.test(title) &&
+    !sentenceWord.test(title) &&
+    !/^(?:მდებარეობა|ადგილმდებარეობა|სამუშაო (?:გრაფიკი|საათები|ადგილი)|განაკვეთი|ხელფასი|ანაზღაურება)/i.test(title) &&
     !sections.some(([pattern]) => pattern.test(title));
   // Explicit role labels beat banners and introductory recruitment sentences.
   for (const [index, line] of lines.entries()) {
@@ -161,6 +172,18 @@ export function parseJobText(text: string): JobImportFields {
       fields.title = title;
       titleIndex = index;
       break;
+    }
+  }
+  // A pasted vacancy usually starts with its title on a line of its own.
+  if (!fields.title) {
+    const first = lines.findIndex(Boolean);
+    const heading = lines[first] ?? '';
+    if (validTitle(heading)) {
+      // "SALES CONSULTANT" reads as "Sales Consultant".
+      fields.title = /^[A-Z0-9 &/-]{4,}$/.test(heading)
+        ? heading.toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+        : heading;
+      titleIndex = first;
     }
   }
   if (!fields.title) {
@@ -179,14 +202,6 @@ export function parseJobText(text: string): JobImportFields {
         // A whole sentence stays in the description; only a bare heading is dropped.
         break;
       }
-    }
-  }
-  if (!fields.title) {
-    const first = lines.findIndex(Boolean);
-    const heading = lines[first] ?? '';
-    if (validTitle(heading)) {
-      fields.title = heading;
-      titleIndex = first;
     }
   }
   const locationLines = lines.filter((line) =>
@@ -241,8 +256,13 @@ export function parseJobText(text: string): JobImportFields {
     .filter((item) => item.value);
   // The shared scraper helper also counts labelled unsafe/negotiable offers.
   const payCandidates = payExcerpts(source);
+  // Several amounts: only a single "ხელფასი:" line, with no other pay label beside it, decides.
+  const labelled = lines.filter((line) => salaryLabel.test(line)).length === 1
+    ? salaryLines.filter((item) => salaryLabel.test(item.line))
+    : [];
   if (salaryLines.length === 1 && payCandidates.length <= 1)
     Object.assign(fields, salaryLines[0].value);
+  else if (labelled.length === 1) Object.assign(fields, labelled[0].value);
   const body = lines
     .filter(
       (line, index) =>
@@ -251,8 +271,7 @@ export function parseJobText(text: string): JobImportFields {
         !boilerplate.test(line) &&
         !(
           fields.salaryFrom &&
-          salaryLines.length === 1 &&
-          index === salaryLines[0].index &&
+          index === (salaryLines.length === 1 ? salaryLines[0] : labelled[0])?.index &&
           (salaryLabel.test(line) || /^[\d\s₾–—-]+(?:ლარი|GEL|₾)/i.test(line))
         ),
     )

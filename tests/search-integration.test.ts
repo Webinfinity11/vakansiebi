@@ -152,6 +152,8 @@ void test(
         salaryMin: null,
         currency: '',
         salaryPeriod: '',
+        // Another shop's ad with the same title: only identical text is one posting.
+        description: 'A different shop needs someone to run its storeroom.',
       },
     ];
     const listingIds = listing.map(() => randomUUID());
@@ -384,7 +386,7 @@ void test(
       assert.equal(
         grouped.total,
         6,
-        'identical title, employer and city fold into one row; classifieds without an employer never do',
+        'identical title, employer and city fold into one row; different classifieds without an employer never do',
       );
       const kept = grouped.jobs.find((job) => job.id === listingIds[1]);
       assert.ok(kept, 'the most recently published duplicate is the one shown');
@@ -610,7 +612,9 @@ void test(
       const georgianIds = georgian.map(() => randomUUID());
       listingIds.push(...georgianIds);
       for (let i = 0; i < georgian.length; i++) {
-        const v = { ...base, ...georgian[i], description: georgianMarker };
+        // The two generic-employer rows are different businesses with their own text;
+        // identical text alone is one posting (migration 096).
+        const v = { ...base, ...georgian[i], description: i === 6 ? `${georgianMarker} სასტუმრო ავლაბარში` : georgianMarker };
         await db().query(
           "INSERT INTO jobs(id,draft,published,status,fingerprint,published_at) VALUES($1,$2,$2,'published',$3,now()+($4||' seconds')::interval)",
           [georgianIds[i], v, fingerprint(v), i],

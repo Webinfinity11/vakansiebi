@@ -1,7 +1,9 @@
 'use client';
 import { companyJobIssueFields, companyJobIssueMessage } from '@/lib/company-job-steps';
 import { JobSteps } from '../company/jobs/job-steps';
-import { JobImport, useJobImport } from '../company/jobs/job-import';
+import { ImportStatus, JobImport, useJobImport } from '../company/jobs/job-import';
+import { JobPreview } from '../company/jobs/job-preview';
+import '../company/jobs/job-wizard.css';
 import { newCompanyJob, visibleJobDeadline, type CompanyJobForm } from '@/lib/company-job-form';
 import { useUi } from '@/app/ui-language';
 import Link from 'next/link';
@@ -674,6 +676,7 @@ export function PostJobForm({
             <JobImport controller={importer} endpoint="/api/job-import" disabled={locked} skin="public" t={ui} />
             <JobSteps form={jobForm} errors={errors} skin="public" t={ui} disabled={locked}
               filled={importer.filled} onDescriptionPaste={importer.paste} onDescriptionBlur={importer.blurDescription}
+              afterDescription={<ImportStatus controller={importer} form={jobForm} disabled={locked} skin="public" t={ui} />}
               set={(key, value) => { if (key in initial) change(key as FieldName, String(value)); }} blur={() => {}} />
             <p className="post-import-subtle">{ui('ვაკანსია საიტზე იქნება {0}', [locale === 'en' && values.deadline ? new Date(values.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Tbilisi' }) : visibleJobDeadline(values.deadline)])}</p>
           </fieldset>
@@ -884,6 +887,14 @@ export function PostJobForm({
             </output>
           </div>
         </form>
+        <aside className="post-preview" aria-label={ui('კანდიდატის ხედი')}>
+          <p className="jw-preview-label">{ui('კანდიდატის ხედი')}</p>
+          <JobPreview variant="public" t={ui} form={jobForm} profile={{
+            name: values.company.trim() || ui('კომპანიის დასახელება'),
+            logoUrl: previewLogo && submissionLogoSchema.safeParse(previewLogo).success ? previewLogo : '',
+            description: '', benefits: [], whyUs: '',
+          }} />
+        </aside>
       </div>
     </main>
   );

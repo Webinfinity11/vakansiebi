@@ -280,8 +280,10 @@
   font-size: var(--ds-text-sm);
 }
 :root .board-shell.company-page .company-filters input[type="search"] {
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
+  height: 44px;
   min-height: 44px;
   padding: 10px 12px;
   border: 1px solid var(--ds-line);
@@ -438,4 +440,9 @@
 }
 :root .board-shell.company-page .company-branding + .company-cv-box {
   margin-top: 20px;
+}
+
+/* Status marks match the site's other tags: rectangular, never a pill. */
+:root .board-shell.company-page .company-job-side .ds-badge {
+  border-radius: 4px;
 }

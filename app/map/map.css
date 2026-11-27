@@ -596,7 +596,7 @@
     gap: 2px;
     min-width: 0;
   }
-  .job-map-slide-head .ds-badge {
+  .job-map-slide-head .placement-badge {
     justify-self: start;
   }
   .job-map-slide-head strong {
@@ -607,7 +607,7 @@
     font-size: var(--ds-text-md);
     line-height: 1.35;
   }
-  .job-map-slide-head span:not(.ds-badge) {
+  .job-map-slide-head span:not(.placement-badge) {
     overflow: hidden;
     color: var(--ds-ink-2);
     font-size: var(--ds-text-sm);

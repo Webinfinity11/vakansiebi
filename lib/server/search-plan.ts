@@ -126,6 +126,12 @@ export type SearchPlanOptions = {
 const normalized = (sql: string) =>
   `lower(CASE WHEN COALESCE(${sql},'') IS NFKC NORMALIZED THEN COALESCE(${sql},'') ELSE normalize(COALESCE(${sql},''),NFKC) END)`;
 const today = "to_char(now() AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD')";
+/* A posting with no deadline counts as open for this many days after its own
+   posting date. Boards without a removal sweep (gancxadebebi, joob, dk) never
+   say when an ad is gone, and on 2026-11-27 ads first posted in 2020 were still
+   listed. No such ad older than 30 days was still on its own board. */
+export const undatedVacancyDays = 30;
+const undatedSince = `to_char((now() AT TIME ZONE 'Asia/Tbilisi')::date-${undatedVacancyDays},'YYYY-MM-DD')`;
 // A city may be declined, but its stem is not a free prefix: გორგია and
 // გორგასალი do not name გორი, just as სამგორი does not.
 const cityPattern = (name: string) => {
@@ -432,7 +438,7 @@ export function searchPlan(
       .map((column) => ',' + column)
       .join('');
   const extraction = (alias: string, matching = true) =>
-    `SELECT ${alias}.id,${alias}.created_at,${alias}.published_at,${alias}.needs_review,${alias}.fingerprint,${alias}.placement_tier,${alias}.placement_expires_at,${extracted.map((key) => `${scalar(alias, key)} AS p_${key}`).join(',')}${pricing ? `,${scalar(alias, 'salaryMin')} AS p_salaryMin` : ''}${matching ? answers(alias) : ''}`;
+    `SELECT ${alias}.id,${alias}.created_at,${alias}.published_at,${alias}.needs_review,${alias}.fingerprint,${preview ? 'NULL::text' : `${alias}.search_duplicate_key`} AS p_duplicate,${alias}.placement_tier,${alias}.placement_expires_at,${extracted.map((key) => `${scalar(alias, key)} AS p_${key}`).join(',')}${pricing ? `,${scalar(alias, 'salaryMin')} AS p_salaryMin` : ''}${matching ? answers(alias) : ''}`;
   const scalarRecord = (alias: string) =>
     preview
       ? `CROSS JOIN LATERAL jsonb_to_record(${alias}.${snapshot.slice(2)}) AS scalars(${extracted.map((key) => `"${key}" text`).join(',')}${pricing ? ',"salaryMin" jsonb' : ''})`
@@ -449,9 +455,11 @@ export function searchPlan(
   const genericEmployers = [...genericCompanyKeys]
     .map((key) => `'${key.replace(/'/g, "''")}'`)
     .join(',');
+  // Without a usable employer only identical text groups: the same ad reposted under a
+  // new id (migration 096). Preview has no published key and keeps every row apart.
   // C locales classify Georgian letters as non-alphanumeric. Keep them explicitly
   // or unrelated Georgian titles/employers/cities all collapse into the key "||".
-  const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' OR length(${employerKey}) < 2 OR ${employerKey} IN (${genericEmployers}) THEN j.id::text ELSE regexp_replace(concat_ws('|',${normalized(p('title'))},${employer},${normalized(p('city'))}),'[^[:alnum:]ა-ჰ|]','','g') END`;
+  const groupKey = `CASE WHEN btrim(COALESCE(${p('company')},''))='' OR length(${employerKey}) < 2 OR ${employerKey} IN (${genericEmployers}) THEN COALESCE('same:'||j.p_duplicate,j.id::text) ELSE regexp_replace(concat_ws('|',${normalized(p('title'))},${employer},${normalized(p('city'))}),'[^[:alnum:]ა-ჰ|]','','g') END`;
   const numericSalary = `jsonb_typeof(${p('salaryMin')})='number'`;
   const monthlyFloor = 100;
   const monthlyCeiling = 50000;
@@ -570,7 +578,7 @@ export function searchPlan(
   // procurement tenders and explicit job-seeker ads (checked on the extracted scalars).
   let base = `${preview ? "j.status IN ('pending','published')" : "j.status='published'"} AND ${snapshot} IS NOT NULL AND EXISTS(SELECT 1 FROM source_items si JOIN sources s ON s.id=si.source_id WHERE si.job_id=j.id AND NOT s.retired)`;
   const visible = base;
-  const current = `(COALESCE(${p('deadline')},'')='' OR ${p('deadline')}>=${today}) AND NOT (lower(${p('title')}) ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]]|(?:სამსახურის[[:space:]]+მაძიებელი|ვეძებ[[:space:]]+სამსახურს)(?:[[:space:]!.,]|$))')`;
+  const current = `(CASE WHEN COALESCE(${p('deadline')},'')='' THEN COALESCE(NULLIF(${p('datePosted')},''),to_char(j.created_at AT TIME ZONE 'Asia/Tbilisi','YYYY-MM-DD'))>=${undatedSince} ELSE ${p('deadline')}>=${today} END) AND NOT (lower(${p('title')}) ~ '^(ტენდერი([[:space:]]|$)|tender[[:space:]]+for[[:space:]]|(?:სამსახურის[[:space:]]+მაძიებელი|ვეძებ[[:space:]]+სამსახურს)(?:[[:space:]!.,]|$))')`;
   if (params.has('ids'))
     base += ` AND j.id=ANY(${bind(
       (params.get('ids') || '')
@@ -599,7 +607,7 @@ export function searchPlan(
   // same three fields, taken from the draft) narrows that scan to candidates.
   // Membership needs no filter answers, only the key.
   const members = params.has('ids')
-    ? `SELECT j.id,${groupKey} AS group_key,j.p_title,${posted} AS posted_at FROM (${extraction('j', false)} FROM jobs j ${scalarRecord('j')} WHERE ${visible} AND j.fingerprint IN (SELECT fingerprint FROM searchable) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
+    ? `SELECT j.id,${groupKey} AS group_key,j.p_title,${posted} AS posted_at FROM (${extraction('j', false)} FROM jobs j ${scalarRecord('j')} WHERE ${visible} AND (j.fingerprint IN (SELECT fingerprint FROM searchable) OR j.search_duplicate_key IN (SELECT p_duplicate FROM searchable)) OFFSET 0) j WHERE ${current} AND ${groupKey} IN (SELECT group_key FROM searchable)`
     : `SELECT j.id,j.group_key,j.p_title,${posted} AS posted_at FROM searchable j`;
   /* Candidates first, so the rest of the plan only asks whether a row is in that
      set. The visibility a candidate needs is its own — retired sources, deadlines

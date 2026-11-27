@@ -42,3 +42,10 @@
 }
 /* The file button sits plainly above the text field, as on the public form. */
 .ji { padding: 0; border: 0; border-radius: 0; background: none; }
+/* Under the text field: what was filled and what still needs typing. */
+.ji-status { display: grid; gap: 8px; margin-top: -4px; }
+.ji-status p { margin: 0; color: var(--cp-ink-2); font-size: 14px; line-height: 1.6; }
+.ji-status b { color: var(--cp-ink); font-weight: 600; }
+.ji-status .ji-actions:empty { display: none; }
+.ji-status .import-undo { padding: 0; border: 0; background: none; color: var(--cp-accent); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ji-status .import-undo:disabled { opacity: .5; cursor: default; }

@@ -14,10 +14,10 @@ export function normalizeCandidateStage(stage: string): CandidateStage {
 export type CandidateStage = (typeof candidateStages)[number];
 export const stageLabels: Record<CandidateStage, string> = {
   new: 'ახალი',
-  interview: 'გასაუბრება',
-  offer: 'შეთავაზება',
+  interview: 'გასაუბრებაზე',
+  offer: 'შეთავაზებული',
   hired: 'აყვანილი',
-  rejected: 'უარი',
+  rejected: 'უარყოფილი',
 };
 export type CandidateSource = 'swipe' | 'resume' | 'upload' | 'cv_box' | 'base';
 export const languageLevels = ['a1', 'a2', 'b1', 'b2', 'c1', 'c2', 'native'] as const;

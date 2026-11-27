@@ -508,13 +508,15 @@ export function JobMap() {
               ['boolean', ['feature-state', 'on'], false],
               '#1f3f96',
               ['==', ['get', 'premium'], 1],
-              '#f2b705',
+              '#1f3f96',
               '#2457e6',
             ],
             'circle-radius': [
               'case',
               ['boolean', ['feature-state', 'on'], false],
               11,
+              ['==', ['get', 'premium'], 1],
+              9,
               7.5,
             ],
             'circle-stroke-width': 3,
@@ -1094,7 +1096,7 @@ export function JobMap() {
                   <CompanyLogo company={v.company} url={v.logoUrl} />
                   <span className="job-map-card-text">
                     {v.premium && (
-                      <em className="ds-badge ds-badge--warning">
+                      <em className="placement-badge placement-badge-premium">
                         {ui('პრემიუმი')}
                       </em>
                     )}
@@ -1193,7 +1195,7 @@ export function JobMap() {
                     <CompanyLogo company={v.company} url={v.logoUrl} />
                     <div>
                       {v.premium && (
-                        <span className="ds-badge ds-badge--warning">
+                        <span className="placement-badge placement-badge-premium">
                           {ui('პრემიუმი')}
                         </span>
                       )}

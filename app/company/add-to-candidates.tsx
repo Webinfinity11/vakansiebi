@@ -8,7 +8,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import "./add-to-candidates.css";
 
 export function candidateSourceLabel(source: Candidate["source"]) {
-  return { base: "ბაზიდან", upload: "ატვირთული", swipe: "Swipe", cv_box: "CV ყუთი", resume: "რეზიუმე" }[source];
+  return { base: "CV ბაზიდან", upload: "ატვირთული", swipe: "Swipe", cv_box: "CV ყუთი", resume: "რეზიუმე" }[source];
 }
 
 export type CandidateControl = Pick<Candidate, "entry" | "source" | "added" | "saved" | "jobId" | "jobTitle">;

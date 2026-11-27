@@ -138,7 +138,15 @@ export function TalentView({
   const [result, setResult] = useState<TalentResult | null>(null);
   const [listError, setListError] = useState("");
   const [searching, setSearching] = useState(false);
-  useEffect(() => {setOffset(0);}, [candidates]);
+  // Typing, filters and "show more" reuse the server's copy; a change re-reads it.
+  const fresh = useRef(false);
+  const seenCandidates = useRef(candidates);
+  useEffect(() => {
+    if (seenCandidates.current === candidates) return;
+    seenCandidates.current = candidates;
+    fresh.current = true;
+    setOffset(0);
+  }, [candidates]);
   useEffect(() => {
     const controller = new AbortController();
     let alive = true;
@@ -146,6 +154,7 @@ export function TalentView({
     const timer = setTimeout(async () => {
       try {
         const params = new URLSearchParams({talent: "1", filters: JSON.stringify(f), offset:String(offset)});
+        if (fresh.current) { params.set("fresh", "1"); fresh.current = false; }
         const response = await fetch(`/api/company/candidates?${params}`, {signal:controller.signal, cache:"no-store"});
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "სია ვერ ჩაიტვირთა.");
@@ -153,16 +162,16 @@ export function TalentView({
       } catch (error) {
         if (alive) setListError(error instanceof Error ? error.message : "სია ვერ ჩაიტვირთა.");
       } finally { if (alive) setSearching(false); }
-    }, 250);
+    }, offset ? 0 : 200);
     return () => { alive = false; clearTimeout(timer); controller.abort(); };
   }, [f, candidates, offset, revision]);
   const words = useMemo(() => terms(f.query), [f.query]);
   const visible = result?.people ?? [];
   const total = result?.total ?? 0;
   const matched = result?.matched ?? 0;
-  const refresh = () => {setOffset(0);setRevision(v=>v+1);};
+  const refresh = () => {fresh.current = true;setOffset(0);setRevision(v=>v+1);};
   const facets = result?.facets ?? countFacets([], emptyFilters, jobs);
-  const chips = filterChips(f, facets, set);
+  const chips = filterChips(f, facets, set).filter(c => c.key !== "query");
   const reset = () => setF({ ...emptyFilters, sort: f.sort });
   const sortLabels: Record<Filters["sort"], string> = {
     match: words.length ? "დამთხვევით" : "ახალი პირველი",
@@ -183,7 +192,6 @@ export function TalentView({
           <h1>CV ბაზა</h1>
         </div>
         <div className="cp-head-actions">
-          <a className="cp-btn cp-btn--secondary" href={companyHref({ tab: "candidates", entry: null })}>კანდიდატები</a>
           {canEdit && (
             <button
               type="button"
@@ -196,7 +204,7 @@ export function TalentView({
         </div>
       </header>
       {listError && <p role="alert" className="cp-alert">{listError}</p>}
-      {searching && <p role="status">იტვირთება…</p>}
+      <p role="status" className="sr-only">{searching ? "იტვირთება…" : ""}</p>
       {!loaded || !result ? (
         <div className="cc-empty">იტვირთება…</div>
       ) : !total ? (
@@ -270,7 +278,7 @@ export function TalentView({
                   : `${total} კანდიდატი`}
               </span>
               <div className="ct-saved-actions">
-                <button type="button" className="ct-clear ct-saved-toggle" aria-pressed={f.saved} onClick={()=>set("saved",!f.saved)}>შენახული კანდიდატები</button>
+                <button type="button" className="ct-clear ct-saved-toggle" aria-pressed={f.saved} onClick={()=>set("saved",!f.saved)}>შენახულები</button>
                 {/* Saving a search only makes sense once there is a search or filter to keep. */}
                 {(chips.length > 0 || words.length > 0) && <button type="button" className="ct-clear" disabled={!accountKey} onClick={()=>{setStorageError("");setSearchName("");setSaving(true);}}>ძებნის შენახვა</button>}
                 {savedSearches.length > 0 && <Popover>
@@ -311,7 +319,7 @@ export function TalentView({
               </DropdownMenu>
             </div>
             </div>
-            {!visible.length ? (
+            {!visible.length && !searching ? (
               <div className="cp-empty cp-empty--small">
                 <p>ამ ფილტრებით კანდიდატი ვერ მოიძებნა.</p>
                 <button type="button" className="cp-btn" onClick={reset}>
@@ -319,7 +327,7 @@ export function TalentView({
               </div>
             ) : (
               <>
-              <ul className="ct-list" aria-label="კანდიდატები">
+              <ul className="ct-list" aria-label="კანდიდატები" aria-busy={searching && !offset} data-busy={searching && !offset ? "" : undefined}>
                 {visible.map((p) => (
                   <PersonRow jobs={jobs} canEdit={canEdit}
                     key={p.key}
@@ -339,10 +347,10 @@ export function TalentView({
                     className="cp-btn"
                     disabled={searching}
                     onClick={() => {
-                      if (!searching) {setOffset(visible.length);setRevision(v=>v+1);}
+                      if (!searching) setOffset(visible.length);
                     }}
                   >
-                    მეტის ჩვენება
+                    {searching && offset ? "იტვირთება…" : "მეტის ჩვენება"}
                   </button>
                 )}
               </div>

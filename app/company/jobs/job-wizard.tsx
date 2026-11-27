@@ -9,7 +9,7 @@ import type { CompanyJobForm } from '@/lib/company-job-form';
 import { validateAll, visibleJobErrors, type CompanyJobErrors } from '@/lib/company-job-steps';
 import { formatTime, type CompanyJob } from '../company-api';
 import { JobSteps } from './job-steps';
-import { JobImport, useJobImport } from './job-import';
+import { ImportStatus, JobImport, useJobImport } from './job-import';
 import { JobPreview, type JobPreviewProfile } from './job-preview';
 import { useJobDraft, type DraftInitial } from './use-job-draft';
 import '../portal.css';
@@ -103,7 +103,7 @@ export function JobWizard({ identity, profile, job, initialForm, baseForm, initi
       <div className="jw-layout"><main className="jw-main">{job?.status === 'published' && <p className="jw-note">ცვლილებები გამოჩნდება JOBX-ის გუნდის დადასტურების შემდეგ. მანამდე საიტზე მიმდინარე ვერსია დარჩება.</p>}
         <form id="job-wizard-form" noValidate onSubmit={e => { e.preventDefault(); void submit(); }}><fieldset className="jw-form" disabled={busy || job?.status === 'merged'}>
         <JobImport controller={importer} disabled={busy || !!job?.imported || job?.status === 'merged'} />
-        <JobSteps filled={importer.filled} onDescriptionPaste={importer.paste} onDescriptionBlur={importer.blurDescription} disabled={busy || job?.status === 'merged'} form={form} errors={errors} job={job} set={(key, value) => { importer.edit(key); setErrors(previous => { const next = { ...previous }; delete next[key]; return next; }); draft.update({ ...form, [key]: value }); }} blur={blur} />
+        <JobSteps filled={importer.filled} onDescriptionPaste={importer.paste} onDescriptionBlur={importer.blurDescription} afterDescription={<ImportStatus controller={importer} form={form} disabled={busy || job?.status === 'merged'} />} disabled={busy || job?.status === 'merged'} form={form} errors={errors} job={job} set={(key, value) => { importer.edit(key); setErrors(previous => { const next = { ...previous }; delete next[key]; return next; }); draft.update({ ...form, [key]: value }); }} blur={blur} />
         {deadlineLabel && <p className="cp-subtle">ვაკანსია საიტზე იქნება {deadlineLabel}</p>}
         </fieldset>
         {error && <p role="alert" className="jw-error jw-note">{error}</p>}
