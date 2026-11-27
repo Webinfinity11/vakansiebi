@@ -34,7 +34,7 @@ export function NotificationSettings({ canEdit }: { canEdit: boolean }) {
         {([['instant', 'ყოველ განაცხადზე'], ['digest', 'დღეში ერთხელ შეჯამება'], ['off', 'გამორთული']] as const).map(([mode, label]) =>
           <label className="cp-notifications-choice" key={mode}><input type="radio" name="application-mode" value={mode} checked={value.application_mode === mode} onChange={() => setValue({ ...value, application_mode: mode })} /><span>{label}</span></label>)}
         <p className="cp-subtle">დღიური შეჯამება გაიგზავნება თბილისის დროით 09:00-ის შემდეგ. წერილში მხოლოდ ვაკანსიები და განაცხადების რაოდენობა გამოჩნდება.</p>
-        <label className="cp-notifications-choice"><input type="checkbox" checked={value.deadline_reminders} onChange={e => setValue({ ...value, deadline_reminders: e.target.checked })} /><span>შემახსენეთ VIP-ისა და პრემიუმის დასრულებამდე</span></label>
+        <label className="cp-notifications-choice"><input type="checkbox" checked={value.deadline_reminders} onChange={e => setValue({ ...value, deadline_reminders: e.target.checked })} /><span>შემახსენეთ VIP-ისა და სუპერ VIP-ის დასრულებამდე</span></label>
       </fieldset>
       {canEdit && <button className="cp-btn cp-btn--primary" disabled={busy}>{busy ? 'ინახება…' : 'პარამეტრების შენახვა'}</button>}
     </form>}

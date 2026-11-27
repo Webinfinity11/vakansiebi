@@ -41,7 +41,7 @@ function CopyValue({ label, value }: { label: string; value: string }) {
 
 export function PaymentDetails({ invoice, nextNote }: { invoice: CompanyInvoiceDetails; nextNote?: string }) {
   return <section className="cp-payment-details" aria-label="გადახდის მონაცემები">
-    <p>{invoice.placementTier === 'vip' ? 'VIP' : 'პრემიუმ'} განთავსება · {invoice.serviceDays} დღე</p>
+    <p>{invoice.placementTier === 'vip' ? 'VIP' : 'სუპერ VIP'} განთავსება · {invoice.serviceDays} დღე</p>
     <dl>
       <div><dt>მიმღები</dt><dd>{invoice.payeeName}</dd></div>
       <div><dt>ბანკი</dt><dd>{invoice.bankName}</dd></div>

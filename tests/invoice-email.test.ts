@@ -38,8 +38,8 @@ void test('invoice mail escapes user content, links the private invoice and prov
     assert.ok(!body.includes(invoiceContact.telephone));
   }
   assert.equal(email.subject, 'JOBX — ინვოისი 000007');
-  assert.match(email.html, /პრემიუმ განთავსება · 30 დღე/);
-  assert.match(email.text, /პრემიუმ განთავსება · 30 დღე/);
+  assert.match(email.html, /სუპერ VIP განთავსება · 30 დღე/);
+  assert.match(email.text, /სუპერ VIP განთავსება · 30 დღე/);
   assert.doesNotMatch(email.html + email.text, /JOBX-2026-/);
 });
 void test('mail does not duplicate the owner address and rejects malformed destinations and links', () => {
@@ -77,7 +77,7 @@ void test('VIP mail names the paid VIP package and its stored terms', () => {
   for (const body of [email.html, email.text]) {
     assert.match(body, /VIP განთავსება · 30 დღე/);
     assert.match(body, /20 ₾/);
-    assert.doesNotMatch(body, /პრემიუმ განთავსება/);
+    assert.doesNotMatch(body, /სუპერ VIP განთავსება/);
   }
 });
 void test('test copies use the selected invoice button and only the test recipient', () => {

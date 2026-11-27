@@ -24,7 +24,7 @@ export function placementRenewalEmail(invoice: {
   placementTier: 'vip' | 'premium'; amountGel: number; token: string;
 }, vacancyTitle: string, expiresAt: Date, recipient: string, appUrl: string): InvoiceEmail {
   const url = `${emailOrigin(appUrl)}/invoices/${encodeURIComponent(invoice.token)}`;
-  const tier = invoice.placementTier === 'vip' ? 'VIP' : 'პრემიუმ';
+  const tier = invoice.placementTier === 'vip' ? 'VIP' : 'სუპერ VIP';
   const title = `„${vacancyTitle}“ — ${tier} განთავსების გაგრძელება`;
   const text = `„${vacancyTitle}“ — ${tier} განთავსება მთავრდება ${onDate(expiresAt)}. გასაგრძელებლად გადაიხადეთ.`;
   const amount = `გადასახდელია — ${invoice.amountGel} ₾`;

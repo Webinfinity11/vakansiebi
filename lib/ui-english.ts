@@ -17,7 +17,7 @@ export const englishUi: Readonly<Record<string, string>> = {
   'აირჩიეთ ანაზღაურების ტიპი': 'Choose a salary basis',
   'შეამოწმეთ ველის მნიშვნელობა': 'Check this field',
 
-  'ვაკანსიის გაგზავნის შემდეგ განცხადებას ადმინისტრატორი ამოწმებს. საიტზე ის დამტკიცების შემდეგ გამოჩნდება. VIP და პრემიუმ განთავსებისთვის გადახდის დადასტურებაც საჭიროა.':
+  'ვაკანსიის გაგზავნის შემდეგ განცხადებას ადმინისტრატორი ამოწმებს. საიტზე ის დამტკიცების შემდეგ გამოჩნდება. VIP და სუპერ VIP განთავსებისთვის გადახდის დადასტურებაც საჭიროა.':
     'An administrator reviews your job before publication. VIP and premium placements also require payment confirmation.',
   'აირჩიეთ ქალაქი': 'Choose a city',
   'სცადეთ მოგვიანებით.': 'Try again later.',
@@ -117,21 +117,21 @@ export const englishUi: Readonly<Record<string, string>> = {
   'განთავსება JOBX-ზე': 'Posting jobs on JOBX',
   'სხვა პოზიციები ({0})': 'More roles ({0})',
   'ნაკლები პოზიცია': 'Fewer roles',
-  'განაცხადის გაგზავნის შემდეგ განცხადებას ადმინისტრატორი ამოწმებს. საიტზე ის დამტკიცების შემდეგ გამოჩნდება. VIP და პრემიუმ განთავსებისთვის გადახდის დადასტურებაც საჭიროა.':
+  'განაცხადის გაგზავნის შემდეგ განცხადებას ადმინისტრატორი ამოწმებს. საიტზე ის დამტკიცების შემდეგ გამოჩნდება. VIP და სუპერ VIP განთავსებისთვის გადახდის დადასტურებაც საჭიროა.':
     'An administrator reviews your submission before publication. VIP and premium placements also require payment confirmation.',
-  'VIP-ისა და პრემიუმის 30-დღიანი პერიოდი იწყება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ. შემდეგ ვაკანსია სტანდარტულად რჩება მის ბოლო ვადამდე. თანხა ავტომატურად არ ჩამოიჭრება.':
-    'The 30-day VIP or Premium period begins after the listing and payment are approved. The listing then remains standard until its deadline. There are no automatic charges.',
+  'VIP-ისა და სუპერ VIP-ის 30-დღიანი პერიოდი იწყება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ. შემდეგ ვაკანსია სტანდარტულად რჩება მის ბოლო ვადამდე. თანხა ავტომატურად არ ჩამოიჭრება.':
+    'The 30-day VIP or Super VIP period begins after the listing and payment are approved. The listing then remains standard until its deadline. There are no automatic charges.',
   'განთავსების ინვოისი': 'Placement invoice',
-  'VIP — {0} ₾, პრემიუმი — {1} ₾. ორივე პაკეტი მოქმედებს {2} დღე გააქტიურებიდან. განთავსება იწყება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ. თანხა ავტომატურად არ ჩამოიჭრება.':
-    'VIP costs {0} GEL and Premium costs {1} GEL. Both packages last {2} days from activation after the listing and payment are approved. There are no automatic charges.',
+  'VIP — {0} ₾, სუპერ VIP — {1} ₾. ორივე პაკეტი მოქმედებს {2} დღე გააქტიურებიდან. განთავსება იწყება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ. თანხა ავტომატურად არ ჩამოიჭრება.':
+    'VIP costs {0} GEL and Super VIP costs {1} GEL. Both packages last {2} days from activation after the listing and payment are approved. There are no automatic charges.',
   'ვაკანსია სტანდარტულ განცხადებებზე წინ გამოჩნდება.':
     'Your vacancy appears ahead of standard listings.',
   'რა ღირს VIP განთავსება?': 'How much does VIP placement cost?',
   'VIP განთავსება ღირს {0} ₾ და მოქმედებს {1} დღე გააქტიურებიდან. ვადის ამოწურვის შემდეგ განცხადება სტანდარტულად დარჩება, თუ განაცხადების მიღების ვადა ჯერ არ გასულა.':
     'VIP placement costs {0} GEL for {1} days from activation. Afterwards the listing remains standard until its application deadline.',
   'როგორ გადავიხადო განთავსების საფასური?': 'How do I pay for a placement?',
-  'განაცხადში VIP-ის ან პრემიუმის არჩევისას მიიღებთ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. პრემიუმის ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.':
-    'Choose VIP or Premium to receive an invoice with bank details and a payment reference. Premium costs {0} GEL for {1} days. Placement starts after the listing and payment are approved. There are no automatic charges.',
+  'განაცხადში VIP-ის ან სუპერ VIP-ის არჩევისას მიიღებთ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. სუპერ VIP-ის ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.':
+    'Choose VIP or Super VIP to receive an invoice with bank details and a payment reference. Super VIP costs {0} GEL for {1} days. Placement starts after the listing and payment are approved. There are no automatic charges.',
   'ფასიანი განთავსება ამჟამად მიუწვდომელია.':
     'Paid placement is currently unavailable.',
   'უბანი ან მისამართი': 'District or address',
@@ -208,9 +208,9 @@ export const englishUi: Readonly<Record<string, string>> = {
   დახურვა: 'Close',
   მოხსნა: 'Remove',
   შენახვა: 'Save',
-  'პრემიუმ ვაკანსია': 'Premium job',
+  'სუპერ VIP ვაკანსია': 'Super VIP job',
   'გამორჩეული განთავსება': 'Featured listing',
-  პრემიუმი: 'Premium',
+  'სუპერ VIP': 'Super VIP',
   ახალი: 'New',
   'გამოქვეყნდა:': 'Posted:',
   'ბოლო ვადა:': 'Deadline:',
@@ -338,7 +338,7 @@ export const englishUi: Readonly<Record<string, string>> = {
   'სწრაფი ბმულები': 'Quick links',
   'მსგავსი ძიებები': 'Related searches',
   ნანახია: 'Viewed',
-  'პრემიუმ ვაკანსიები': 'Premium jobs',
+  'სუპერ VIP ვაკანსიები': 'Super VIP jobs',
   'VIP ვაკანსიები': 'VIP jobs',
   'სხვა ვაკანსიები': 'Other jobs',
   'ბოლოს ნანახი': 'Recently viewed',
@@ -750,7 +750,7 @@ export const englishUi: Readonly<Record<string, string>> = {
     'VIP placement requested. If this is the company’s first VIP listing,',
   'დღე უფასო იქნება — ამას ადმინისტრატორი დამტკიცებისას ამოწმებს.':
     'days will be free. The administrator checks eligibility during approval.',
-  'პრემიუმი ·': 'Premium ·',
+  'სუპერ VIP ·': 'Super VIP ·',
   'საბანკო რეკვიზიტები და გადარიცხვის დანიშნულება იხილე ინვოისში. განთავსება გააქტიურდება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ.':
     'See the invoice for bank details and the payment reference. Placement starts after the listing and payment are approved.',
   'ინვოისის ნახვა': 'View invoice',
@@ -800,15 +800,15 @@ export const englishUi: Readonly<Record<string, string>> = {
     'Alternative invoice email (optional)',
   'შეთავაზების პირობები': 'Offer terms',
   'პირველი VIP განთავსება': 'First VIP placement',
-  'დღით უფასოა — ერთხელ თითო კომპანიაზე; შემოწმდება დამტკიცებისას. პრემიუმი ღირს':
-    'days free, once per company, subject to approval. Premium costs',
+  'დღით უფასოა — ერთხელ თითო კომპანიაზე; შემოწმდება დამტკიცებისას. სუპერ VIP ღირს':
+    'days free, once per company, subject to approval. Super VIP costs',
   '₾ და აქტიურდება ჩარიცხვის დადასტურების შემდეგ. VIP-ის':
     '₾ and starts after payment is confirmed. VIP lasts',
-  'დღე და პრემიუმის': 'days and Premium lasts',
+  'დღე და სუპერ VIP-ის': 'days and Super VIP lasts',
   'დღე ითვლება განთავსების გააქტიურებიდან. ვადის ამოწურვის შემდეგ განცხადება სტანდარტულ რეჟიმში რჩება. თანხა ავტომატურად არ ჩამოიჭრება.':
     'days from activation. When placement ends, the listing remains as standard. No automatic charges apply.',
-  'ნებისმიერი ფილტრისა და დალაგებისას შესაბამისი პრემიუმ განცხადებები ჩანს პირველ, VIP — მათ შემდეგ, თითოეული გამოქვეყნების თარიღის მიხედვით, უახლესი — ზემოთ.':
-    'For any filters or sort order, matching Premium listings appear first, followed by VIP listings. Each group is ordered by publication date, newest first.',
+  'ნებისმიერი ფილტრისა და დალაგებისას შესაბამისი სუპერ VIP განცხადებები ჩანს პირველ, VIP — მათ შემდეგ, თითოეული გამოქვეყნების თარიღის მიხედვით, უახლესი — ზემოთ.':
+    'For any filters or sort order, matching Super VIP listings appear first, followed by VIP listings. Each group is ordered by publication date, newest first.',
   'ვადასტურებ, რომ უფლებამოსილი ვარ და ვეთანხმები საკონტაქტო მონაცემების საჯარო გამოქვეყნებას.':
     'I confirm that I am authorised to submit this listing and consent to publishing its contact details.',
   'იგზავნება…': 'Sending…',
@@ -850,15 +850,15 @@ export const englishUi: Readonly<Record<string, string>> = {
   'განთავსების ტიპს განცხადების შევსებისას აირჩევთ.':
     'Select a placement when completing your listing.',
   'დროებითი შეთავაზება': 'Limited-time offer',
-  'პრემიუმის გადახდა ამჟამად მიუწვდომელია.':
-    'Premium payment is currently unavailable.',
+  'სუპერ VIP-ის გადახდა ამჟამად მიუწვდომელია.':
+    'Super VIP payment is currently unavailable.',
   'უფასოდ განთავსება': 'Post for free',
   'VIP-ის არჩევა': 'Choose VIP',
   'დაგვიკავშირდით': 'Contact us',
-  'პრემიუმის არჩევა': 'Choose Premium',
+  'სუპერ VIP-ის არჩევა': 'Choose Super VIP',
   'ამჟამად მიუწვდომელია': 'Currently unavailable',
-  'VIP-ის უფასო შეთავაზება შემოწმდება დამტკიცებისას. VIP და პრემიუმ პერიოდი ითვლება გააქტიურებიდან; ვადის გასვლის შემდეგ განცხადება სტანდარტულ რეჟიმში რჩება, მის მითითებულ ბოლო ვადამდე. თანხა ავტომატურად არ ჩამოიჭრება.':
-    'Eligibility for the free VIP offer is checked during approval. VIP and Premium periods start at activation. Afterwards, the job remains a standard listing until its deadline. No automatic charges apply.',
+  'VIP-ის უფასო შეთავაზება შემოწმდება დამტკიცებისას. VIP და სუპერ VIP პერიოდი ითვლება გააქტიურებიდან; ვადის გასვლის შემდეგ განცხადება სტანდარტულ რეჟიმში რჩება, მის მითითებულ ბოლო ვადამდე. თანხა ავტომატურად არ ჩამოიჭრება.':
+    'Eligibility for the free VIP offer is checked during approval. VIP and Super VIP periods start at activation. Afterwards, the job remains a standard listing until its deadline. No automatic charges apply.',
   'კითხვები და პასუხები': 'Questions and answers',
   'განათავსეთ პირველი ვაკანსია': 'Start with your next vacancy.',
   'შეკითხვების შემთხვევაში დაგვიკავშირდით.':
@@ -923,10 +923,10 @@ export const englishUi: Readonly<Record<string, string>> = {
   'განცხადების დასამატებლად რეგისტრაცია საჭირო არ არის. შეავსე ვაკანსიისა და კომპანიის მონაცემები და მიუთითე, როგორ დაგიკავშირდეს კანდიდატი.':
     'No registration is required. Provide the job and company details and tell candidates how to contact you.',
   'როდის გამოჩნდება ვაკანსია?': 'When will my job appear?',
-  'განაცხადის გაგზავნის შემდეგ განცხადებას ადმინისტრატორი ამოწმებს. საიტზე ის დამტკიცების შემდეგ გამოჩნდება. პრემიუმ განთავსებისთვის გადახდის დადასტურებაც საჭიროა.':
-    'An administrator reviews your submission. It appears after approval. Premium placement also requires payment confirmation.',
+  'განაცხადის გაგზავნის შემდეგ განცხადებას ადმინისტრატორი ამოწმებს. საიტზე ის დამტკიცების შემდეგ გამოჩნდება. სუპერ VIP განთავსებისთვის გადახდის დადასტურებაც საჭიროა.':
+    'An administrator reviews your submission. It appears after approval. Super VIP placement also requires payment confirmation.',
   'ვის შეუძლია უფასო VIP-ის გამოყენება?': 'Who can use the free VIP offer?',
-  'როგორ გადავიხადო პრემიუმის საფასური?': 'How do I pay for Premium?',
+  'როგორ გადავიხადო სუპერ VIP-ის საფასური?': 'How do I pay for Super VIP?',
   'პირველი {0} დღე': 'First {0} days',
   '{0} დღე გააქტიურებიდან': '{0} days from activation',
   '{0} დღით': 'For {0} days',
@@ -1007,8 +1007,8 @@ export const englishUi: Readonly<Record<string, string>> = {
   'შეავსეთ ფორმა და გამოგზავნეთ. ვაკანსია შემოწმების შემდეგ გამოქვეყნდება, კანდიდატები კი თქვენ მიერ მითითებული გზით დაგიკავშირდებიან.':
     'Fill in the form and send it. The job is published after review, and candidates contact you the way you choose.',
   'უფასოა და რეგისტრაცია არ სჭირდება': 'Free, no registration needed',
-  'საჭიროების შემთხვევაში VIP ან პრემიუმი':
-    'VIP or Premium when you need more reach',
+  'საჭიროების შემთხვევაში VIP ან სუპერ VIP':
+    'VIP or Super VIP when you need more reach',
   'კომპანიის ანგარიში': 'Company account',
   'ყველა ვაკანსია და განაცხადი ერთ სივრცეშია. ანგარიში ადმინისტრატორის დამტკიცების შემდეგ ჩაირთვება.':
     'All your jobs and applications in one place. The account is activated after an administrator approves it.',
@@ -1035,8 +1035,8 @@ export const englishUi: Readonly<Record<string, string>> = {
   'კანდიდატების სამართავად: ': 'To manage candidates: ',
   'პირველი VIP განთავსება {0} დღით უფასოა, თითო კომპანიისთვის ერთხელ. შემდეგ განცხადება ავტომატურად გადადის სტანდარტულ განთავსებაზე და რჩება განაცხადების მიღების ვადის ამოწურვამდე. შეთავაზების გამოყენების შესაძლებლობა განცხადების შემოწმებისას დგინდება.':
     'Your first VIP listing is free for {0} days, once per company. It then becomes a standard listing until its application deadline. Eligibility is checked when the listing is reviewed.',
-  'განაცხადში პრემიუმის არჩევისას მიიღებთ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.':
-    'Choose Premium in the form to receive an invoice with bank details and a payment reference. It costs ₾{0} for {1} days. Placement starts after the listing and payment are approved. No automatic charges apply.',
+  'განაცხადში სუპერ VIP-ის არჩევისას მიიღებთ ინვოისს საბანკო რეკვიზიტებითა და გადარიცხვის დანიშნულებით. ფასი {0} ₾-ია {1} დღისთვის. განთავსება განცხადებისა და ჩარიცხვის დადასტურების შემდეგ გააქტიურდება. თანხა ავტომატურად არ ჩამოიჭრება.':
+    'Choose Super VIP in the form to receive an invoice with bank details and a payment reference. It costs ₾{0} for {1} days. Placement starts after the listing and payment are approved. No automatic charges apply.',
   ბლოგი: 'Blog',
   ენა: 'Language',
   'როგორ შეუთავსო სამსახური სწავლას': 'How to fit work around your studies',

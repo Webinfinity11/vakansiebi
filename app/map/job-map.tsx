@@ -1097,7 +1097,7 @@ export function JobMap() {
                   <span className="job-map-card-text">
                     {v.premium && (
                       <em className="placement-badge placement-badge-premium">
-                        {ui('პრემიუმი')}
+                        {ui('სუპერ VIP')}
                       </em>
                     )}
                     <strong>{v.title}</strong>
@@ -1196,7 +1196,7 @@ export function JobMap() {
                     <div>
                       {v.premium && (
                         <span className="placement-badge placement-badge-premium">
-                          {ui('პრემიუმი')}
+                          {ui('სუპერ VIP')}
                         </span>
                       )}
                       <strong>{v.title}</strong>

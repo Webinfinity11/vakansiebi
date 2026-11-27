@@ -12,7 +12,7 @@ export function invoiceServiceLabel(invoice: {
 }) {
   return invoice.placement_tier === 'vip'
     ? 'VIP განთავსება'
-    : 'პრემიუმ განთავსება';
+    : 'სუპერ VIP განთავსება';
 }
 export const invoiceContact = {
   email: 'invoice@jobx.ge',

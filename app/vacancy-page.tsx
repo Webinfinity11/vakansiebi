@@ -547,7 +547,7 @@ export default function VacancyPage({
                     <span
                       className={`placement-badge placement-badge-${job.placement.tier}`}
                     >
-                      {job.placement.tier === 'premium' ? ui('პრემიუმი') : 'VIP'}
+                      {job.placement.tier === 'premium' ? ui('სუპერ VIP') : 'VIP'}
                     </span>
                   )}
                 </div>

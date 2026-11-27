@@ -477,7 +477,7 @@ function JobRow({
           job.placementExpiresAt &&
           new Date(job.placementExpiresAt).getTime() > Date.now() && (
             <span>
-              {job.placement === 'vip' ? 'VIP' : 'პრემიუმი'} აქტიურია{' '}
+              {job.placement === 'vip' ? 'VIP' : 'სუპერ VIP'} აქტიურია{' '}
               {formatUntilDate(job.placementExpiresAt)}</span>
           )}
         {job.invoice?.status === 'pending' && (

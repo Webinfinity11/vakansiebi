@@ -26,7 +26,7 @@ export function VacancySections({
       {!!premium.length && (
         <section
           className="featured-vacancies featured-premium"
-          aria-label={ui('პრემიუმ ვაკანსიები')}
+          aria-label={ui('სუპერ VIP ვაკანსიები')}
         >
           <div>{premium.map(card)}</div>
         </section>

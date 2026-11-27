@@ -21,20 +21,20 @@ export function SentPlacement({ job, reviewing, owner, approved }: { job: Compan
   const renewal = invoice?.token === saved?.token && !!saved?.renewal_for_expires_at;
   if (!owner || job.imported) return null;
   if (invoice?.status === 'pending') return <section className="cp-sent-payment">
-    {job.placement !== 'standard' && job.placementExpiresAt && new Date(job.placementExpiresAt).getTime() > Date.now() && <p>{job.placement === 'vip' ? 'VIP' : 'პრემიუმი'} აქტიურია {formatUntilDate(job.placementExpiresAt)}.</p>}
+    {job.placement !== 'standard' && job.placementExpiresAt && new Date(job.placementExpiresAt).getTime() > Date.now() && <p>{job.placement === 'vip' ? 'VIP' : 'სუპერ VIP'} აქტიურია {formatUntilDate(job.placementExpiresAt)}.</p>}
     <h2 role="status">{renewal ? 'გასაგრძელებლად გადასახდელია' : 'გადასახდელია'} — {invoice.amountGel} ₾</h2>
     {renewal && <p>თუ ვადა ჯერ არ დასრულებულა, ახალი {invoice.serviceDays} დღე მიმდინარე ვადის დასრულებიდან დაითვლება; სხვა შემთხვევაში — ჩარიცხვის დადასტურებიდან.</p>}
     <PaymentDetails invoice={invoice} nextNote={reviewing ? PLACEMENT_REVIEW_NOTE : undefined} />
   </section>;
   if (job.placement && job.placement !== 'standard' && job.placementExpiresAt && new Date(job.placementExpiresAt).getTime() > Date.now()) {
-    return <p className="cp-sent-state">{job.placement === 'vip' ? 'VIP' : 'პრემიუმ'} განთავსება აქტიურია {formatUntilDate(job.placementExpiresAt)}.</p>;
+    return <p className="cp-sent-state">{job.placement === 'vip' ? 'VIP' : 'სუპერ VIP'} განთავსება აქტიურია {formatUntilDate(job.placementExpiresAt)}.</p>;
   }
   if (invoice?.status === 'paid' && !invoice.activatedAt) return <p className="cp-sent-state">გადახდილია — განთავსება გააქტიურებას ელოდება.</p>;
   if (!canPromoteJob(job, owner, approved, new Date())) return null;
 
   const choices = [
     { tier: 'vip' as const, title: 'VIP', days: vipDays, detail: 'საერთო სიაში სტანდარტულ ვაკანსიებზე წინ გამოჩნდება.' },
-    { tier: 'premium' as const, title: 'პრემიუმი', days: premiumDays, detail: 'საერთო სიაში VIP და სტანდარტულ ვაკანსიებზე წინ გამოჩნდება.' },
+    { tier: 'premium' as const, title: 'სუპერ VIP', days: premiumDays, detail: 'საერთო სიაში VIP და სტანდარტულ ვაკანსიებზე წინ გამოჩნდება.' },
   ];
   return <section className="cp-sent-placement" aria-label="განთავსება" aria-busy={busy}>
     <div className="cp-sent-options">{choices.map(choice => <div className="cp-sent-option" key={choice.tier}>

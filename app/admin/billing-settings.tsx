@@ -226,7 +226,7 @@ export function BillingSettings({
               </ul>
             ) : (
               <p className="records-empty">
-                აქტიური VIP ან პრემიუმ განთავსება არ არის.
+                აქტიური VIP ან სუპერ VIP განთავსება არ არის.
               </p>
             )}
           </section>
@@ -318,7 +318,7 @@ export function BillingSettings({
               <div>
                 <h2 id="bl-payee">ინვოისის რეკვიზიტები</h2>
                 <p>
-                  VIP — {vipPriceGEL} ₾ / {premiumDays} დღე; პრემიუმი —{' '}
+                  VIP — {vipPriceGEL} ₾ / {premiumDays} დღე; სუპერ VIP —{' '}
                   {premiumPriceGEL} ₾ / {premiumDays} დღე. თანხა ირიცხება ამ
                   ანგარიშზე; ჩარიცხვას ადმინისტრატორი ადასტურებს.
                 </p>

@@ -86,11 +86,11 @@ export function Promote({ job, owner, approved }: { job: CompanyJob; owner: bool
       {closed || rejected ? <><p>{reason}</p>
         {rejected && <Link className="cp-btn cp-btn--secondary" href={`/company/jobs/${job.id}/edit`}>რედაქტირება</Link>}
       </> : !owner ? <p>{reason}</p> : invoice?.status === 'pending' ? <>
-        {active && <p>{job.placement === 'vip' ? 'VIP' : 'პრემიუმი'} აქტიურია {formatUntilDate(job.placementExpiresAt ?? null)}.</p>}
+        {active && <p>{job.placement === 'vip' ? 'VIP' : 'სუპერ VIP'} აქტიურია {formatUntilDate(job.placementExpiresAt ?? null)}.</p>}
         <h2 role="status">{renewal ? 'გასაგრძელებლად გადასახდელია' : 'გადასახდელია'} — {invoice.amountGel} ₾</h2>
         {renewal && <p>თუ ვადა ჯერ არ დასრულებულა, ახალი {invoice.serviceDays} დღე მიმდინარე ვადის დასრულებიდან დაითვლება; სხვა შემთხვევაში — ჩარიცხვის დადასტურებიდან.</p>}
         <PaymentDetails invoice={invoice} nextNote={job.status === 'pending' ? PLACEMENT_REVIEW_NOTE : undefined} />
-      </> : active ? <p>{job.placement === 'vip' ? 'VIP' : 'პრემიუმ'} განთავსება აქტიურია {formatUntilDate(job.placementExpiresAt ?? null)}.</p>
+      </> : active ? <p>{job.placement === 'vip' ? 'VIP' : 'სუპერ VIP'} განთავსება აქტიურია {formatUntilDate(job.placementExpiresAt ?? null)}.</p>
         : invoice?.status === 'paid' && !invoice.activatedAt ? <p>გადახდილია — განთავსება გააქტიურებას ელოდება.</p>
         : !canOrder ? <p>{reason}</p> : <form onSubmit={e => { e.preventDefault(); void order(placement); }}>
           <PlacementChoice value={placement} includeStandard={false} disabled={busy} onChange={value => {

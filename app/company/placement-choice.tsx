@@ -8,7 +8,7 @@ export function PlacementChoice({ value, onChange, disabled = false, includeStan
   const choices: { id: PlacementTier; title: string; price: string; detail: string }[] = [
     ...(includeStandard ? [{ id: 'standard' as const, title: 'სტანდარტული', price: 'უფასო', detail: 'განცხადება გამოჩნდება ვაკანსიების საერთო სიაში.' }] : []),
     { id: 'vip', title: 'VIP', price: `${paidPlacementPrices.vip} ₾ · ${vipDays} დღე`, detail: 'საერთო სიაში სტანდარტულ ვაკანსიებზე წინ გამოჩნდება.' },
-    { id: 'premium', title: 'პრემიუმი', price: `${paidPlacementPrices.premium} ₾ · ${premiumDays} დღე`, detail: 'საერთო სიაში VIP და სტანდარტულ ვაკანსიებზე წინ გამოჩნდება.' },
+    { id: 'premium', title: 'სუპერ VIP', price: `${paidPlacementPrices.premium} ₾ · ${premiumDays} დღე`, detail: 'საერთო სიაში VIP და სტანდარტულ ვაკანსიებზე წინ გამოჩნდება.' },
   ];
   return <fieldset className="cp-placement" disabled={disabled}>
     <legend>განთავსება</legend>

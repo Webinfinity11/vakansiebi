@@ -219,7 +219,7 @@ const JobCard = memo(function JobCard({
           {/* The words carry it. A gem beside them read as a sticker on a shop
               window rather than as a job worth reading first. */}
           {featured === "premium" && (
-            <span className="featured-label">{ui("პრემიუმ ვაკანსია")}</span>
+            <span className="featured-label">{ui("სუპერ VIP ვაკანსია")}</span>
           )}
           <div className="job-title-row">
             <Link
@@ -244,7 +244,7 @@ const JobCard = memo(function JobCard({
                 className={`placement-badge placement-badge-${j.placement.tier}`}
                 title={ui("გამორჩეული განთავსება")}
               >
-                {j.placement.tier === "premium" ? ui("პრემიუმი") : "VIP"}
+                {j.placement.tier === "premium" ? ui("სუპერ VIP") : "VIP"}
               </span>
             )}
             {featured === "vip" && (
