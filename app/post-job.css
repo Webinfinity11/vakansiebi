@@ -309,6 +309,15 @@
   font-size: var(--jobx-font-size-14px);
   margin-bottom: var(--jobx-space-14px);
 }
+.post-plan-mail {
+  margin: var(--jobx-space-14px) 0 0;
+  font-size: var(--ds-text-sm);
+  color: var(--ds-ink-3);
+  overflow-wrap: anywhere;
+}
+.post-plan-mail strong {
+  color: var(--ds-ink);
+}
 .post-plan-note {
   font-size: var(--ds-text-xs);
   color: var(--ds-ink-3);

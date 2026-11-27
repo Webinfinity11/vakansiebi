@@ -444,6 +444,8 @@ export function PostJobForm({
     const result = submissionSchema.safeParse({
       ...values,
       contact: values.notificationEmail,
+      // A restored older draft may still hold a second address; the invoice uses the one above.
+      billingEmail: '',
       category: '', salaryPeriod: 'თვე',
       deadline: submissionDate(new Date(Date.now() + 30 * 86400000)),
       consent,
@@ -786,21 +788,18 @@ export function PostJobForm({
                 </label>
               ))}
             </div>
+            {/* One address for everything: the invoice goes where the confirmation goes. */}
             {values.placement !== 'standard' && (
-              <Field
-                name="billingEmail"
-                label={ui('ინვოისისთვის სხვა ელფოსტა (არასავალდებულო)')}
-                error={errors.billingEmail}
-                hint="ინვოისი შეტყობინებისთვის მითითებულ ელფოსტაზე მოგივა. სხვა მისამართზე მისაღებად შეავსე ეს ველი."
-                wide
-              >
-                <input
-                  {...props('billingEmail')}
-                  type="email"
-                  autoComplete="email"
-                  maxLength={254}
-                />
-              </Field>
+              <p className="post-plan-mail">
+                {values.notificationEmail.trim() ? (
+                  <>
+                    {ui('ინვოისი მოგივა ამ ელფოსტაზე:')}{' '}
+                    <strong>{values.notificationEmail.trim()}</strong>
+                  </>
+                ) : (
+                  ui('ინვოისი ზემოთ მითითებულ ელფოსტაზე მოგივა.')
+                )}
+              </p>
             )}
             <details className="post-plan-note">
               <summary>{ui('შეთავაზების პირობები')}</summary>

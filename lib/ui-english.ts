@@ -796,8 +796,8 @@ export const englishUi: Readonly<Record<string, string>> = {
   'პირველი VIP': 'First VIP placement',
   'დღით უფასოა — ერთხელ თითო კომპანიაზე; ელიგიბელობა შემოწმებისას დადგინდება.':
     'days free, once per company. Eligibility is checked during review.',
-  'ინვოისისთვის სხვა ელფოსტა (არასავალდებულო)':
-    'Alternative invoice email (optional)',
+  'ინვოისი მოგივა ამ ელფოსტაზე:': 'The invoice will be sent to:',
+  'ინვოისი ზემოთ მითითებულ ელფოსტაზე მოგივა.': 'The invoice will be sent to the email above.',
   'შეთავაზების პირობები': 'Offer terms',
   'პირველი VIP განთავსება': 'First VIP placement',
   'დღით უფასოა — ერთხელ თითო კომპანიაზე; შემოწმდება დამტკიცებისას. სუპერ VIP ღირს':
